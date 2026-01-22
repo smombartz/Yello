@@ -2,16 +2,32 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { processPhoto, getPhotoUrl } from '../photoProcessor.js';
 import fs from 'fs/promises';
 import path from 'path';
+import sharp from 'sharp';
 
 const TEST_PHOTOS_PATH = './test-data/photos';
 
-// 1x1 red pixel JPEG as base64
-const TINY_JPEG = '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBEQCEQT8AVYCf/9k=';
+// Generate a valid test image using Sharp
+async function createTestImage(): Promise<string> {
+  const buffer = await sharp({
+    create: {
+      width: 100,
+      height: 100,
+      channels: 3,
+      background: { r: 255, g: 0, b: 0 }
+    }
+  })
+    .jpeg()
+    .toBuffer();
+  return buffer.toString('base64');
+}
+
+let testImageBase64: string;
 
 describe('photoProcessor', () => {
   beforeAll(async () => {
     process.env.PHOTOS_PATH = TEST_PHOTOS_PATH;
     await fs.mkdir(TEST_PHOTOS_PATH, { recursive: true });
+    testImageBase64 = await createTestImage();
   });
 
   afterAll(async () => {
@@ -19,12 +35,12 @@ describe('photoProcessor', () => {
   });
 
   it('should process photo and return hash', async () => {
-    const hash = await processPhoto(TINY_JPEG, 123);
+    const hash = await processPhoto(testImageBase64, 123);
     expect(hash).toMatch(/^[a-f0-9]{32}$/);
   });
 
   it('should create all size variants', async () => {
-    const hash = await processPhoto(TINY_JPEG, 456);
+    const hash = await processPhoto(testImageBase64, 456);
     const sizes = ['thumbnail', 'small', 'medium', 'large'];
 
     for (const size of sizes) {
