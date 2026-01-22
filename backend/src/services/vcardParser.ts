@@ -83,10 +83,16 @@ function parseSingleVcard(vcardText: string): ParsedContact | null {
   let lastName: string | null = null;
 
   if (nProp) {
-    const nValue = nProp.getValues();
+    // ical.js returns N property as a single structured value (array)
+    const nValue = nProp.getFirstValue();
     if (Array.isArray(nValue) && nValue.length >= 2) {
       lastName = nValue[0] || null;
       firstName = nValue[1] || null;
+    } else if (typeof nValue === 'string') {
+      // Fallback: parse semicolon-separated string manually
+      const parts = nValue.split(';');
+      lastName = parts[0] || null;
+      firstName = parts[1] || null;
     }
   }
 
