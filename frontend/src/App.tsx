@@ -1,35 +1,42 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import { ContactList } from './components/ContactList';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [searchQuery, setSearchQuery] = useState('');
+  // selectedContactId will be used by ContactDetail panel (Task 4.4)
+  const [_selectedContactId, setSelectedContactId] = useState<number | null>(null);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <main className="container">
+      <header>
+        <nav>
+          <ul>
+            <li><strong>Contact Manager</strong></li>
+          </ul>
+          <ul>
+            <li>
+              <input
+                type="search"
+                placeholder="Search contacts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </li>
+            <li>
+              <button>Import VCF</button>
+            </li>
+          </ul>
+        </nav>
+      </header>
+
+      <section>
+        <ContactList
+          search={searchQuery}
+          onSelectContact={setSelectedContactId}
+        />
+      </section>
+    </main>
+  );
 }
 
-export default App
+export default App;
