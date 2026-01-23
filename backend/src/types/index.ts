@@ -67,13 +67,17 @@ export interface ContactDetail extends Contact {
 }
 
 // Deduplication types
-export type DeduplicationMode = 'email' | 'phone' | 'address' | 'social';
+export type DeduplicationMode = 'email' | 'phone' | 'address' | 'social' | 'recommended';
+
+export type ConfidenceLevel = 'very_high' | 'high' | 'medium';
 
 export interface DuplicateGroup {
   id: string;
   matchingValue: string;
   matchingField: DeduplicationMode;
   contacts: ContactDetail[];
+  confidence?: ConfidenceLevel;
+  matchedCriteria?: string[];
 }
 
 export interface DuplicateGroupsResponse {
@@ -88,6 +92,12 @@ export interface DuplicateSummary {
   phone: number;
   address: number;
   social: number;
+  recommended: {
+    veryHigh: number;
+    high: number;
+    medium: number;
+    total: number;
+  };
 }
 
 export interface MergeRequest {

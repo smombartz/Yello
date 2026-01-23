@@ -70,13 +70,17 @@ export interface ImportResult {
 }
 
 // Deduplication types
-export type DeduplicationMode = 'email' | 'phone' | 'address' | 'social';
+export type DeduplicationMode = 'email' | 'phone' | 'address' | 'social' | 'recommended';
+
+export type ConfidenceLevel = 'very_high' | 'high' | 'medium';
 
 export interface DuplicateGroup {
   id: string;
   matchingValue: string;
   matchingField: DeduplicationMode;
   contacts: ContactDetail[];
+  confidence?: ConfidenceLevel;
+  matchedCriteria?: string[];
 }
 
 export interface DuplicateGroupsResponse {
@@ -91,6 +95,12 @@ export interface DuplicateSummary {
   phone: number;
   address: number;
   social: number;
+  recommended: {
+    veryHigh: number;
+    high: number;
+    medium: number;
+    total: number;
+  };
 }
 
 export interface MergeRequest {
@@ -101,4 +111,40 @@ export interface MergeRequest {
 export interface MergeResponse {
   mergedContact: ContactDetail;
   deletedContactIds: number[];
+}
+
+// Cleanup types
+export type CleanupMode = 'empty' | 'problematic';
+
+export type EmptyContactType = 'truly_empty' | 'name_only';
+
+export type ProblematicContactType = 'many_domains' | 'same_domain';
+
+export interface CleanupContact extends ContactDetail {
+  issueType: EmptyContactType | ProblematicContactType;
+  issueDetails?: string;
+}
+
+export interface CleanupResponse {
+  contacts: CleanupContact[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface CleanupSummary {
+  empty: {
+    trulyEmpty: number;
+    nameOnly: number;
+    total: number;
+  };
+  problematic: {
+    manyDomains: number;
+    sameDomain: number;
+    total: number;
+  };
+}
+
+export interface DeleteContactsResponse {
+  deletedCount: number;
 }

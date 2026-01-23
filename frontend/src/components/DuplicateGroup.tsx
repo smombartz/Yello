@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DuplicateContactCard } from './DuplicateContactCard';
-import type { DuplicateGroup as DuplicateGroupType } from '../api/types';
+import type { DuplicateGroup as DuplicateGroupType, ConfidenceLevel } from '../api/types';
 
 interface DuplicateGroupProps {
   group: DuplicateGroupType;
@@ -9,7 +9,10 @@ interface DuplicateGroupProps {
   isMerging: boolean;
 }
 
-function formatMatchingValue(value: string, field: string): string {
+function formatMatchingValue(value: string, field: string, matchedCriteria?: string[]): string {
+  if (field === 'recommended' && matchedCriteria && matchedCriteria.length > 0) {
+    return formatMatchedCriteria(matchedCriteria);
+  }
   if (field === 'address') {
     const [street, city, postalCode] = value.split('|');
     const parts = [street, city, postalCode].filter(Boolean);
@@ -20,6 +23,34 @@ function formatMatchingValue(value: string, field: string): string {
     return `${platform}: @${username}`;
   }
   return value;
+}
+
+function formatMatchedCriteria(criteria: string[]): string {
+  // Extract unique field types from criteria (format: "email:value", "phone:value", "name")
+  const fieldTypes = [...new Set(
+    criteria.map(c => c.includes(':') ? c.split(':')[0] : c)
+  )];
+  return fieldTypes
+    .map((c) => c.charAt(0).toUpperCase() + c.slice(1))
+    .join(' + ');
+}
+
+function getConfidenceBadgeClass(confidence: ConfidenceLevel): string {
+  const classMap: Record<ConfidenceLevel, string> = {
+    very_high: 'very-high',
+    high: 'high',
+    medium: 'medium',
+  };
+  return `confidence-badge ${classMap[confidence]}`;
+}
+
+function getConfidenceLabel(confidence: ConfidenceLevel): string {
+  const labelMap: Record<ConfidenceLevel, string> = {
+    very_high: 'Very High',
+    high: 'High',
+    medium: 'Medium',
+  };
+  return labelMap[confidence];
 }
 
 export function DuplicateGroup({
@@ -47,11 +78,18 @@ export function DuplicateGroup({
                   ? 'phone'
                   : group.matchingField === 'address'
                     ? 'location_on'
-                    : 'share'}
+                    : group.matchingField === 'recommended'
+                      ? 'auto_awesome'
+                      : 'share'}
             </span>
             <span className="match-value">
-              {formatMatchingValue(group.matchingValue, group.matchingField)}
+              {formatMatchingValue(group.matchingValue, group.matchingField, group.matchedCriteria)}
             </span>
+            {group.matchingField === 'recommended' && group.confidence && (
+              <span className={getConfidenceBadgeClass(group.confidence)}>
+                {getConfidenceLabel(group.confidence)}
+              </span>
+            )}
           </span>
           <span className="contact-count">{group.contacts.length} contacts</span>
         </div>
@@ -87,6 +125,7 @@ export function DuplicateGroup({
               contact={contact}
               matchingField={group.matchingField}
               matchingValue={group.matchingValue}
+              matchedCriteria={group.matchedCriteria}
             />
           </div>
         ))}

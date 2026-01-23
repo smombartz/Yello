@@ -711,6 +711,12 @@ body {
 /* Duplicate Group List */
 .duplicate-group-list {
   height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.duplicate-group-list-content {
+  flex: 1;
   overflow-y: auto;
   padding: 1.5rem;
 }
@@ -1283,4 +1289,590 @@ body {
     align-items: flex-start;
     gap: 1rem;
   }
+}
+
+/* Confidence filter chips */
+.confidence-filter { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+
+.confidence-chip {
+  padding: 0.375rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all 0.15s;
+  background: transparent;
+}
+
+.confidence-chip:hover { opacity: 0.8; }
+
+.confidence-chip.very-high { border-color: #bbf7d0; color: #166534; }
+.confidence-chip.very-high.active { background: #dcfce7; border-color: #86efac; }
+
+.confidence-chip.high { border-color: #bfdbfe; color: #1e40af; }
+.confidence-chip.high.active { background: #dbeafe; border-color: #93c5fd; }
+
+.confidence-chip.medium { border-color: #e5e7eb; color: #4b5563; }
+.confidence-chip.medium.active { background: #f3f4f6; border-color: #d1d5db; }
+
+/* Confidence badges */
+.confidence-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-block;
+}
+.confidence-badge.very-high { background: #dcfce7; color: #166534; }
+.confidence-badge.high { background: #dbeafe; color: #1e40af; }
+.confidence-badge.medium { background: #f3f4f6; color: #4b5563; }
+
+/* Nickname/name match indicator */
+.nickname-indicator,
+.name-match-indicator {
+  font-size: 0.6875rem;
+  color: #9333ea;
+  margin-left: 0.25rem;
+  font-style: italic;
+}
+
+/* Matched criteria display */
+.matched-criteria {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.criteria-tag {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  background: var(--stitch-primary-light);
+  color: var(--stitch-primary);
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid var(--stitch-border);
+  background-color: var(--stitch-card-bg);
+}
+
+.pagination-button {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--stitch-border);
+  background-color: var(--stitch-card-bg);
+  color: var(--stitch-text-main);
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.pagination-button:hover:not(:disabled) {
+  background-color: var(--stitch-background);
+  border-color: var(--stitch-text-secondary);
+}
+
+.pagination-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-button .material-symbols-outlined {
+  font-size: 1.25rem;
+}
+
+.pagination-indicator {
+  font-size: 0.875rem;
+  color: var(--stitch-text-secondary);
+  font-weight: 500;
+  min-width: 100px;
+  text-align: center;
+}
+
+/* ============================================================
+   Cleanup View Styles
+   ============================================================ */
+
+.cleanup-layout .main-content {
+  margin-right: 0 !important;
+}
+
+.cleanup-view {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.cleanup-header {
+  background-color: var(--stitch-card-bg);
+  border-bottom: 1px solid var(--stitch-border);
+  padding: 1rem 1.5rem;
+}
+
+.cleanup-header-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.cleanup-header-top h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* Cleanup Mode Selector */
+.cleanup-mode-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.cleanup-mode-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  border: 1px solid var(--stitch-border);
+  background-color: var(--stitch-card-bg);
+  color: var(--stitch-text-secondary);
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cleanup-mode-pill:hover:not(:disabled) {
+  border-color: var(--stitch-primary);
+  color: var(--stitch-primary);
+}
+
+.cleanup-mode-pill.active {
+  background-color: var(--stitch-primary);
+  border-color: var(--stitch-primary);
+  color: white;
+}
+
+.cleanup-mode-pill .material-symbols-outlined {
+  font-size: 1.125rem;
+}
+
+.cleanup-mode-pill .cleanup-mode-count {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 0.125rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+}
+
+.cleanup-mode-pill.active .cleanup-mode-count {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Cleanup Controls (threshold + filters) */
+.cleanup-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Threshold Selector */
+.threshold-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.threshold-selector label {
+  font-size: 0.875rem;
+  color: var(--stitch-text-secondary);
+  font-weight: 500;
+}
+
+.threshold-select {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--stitch-border);
+  background-color: var(--stitch-card-bg);
+  color: var(--stitch-text-main);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.threshold-select:focus {
+  outline: none;
+  border-color: var(--stitch-primary);
+  box-shadow: 0 0 0 3px var(--stitch-primary-light);
+}
+
+/* Cleanup Filters */
+.cleanup-filters {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cleanup-filter-chip {
+  padding: 0.375rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--stitch-border);
+  background: transparent;
+  color: var(--stitch-text-secondary);
+  transition: all 0.15s;
+}
+
+.cleanup-filter-chip:hover {
+  border-color: var(--stitch-primary);
+  color: var(--stitch-primary);
+}
+
+.cleanup-filter-chip.active {
+  background: var(--stitch-primary-light);
+  border-color: var(--stitch-primary);
+  color: var(--stitch-primary);
+}
+
+/* Cleanup Stats Row */
+.cleanup-stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cleanup-stats {
+  font-size: 0.875rem;
+  color: var(--stitch-text-secondary);
+}
+
+/* Delete Selected Button */
+.delete-selected-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.delete-selected-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.delete-selected-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.delete-selected-button .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Cleanup Content */
+.cleanup-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.cleanup-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--stitch-text-secondary);
+}
+
+.cleanup-loading .material-symbols-outlined {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+/* Cleanup Contact List */
+.cleanup-list {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.cleanup-list-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--stitch-card-bg);
+  border-bottom: 1px solid var(--stitch-border);
+}
+
+.cleanup-selection-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cleanup-action-button {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--stitch-border);
+  background-color: var(--stitch-card-bg);
+  color: var(--stitch-text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cleanup-action-button:hover:not(:disabled) {
+  background-color: var(--stitch-background);
+  border-color: var(--stitch-text-secondary);
+}
+
+.cleanup-action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cleanup-action-button .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+.cleanup-selection-count {
+  font-size: 0.875rem;
+  color: var(--stitch-primary);
+  font-weight: 500;
+}
+
+.cleanup-list-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+.cleanup-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--stitch-text-secondary);
+}
+
+.cleanup-list-empty .material-symbols-outlined {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #28a745;
+}
+
+/* Cleanup Contact Card */
+.cleanup-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background-color: var(--stitch-card-bg);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 0.75rem;
+  transition: box-shadow 0.15s;
+}
+
+.cleanup-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.cleanup-card.selected {
+  box-shadow: 0 0 0 2px var(--stitch-primary);
+}
+
+.cleanup-card-checkbox {
+  padding-top: 0.25rem;
+}
+
+.cleanup-card-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--stitch-primary);
+}
+
+.cleanup-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.cleanup-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.cleanup-card-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.cleanup-card-name .name {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--stitch-text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cleanup-card-name .company {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--stitch-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Cleanup Issue Badges */
+.cleanup-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.cleanup-badge.badge-empty {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.cleanup-badge.badge-name-only {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.cleanup-badge.badge-many-domains {
+  background: #faf5ff;
+  color: #7e22ce;
+}
+
+.cleanup-badge.badge-same-domain {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+/* Cleanup Card Issue Details */
+.cleanup-card-issue {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--stitch-background);
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--stitch-text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.cleanup-card-issue .material-symbols-outlined {
+  font-size: 1rem;
+  color: var(--stitch-text-secondary);
+}
+
+/* Cleanup Card Emails */
+.cleanup-card-emails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cleanup-card-email {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--stitch-text-secondary);
+  padding: 0.25rem 0;
+}
+
+.cleanup-card-email .material-symbols-outlined {
+  font-size: 1rem;
+  color: var(--stitch-text-secondary);
+}
+
+.cleanup-card-email .value {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cleanup-card-email .type {
+  font-size: 0.6875rem;
+  color: var(--stitch-text-secondary);
+  text-transform: capitalize;
+}
+
+/* Cleanup Card Summary */
+.cleanup-card-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cleanup-card-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--stitch-text-secondary);
+  padding: 0.25rem 0;
+}
+
+.cleanup-card-field .material-symbols-outlined {
+  font-size: 1rem;
+  color: var(--stitch-text-secondary);
+}
+
+.cleanup-card-field .notes-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 300px;
+}
+
+.cleanup-card-field.empty {
+  font-style: italic;
+}
+
+/* Danger confirm button */
+.confirm-button.danger {
+  background: #dc2626;
+}
+
+.confirm-button.danger:hover {
+  background: #b91c1c;
 }

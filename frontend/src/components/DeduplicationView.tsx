@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ModeSelector } from './ModeSelector';
 import { DuplicateGroupList } from './DuplicateGroupList';
-import { useDuplicateSummary, useDuplicatesInfinite, useMergeContacts } from '../api/deduplicationHooks';
-import type { DeduplicationMode, DuplicateGroup } from '../api/types';
+import { ConfidenceFilter } from './ConfidenceFilter';
+import { useDuplicateSummary, useDuplicatesPaginated, useMergeContacts } from '../api/deduplicationHooks';
+import type { ConfidenceLevel, DeduplicationMode, DuplicateGroup } from '../api/types';
 
 interface DeduplicationViewProps {
   onBack: () => void;
@@ -14,29 +15,45 @@ interface UndoState {
   timeout: ReturnType<typeof setTimeout>;
 }
 
-export function DeduplicationView({ onBack }: DeduplicationViewProps) {
+const ALL_CONFIDENCE_LEVELS: Set<ConfidenceLevel> = new Set(['very_high', 'high', 'medium']);
+
+export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
   const [selectedMode, setSelectedMode] = useState<DeduplicationMode>('email');
   const [hiddenGroupIds, setHiddenGroupIds] = useState<Set<string>>(new Set());
   const [undoState, setUndoState] = useState<UndoState | null>(null);
   const [mergeAllProgress, setMergeAllProgress] = useState<{ current: number; total: number } | null>(null);
   const [showMergeAllConfirm, setShowMergeAllConfirm] = useState(false);
+  const [confidenceFilter, setConfidenceFilter] = useState<Set<ConfidenceLevel>>(new Set(ALL_CONFIDENCE_LEVELS));
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const PAGE_SIZE = 100;
 
   const { data: summary, isLoading: isSummaryLoading } = useDuplicateSummary();
 
   const {
     data: duplicatesData,
     isLoading: isDuplicatesLoading,
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-  } = useDuplicatesInfinite(selectedMode);
+    isFetching,
+  } = useDuplicatesPaginated(
+    selectedMode,
+    currentPage,
+    PAGE_SIZE,
+    selectedMode === 'recommended' ? confidenceFilter : undefined
+  );
 
   const mergeMutation = useMergeContacts();
 
-  // Clear hidden groups when mode changes
+  // Clear hidden groups, reset confidence filter, and reset page when mode changes
   useEffect(() => {
     setHiddenGroupIds(new Set());
+    setConfidenceFilter(new Set(ALL_CONFIDENCE_LEVELS));
+    setCurrentPage(1);
   }, [selectedMode]);
+
+  // Reset page when confidence filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [confidenceFilter]);
 
   // Cleanup undo timeout on unmount
   useEffect(() => {
@@ -85,14 +102,25 @@ export function DeduplicationView({ onBack }: DeduplicationViewProps) {
     setSelectedMode(mode);
   }, []);
 
-  const allGroups: DuplicateGroup[] =
-    duplicatesData?.pages.flatMap((page) => page.groups) ?? [];
+  const handleConfidenceToggle = useCallback((level: ConfidenceLevel) => {
+    setConfidenceFilter(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(level)) {
+        newSet.delete(level);
+      } else {
+        newSet.add(level);
+      }
+      return newSet;
+    });
+  }, []);
 
-  const totalGroups = duplicatesData?.pages[0]?.totalGroups ?? 0;
-  const visibleCount = allGroups.filter((g) => !hiddenGroupIds.has(g.id)).length;
+  const groups: DuplicateGroup[] = duplicatesData?.groups ?? [];
+  const totalGroups = duplicatesData?.totalGroups ?? 0;
+  const totalPages = Math.ceil(totalGroups / PAGE_SIZE);
+  const visibleCount = groups.filter((g) => !hiddenGroupIds.has(g.id)).length;
 
   const handleMergeAll = useCallback(async () => {
-    const groupsToMerge = allGroups.filter((g) => !hiddenGroupIds.has(g.id));
+    const groupsToMerge = groups.filter((g) => !hiddenGroupIds.has(g.id));
     if (groupsToMerge.length === 0) return;
 
     setMergeAllProgress({ current: 0, total: groupsToMerge.length });
@@ -125,16 +153,12 @@ export function DeduplicationView({ onBack }: DeduplicationViewProps) {
       message: `Merged ${groupsToMerge.length} duplicate groups`,
       timeout,
     });
-  }, [allGroups, hiddenGroupIds, mergeMutation, undoState]);
+  }, [groups, hiddenGroupIds, mergeMutation, undoState]);
 
   return (
     <div className="dedup-view">
       <div className="dedup-header">
         <div className="dedup-header-top">
-          <button className="back-button" onClick={onBack}>
-            <span className="material-symbols-outlined">arrow_back</span>
-            <span>Back to Contacts</span>
-          </button>
           <h1>Resolve Duplicates</h1>
         </div>
 
@@ -144,6 +168,18 @@ export function DeduplicationView({ onBack }: DeduplicationViewProps) {
           summary={summary}
           isLoading={isSummaryLoading}
         />
+
+        {selectedMode === 'recommended' && summary?.recommended && (
+          <ConfidenceFilter
+            selectedLevels={confidenceFilter}
+            onToggle={handleConfidenceToggle}
+            counts={{
+              veryHigh: summary.recommended.veryHigh,
+              high: summary.recommended.high,
+              medium: summary.recommended.medium,
+            }}
+          />
+        )}
 
         {!isDuplicatesLoading && (
           <div className="dedup-stats-row">
@@ -164,7 +200,7 @@ export function DeduplicationView({ onBack }: DeduplicationViewProps) {
                 <span className="material-symbols-outlined">merge</span>
                 {mergeAllProgress
                   ? `Merging ${mergeAllProgress.current}/${mergeAllProgress.total}...`
-                  : `Merge All (${visibleCount})`}
+                  : `Merge Page (${visibleCount})`}
               </button>
             )}
           </div>
@@ -179,14 +215,15 @@ export function DeduplicationView({ onBack }: DeduplicationViewProps) {
           </div>
         ) : (
           <DuplicateGroupList
-            groups={allGroups}
+            groups={groups}
             hiddenGroupIds={hiddenGroupIds}
             onMerge={handleMerge}
             onKeepSeparate={handleKeepSeparate}
             isMerging={mergeMutation.isPending}
-            hasNextPage={hasNextPage ?? false}
-            isFetchingNextPage={isFetchingNextPage}
-            fetchNextPage={fetchNextPage}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            isLoading={isFetching}
             mode={selectedMode}
           />
         )}
@@ -211,9 +248,9 @@ export function DeduplicationView({ onBack }: DeduplicationViewProps) {
       {showMergeAllConfirm && (
         <div className="modal-overlay" onClick={() => setShowMergeAllConfirm(false)}>
           <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Merge All Duplicates?</h3>
+            <h3>Merge All on This Page?</h3>
             <p>
-              This will merge {visibleCount} duplicate group{visibleCount !== 1 ? 's' : ''}.
+              This will merge {visibleCount} duplicate group{visibleCount !== 1 ? 's' : ''} on this page.
               The first contact in each group will be kept as the primary.
             </p>
             <div className="confirm-actions">

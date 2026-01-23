@@ -5,6 +5,7 @@ interface DuplicateContactCardProps {
   contact: ContactDetail;
   matchingField: DeduplicationMode;
   matchingValue: string;
+  matchedCriteria?: string[];  // For recommended mode - which field types matched
 }
 
 function formatSingleAddress(addr: ContactAddress): string {
@@ -38,13 +39,29 @@ export function DuplicateContactCard({
   contact,
   matchingField,
   matchingValue,
+  matchedCriteria = [],
 }: DuplicateContactCardProps) {
+  // Extract field types from matchedCriteria (format: "email:value", "phone:value", "name")
+  const matchedFieldTypes = new Set(
+    matchedCriteria.map(c => c.includes(':') ? c.split(':')[0] : c)
+  );
+
+  // For recommended mode: check if a field type is in matchedCriteria
+  const isFieldTypeMatching = (fieldType: string): boolean => {
+    return matchedFieldTypes.has(fieldType);
+  };
+
+  // Check if name matched (for showing nickname indicator)
+  const nameMatched = matchedFieldTypes.has('name');
   return (
     <div className="duplicate-card">
       <div className="duplicate-card-header">
         <Avatar photoUrl={contact.photoUrl} name={contact.displayName} size={40} />
         <div className="duplicate-card-name">
-          <span className="name">{contact.displayName}</span>
+          <span className={`name ${nameMatched ? 'matching' : ''}`}>
+            {contact.displayName}
+            {nameMatched && <span className="name-match-indicator" title="Name/nickname match"> (similar name)</span>}
+          </span>
           {contact.company && <span className="company">{contact.company}</span>}
         </div>
       </div>
@@ -97,6 +114,54 @@ export function DuplicateContactCard({
             {social.type && <span className="type">{social.type}</span>}
           </div>
         ))}
+
+        {/* Recommended mode: show all relevant fields with matched criteria highlighting */}
+        {matchingField === 'recommended' && (
+          <>
+            {/* Emails - highlight all if 'email' is in matchedCriteria */}
+            {contact.emails.map((email, idx) => (
+              <div
+                key={`email-${idx}`}
+                className={`duplicate-card-field ${isFieldTypeMatching('email') ? 'matching' : ''}`}
+              >
+                <span className="material-symbols-outlined">mail</span>
+                <span className="value">{email.email}</span>
+                {email.type && <span className="type">{email.type}</span>}
+              </div>
+            ))}
+
+            {/* Phones - highlight all if 'phone' is in matchedCriteria */}
+            {contact.phones.map((phone, idx) => (
+              <div
+                key={`phone-${idx}`}
+                className={`duplicate-card-field ${isFieldTypeMatching('phone') ? 'matching' : ''}`}
+              >
+                <span className="material-symbols-outlined">phone</span>
+                <span className="value">{phone.phoneDisplay}</span>
+                {phone.type && <span className="type">{phone.type}</span>}
+              </div>
+            ))}
+
+            {/* Social profiles - highlight all if 'social' is in matchedCriteria */}
+            {contact.socialProfiles.map((social, idx) => (
+              <div
+                key={`social-${idx}`}
+                className={`duplicate-card-field ${isFieldTypeMatching('social') ? 'matching' : ''}`}
+              >
+                <span className="material-symbols-outlined">share</span>
+                <span className="value">{social.platform}: @{social.username}</span>
+                {social.type && <span className="type">{social.type}</span>}
+              </div>
+            ))}
+
+            {/* Empty state for recommended mode */}
+            {contact.emails.length === 0 && contact.phones.length === 0 && contact.socialProfiles.length === 0 && (
+              <div className="duplicate-card-field empty">
+                <span className="value">No contact info</span>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Show empty state if current mode has no items */}
         {((matchingField === 'email' && contact.emails.length === 0) ||

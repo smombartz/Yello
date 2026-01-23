@@ -35,8 +35,15 @@ export default async function duplicatesRoutes(
       }
     }
   }, async (request, _reply) => {
-    const { mode, limit = 50, offset = 0 } = request.query;
-    const { groups, totalGroups } = findDuplicates(mode, limit, offset);
+    const { mode, limit = 50, offset = 0, confidence } = request.query;
+
+    // Parse and validate confidence levels from comma-separated string if provided
+    const validConfidenceLevels = ['very_high', 'high', 'medium'];
+    const confidenceLevels = confidence
+      ? confidence.split(',').map(c => c.trim()).filter(c => validConfidenceLevels.includes(c))
+      : undefined;
+
+    const { groups, totalGroups } = findDuplicates(mode, limit, offset, confidenceLevels);
 
     return {
       groups,

@@ -4,8 +4,9 @@ import { TopHeader } from './components/TopHeader';
 import { ContactList } from './components/ContactList';
 import { ImportModal } from './components/ImportModal';
 import { DeduplicationView } from './components/DeduplicationView';
+import { CleanupView } from './components/CleanupView';
 
-type AppView = 'contacts' | 'deduplication';
+type AppView = 'contacts' | 'deduplication' | 'cleanup';
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('contacts');
@@ -27,7 +28,7 @@ function App() {
       if (e.key === 'Escape') {
         if (showImportModal) {
           setShowImportModal(false);
-        } else if (currentView === 'deduplication') {
+        } else if (currentView === 'deduplication' || currentView === 'cleanup') {
           setCurrentView('contacts');
         }
       }
@@ -40,14 +41,39 @@ function App() {
     setCurrentView('deduplication');
   };
 
+  const handleCleanupClick = () => {
+    setCurrentView('cleanup');
+  };
+
   const handleBackToContacts = () => {
     setCurrentView('contacts');
   };
 
+  if (currentView === 'cleanup') {
+    return (
+      <div className="app-layout cleanup-layout">
+        <Sidebar
+          onDeduplicateClick={handleDeduplicateClick}
+          onCleanupClick={handleCleanupClick}
+          onBackToContacts={handleBackToContacts}
+          currentView="cleanup"
+        />
+        <main className="main-content">
+          <CleanupView onBack={handleBackToContacts} />
+        </main>
+      </div>
+    );
+  }
+
   if (currentView === 'deduplication') {
     return (
       <div className="app-layout dedup-layout">
-        <Sidebar onDeduplicateClick={handleDeduplicateClick} onBackToContacts={handleBackToContacts} currentView="deduplication" />
+        <Sidebar
+          onDeduplicateClick={handleDeduplicateClick}
+          onCleanupClick={handleCleanupClick}
+          onBackToContacts={handleBackToContacts}
+          currentView="deduplication"
+        />
         <main className="main-content">
           <DeduplicationView onBack={handleBackToContacts} />
         </main>
@@ -58,7 +84,11 @@ function App() {
   return (
     <>
       <div className="app-layout">
-        <Sidebar onDeduplicateClick={handleDeduplicateClick} currentView="contacts" />
+        <Sidebar
+          onDeduplicateClick={handleDeduplicateClick}
+          onCleanupClick={handleCleanupClick}
+          currentView="contacts"
+        />
         <main className="main-content">
           <TopHeader
             searchQuery={searchQuery}
@@ -66,10 +96,6 @@ function App() {
             onImportClick={() => setShowImportModal(true)}
           />
           <div className="page-content">
-            <div className="page-header">
-              <h1>Team Directory</h1>
-              <p>Manage your contacts here.</p>
-            </div>
             <ContactList search={debouncedSearch} />
           </div>
         </main>

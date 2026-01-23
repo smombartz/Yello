@@ -8,6 +8,7 @@ interface ModeSelectorProps {
 }
 
 const MODE_LABELS: Record<DeduplicationMode, string> = {
+  recommended: 'Recommended',
   email: 'Email',
   phone: 'Phone',
   address: 'Address',
@@ -15,19 +16,22 @@ const MODE_LABELS: Record<DeduplicationMode, string> = {
 };
 
 const MODE_ICONS: Record<DeduplicationMode, string> = {
+  recommended: 'auto_awesome',
   email: 'mail',
   phone: 'phone',
   address: 'location_on',
   social: 'share',
 };
 
-const MODES: DeduplicationMode[] = ['email', 'phone', 'address', 'social'];
+const MODES: DeduplicationMode[] = ['recommended', 'email', 'phone', 'address', 'social'];
 
 export function ModeSelector({ selectedMode, onModeChange, summary, isLoading }: ModeSelectorProps) {
   return (
     <div className="mode-selector">
       {MODES.map((mode) => {
-        const count = summary?.[mode] ?? 0;
+        const count = mode === 'recommended'
+          ? (summary?.recommended?.total ?? 0)
+          : (summary?.[mode] ?? 0);
         const isActive = mode === selectedMode;
 
         return (

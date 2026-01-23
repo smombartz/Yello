@@ -10,6 +10,7 @@ import healthRoutes from './routes/health.js';
 import contactRoutes from './routes/contacts.js';
 import importRoutes from './routes/import.js';
 import duplicatesRoutes from './routes/duplicates.js';
+import cleanupRoutes from './routes/cleanup.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -59,6 +60,7 @@ await app.register(healthRoutes);
 await app.register(contactRoutes, { prefix: '/api/contacts' });
 await app.register(importRoutes, { prefix: '/api' });
 await app.register(duplicatesRoutes, { prefix: '/api/duplicates' });
+await app.register(cleanupRoutes, { prefix: '/api/cleanup' });
 
 const port = parseInt(process.env.PORT || '3000');
 app.listen({ port, host: '0.0.0.0' }).then(() => {

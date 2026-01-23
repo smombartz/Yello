@@ -54,6 +54,7 @@ ADR;TYPE=WORK:;;PO Box 27;New York;NY;10002;USA
 ADR;TYPE=HOME:;;FL3 72 Allen Street;New York;New York;;
 ADR;TYPE=OTHER:;;72 Allen Street\, FL3;New York;NY;10002;
 BDAY:1983-11-07
+CATEGORIES:Work
 IMPP;TYPE=OTHER;TYPE=pref;X-SERVICE-TYPE=AIM:aim:sm@mombartz.com
 IMPP;TYPE=OTHER;X-SERVICE-TYPE=FACEBOOK:xmpp:sascha.mombartz
 NOTE:52/53 Pretty Bay\nBirzebugia BBG06\nMalta\nHISTORY\n+1212-556-2055\n+2

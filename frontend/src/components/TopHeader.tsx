@@ -7,6 +7,9 @@ interface TopHeaderProps {
 export function TopHeader({ searchQuery, onSearchChange, onImportClick }: TopHeaderProps) {
   return (
     <header className="top-header">
+      <div className="page-header">
+        <h1>All Contacts</h1>
+      </div>
       <div className="search-container">
         <span className="material-symbols-outlined">search</span>
         <input
