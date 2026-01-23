@@ -16,6 +16,34 @@
   --pico-background-color: var(--stitch-background);
 }
 
+/* Custom Scrollbar Styling */
+/* WebKit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--stitch-background);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c9;
+  border-radius: 5px;
+  border: 2px solid var(--stitch-background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c9 var(--stitch-background);
+}
+
 body {
   margin: 0;
   min-height: 100vh;
