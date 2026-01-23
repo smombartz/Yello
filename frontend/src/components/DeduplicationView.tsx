@@ -18,6 +18,8 @@ export function DeduplicationView({ onBack }: DeduplicationViewProps) {
   const [selectedMode, setSelectedMode] = useState<DeduplicationMode>('email');
   const [hiddenGroupIds, setHiddenGroupIds] = useState<Set<string>>(new Set());
   const [undoState, setUndoState] = useState<UndoState | null>(null);
+  const [mergeAllProgress, setMergeAllProgress] = useState<{ current: number; total: number } | null>(null);
+  const [showMergeAllConfirm, setShowMergeAllConfirm] = useState(false);
 
   const { data: summary, isLoading: isSummaryLoading } = useDuplicateSummary();
 
@@ -89,6 +91,42 @@ export function DeduplicationView({ onBack }: DeduplicationViewProps) {
   const totalGroups = duplicatesData?.pages[0]?.totalGroups ?? 0;
   const visibleCount = allGroups.filter((g) => !hiddenGroupIds.has(g.id)).length;
 
+  const handleMergeAll = useCallback(async () => {
+    const groupsToMerge = allGroups.filter((g) => !hiddenGroupIds.has(g.id));
+    if (groupsToMerge.length === 0) return;
+
+    setMergeAllProgress({ current: 0, total: groupsToMerge.length });
+
+    for (let i = 0; i < groupsToMerge.length; i++) {
+      const group = groupsToMerge[i];
+      const contactIds = group.contacts.map((c) => c.id);
+      const primaryContactId = group.contacts[0].id;
+
+      try {
+        await mergeMutation.mutateAsync({ contactIds, primaryContactId });
+        setMergeAllProgress({ current: i + 1, total: groupsToMerge.length });
+      } catch (error) {
+        console.error('Merge failed for group:', group.id, error);
+        // Continue with remaining groups even if one fails
+      }
+    }
+
+    setMergeAllProgress(null);
+
+    // Clear any existing undo timeout
+    if (undoState?.timeout) {
+      clearTimeout(undoState.timeout);
+    }
+
+    // Show completion toast
+    const timeout = setTimeout(() => setUndoState(null), 5000);
+    setUndoState({
+      groupId: '',
+      message: `Merged ${groupsToMerge.length} duplicate groups`,
+      timeout,
+    });
+  }, [allGroups, hiddenGroupIds, mergeMutation, undoState]);
+
   return (
     <div className="dedup-view">
       <div className="dedup-header">
@@ -108,12 +146,26 @@ export function DeduplicationView({ onBack }: DeduplicationViewProps) {
         />
 
         {!isDuplicatesLoading && (
-          <div className="dedup-stats">
-            {visibleCount} of {totalGroups} duplicate groups
-            {hiddenGroupIds.size > 0 && (
-              <span className="hidden-count">
-                ({hiddenGroupIds.size} marked as separate)
-              </span>
+          <div className="dedup-stats-row">
+            <div className="dedup-stats">
+              {visibleCount} of {totalGroups} duplicate groups
+              {hiddenGroupIds.size > 0 && (
+                <span className="hidden-count">
+                  ({hiddenGroupIds.size} marked as separate)
+                </span>
+              )}
+            </div>
+            {visibleCount > 0 && (
+              <button
+                className="merge-all-button"
+                onClick={() => setShowMergeAllConfirm(true)}
+                disabled={mergeMutation.isPending || mergeAllProgress !== null}
+              >
+                <span className="material-symbols-outlined">merge</span>
+                {mergeAllProgress
+                  ? `Merging ${mergeAllProgress.current}/${mergeAllProgress.total}...`
+                  : `Merge All (${visibleCount})`}
+              </button>
             )}
           </div>
         )}
@@ -153,6 +205,32 @@ export function DeduplicationView({ onBack }: DeduplicationViewProps) {
           >
             <span className="material-symbols-outlined">close</span>
           </button>
+        </div>
+      )}
+
+      {showMergeAllConfirm && (
+        <div className="modal-overlay" onClick={() => setShowMergeAllConfirm(false)}>
+          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
+            <h3>Merge All Duplicates?</h3>
+            <p>
+              This will merge {visibleCount} duplicate group{visibleCount !== 1 ? 's' : ''}.
+              The first contact in each group will be kept as the primary.
+            </p>
+            <div className="confirm-actions">
+              <button className="cancel-button" onClick={() => setShowMergeAllConfirm(false)}>
+                Cancel
+              </button>
+              <button
+                className="confirm-button"
+                onClick={() => {
+                  setShowMergeAllConfirm(false);
+                  handleMergeAll();
+                }}
+              >
+                Merge All
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

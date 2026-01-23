@@ -583,6 +583,35 @@ body {
   font-size: 1.25rem;
 }
 
+/* Merge All Button */
+.merge-all-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.merge-all-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.merge-all-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.merge-all-button .material-symbols-outlined {
+  font-size: 18px;
+}
+
 /* Mode Selector */
 .mode-selector {
   display: flex;
@@ -629,6 +658,13 @@ body {
 
 .mode-pill.active .mode-count {
   background-color: rgba(255, 255, 255, 0.2);
+}
+
+.dedup-stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .dedup-stats {
@@ -972,4 +1008,72 @@ body {
 .undo-toast .dismiss .material-symbols-outlined {
   font-size: 1.125rem;
   color: inherit;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.confirm-dialog {
+  max-width: 400px;
+  text-align: center;
+}
+
+.confirm-dialog h3 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+}
+
+.confirm-dialog p {
+  margin: 0 0 20px 0;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.cancel-button {
+  padding: 8px 20px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cancel-button:hover {
+  background: #e5e7eb;
+}
+
+.confirm-button {
+  padding: 8px 20px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.confirm-button:hover {
+  opacity: 0.9;
 }

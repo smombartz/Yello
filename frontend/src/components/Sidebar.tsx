@@ -18,8 +18,8 @@ export function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <span className="material-symbols-outlined">contacts_product</span>
-        <span>Directory</span>
+        <span className="material-symbols-outlined">3p</span>
+        <span>ello CRM</span>
       </div>
 
       <nav className="sidebar-nav">
@@ -28,6 +28,7 @@ export function Sidebar() {
         <NavItem icon="star" label="Favorites" />
         <NavItem icon="group" label="Groups" />
         <NavItem icon="archive" label="Archived" />
+        <NavItem icon="merge" label="Merge" /> 
 
         <div className="nav-spacer" />
 
