@@ -29,7 +29,7 @@ function PhoneList({ phones }: { phones: ContactPhone[] }) {
       <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.875rem', color: 'var(--pico-muted-color)' }}>Phone</h4>
       {phones.map((phone, i) => (
         <div key={i} style={{ marginBottom: '0.25rem' }}>
-          <a href={`tel:${phone.phone}`}>{phone.display}</a>
+          <a href={`tel:${phone.phone}`}>{phone.phoneDisplay}</a>
           {phone.type && <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: 'var(--pico-muted-color)' }}>({phone.type})</span>}
         </div>
       ))}

@@ -15,7 +15,7 @@ export interface ContactEmail {
 
 export interface ContactPhone {
   phone: string;
-  display: string;
+  phoneDisplay: string;
   type: string | null;
   isPrimary: boolean;
 }

@@ -3,6 +3,7 @@ import fastifyStatic from '@fastify/static';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyCors from '@fastify/cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 import healthRoutes from './routes/health.js';
@@ -24,7 +25,10 @@ await app.register(fastifyMultipart, {
 });
 
 // Serve photos from the photos directory
-const photosPath = process.env.PHOTOS_PATH || path.join(__dirname, '../../data/photos');
+const photosPath = process.env.PHOTOS_PATH || path.join(__dirname, '../data/photos');
+if (!fs.existsSync(photosPath)) {
+  fs.mkdirSync(photosPath, { recursive: true });
+}
 await app.register(fastifyStatic, {
   root: photosPath,
   prefix: '/photos/',
@@ -51,7 +55,7 @@ if (process.env.NODE_ENV === 'production') {
 
 // Register API routes
 await app.register(healthRoutes);
-await app.register(contactRoutes, { prefix: '/api' });
+await app.register(contactRoutes, { prefix: '/api/contacts' });
 await app.register(importRoutes, { prefix: '/api' });
 
 const port = parseInt(process.env.PORT || '3000');

@@ -154,10 +154,15 @@ function parseSingleVcard(vcardText: string): ParsedContact | null {
   let photoBase64: string | null = null;
   const photoProp = comp.getFirstProperty('photo');
   if (photoProp) {
-    const photoValue = photoProp.getFirstValue() as string;
-    if (photoValue) {
+    const photoValue = photoProp.getFirstValue();
+    if (typeof photoValue === 'string') {
+      // Handle data URIs - strip the prefix
       photoBase64 = photoValue.replace(/^data:image\/[^;]+;base64,/i, '');
+    } else if (photoValue && typeof photoValue === 'object' && 'icaltype' in photoValue && photoValue.icaltype === 'binary') {
+      // Handle ENCODING=B format - Binary object has toString() method
+      photoBase64 = (photoValue as { toString(): string }).toString();
     }
+    // Skip URL references and other unsupported formats
   }
 
   return {
