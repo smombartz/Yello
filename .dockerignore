@@ -1,0 +1,14 @@
+node_modules
+dist
+*.log
+.git
+.gitignore
+.env
+.env.*
+*.md
+!README.md
+test-data
+*.test.ts
+__tests__
+coverage
+.DS_Store
