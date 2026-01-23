@@ -38,6 +38,35 @@ export interface ContactSocialProfile {
   type: string | null;
 }
 
+export interface ContactCategory {
+  id: number;
+  contactId: number;
+  category: string;
+}
+
+export interface ContactInstantMessage {
+  id: number;
+  contactId: number;
+  service: string;
+  handle: string;
+  type: string | null;
+}
+
+export interface ContactUrl {
+  id: number;
+  contactId: number;
+  url: string;
+  label: string | null;
+  type: string | null;
+}
+
+export interface ContactRelatedPerson {
+  id: number;
+  contactId: number;
+  name: string;
+  relationship: string | null;
+}
+
 export interface ContactDetail {
   id: number;
   firstName: string | null;
@@ -46,10 +75,15 @@ export interface ContactDetail {
   company: string | null;
   title: string | null;
   notes: string | null;
+  birthday: string | null;
   emails: ContactEmail[];
   phones: ContactPhone[];
   addresses: ContactAddress[];
   socialProfiles: ContactSocialProfile[];
+  categories: ContactCategory[];
+  instantMessages: ContactInstantMessage[];
+  urls: ContactUrl[];
+  relatedPeople: ContactRelatedPerson[];
   photoUrl: string | null;
   createdAt: string;
   updatedAt: string;

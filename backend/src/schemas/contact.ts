@@ -51,6 +51,35 @@ export const ContactSocialProfileSchema = Type.Object({
   type: Type.Union([Type.String(), Type.Null()])
 });
 
+export const ContactCategorySchema = Type.Object({
+  id: Type.Number(),
+  contactId: Type.Number(),
+  category: Type.String()
+});
+
+export const ContactInstantMessageSchema = Type.Object({
+  id: Type.Number(),
+  contactId: Type.Number(),
+  service: Type.String(),
+  handle: Type.String(),
+  type: Type.Union([Type.String(), Type.Null()])
+});
+
+export const ContactUrlSchema = Type.Object({
+  id: Type.Number(),
+  contactId: Type.Number(),
+  url: Type.String(),
+  label: Type.Union([Type.String(), Type.Null()]),
+  type: Type.Union([Type.String(), Type.Null()])
+});
+
+export const ContactRelatedPersonSchema = Type.Object({
+  id: Type.Number(),
+  contactId: Type.Number(),
+  name: Type.String(),
+  relationship: Type.Union([Type.String(), Type.Null()])
+});
+
 export const ContactListItemSchema = Type.Object({
   id: Type.Number(),
   displayName: Type.String(),
@@ -75,6 +104,7 @@ export const ContactDetailSchema = Type.Object({
   company: Type.Union([Type.String(), Type.Null()]),
   title: Type.Union([Type.String(), Type.Null()]),
   notes: Type.Union([Type.String(), Type.Null()]),
+  birthday: Type.Union([Type.String(), Type.Null()]),
   photoHash: Type.Union([Type.String(), Type.Null()]),
   rawVcard: Type.Union([Type.String(), Type.Null()]),
   createdAt: Type.String(),
@@ -83,6 +113,10 @@ export const ContactDetailSchema = Type.Object({
   phones: Type.Array(ContactPhoneSchema),
   addresses: Type.Array(ContactAddressSchema),
   socialProfiles: Type.Array(ContactSocialProfileSchema),
+  categories: Type.Array(ContactCategorySchema),
+  instantMessages: Type.Array(ContactInstantMessageSchema),
+  urls: Type.Array(ContactUrlSchema),
+  relatedPeople: Type.Array(ContactRelatedPersonSchema),
   photoUrl: Type.Union([Type.String(), Type.Null()])
 });
 

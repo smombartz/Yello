@@ -1,4 +1,4 @@
-import type { ContactDetail, ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile } from '../api/types';
+import type { ContactDetail, ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson } from '../api/types';
 
 interface ContactRowExpandedProps {
   contact: ContactDetail;
@@ -108,6 +108,173 @@ function SocialLinksSection({ socialProfiles }: { socialProfiles: ContactSocialP
   );
 }
 
+function formatBirthday(dateString: string): string {
+  // Handle various date formats (YYYY-MM-DD, YYYYMMDD, etc.)
+  const cleaned = dateString.replace(/[^0-9-]/g, '');
+  try {
+    // Try parsing as ISO date
+    const date = new Date(cleaned);
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    }
+  } catch {
+    // Fall through
+  }
+  return dateString;
+}
+
+function BirthdaySection({ birthday }: { birthday: string }) {
+  if (!birthday) return null;
+
+  return (
+    <div className="expanded-section">
+      <h4 className="section-header">Birthday</h4>
+      <div className="section-content">
+        <div className="expanded-item">
+          <span className="material-symbols-outlined">cake</span>
+          <div className="expanded-item-content">
+            <span>{formatBirthday(birthday)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CategoriesSection({ categories }: { categories: ContactCategory[] }) {
+  if (!categories.length) return null;
+
+  return (
+    <div className="expanded-section">
+      <h4 className="section-header">Categories</h4>
+      <div className="section-content">
+        <div className="expanded-item categories-container">
+          {categories.map((cat) => (
+            <span key={cat.id} className="category-tag">
+              {cat.category}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InstantMessagesSection({ instantMessages }: { instantMessages: ContactInstantMessage[] }) {
+  if (!instantMessages.length) return null;
+
+  const getServiceIcon = (service: string): string => {
+    const s = service.toLowerCase();
+    if (s.includes('aim')) return 'chat';
+    if (s.includes('facebook') || s.includes('messenger')) return 'forum';
+    if (s.includes('jabber') || s.includes('xmpp')) return 'chat_bubble';
+    if (s.includes('skype')) return 'video_call';
+    if (s.includes('icq')) return 'chat';
+    return 'message';
+  };
+
+  return (
+    <div className="expanded-section">
+      <h4 className="section-header">Instant Messages</h4>
+      <div className="section-content">
+        {instantMessages.map((im) => (
+          <div key={im.id} className="expanded-item">
+            <span className="material-symbols-outlined">{getServiceIcon(im.service)}</span>
+            <div className="expanded-item-content">
+              <span>{im.handle}</span>
+              <span className="item-type">{im.service}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function UrlsSection({ urls }: { urls: ContactUrl[] }) {
+  if (!urls.length) return null;
+
+  const getUrlIcon = (url: string, label: string | null): string => {
+    const urlLower = url.toLowerCase();
+    const labelLower = (label || '').toLowerCase();
+
+    if (urlLower.includes('linkedin') || labelLower.includes('linkedin')) return 'work';
+    if (urlLower.includes('whatsapp') || labelLower.includes('whatsapp')) return 'chat';
+    if (urlLower.includes('twitter') || urlLower.includes('x.com') || labelLower.includes('twitter')) return 'tag';
+    if (urlLower.includes('facebook') || labelLower.includes('facebook')) return 'group';
+    if (urlLower.includes('instagram') || labelLower.includes('instagram')) return 'photo_camera';
+    if (urlLower.includes('github') || labelLower.includes('github')) return 'code';
+    if (labelLower.includes('home') || labelLower.includes('homepage')) return 'home';
+    if (labelLower.includes('work') || labelLower.includes('business')) return 'business';
+    return 'link';
+  };
+
+  const getDisplayLabel = (url: string, label: string | null): string => {
+    if (label) return label;
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname.replace('www.', '');
+    } catch {
+      return 'Link';
+    }
+  };
+
+  return (
+    <div className="expanded-section">
+      <h4 className="section-header">Links</h4>
+      <div className="section-content">
+        {urls.map((u) => (
+          <div key={u.id} className="expanded-item">
+            <span className="material-symbols-outlined">{getUrlIcon(u.url, u.label)}</span>
+            <div className="expanded-item-content">
+              <a href={u.url} target="_blank" rel="noopener noreferrer">
+                {getDisplayLabel(u.url, u.label)}
+              </a>
+              {u.label && <span className="item-type">{u.label}</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RelatedPeopleSection({ relatedPeople }: { relatedPeople: ContactRelatedPerson[] }) {
+  if (!relatedPeople.length) return null;
+
+  const getRelationshipIcon = (relationship: string | null): string => {
+    const r = (relationship || '').toLowerCase();
+    if (r.includes('spouse') || r.includes('partner') || r.includes('husband') || r.includes('wife')) return 'favorite';
+    if (r.includes('child') || r.includes('son') || r.includes('daughter')) return 'child_care';
+    if (r.includes('parent') || r.includes('mother') || r.includes('father')) return 'family_restroom';
+    if (r.includes('sibling') || r.includes('brother') || r.includes('sister')) return 'group';
+    if (r.includes('friend')) return 'person';
+    if (r.includes('assistant') || r.includes('manager')) return 'badge';
+    return 'person';
+  };
+
+  return (
+    <div className="expanded-section">
+      <h4 className="section-header">Related People</h4>
+      <div className="section-content">
+        {relatedPeople.map((person) => (
+          <div key={person.id} className="expanded-item">
+            <span className="material-symbols-outlined">{getRelationshipIcon(person.relationship)}</span>
+            <div className="expanded-item-content">
+              <span>{person.name}</span>
+              {person.relationship && <span className="item-type">{person.relationship}</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MetadataSection({ createdAt, updatedAt }: { createdAt: string; updatedAt: string }) {
   return (
     <div className="expanded-section metadata-section">
@@ -137,6 +304,11 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
   const hasContactInfo = contact.emails.length > 0 || contact.phones.length > 0;
   const hasLocations = contact.addresses.length > 0;
   const hasSocial = contact.socialProfiles.length > 0;
+  const hasCategories = contact.categories?.length > 0;
+  const hasInstantMessages = contact.instantMessages?.length > 0;
+  const hasUrls = contact.urls?.length > 0;
+  const hasRelatedPeople = contact.relatedPeople?.length > 0;
+  const hasBirthday = !!contact.birthday;
 
   return (
     <div className="expanded-content" onClick={(e) => e.stopPropagation()}>
@@ -159,26 +331,43 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
         </div>
       </div>
 
+      {/* Categories row */}
+      {hasCategories && (
+        <CategoriesSection categories={contact.categories} />
+      )}
+
       {/* Main content grid */}
       <div className="expanded-grid">
-        {/* Left column: Contact Info */}
+        {/* Left column: Contact Info + Instant Messages */}
         <div className="expanded-column">
           {hasContactInfo && (
             <ContactInfoSection emails={contact.emails} phones={contact.phones} />
           )}
+          {hasInstantMessages && (
+            <InstantMessagesSection instantMessages={contact.instantMessages} />
+          )}
         </div>
 
-        {/* Center column: Locations */}
+        {/* Center column: Locations + Birthday + Related People */}
         <div className="expanded-column">
           {hasLocations && (
             <LocationsSection addresses={contact.addresses} />
           )}
+          {hasBirthday && (
+            <BirthdaySection birthday={contact.birthday!} />
+          )}
+          {hasRelatedPeople && (
+            <RelatedPeopleSection relatedPeople={contact.relatedPeople} />
+          )}
         </div>
 
-        {/* Right column: Social + Metadata */}
+        {/* Right column: Social + URLs + Metadata */}
         <div className="expanded-column">
           {hasSocial && (
             <SocialLinksSection socialProfiles={contact.socialProfiles} />
+          )}
+          {hasUrls && (
+            <UrlsSection urls={contact.urls} />
           )}
           <MetadataSection createdAt={contact.createdAt} updatedAt={contact.updatedAt} />
         </div>

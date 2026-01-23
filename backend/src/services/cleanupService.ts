@@ -221,6 +221,7 @@ function getContactDetails(contactIds: number[]): ContactDetail[] {
       company,
       title,
       notes,
+      birthday,
       photo_hash as photoHash,
       raw_vcard as rawVcard,
       created_at as createdAt,
@@ -235,6 +236,7 @@ function getContactDetails(contactIds: number[]): ContactDetail[] {
     company: string | null;
     title: string | null;
     notes: string | null;
+    birthday: string | null;
     photoHash: string | null;
     rawVcard: string | null;
     createdAt: string;
@@ -288,12 +290,40 @@ function getContactDetails(contactIds: number[]): ContactDetail[] {
       WHERE contact_id = ?
     `).all(contact.id) as ContactSocialProfile[];
 
+    const categories = db.prepare(`
+      SELECT id, contact_id as contactId, category
+      FROM contact_categories
+      WHERE contact_id = ?
+    `).all(contact.id) as Array<{ id: number; contactId: number; category: string }>;
+
+    const instantMessages = db.prepare(`
+      SELECT id, contact_id as contactId, service, handle, type
+      FROM contact_instant_messages
+      WHERE contact_id = ?
+    `).all(contact.id) as Array<{ id: number; contactId: number; service: string; handle: string; type: string | null }>;
+
+    const urls = db.prepare(`
+      SELECT id, contact_id as contactId, url, label, type
+      FROM contact_urls
+      WHERE contact_id = ?
+    `).all(contact.id) as Array<{ id: number; contactId: number; url: string; label: string | null; type: string | null }>;
+
+    const relatedPeople = db.prepare(`
+      SELECT id, contact_id as contactId, name, relationship
+      FROM contact_related_people
+      WHERE contact_id = ?
+    `).all(contact.id) as Array<{ id: number; contactId: number; name: string; relationship: string | null }>;
+
     return {
       ...contact,
       emails: emails.map(e => ({ ...e, isPrimary: Boolean(e.isPrimary) })),
       phones: phones.map(p => ({ ...p, isPrimary: Boolean(p.isPrimary) })),
       addresses,
       socialProfiles,
+      categories,
+      instantMessages,
+      urls,
+      relatedPeople,
       photoUrl: getPhotoUrl(contact.photoHash, 'medium')
     };
   });

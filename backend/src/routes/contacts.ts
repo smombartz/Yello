@@ -20,6 +20,7 @@ interface ContactRow {
   company: string | null;
   title: string | null;
   notes: string | null;
+  birthday: string | null;
   photo_hash: string | null;
   raw_vcard: string | null;
   created_at: string;
@@ -70,6 +71,35 @@ interface SocialProfileRow {
   username: string;
   profile_url: string | null;
   type: string | null;
+}
+
+interface CategoryRow {
+  id: number;
+  contact_id: number;
+  category: string;
+}
+
+interface InstantMessageRow {
+  id: number;
+  contact_id: number;
+  service: string;
+  handle: string;
+  type: string | null;
+}
+
+interface UrlRow {
+  id: number;
+  contact_id: number;
+  url: string;
+  label: string | null;
+  type: string | null;
+}
+
+interface RelatedPersonRow {
+  id: number;
+  contact_id: number;
+  name: string;
+  relationship: string | null;
 }
 
 interface CountRow {
@@ -183,7 +213,7 @@ export default async function contactsRoutes(
 
     const contact = db.prepare(`
       SELECT
-        id, first_name, last_name, display_name, company, title, notes,
+        id, first_name, last_name, display_name, company, title, notes, birthday,
         photo_hash, raw_vcard, created_at, updated_at
       FROM contacts
       WHERE id = ?
@@ -217,6 +247,30 @@ export default async function contactsRoutes(
       WHERE contact_id = ?
     `).all(id) as SocialProfileRow[];
 
+    const categories = db.prepare(`
+      SELECT id, contact_id, category
+      FROM contact_categories
+      WHERE contact_id = ?
+    `).all(id) as CategoryRow[];
+
+    const instantMessages = db.prepare(`
+      SELECT id, contact_id, service, handle, type
+      FROM contact_instant_messages
+      WHERE contact_id = ?
+    `).all(id) as InstantMessageRow[];
+
+    const urls = db.prepare(`
+      SELECT id, contact_id, url, label, type
+      FROM contact_urls
+      WHERE contact_id = ?
+    `).all(id) as UrlRow[];
+
+    const relatedPeople = db.prepare(`
+      SELECT id, contact_id, name, relationship
+      FROM contact_related_people
+      WHERE contact_id = ?
+    `).all(id) as RelatedPersonRow[];
+
     return {
       id: contact.id,
       firstName: contact.first_name,
@@ -225,6 +279,7 @@ export default async function contactsRoutes(
       company: contact.company,
       title: contact.title,
       notes: contact.notes,
+      birthday: contact.birthday,
       photoHash: contact.photo_hash,
       rawVcard: contact.raw_vcard,
       createdAt: contact.created_at,
@@ -261,6 +316,31 @@ export default async function contactsRoutes(
         username: s.username,
         profileUrl: s.profile_url,
         type: s.type
+      })),
+      categories: categories.map(c => ({
+        id: c.id,
+        contactId: c.contact_id,
+        category: c.category
+      })),
+      instantMessages: instantMessages.map(im => ({
+        id: im.id,
+        contactId: im.contact_id,
+        service: im.service,
+        handle: im.handle,
+        type: im.type
+      })),
+      urls: urls.map(u => ({
+        id: u.id,
+        contactId: u.contact_id,
+        url: u.url,
+        label: u.label,
+        type: u.type
+      })),
+      relatedPeople: relatedPeople.map(rp => ({
+        id: rp.id,
+        contactId: rp.contact_id,
+        name: rp.name,
+        relationship: rp.relationship
       })),
       photoUrl: getPhotoUrl(contact.photo_hash, 'medium')
     };

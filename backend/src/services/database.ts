@@ -30,6 +30,7 @@ export function getDatabase(): DatabaseType {
       company TEXT,
       title TEXT,
       notes TEXT,
+      birthday TEXT,
       photo_hash TEXT,
       raw_vcard TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -71,6 +72,35 @@ export function getDatabase(): DatabaseType {
       username TEXT NOT NULL,
       profile_url TEXT,
       type TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS contact_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+      category TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS contact_instant_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+      service TEXT NOT NULL,
+      handle TEXT NOT NULL,
+      type TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS contact_urls (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+      url TEXT NOT NULL,
+      label TEXT,
+      type TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS contact_related_people (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      relationship TEXT
     );
 
     CREATE VIRTUAL TABLE IF NOT EXISTS contacts_fts USING fts5(
@@ -123,6 +153,10 @@ export function getDatabase(): DatabaseType {
     CREATE INDEX IF NOT EXISTS idx_contact_emails_email_lower ON contact_emails(email COLLATE NOCASE);
     CREATE INDEX IF NOT EXISTS idx_contact_phones_phone ON contact_phones(phone);
     CREATE INDEX IF NOT EXISTS idx_contact_addresses_composite ON contact_addresses(street, city, postal_code);
+    CREATE INDEX IF NOT EXISTS idx_contact_categories_contact_id ON contact_categories(contact_id);
+    CREATE INDEX IF NOT EXISTS idx_contact_instant_messages_contact_id ON contact_instant_messages(contact_id);
+    CREATE INDEX IF NOT EXISTS idx_contact_urls_contact_id ON contact_urls(contact_id);
+    CREATE INDEX IF NOT EXISTS idx_contact_related_people_contact_id ON contact_related_people(contact_id);
   `);
 
   return db;

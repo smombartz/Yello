@@ -17,8 +17,8 @@ export async function importVcf(vcfContent: string): Promise<ImportResult> {
   let photosProcessed = 0;
 
   const insertContact = db.prepare(`
-    INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, photo_hash, raw_vcard)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, photo_hash, raw_vcard)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const insertEmail = db.prepare(`
@@ -34,6 +34,27 @@ export async function importVcf(vcfContent: string): Promise<ImportResult> {
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
+  const insertCategory = db.prepare(`
+    INSERT INTO contact_categories (contact_id, category) VALUES (?, ?)
+  `);
+
+  const insertInstantMessage = db.prepare(`
+    INSERT INTO contact_instant_messages (contact_id, service, handle, type) VALUES (?, ?, ?, ?)
+  `);
+
+  const insertUrl = db.prepare(`
+    INSERT INTO contact_urls (contact_id, url, label, type) VALUES (?, ?, ?, ?)
+  `);
+
+  const insertRelatedPerson = db.prepare(`
+    INSERT INTO contact_related_people (contact_id, name, relationship) VALUES (?, ?, ?)
+  `);
+
+  const insertSocialProfile = db.prepare(`
+    INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url, type)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+
   for (const contact of contacts) {
     try {
       let photoHash = null;
@@ -45,6 +66,7 @@ export async function importVcf(vcfContent: string): Promise<ImportResult> {
         contact.company,
         contact.title,
         contact.notes,
+        contact.birthday,
         null,
         contact.rawVcard
       );
@@ -77,6 +99,41 @@ export async function importVcf(vcfContent: string): Promise<ImportResult> {
           addr.postalCode,
           addr.country,
           addr.type
+        );
+      }
+
+      for (const category of contact.categories) {
+        insertCategory.run(contactId, category);
+      }
+
+      for (const im of contact.instantMessages) {
+        insertInstantMessage.run(contactId, im.service, im.handle, im.type);
+      }
+
+      for (const url of contact.urls) {
+        insertUrl.run(contactId, url.url, url.label, url.type);
+      }
+
+      for (const person of contact.relatedPeople) {
+        insertRelatedPerson.run(contactId, person.name, person.relationship);
+      }
+
+      for (const profile of contact.socialProfiles) {
+        // Extract username from URL if not provided
+        let username = profile.username;
+        if (!username && profile.url) {
+          // Try to extract username from URL path (last segment)
+          const urlMatch = profile.url.match(/\/([^\/]+)\/?$/);
+          username = urlMatch ? urlMatch[1] : profile.platform;
+        }
+        username = username || profile.platform; // Final fallback to platform name
+
+        insertSocialProfile.run(
+          contactId,
+          profile.platform,
+          username,
+          profile.url,
+          null
         );
       }
 
