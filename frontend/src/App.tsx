@@ -5,8 +5,9 @@ import { ContactList } from './components/ContactList';
 import { ImportModal } from './components/ImportModal';
 import { DeduplicationView } from './components/DeduplicationView';
 import { CleanupView } from './components/CleanupView';
+import { ArchivedView } from './components/ArchivedView';
 
-type AppView = 'contacts' | 'deduplication' | 'cleanup';
+type AppView = 'contacts' | 'deduplication' | 'cleanup' | 'archived';
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('contacts');
@@ -28,7 +29,7 @@ function App() {
       if (e.key === 'Escape') {
         if (showImportModal) {
           setShowImportModal(false);
-        } else if (currentView === 'deduplication' || currentView === 'cleanup') {
+        } else if (currentView === 'deduplication' || currentView === 'cleanup' || currentView === 'archived') {
           setCurrentView('contacts');
         }
       }
@@ -45,9 +46,30 @@ function App() {
     setCurrentView('cleanup');
   };
 
+  const handleArchivedClick = () => {
+    setCurrentView('archived');
+  };
+
   const handleBackToContacts = () => {
     setCurrentView('contacts');
   };
+
+  if (currentView === 'archived') {
+    return (
+      <div className="app-layout archived-layout">
+        <Sidebar
+          onDeduplicateClick={handleDeduplicateClick}
+          onCleanupClick={handleCleanupClick}
+          onArchivedClick={handleArchivedClick}
+          onBackToContacts={handleBackToContacts}
+          currentView="archived"
+        />
+        <main className="main-content">
+          <ArchivedView onBack={handleBackToContacts} />
+        </main>
+      </div>
+    );
+  }
 
   if (currentView === 'cleanup') {
     return (
@@ -55,6 +77,7 @@ function App() {
         <Sidebar
           onDeduplicateClick={handleDeduplicateClick}
           onCleanupClick={handleCleanupClick}
+          onArchivedClick={handleArchivedClick}
           onBackToContacts={handleBackToContacts}
           currentView="cleanup"
         />
@@ -71,6 +94,7 @@ function App() {
         <Sidebar
           onDeduplicateClick={handleDeduplicateClick}
           onCleanupClick={handleCleanupClick}
+          onArchivedClick={handleArchivedClick}
           onBackToContacts={handleBackToContacts}
           currentView="deduplication"
         />
@@ -87,6 +111,7 @@ function App() {
         <Sidebar
           onDeduplicateClick={handleDeduplicateClick}
           onCleanupClick={handleCleanupClick}
+          onArchivedClick={handleArchivedClick}
           currentView="contacts"
         />
         <main className="main-content">

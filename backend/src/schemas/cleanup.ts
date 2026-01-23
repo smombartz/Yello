@@ -91,3 +91,16 @@ export const DeleteContactsResponseSchema = Type.Object({
 export const CleanupErrorSchema = Type.Object({
   error: Type.String()
 });
+
+// Schema for getting all contact IDs (for bulk selection)
+export const CleanupIdsQuerySchema = Type.Object({
+  mode: CleanupModeSchema,
+  types: Type.Optional(Type.String()),
+  threshold: Type.Optional(Type.Number({ default: 3 }))
+});
+
+export type CleanupIdsQuery = Static<typeof CleanupIdsQuerySchema>;
+
+export const CleanupIdsResponseSchema = Type.Object({
+  contactIds: Type.Array(Type.Number())
+});

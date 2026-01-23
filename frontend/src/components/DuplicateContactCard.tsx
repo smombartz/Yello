@@ -75,7 +75,6 @@ export function DuplicateContactCard({
           >
             <span className="material-symbols-outlined">mail</span>
             <span className="value">{email.email}</span>
-            {email.type && <span className="type">{email.type}</span>}
           </div>
         ))}
 
@@ -87,7 +86,6 @@ export function DuplicateContactCard({
           >
             <span className="material-symbols-outlined">phone</span>
             <span className="value">{phone.phoneDisplay}</span>
-            {phone.type && <span className="type">{phone.type}</span>}
           </div>
         ))}
 
@@ -99,7 +97,6 @@ export function DuplicateContactCard({
           >
             <span className="material-symbols-outlined">location_on</span>
             <span className="value">{formatSingleAddress(addr)}</span>
-            {addr.type && <span className="type">{addr.type}</span>}
           </div>
         ))}
 
@@ -111,7 +108,6 @@ export function DuplicateContactCard({
           >
             <span className="material-symbols-outlined">share</span>
             <span className="value">{social.platform}: @{social.username}</span>
-            {social.type && <span className="type">{social.type}</span>}
           </div>
         ))}
 
@@ -126,7 +122,6 @@ export function DuplicateContactCard({
               >
                 <span className="material-symbols-outlined">mail</span>
                 <span className="value">{email.email}</span>
-                {email.type && <span className="type">{email.type}</span>}
               </div>
             ))}
 
@@ -138,7 +133,6 @@ export function DuplicateContactCard({
               >
                 <span className="material-symbols-outlined">phone</span>
                 <span className="value">{phone.phoneDisplay}</span>
-                {phone.type && <span className="type">{phone.type}</span>}
               </div>
             ))}
 
@@ -150,7 +144,6 @@ export function DuplicateContactCard({
               >
                 <span className="material-symbols-outlined">share</span>
                 <span className="value">{social.platform}: @{social.username}</span>
-                {social.type && <span className="type">{social.type}</span>}
               </div>
             ))}
 

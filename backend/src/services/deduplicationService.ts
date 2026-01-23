@@ -12,11 +12,13 @@ interface DuplicateMatch {
 function findEmailDuplicates(limit: number, offset: number): DuplicateMatch[] {
   const db = getDatabase();
   return db.prepare(`
-    SELECT LOWER(email) as matchValue, GROUP_CONCAT(DISTINCT contact_id) as contactIds
-    FROM contact_emails
-    GROUP BY LOWER(email)
-    HAVING COUNT(DISTINCT contact_id) > 1
-    ORDER BY COUNT(DISTINCT contact_id) DESC
+    SELECT LOWER(e.email) as matchValue, GROUP_CONCAT(DISTINCT e.contact_id) as contactIds
+    FROM contact_emails e
+    JOIN contacts c ON e.contact_id = c.id
+    WHERE c.archived_at IS NULL
+    GROUP BY LOWER(e.email)
+    HAVING COUNT(DISTINCT e.contact_id) > 1
+    ORDER BY COUNT(DISTINCT e.contact_id) DESC
     LIMIT ? OFFSET ?
   `).all(limit, offset) as DuplicateMatch[];
 }
@@ -24,12 +26,13 @@ function findEmailDuplicates(limit: number, offset: number): DuplicateMatch[] {
 function findPhoneDuplicates(limit: number, offset: number): DuplicateMatch[] {
   const db = getDatabase();
   return db.prepare(`
-    SELECT phone as matchValue, GROUP_CONCAT(DISTINCT contact_id) as contactIds
-    FROM contact_phones
-    WHERE phone != ''
-    GROUP BY phone
-    HAVING COUNT(DISTINCT contact_id) > 1
-    ORDER BY COUNT(DISTINCT contact_id) DESC
+    SELECT p.phone as matchValue, GROUP_CONCAT(DISTINCT p.contact_id) as contactIds
+    FROM contact_phones p
+    JOIN contacts c ON p.contact_id = c.id
+    WHERE p.phone != '' AND c.archived_at IS NULL
+    GROUP BY p.phone
+    HAVING COUNT(DISTINCT p.contact_id) > 1
+    ORDER BY COUNT(DISTINCT p.contact_id) DESC
     LIMIT ? OFFSET ?
   `).all(limit, offset) as DuplicateMatch[];
 }
@@ -38,13 +41,15 @@ function findAddressDuplicates(limit: number, offset: number): DuplicateMatch[] 
   const db = getDatabase();
   return db.prepare(`
     SELECT
-      LOWER(COALESCE(street, '')) || '|' || LOWER(COALESCE(city, '')) || '|' || LOWER(COALESCE(postal_code, '')) as matchValue,
-      GROUP_CONCAT(DISTINCT contact_id) as contactIds
-    FROM contact_addresses
-    WHERE street IS NOT NULL AND street != '' AND city IS NOT NULL AND city != ''
-    GROUP BY LOWER(street), LOWER(city), LOWER(postal_code)
-    HAVING COUNT(DISTINCT contact_id) > 1
-    ORDER BY COUNT(DISTINCT contact_id) DESC
+      LOWER(COALESCE(a.street, '')) || '|' || LOWER(COALESCE(a.city, '')) || '|' || LOWER(COALESCE(a.postal_code, '')) as matchValue,
+      GROUP_CONCAT(DISTINCT a.contact_id) as contactIds
+    FROM contact_addresses a
+    JOIN contacts c ON a.contact_id = c.id
+    WHERE a.street IS NOT NULL AND a.street != '' AND a.city IS NOT NULL AND a.city != ''
+      AND c.archived_at IS NULL
+    GROUP BY LOWER(a.street), LOWER(a.city), LOWER(a.postal_code)
+    HAVING COUNT(DISTINCT a.contact_id) > 1
+    ORDER BY COUNT(DISTINCT a.contact_id) DESC
     LIMIT ? OFFSET ?
   `).all(limit, offset) as DuplicateMatch[];
 }
@@ -53,12 +58,14 @@ function findSocialDuplicates(limit: number, offset: number): DuplicateMatch[] {
   const db = getDatabase();
   return db.prepare(`
     SELECT
-      platform || ':' || username as matchValue,
-      GROUP_CONCAT(DISTINCT contact_id) as contactIds
-    FROM contact_social_profiles
-    GROUP BY platform, username
-    HAVING COUNT(DISTINCT contact_id) > 1
-    ORDER BY COUNT(DISTINCT contact_id) DESC
+      s.platform || ':' || s.username as matchValue,
+      GROUP_CONCAT(DISTINCT s.contact_id) as contactIds
+    FROM contact_social_profiles s
+    JOIN contacts c ON s.contact_id = c.id
+    WHERE c.archived_at IS NULL
+    GROUP BY s.platform, s.username
+    HAVING COUNT(DISTINCT s.contact_id) > 1
+    ORDER BY COUNT(DISTINCT s.contact_id) DESC
     LIMIT ? OFFSET ?
   `).all(limit, offset) as DuplicateMatch[];
 }
@@ -68,9 +75,11 @@ function countEmailDuplicateGroups(): number {
   const result = db.prepare(`
     SELECT COUNT(*) as count FROM (
       SELECT 1
-      FROM contact_emails
-      GROUP BY LOWER(email)
-      HAVING COUNT(DISTINCT contact_id) > 1
+      FROM contact_emails e
+      JOIN contacts c ON e.contact_id = c.id
+      WHERE c.archived_at IS NULL
+      GROUP BY LOWER(e.email)
+      HAVING COUNT(DISTINCT e.contact_id) > 1
     )
   `).get() as { count: number };
   return result.count;
@@ -81,10 +90,11 @@ function countPhoneDuplicateGroups(): number {
   const result = db.prepare(`
     SELECT COUNT(*) as count FROM (
       SELECT 1
-      FROM contact_phones
-      WHERE phone != ''
-      GROUP BY phone
-      HAVING COUNT(DISTINCT contact_id) > 1
+      FROM contact_phones p
+      JOIN contacts c ON p.contact_id = c.id
+      WHERE p.phone != '' AND c.archived_at IS NULL
+      GROUP BY p.phone
+      HAVING COUNT(DISTINCT p.contact_id) > 1
     )
   `).get() as { count: number };
   return result.count;
@@ -95,10 +105,12 @@ function countAddressDuplicateGroups(): number {
   const result = db.prepare(`
     SELECT COUNT(*) as count FROM (
       SELECT 1
-      FROM contact_addresses
-      WHERE street IS NOT NULL AND street != '' AND city IS NOT NULL AND city != ''
-      GROUP BY LOWER(street), LOWER(city), LOWER(postal_code)
-      HAVING COUNT(DISTINCT contact_id) > 1
+      FROM contact_addresses a
+      JOIN contacts c ON a.contact_id = c.id
+      WHERE a.street IS NOT NULL AND a.street != '' AND a.city IS NOT NULL AND a.city != ''
+        AND c.archived_at IS NULL
+      GROUP BY LOWER(a.street), LOWER(a.city), LOWER(a.postal_code)
+      HAVING COUNT(DISTINCT a.contact_id) > 1
     )
   `).get() as { count: number };
   return result.count;
@@ -109,9 +121,11 @@ function countSocialDuplicateGroups(): number {
   const result = db.prepare(`
     SELECT COUNT(*) as count FROM (
       SELECT 1
-      FROM contact_social_profiles
-      GROUP BY platform, username
-      HAVING COUNT(DISTINCT contact_id) > 1
+      FROM contact_social_profiles s
+      JOIN contacts c ON s.contact_id = c.id
+      WHERE c.archived_at IS NULL
+      GROUP BY s.platform, s.username
+      HAVING COUNT(DISTINCT s.contact_id) > 1
     )
   `).get() as { count: number };
   return result.count;
@@ -203,9 +217,9 @@ function loadContactMatchData(): Map<number, ContactMatchData> {
   const db = getDatabase();
   const contacts = new Map<number, ContactMatchData>();
 
-  // Load basic contact info
+  // Load basic contact info (excluding archived contacts)
   const contactRows = db.prepare(`
-    SELECT id, display_name as displayName FROM contacts
+    SELECT id, display_name as displayName FROM contacts WHERE archived_at IS NULL
   `).all() as Array<{ id: number; displayName: string }>;
 
   for (const row of contactRows) {
@@ -218,9 +232,12 @@ function loadContactMatchData(): Map<number, ContactMatchData> {
     });
   }
 
-  // Load emails
+  // Load emails (only for non-archived contacts)
   const emailRows = db.prepare(`
-    SELECT contact_id, LOWER(email) as email FROM contact_emails
+    SELECT e.contact_id, LOWER(e.email) as email
+    FROM contact_emails e
+    JOIN contacts c ON e.contact_id = c.id
+    WHERE c.archived_at IS NULL
   `).all() as Array<{ contact_id: number; email: string }>;
 
   for (const row of emailRows) {
@@ -230,9 +247,12 @@ function loadContactMatchData(): Map<number, ContactMatchData> {
     }
   }
 
-  // Load phones (normalized)
+  // Load phones (normalized, only for non-archived contacts)
   const phoneRows = db.prepare(`
-    SELECT contact_id, phone FROM contact_phones WHERE phone != ''
+    SELECT p.contact_id, p.phone
+    FROM contact_phones p
+    JOIN contacts c ON p.contact_id = c.id
+    WHERE p.phone != '' AND c.archived_at IS NULL
   `).all() as Array<{ contact_id: number; phone: string }>;
 
   for (const row of phoneRows) {
@@ -242,10 +262,12 @@ function loadContactMatchData(): Map<number, ContactMatchData> {
     }
   }
 
-  // Load social profiles
+  // Load social profiles (only for non-archived contacts)
   const socialRows = db.prepare(`
-    SELECT contact_id, LOWER(platform) || ':' || LOWER(username) as social
-    FROM contact_social_profiles
+    SELECT s.contact_id, LOWER(s.platform) || ':' || LOWER(s.username) as social
+    FROM contact_social_profiles s
+    JOIN contacts c ON s.contact_id = c.id
+    WHERE c.archived_at IS NULL
   `).all() as Array<{ contact_id: number; social: string }>;
 
   for (const row of socialRows) {

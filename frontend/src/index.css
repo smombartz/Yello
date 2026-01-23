@@ -1893,3 +1893,326 @@ body {
   font-size: 0.8125rem;
   font-weight: 500;
 }
+
+/* ============================================================
+   Archive Styles
+   ============================================================ */
+
+/* Archive Selected Button (in CleanupView) */
+.archive-selected-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--stitch-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.archive-selected-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.archive-selected-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.archive-selected-button .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Cleanup Action Buttons Container */
+.cleanup-action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Archived Layout */
+.archived-layout .main-content {
+  margin-right: 0 !important;
+}
+
+/* Archived View */
+.archived-view {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.archived-header {
+  background-color: var(--stitch-card-bg);
+  border-bottom: 1px solid var(--stitch-border);
+  padding: 1rem 1.5rem;
+}
+
+.archived-header-top {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.archived-header-top h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.archived-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  padding: 0.125rem 0.5rem;
+  background-color: var(--stitch-text-secondary);
+  color: white;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.archived-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Export Button */
+.export-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--stitch-card-bg);
+  color: var(--stitch-text-main);
+  border: 1px solid var(--stitch-border);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.export-button:hover {
+  background-color: var(--stitch-background);
+  border-color: var(--stitch-text-secondary);
+}
+
+.export-button .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Restore Button */
+.restore-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.restore-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.restore-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.restore-button .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Archived Content */
+.archived-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.archived-loading,
+.archived-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--stitch-text-secondary);
+}
+
+.archived-loading .material-symbols-outlined,
+.archived-empty .material-symbols-outlined {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.archived-empty .material-symbols-outlined {
+  color: var(--stitch-text-secondary);
+}
+
+.archived-empty h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  color: var(--stitch-text-main);
+}
+
+.archived-empty p {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+/* Archived List */
+.archived-list {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.archived-list-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--stitch-card-bg);
+  border-bottom: 1px solid var(--stitch-border);
+}
+
+.archived-selection-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.archived-selection-count {
+  font-size: 0.875rem;
+  color: var(--stitch-primary);
+  font-weight: 500;
+}
+
+.archived-list-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+/* Archived Card */
+.archived-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background-color: var(--stitch-card-bg);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 0.75rem;
+  transition: box-shadow 0.15s;
+}
+
+.archived-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.archived-card.selected {
+  box-shadow: 0 0 0 2px var(--stitch-primary);
+}
+
+.archived-card-checkbox {
+  padding-top: 0.25rem;
+}
+
+.archived-card-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--stitch-primary);
+}
+
+.archived-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.archived-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.archived-card-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.archived-card-name .name {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--stitch-text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archived-card-name .company {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--stitch-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archived-date {
+  font-size: 0.75rem;
+  color: var(--stitch-text-secondary);
+  white-space: nowrap;
+}
+
+.archived-card-emails,
+.archived-card-phones {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.archived-card-email,
+.archived-card-phone {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--stitch-text-secondary);
+}
+
+.archived-card-email .material-symbols-outlined,
+.archived-card-phone .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+.archived-card-email .value,
+.archived-card-phone .value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more-emails {
+  font-size: 0.75rem;
+  color: var(--stitch-text-secondary);
+  font-style: italic;
+  margin-left: 1.5rem;
+}

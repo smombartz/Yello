@@ -3,7 +3,8 @@ import { CleanupModeSelector } from './CleanupModeSelector';
 import { ThresholdSelector } from './ThresholdSelector';
 import { CleanupFilters } from './CleanupFilters';
 import { CleanupContactList } from './CleanupContactList';
-import { useCleanupSummary, useCleanupContacts, useDeleteContacts } from '../api/cleanupHooks';
+import { useCleanupSummary, useCleanupContacts, useDeleteContacts, fetchAllCleanupContactIds } from '../api/cleanupHooks';
+import { useArchiveContacts } from '../api/archiveHooks';
 import type {
   CleanupMode,
   EmptyContactType,
@@ -28,7 +29,9 @@ export function CleanupView({ onBack: _onBack }: CleanupViewProps) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [selectedTypes, setSelectedTypes] = useState<Set<EmptyContactType | ProblematicContactType>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [isSelectingAll, setIsSelectingAll] = useState(false);
 
   const { data: summary, isLoading: isSummaryLoading } = useCleanupSummary(threshold);
 
@@ -46,6 +49,7 @@ export function CleanupView({ onBack: _onBack }: CleanupViewProps) {
   });
 
   const deleteMutation = useDeleteContacts();
+  const archiveMutation = useArchiveContacts();
 
   // Reset state when mode changes
   useEffect(() => {
@@ -100,7 +104,8 @@ export function CleanupView({ onBack: _onBack }: CleanupViewProps) {
     });
   }, []);
 
-  const handleSelectAll = useCallback(() => {
+  // Select all contacts on current page only
+  const handleSelectPage = useCallback(() => {
     if (!contactsData?.contacts) return;
     setSelectedIds(prev => {
       const newSet = new Set(prev);
@@ -108,6 +113,22 @@ export function CleanupView({ onBack: _onBack }: CleanupViewProps) {
       return newSet;
     });
   }, [contactsData]);
+
+  // Select all contacts across all pages
+  const handleSelectAll = useCallback(async () => {
+    setIsSelectingAll(true);
+    try {
+      const allIds = await fetchAllCleanupContactIds(selectedMode, {
+        types: typesArray,
+        threshold,
+      });
+      setSelectedIds(new Set(allIds));
+    } catch (error) {
+      console.error('Failed to fetch all contact IDs:', error);
+    } finally {
+      setIsSelectingAll(false);
+    }
+  }, [selectedMode, typesArray, threshold]);
 
   const handleSelectNone = useCallback(() => {
     setSelectedIds(new Set());
@@ -136,6 +157,30 @@ export function CleanupView({ onBack: _onBack }: CleanupViewProps) {
 
     setShowDeleteConfirm(false);
   }, [selectedIds, deleteMutation, toast]);
+
+  const handleArchive = useCallback(() => {
+    if (selectedIds.size === 0) return;
+
+    archiveMutation.mutate(Array.from(selectedIds), {
+      onSuccess: (result) => {
+        const message = `Archived ${result.archivedCount} contact${result.archivedCount !== 1 ? 's' : ''}`;
+
+        // Clear selection
+        setSelectedIds(new Set());
+
+        // Clear any existing toast timeout
+        if (toast?.timeout) {
+          clearTimeout(toast.timeout);
+        }
+
+        // Show success toast
+        const timeout = setTimeout(() => setToast(null), 5000);
+        setToast({ message, timeout });
+      },
+    });
+
+    setShowArchiveConfirm(false);
+  }, [selectedIds, archiveMutation, toast]);
 
   const contacts = contactsData?.contacts ?? [];
   const total = contactsData?.total ?? 0;
@@ -178,16 +223,28 @@ export function CleanupView({ onBack: _onBack }: CleanupViewProps) {
               {total} contact{total !== 1 ? 's' : ''} found
             </div>
             {selectedIds.size > 0 && (
-              <button
-                className="delete-selected-button"
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={deleteMutation.isPending}
-              >
-                <span className="material-symbols-outlined">delete</span>
-                {deleteMutation.isPending
-                  ? 'Deleting...'
-                  : `Delete Selected (${selectedIds.size})`}
-              </button>
+              <div className="cleanup-action-buttons">
+                <button
+                  className="archive-selected-button"
+                  onClick={() => setShowArchiveConfirm(true)}
+                  disabled={archiveMutation.isPending}
+                >
+                  <span className="material-symbols-outlined">archive</span>
+                  {archiveMutation.isPending
+                    ? 'Archiving...'
+                    : `Archive Selected (${selectedIds.size})`}
+                </button>
+                <button
+                  className="delete-selected-button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={deleteMutation.isPending}
+                >
+                  <span className="material-symbols-outlined">delete</span>
+                  {deleteMutation.isPending
+                    ? 'Deleting...'
+                    : `Delete Selected (${selectedIds.size})`}
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -204,12 +261,15 @@ export function CleanupView({ onBack: _onBack }: CleanupViewProps) {
             contacts={contacts}
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
+            onSelectPage={handleSelectPage}
             onSelectAll={handleSelectAll}
             onSelectNone={handleSelectNone}
             currentPage={currentPage}
             totalPages={totalPages}
+            totalContacts={total}
             onPageChange={setCurrentPage}
             isLoading={isFetching}
+            isSelectingAll={isSelectingAll}
             mode={selectedMode}
           />
         )}
@@ -247,6 +307,28 @@ export function CleanupView({ onBack: _onBack }: CleanupViewProps) {
                 onClick={handleDelete}
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showArchiveConfirm && (
+        <div className="modal-overlay" onClick={() => setShowArchiveConfirm(false)}>
+          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
+            <h3>Archive {selectedIds.size} Contact{selectedIds.size !== 1 ? 's' : ''}?</h3>
+            <p>
+              Archived contacts will be moved to the Archive section. You can restore them later or permanently delete them.
+            </p>
+            <div className="confirm-actions">
+              <button className="cancel-button" onClick={() => setShowArchiveConfirm(false)}>
+                Cancel
+              </button>
+              <button
+                className="confirm-button"
+                onClick={handleArchive}
+              >
+                Archive
               </button>
             </div>
           </div>

@@ -44,6 +44,7 @@ function countTrulyEmptyContacts(): number {
       AND cp.id IS NULL
       AND ca.id IS NULL
       AND csp.id IS NULL
+      AND c.archived_at IS NULL
   `).get() as { count: number };
   return result.count;
 }
@@ -68,6 +69,7 @@ function countNameOnlyContacts(): number {
       AND (c.company IS NULL OR TRIM(c.company) = '')
       AND (c.title IS NULL OR TRIM(c.title) = '')
       AND (c.notes IS NULL OR TRIM(c.notes) = '')
+      AND c.archived_at IS NULL
   `).get() as { count: number };
   return result.count;
 }
@@ -89,6 +91,7 @@ function findTrulyEmptyContactIds(limit: number, offset: number): number[] {
       AND cp.id IS NULL
       AND ca.id IS NULL
       AND csp.id IS NULL
+      AND c.archived_at IS NULL
     ORDER BY c.id
     LIMIT ? OFFSET ?
   `).all(limit, offset) as Array<{ id: number }>;
@@ -115,6 +118,7 @@ function findNameOnlyContactIds(limit: number, offset: number): number[] {
       AND (c.company IS NULL OR TRIM(c.company) = '')
       AND (c.title IS NULL OR TRIM(c.title) = '')
       AND (c.notes IS NULL OR TRIM(c.notes) = '')
+      AND c.archived_at IS NULL
     ORDER BY c.display_name
     LIMIT ? OFFSET ?
   `).all(limit, offset) as Array<{ id: number }>;
@@ -135,7 +139,7 @@ function countManyDomainsContacts(threshold: number): number {
       SELECT c.id
       FROM contacts c
       JOIN contact_emails ce ON ce.contact_id = c.id
-      WHERE INSTR(ce.email, '@') > 0
+      WHERE INSTR(ce.email, '@') > 0 AND c.archived_at IS NULL
       GROUP BY c.id
       HAVING COUNT(DISTINCT LOWER(SUBSTR(ce.email, INSTR(ce.email, '@') + 1))) >= ?
     )
@@ -153,7 +157,8 @@ function countSameDomainContacts(): number {
     SELECT COUNT(DISTINCT contact_id) as count FROM (
       SELECT ce.contact_id, LOWER(SUBSTR(ce.email, INSTR(ce.email, '@') + 1)) as domain
       FROM contact_emails ce
-      WHERE INSTR(ce.email, '@') > 0
+      JOIN contacts c ON c.id = ce.contact_id
+      WHERE INSTR(ce.email, '@') > 0 AND c.archived_at IS NULL
       GROUP BY ce.contact_id, domain
       HAVING COUNT(DISTINCT LOWER(SUBSTR(ce.email, 1, INSTR(ce.email, '@') - 1))) > 1
     )
@@ -170,7 +175,7 @@ function findManyDomainsContactIds(threshold: number, limit: number, offset: num
     SELECT c.id, COUNT(DISTINCT LOWER(SUBSTR(ce.email, INSTR(ce.email, '@') + 1))) as domainCount
     FROM contacts c
     JOIN contact_emails ce ON ce.contact_id = c.id
-    WHERE INSTR(ce.email, '@') > 0
+    WHERE INSTR(ce.email, '@') > 0 AND c.archived_at IS NULL
     GROUP BY c.id
     HAVING domainCount >= ?
     ORDER BY domainCount DESC, c.display_name
@@ -192,7 +197,8 @@ function findSameDomainContactIds(limit: number, offset: number): Array<{ id: nu
              LOWER(SUBSTR(ce.email, INSTR(ce.email, '@') + 1)) as domain,
              COUNT(DISTINCT LOWER(SUBSTR(ce.email, 1, INSTR(ce.email, '@') - 1))) as usernameCount
       FROM contact_emails ce
-      WHERE INSTR(ce.email, '@') > 0
+      JOIN contacts c ON c.id = ce.contact_id
+      WHERE INSTR(ce.email, '@') > 0 AND c.archived_at IS NULL
       GROUP BY ce.contact_id, domain
       HAVING usernameCount > 1
     )
@@ -489,6 +495,110 @@ export function findProblematicContacts(
   }
 
   return { contacts: results, total: totalCount };
+}
+
+/**
+ * Get all empty contact IDs (no pagination, for bulk selection)
+ */
+export function getAllEmptyContactIds(types?: EmptyContactType[]): number[] {
+  const includeTypes = types && types.length > 0
+    ? types
+    : ['truly_empty', 'name_only'] as EmptyContactType[];
+
+  const results: number[] = [];
+
+  if (includeTypes.includes('truly_empty')) {
+    const db = getDatabase();
+    const rows = db.prepare(`
+      SELECT c.id
+      FROM contacts c
+      LEFT JOIN contact_emails ce ON ce.contact_id = c.id
+      LEFT JOIN contact_phones cp ON cp.contact_id = c.id
+      LEFT JOIN contact_addresses ca ON ca.contact_id = c.id
+      LEFT JOIN contact_social_profiles csp ON csp.contact_id = c.id
+      WHERE (c.display_name IS NULL OR TRIM(c.display_name) = '')
+        AND ce.id IS NULL
+        AND cp.id IS NULL
+        AND ca.id IS NULL
+        AND csp.id IS NULL
+        AND c.archived_at IS NULL
+      ORDER BY c.id
+    `).all() as Array<{ id: number }>;
+    results.push(...rows.map(r => r.id));
+  }
+
+  if (includeTypes.includes('name_only')) {
+    const db = getDatabase();
+    const rows = db.prepare(`
+      SELECT c.id
+      FROM contacts c
+      LEFT JOIN contact_emails ce ON ce.contact_id = c.id
+      LEFT JOIN contact_phones cp ON cp.contact_id = c.id
+      LEFT JOIN contact_addresses ca ON ca.contact_id = c.id
+      LEFT JOIN contact_social_profiles csp ON csp.contact_id = c.id
+      WHERE c.display_name IS NOT NULL AND TRIM(c.display_name) != ''
+        AND ce.id IS NULL
+        AND cp.id IS NULL
+        AND ca.id IS NULL
+        AND csp.id IS NULL
+        AND (c.company IS NULL OR TRIM(c.company) = '')
+        AND (c.title IS NULL OR TRIM(c.title) = '')
+        AND (c.notes IS NULL OR TRIM(c.notes) = '')
+        AND c.archived_at IS NULL
+      ORDER BY c.display_name
+    `).all() as Array<{ id: number }>;
+    results.push(...rows.map(r => r.id));
+  }
+
+  return results;
+}
+
+/**
+ * Get all problematic contact IDs (no pagination, for bulk selection)
+ */
+export function getAllProblematicContactIds(
+  threshold: number = 3,
+  types?: ProblematicContactType[]
+): number[] {
+  const includeTypes = types && types.length > 0
+    ? types
+    : ['many_domains', 'same_domain'] as ProblematicContactType[];
+
+  const results: number[] = [];
+
+  if (includeTypes.includes('many_domains')) {
+    const db = getDatabase();
+    const rows = db.prepare(`
+      SELECT c.id
+      FROM contacts c
+      JOIN contact_emails ce ON ce.contact_id = c.id
+      WHERE INSTR(ce.email, '@') > 0 AND c.archived_at IS NULL
+      GROUP BY c.id
+      HAVING COUNT(DISTINCT LOWER(SUBSTR(ce.email, INSTR(ce.email, '@') + 1))) >= ?
+      ORDER BY COUNT(DISTINCT LOWER(SUBSTR(ce.email, INSTR(ce.email, '@') + 1))) DESC
+    `).all(threshold) as Array<{ id: number }>;
+    results.push(...rows.map(r => r.id));
+  }
+
+  if (includeTypes.includes('same_domain')) {
+    const db = getDatabase();
+    const rows = db.prepare(`
+      SELECT DISTINCT contact_id as id
+      FROM (
+        SELECT ce.contact_id,
+               LOWER(SUBSTR(ce.email, INSTR(ce.email, '@') + 1)) as domain,
+               COUNT(DISTINCT LOWER(SUBSTR(ce.email, 1, INSTR(ce.email, '@') - 1))) as usernameCount
+        FROM contact_emails ce
+        JOIN contacts c ON c.id = ce.contact_id
+        WHERE INSTR(ce.email, '@') > 0 AND c.archived_at IS NULL
+        GROUP BY ce.contact_id, domain
+        HAVING usernameCount > 1
+      )
+    `).all() as Array<{ id: number }>;
+    results.push(...rows.map(r => r.id));
+  }
+
+  return results;
 }
 
 /**

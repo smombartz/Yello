@@ -22,12 +22,17 @@ export function CleanupContactCard({
   const badge = ISSUE_BADGES[contact.issueType];
 
   return (
-    <div className={`cleanup-card ${isSelected ? 'selected' : ''}`}>
+    <div
+      className={`cleanup-card ${isSelected ? 'selected' : ''}`}
+      onClick={() => onToggleSelect(contact.id)}
+      style={{ cursor: 'pointer' }}
+    >
       <div className="cleanup-card-checkbox">
         <input
           type="checkbox"
           checked={isSelected}
           onChange={() => onToggleSelect(contact.id)}
+          onClick={(e) => e.stopPropagation()}
           aria-label={`Select ${contact.displayName || 'unnamed contact'}`}
         />
       </div>

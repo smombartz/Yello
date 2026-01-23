@@ -144,6 +144,111 @@ export function mergeContacts(contactIds: number[], primaryContactId: number): M
       }
     }
 
+    // Merge categories from secondary contacts (dedupe on category name)
+    const primaryCategories = db.prepare(`
+      SELECT LOWER(category) as category FROM contact_categories WHERE contact_id = ?
+    `).all(primaryContactId) as Array<{ category: string }>;
+    const primaryCategorySet = new Set(primaryCategories.map(c => c.category));
+
+    for (const secondaryId of secondaryContactIds) {
+      const secondaryCategories = db.prepare(`
+        SELECT category FROM contact_categories WHERE contact_id = ?
+      `).all(secondaryId) as Array<{ category: string }>;
+
+      for (const cat of secondaryCategories) {
+        if (!primaryCategorySet.has(cat.category.toLowerCase())) {
+          db.prepare(`
+            INSERT INTO contact_categories (contact_id, category) VALUES (?, ?)
+          `).run(primaryContactId, cat.category);
+          primaryCategorySet.add(cat.category.toLowerCase());
+        }
+      }
+    }
+
+    // Merge instant messages from secondary contacts (dedupe on service:handle)
+    const primaryIMs = db.prepare(`
+      SELECT LOWER(service) || ':' || LOWER(handle) as key FROM contact_instant_messages WHERE contact_id = ?
+    `).all(primaryContactId) as Array<{ key: string }>;
+    const primaryIMSet = new Set(primaryIMs.map(im => im.key));
+
+    for (const secondaryId of secondaryContactIds) {
+      const secondaryIMs = db.prepare(`
+        SELECT service, handle, type, LOWER(service) || ':' || LOWER(handle) as key
+        FROM contact_instant_messages WHERE contact_id = ?
+      `).all(secondaryId) as Array<{ service: string; handle: string; type: string | null; key: string }>;
+
+      for (const im of secondaryIMs) {
+        if (!primaryIMSet.has(im.key)) {
+          db.prepare(`
+            INSERT INTO contact_instant_messages (contact_id, service, handle, type) VALUES (?, ?, ?, ?)
+          `).run(primaryContactId, im.service, im.handle, im.type);
+          primaryIMSet.add(im.key);
+        }
+      }
+    }
+
+    // Merge URLs from secondary contacts (dedupe on url)
+    const primaryUrls = db.prepare(`
+      SELECT LOWER(url) as url FROM contact_urls WHERE contact_id = ?
+    `).all(primaryContactId) as Array<{ url: string }>;
+    const primaryUrlSet = new Set(primaryUrls.map(u => u.url));
+
+    for (const secondaryId of secondaryContactIds) {
+      const secondaryUrls = db.prepare(`
+        SELECT url, label, type FROM contact_urls WHERE contact_id = ?
+      `).all(secondaryId) as Array<{ url: string; label: string | null; type: string | null }>;
+
+      for (const urlRecord of secondaryUrls) {
+        if (!primaryUrlSet.has(urlRecord.url.toLowerCase())) {
+          db.prepare(`
+            INSERT INTO contact_urls (contact_id, url, label, type) VALUES (?, ?, ?, ?)
+          `).run(primaryContactId, urlRecord.url, urlRecord.label, urlRecord.type);
+          primaryUrlSet.add(urlRecord.url.toLowerCase());
+        }
+      }
+    }
+
+    // Merge related people from secondary contacts (dedupe on name)
+    const primaryRelated = db.prepare(`
+      SELECT LOWER(name) as name FROM contact_related_people WHERE contact_id = ?
+    `).all(primaryContactId) as Array<{ name: string }>;
+    const primaryRelatedSet = new Set(primaryRelated.map(r => r.name));
+
+    for (const secondaryId of secondaryContactIds) {
+      const secondaryRelated = db.prepare(`
+        SELECT name, relationship FROM contact_related_people WHERE contact_id = ?
+      `).all(secondaryId) as Array<{ name: string; relationship: string | null }>;
+
+      for (const person of secondaryRelated) {
+        if (!primaryRelatedSet.has(person.name.toLowerCase())) {
+          db.prepare(`
+            INSERT INTO contact_related_people (contact_id, name, relationship) VALUES (?, ?, ?)
+          `).run(primaryContactId, person.name, person.relationship);
+          primaryRelatedSet.add(person.name.toLowerCase());
+        }
+      }
+    }
+
+    // Preserve photo: if primary has no photo, use first available from secondary contacts
+    const primaryPhoto = db.prepare(`
+      SELECT photo_hash FROM contacts WHERE id = ?
+    `).get(primaryContactId) as { photo_hash: string | null };
+
+    if (!primaryPhoto.photo_hash) {
+      for (const secondaryId of secondaryContactIds) {
+        const secondaryPhoto = db.prepare(`
+          SELECT photo_hash FROM contacts WHERE id = ?
+        `).get(secondaryId) as { photo_hash: string | null };
+
+        if (secondaryPhoto.photo_hash) {
+          db.prepare(`
+            UPDATE contacts SET photo_hash = ? WHERE id = ?
+          `).run(secondaryPhoto.photo_hash, primaryContactId);
+          break;
+        }
+      }
+    }
+
     // Merge notes from secondary contacts
     const primaryContact = db.prepare(`
       SELECT notes FROM contacts WHERE id = ?

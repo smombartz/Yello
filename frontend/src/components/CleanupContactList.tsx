@@ -6,12 +6,15 @@ interface CleanupContactListProps {
   contacts: CleanupContact[];
   selectedIds: Set<number>;
   onToggleSelect: (contactId: number) => void;
+  onSelectPage: () => void;
   onSelectAll: () => void;
   onSelectNone: () => void;
   currentPage: number;
   totalPages: number;
+  totalContacts: number;
   onPageChange: (page: number) => void;
   isLoading: boolean;
+  isSelectingAll: boolean;
   mode: CleanupMode;
 }
 
@@ -19,15 +22,19 @@ export function CleanupContactList({
   contacts,
   selectedIds,
   onToggleSelect,
+  onSelectPage,
   onSelectAll,
   onSelectNone,
   currentPage,
   totalPages,
+  totalContacts,
   onPageChange,
   isLoading,
+  isSelectingAll,
   mode,
 }: CleanupContactListProps) {
   const allOnPageSelected = contacts.length > 0 && contacts.every(c => selectedIds.has(c.id));
+  const allSelected = selectedIds.size === totalContacts && totalContacts > 0;
   const someSelected = selectedIds.size > 0;
 
   if (contacts.length === 0 && !isLoading) {
@@ -49,16 +56,24 @@ export function CleanupContactList({
         <div className="cleanup-selection-actions">
           <button
             className="cleanup-action-button"
+            onClick={onSelectPage}
+            disabled={isLoading || allOnPageSelected || isSelectingAll}
+          >
+            <span className="material-symbols-outlined">check_box</span>
+            Select Page
+          </button>
+          <button
+            className="cleanup-action-button"
             onClick={onSelectAll}
-            disabled={isLoading || allOnPageSelected}
+            disabled={isLoading || allSelected || isSelectingAll}
           >
             <span className="material-symbols-outlined">select_all</span>
-            Select All
+            {isSelectingAll ? 'Selecting...' : `Select All (${totalContacts})`}
           </button>
           <button
             className="cleanup-action-button"
             onClick={onSelectNone}
-            disabled={isLoading || !someSelected}
+            disabled={isLoading || !someSelected || isSelectingAll}
           >
             <span className="material-symbols-outlined">deselect</span>
             Select None

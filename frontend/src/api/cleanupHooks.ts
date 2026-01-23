@@ -4,6 +4,7 @@ import type {
   CleanupMode,
   CleanupResponse,
   CleanupSummary,
+  CleanupIdsResponse,
   DeleteContactsResponse,
   EmptyContactType,
   ProblematicContactType
@@ -71,4 +72,28 @@ export function useDeleteContacts() {
       queryClient.invalidateQueries({ queryKey: ['duplicates'] });
     },
   });
+}
+
+// Fetch all contact IDs for the current query (for bulk "Select All" across pages)
+export async function fetchAllCleanupContactIds(
+  mode: CleanupMode,
+  options?: {
+    types?: EmptyContactType[] | ProblematicContactType[];
+    threshold?: number;
+  }
+): Promise<number[]> {
+  const { types, threshold = 3 } = options || {};
+
+  const params = new URLSearchParams({ mode });
+
+  if (types && types.length > 0) {
+    params.set('types', types.join(','));
+  }
+
+  if (mode === 'problematic') {
+    params.set('threshold', threshold.toString());
+  }
+
+  const response = await fetchApi<CleanupIdsResponse>(`/api/cleanup/ids?${params}`);
+  return response.contactIds;
 }

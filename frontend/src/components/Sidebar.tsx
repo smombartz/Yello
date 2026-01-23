@@ -17,11 +17,12 @@ function NavItem({ icon, label, active, onClick }: NavItemProps) {
 interface SidebarProps {
   onDeduplicateClick?: () => void;
   onCleanupClick?: () => void;
+  onArchivedClick?: () => void;
   onBackToContacts?: () => void;
-  currentView?: 'contacts' | 'deduplication' | 'cleanup';
+  currentView?: 'contacts' | 'deduplication' | 'cleanup' | 'archived';
 }
 
-export function Sidebar({ onDeduplicateClick, onCleanupClick, onBackToContacts, currentView = 'contacts' }: SidebarProps) {
+export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, onBackToContacts, currentView = 'contacts' }: SidebarProps) {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
@@ -34,7 +35,7 @@ export function Sidebar({ onDeduplicateClick, onCleanupClick, onBackToContacts, 
         <NavItem icon="contacts" label="All Contacts" active={currentView === 'contacts'} onClick={onBackToContacts} />
         <NavItem icon="star" label="Favorites" />
         <NavItem icon="group" label="Groups" />
-        <NavItem icon="archive" label="Archived" />
+        <NavItem icon="archive" label="Archived" active={currentView === 'archived'} onClick={onArchivedClick} />
         <NavItem icon="merge" label="Merge" active={currentView === 'deduplication'} onClick={onDeduplicateClick} />
         <NavItem icon="cleaning_services" label="Cleanup" active={currentView === 'cleanup'} onClick={onCleanupClick} />
 

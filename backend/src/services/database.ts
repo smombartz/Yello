@@ -159,6 +159,17 @@ export function getDatabase(): DatabaseType {
     CREATE INDEX IF NOT EXISTS idx_contact_related_people_contact_id ON contact_related_people(contact_id);
   `);
 
+  // Migration: Add archived_at column if it doesn't exist
+  const tableInfo = db.prepare("PRAGMA table_info(contacts)").all() as Array<{ name: string }>;
+  const hasArchivedAt = tableInfo.some(col => col.name === 'archived_at');
+
+  if (!hasArchivedAt) {
+    db.exec(`
+      ALTER TABLE contacts ADD COLUMN archived_at DATETIME DEFAULT NULL;
+      CREATE INDEX IF NOT EXISTS idx_contacts_archived_at ON contacts(archived_at);
+    `);
+  }
+
   return db;
 }
 

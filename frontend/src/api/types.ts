@@ -182,3 +182,35 @@ export interface CleanupSummary {
 export interface DeleteContactsResponse {
   deletedCount: number;
 }
+
+export interface CleanupIdsResponse {
+  contactIds: number[];
+}
+
+// Archive types
+export interface ArchivedContact extends ContactDetail {
+  archivedAt: string;
+}
+
+export interface ArchivedListResponse {
+  contacts: ArchivedContact[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ArchivedCountResponse {
+  count: number;
+}
+
+export interface ArchiveResponse {
+  archivedCount: number;
+}
+
+export interface UnarchiveResponse {
+  unarchivedCount: number;
+}
+
+export interface DeleteArchivedResponse {
+  deletedCount: number;
+}

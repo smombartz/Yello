@@ -4,6 +4,8 @@ import {
   findEmptyContacts,
   findProblematicContacts,
   deleteContacts,
+  getAllEmptyContactIds,
+  getAllProblematicContactIds,
   type EmptyContactType,
   type ProblematicContactType
 } from '../services/cleanupService.js';
@@ -12,10 +14,13 @@ import {
   CleanupQuery,
   CleanupSummaryQuerySchema,
   CleanupSummaryQuery,
+  CleanupIdsQuerySchema,
+  CleanupIdsQuery,
   DeleteContactsBodySchema,
   DeleteContactsBody,
   CleanupResponseSchema,
   CleanupSummaryResponseSchema,
+  CleanupIdsResponseSchema,
   DeleteContactsResponseSchema,
   CleanupErrorSchema
 } from '../schemas/cleanup.js';
@@ -35,6 +40,39 @@ export default async function cleanupRoutes(
   }, async (request, _reply) => {
     const { threshold = 3 } = request.query;
     return getCleanupSummary(threshold);
+  });
+
+  // GET /api/cleanup/ids - Get all contact IDs for a query (for bulk selection)
+  fastify.get<{ Querystring: CleanupIdsQuery }>('/ids', {
+    schema: {
+      querystring: CleanupIdsQuerySchema,
+      response: {
+        200: CleanupIdsResponseSchema,
+        400: CleanupErrorSchema
+      }
+    }
+  }, async (request, reply) => {
+    const { mode, types, threshold = 3 } = request.query;
+
+    if (mode === 'empty') {
+      const validEmptyTypes: EmptyContactType[] = ['truly_empty', 'name_only'];
+      const typeFilter = types
+        ? types.split(',').map(t => t.trim()).filter((t): t is EmptyContactType => validEmptyTypes.includes(t as EmptyContactType))
+        : undefined;
+
+      const contactIds = getAllEmptyContactIds(typeFilter);
+      return { contactIds };
+    } else if (mode === 'problematic') {
+      const validProblematicTypes: ProblematicContactType[] = ['many_domains', 'same_domain'];
+      const typeFilter = types
+        ? types.split(',').map(t => t.trim()).filter((t): t is ProblematicContactType => validProblematicTypes.includes(t as ProblematicContactType))
+        : undefined;
+
+      const contactIds = getAllProblematicContactIds(threshold, typeFilter);
+      return { contactIds };
+    }
+
+    return reply.status(400).send({ error: 'Invalid mode' });
   });
 
   // GET /api/cleanup
