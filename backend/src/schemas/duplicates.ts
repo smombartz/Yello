@@ -68,3 +68,22 @@ export const MergeResponseSchema = Type.Object({
   mergedContact: ContactDetailSchema,
   deletedContactIds: Type.Array(Type.Number())
 });
+
+// Lightweight schema for bulk operations (returns only IDs, no full contact details)
+export const DuplicateGroupLightSchema = Type.Object({
+  id: Type.String(),
+  contactIds: Type.Array(Type.Number()),
+  primaryContactId: Type.Number()
+});
+
+export const AllDuplicateGroupsResponseSchema = Type.Object({
+  groups: Type.Array(DuplicateGroupLightSchema),
+  totalGroups: Type.Number()
+});
+
+export const AllDuplicateGroupsQuerySchema = Type.Object({
+  mode: DeduplicationModeSchema,
+  confidence: Type.Optional(Type.String())
+});
+
+export type AllDuplicateGroupsQuery = Static<typeof AllDuplicateGroupsQuerySchema>;

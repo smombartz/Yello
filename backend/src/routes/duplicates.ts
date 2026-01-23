@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { findDuplicates, getDuplicateSummary } from '../services/deduplicationService.js';
+import { findDuplicates, getDuplicateSummary, getAllDuplicateGroupIds } from '../services/deduplicationService.js';
 import { mergeContacts } from '../services/mergeService.js';
 import {
   DuplicatesQuerySchema,
@@ -8,7 +8,10 @@ import {
   DuplicateSummarySchema,
   MergeRequestSchema,
   MergeRequest,
-  MergeResponseSchema
+  MergeResponseSchema,
+  AllDuplicateGroupsQuerySchema,
+  AllDuplicateGroupsQuery,
+  AllDuplicateGroupsResponseSchema
 } from '../schemas/duplicates.js';
 
 export default async function duplicatesRoutes(
@@ -24,6 +27,22 @@ export default async function duplicatesRoutes(
     }
   }, async (_request, _reply) => {
     return getDuplicateSummary();
+  });
+
+  // GET /api/duplicates/all-groups - lightweight endpoint for bulk operations
+  fastify.get<{ Querystring: AllDuplicateGroupsQuery }>('/all-groups', {
+    schema: {
+      querystring: AllDuplicateGroupsQuerySchema,
+      response: {
+        200: AllDuplicateGroupsResponseSchema
+      }
+    }
+  }, async (request, _reply) => {
+    const { mode, confidence } = request.query;
+    const confidenceLevels = confidence?.split(',').filter(c =>
+      ['very_high', 'high', 'medium'].includes(c)
+    );
+    return getAllDuplicateGroupIds(mode, confidenceLevels);
   });
 
   // GET /api/duplicates

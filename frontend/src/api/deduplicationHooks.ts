@@ -100,3 +100,25 @@ export function useMergeContacts() {
     },
   });
 }
+
+// Lightweight group for bulk operations (no full contact details)
+export interface DuplicateGroupLight {
+  id: string;
+  contactIds: number[];
+  primaryContactId: number;
+}
+
+// Imperative fetch function (not a hook) for fetching all duplicate groups
+export async function fetchAllDuplicateGroups(
+  mode: DeduplicationMode,
+  confidenceFilter?: Set<ConfidenceLevel>
+): Promise<DuplicateGroupLight[]> {
+  const params = new URLSearchParams({ mode });
+  if (mode === 'recommended' && confidenceFilter?.size) {
+    params.set('confidence', Array.from(confidenceFilter).join(','));
+  }
+  const response = await fetchApi<{ groups: DuplicateGroupLight[]; totalGroups: number }>(
+    `/api/duplicates/all-groups?${params}`
+  );
+  return response.groups;
+}

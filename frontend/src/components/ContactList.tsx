@@ -2,6 +2,8 @@ import { useRef, useState, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useContacts } from '../api/hooks';
 import { ContactRow } from './ContactRow';
+import { ContactGridCard } from './ContactGridCard';
+import { ViewToggle } from './ViewToggle';
 
 interface ContactListProps {
   search: string;
@@ -14,12 +16,20 @@ const PAGE_SIZE = 100;
 export function ContactList({ search }: ContactListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
+    return (localStorage.getItem('contactViewMode') as 'list' | 'grid') || 'list';
+  });
 
   const { data, isLoading, error } = useContacts(1, PAGE_SIZE, search || undefined);
 
   const handleToggle = useCallback((id: number) => {
     setExpandedId(prev => prev === id ? null : id);
   }, []);
+
+  const handleViewChange = (view: 'list' | 'grid') => {
+    setViewMode(view);
+    localStorage.setItem('contactViewMode', view);
+  };
 
   const virtualizer = useVirtualizer({
     count: data?.contacts.length ?? 0,
@@ -58,47 +68,62 @@ export function ContactList({ search }: ContactListProps) {
 
   return (
     <div className="contact-list">
-      <div className="contact-count">
-        {data.total.toLocaleString()} contact{data.total !== 1 ? 's' : ''}
-      </div>
-      <div
-        ref={parentRef}
-        className="virtual-scroll-container"
-      >
-        <div
-          style={{
-            height: `${virtualizer.getTotalSize()}px`,
-            width: '100%',
-            position: 'relative',
-          }}
-        >
-          {virtualizer.getVirtualItems().map((virtualRow) => {
-            const contact = data.contacts[virtualRow.index];
-            const isExpanded = contact.id === expandedId;
-
-            return (
-              <div
-                key={contact.id}
-                data-index={virtualRow.index}
-                ref={virtualizer.measureElement}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
-              >
-                <ContactRow
-                  contact={contact}
-                  isExpanded={isExpanded}
-                  onToggle={handleToggle}
-                />
-              </div>
-            );
-          })}
+      <div className="contact-list-header">
+        <div className="contact-count">
+          {data.total.toLocaleString()} contact{data.total !== 1 ? 's' : ''}
         </div>
+        <ViewToggle view={viewMode} onViewChange={handleViewChange} />
       </div>
+      {viewMode === 'list' ? (
+        <div
+          ref={parentRef}
+          className="virtual-scroll-container"
+        >
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: '100%',
+              position: 'relative',
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const contact = data.contacts[virtualRow.index];
+              const isExpanded = contact.id === expandedId;
+
+              return (
+                <div
+                  key={contact.id}
+                  data-index={virtualRow.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <ContactRow
+                    contact={contact}
+                    isExpanded={isExpanded}
+                    onToggle={handleToggle}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="contact-grid">
+          {data.contacts.map(contact => (
+            <ContactGridCard
+              key={contact.id}
+              contact={contact}
+              onClick={() => handleToggle(contact.id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

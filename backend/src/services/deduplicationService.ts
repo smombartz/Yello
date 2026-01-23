@@ -743,6 +743,131 @@ function getContactDetails(contactIds: number[]): ContactDetail[] {
   });
 }
 
+export interface DuplicateGroupLight {
+  id: string;
+  contactIds: number[];
+  primaryContactId: number;
+}
+
+/**
+ * Get all duplicate group IDs without full contact details (for bulk operations)
+ */
+export function getAllDuplicateGroupIds(
+  mode: DeduplicationMode,
+  confidenceLevels?: string[]
+): { groups: DuplicateGroupLight[]; totalGroups: number } {
+  if (mode === 'recommended') {
+    // Use the existing recommended logic but extract only IDs
+    const contacts = loadContactMatchData();
+    const pairs = buildCandidatePairs(contacts);
+    let groups = groupConnectedContacts(pairs);
+
+    // Filter by confidence levels if specified
+    if (confidenceLevels && confidenceLevels.length > 0) {
+      groups = groups.filter(g => confidenceLevels.includes(g.confidence));
+    }
+
+    // Sort groups
+    const sortedGroups = sortGroups(groups);
+
+    // Convert to lightweight format
+    const lightGroups: DuplicateGroupLight[] = sortedGroups.map((group, index) => ({
+      id: `recommended-${index}-${group.contactIds.join('-')}`,
+      contactIds: group.contactIds,
+      primaryContactId: group.contactIds[0]
+    }));
+
+    return { groups: lightGroups, totalGroups: lightGroups.length };
+  }
+
+  // For simple modes (email, phone, address, social), fetch all matches without pagination
+  let allMatches: DuplicateMatch[];
+
+  switch (mode) {
+    case 'email':
+      allMatches = findEmailDuplicatesAll();
+      break;
+    case 'phone':
+      allMatches = findPhoneDuplicatesAll();
+      break;
+    case 'address':
+      allMatches = findAddressDuplicatesAll();
+      break;
+    case 'social':
+      allMatches = findSocialDuplicatesAll();
+      break;
+  }
+
+  const lightGroups: DuplicateGroupLight[] = allMatches.map(match => {
+    const contactIds = match.contactIds.split(',').map(id => parseInt(id, 10));
+    return {
+      id: Buffer.from(match.matchValue).toString('base64'),
+      contactIds,
+      primaryContactId: contactIds[0]
+    };
+  });
+
+  return { groups: lightGroups, totalGroups: lightGroups.length };
+}
+
+// Helper functions to fetch all matches without pagination (for bulk operations)
+function findEmailDuplicatesAll(): DuplicateMatch[] {
+  const db = getDatabase();
+  return db.prepare(`
+    SELECT LOWER(e.email) as matchValue, GROUP_CONCAT(DISTINCT e.contact_id) as contactIds
+    FROM contact_emails e
+    JOIN contacts c ON e.contact_id = c.id
+    WHERE c.archived_at IS NULL
+    GROUP BY LOWER(e.email)
+    HAVING COUNT(DISTINCT e.contact_id) > 1
+    ORDER BY COUNT(DISTINCT e.contact_id) DESC
+  `).all() as DuplicateMatch[];
+}
+
+function findPhoneDuplicatesAll(): DuplicateMatch[] {
+  const db = getDatabase();
+  return db.prepare(`
+    SELECT p.phone as matchValue, GROUP_CONCAT(DISTINCT p.contact_id) as contactIds
+    FROM contact_phones p
+    JOIN contacts c ON p.contact_id = c.id
+    WHERE p.phone != '' AND c.archived_at IS NULL
+    GROUP BY p.phone
+    HAVING COUNT(DISTINCT p.contact_id) > 1
+    ORDER BY COUNT(DISTINCT p.contact_id) DESC
+  `).all() as DuplicateMatch[];
+}
+
+function findAddressDuplicatesAll(): DuplicateMatch[] {
+  const db = getDatabase();
+  return db.prepare(`
+    SELECT
+      LOWER(COALESCE(a.street, '')) || '|' || LOWER(COALESCE(a.city, '')) || '|' || LOWER(COALESCE(a.postal_code, '')) as matchValue,
+      GROUP_CONCAT(DISTINCT a.contact_id) as contactIds
+    FROM contact_addresses a
+    JOIN contacts c ON a.contact_id = c.id
+    WHERE a.street IS NOT NULL AND a.street != '' AND a.city IS NOT NULL AND a.city != ''
+      AND c.archived_at IS NULL
+    GROUP BY LOWER(a.street), LOWER(a.city), LOWER(a.postal_code)
+    HAVING COUNT(DISTINCT a.contact_id) > 1
+    ORDER BY COUNT(DISTINCT a.contact_id) DESC
+  `).all() as DuplicateMatch[];
+}
+
+function findSocialDuplicatesAll(): DuplicateMatch[] {
+  const db = getDatabase();
+  return db.prepare(`
+    SELECT
+      s.platform || ':' || s.username as matchValue,
+      GROUP_CONCAT(DISTINCT s.contact_id) as contactIds
+    FROM contact_social_profiles s
+    JOIN contacts c ON s.contact_id = c.id
+    WHERE c.archived_at IS NULL
+    GROUP BY s.platform, s.username
+    HAVING COUNT(DISTINCT s.contact_id) > 1
+    ORDER BY COUNT(DISTINCT s.contact_id) DESC
+  `).all() as DuplicateMatch[];
+}
+
 export function findDuplicates(
   mode: DeduplicationMode,
   limit: number,

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { ModeSelector } from './ModeSelector';
 import { DuplicateGroupList } from './DuplicateGroupList';
 import { ConfidenceFilter } from './ConfidenceFilter';
-import { useDuplicateSummary, useDuplicatesPaginated, useMergeContacts } from '../api/deduplicationHooks';
+import { useDuplicateSummary, useDuplicatesPaginated, useMergeContacts, fetchAllDuplicateGroups } from '../api/deduplicationHooks';
 import type { ConfidenceLevel, DeduplicationMode, DuplicateGroup } from '../api/types';
 
 interface DeduplicationViewProps {
@@ -23,6 +23,8 @@ export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
   const [undoState, setUndoState] = useState<UndoState | null>(null);
   const [mergeAllProgress, setMergeAllProgress] = useState<{ current: number; total: number } | null>(null);
   const [showMergeAllConfirm, setShowMergeAllConfirm] = useState(false);
+  const [showMergeAllGlobalConfirm, setShowMergeAllGlobalConfirm] = useState(false);
+  const [mergeAllGlobalProgress, setMergeAllGlobalProgress] = useState<{ current: number; total: number } | null>(null);
   const [confidenceFilter, setConfidenceFilter] = useState<Set<ConfidenceLevel>>(new Set(ALL_CONFIDENCE_LEVELS));
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -155,6 +157,56 @@ export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
     });
   }, [groups, hiddenGroupIds, mergeMutation, undoState]);
 
+  const handleMergeAllGlobal = useCallback(async () => {
+    setMergeAllGlobalProgress({ current: 0, total: 0 });
+
+    try {
+      const allGroups = await fetchAllDuplicateGroups(
+        selectedMode,
+        selectedMode === 'recommended' ? confidenceFilter : undefined
+      );
+
+      if (allGroups.length === 0) {
+        setMergeAllGlobalProgress(null);
+        return;
+      }
+
+      setMergeAllGlobalProgress({ current: 0, total: allGroups.length });
+
+      for (let i = 0; i < allGroups.length; i++) {
+        const group = allGroups[i];
+        try {
+          await mergeMutation.mutateAsync({
+            contactIds: group.contactIds,
+            primaryContactId: group.primaryContactId
+          });
+        } catch (error) {
+          console.error('Merge failed for group:', group.id, error);
+          // Continue with remaining groups even if one fails
+        }
+        setMergeAllGlobalProgress({ current: i + 1, total: allGroups.length });
+      }
+
+      setMergeAllGlobalProgress(null);
+
+      // Clear any existing undo timeout
+      if (undoState?.timeout) {
+        clearTimeout(undoState.timeout);
+      }
+
+      // Show completion toast
+      const timeout = setTimeout(() => setUndoState(null), 5000);
+      setUndoState({
+        groupId: '',
+        message: `Merged all ${allGroups.length} duplicate groups`,
+        timeout,
+      });
+    } catch (error) {
+      console.error('Failed to fetch all groups:', error);
+      setMergeAllGlobalProgress(null);
+    }
+  }, [selectedMode, confidenceFilter, mergeMutation, undoState]);
+
   return (
     <div className="dedup-view">
       <div className="dedup-header">
@@ -192,16 +244,28 @@ export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
               )}
             </div>
             {visibleCount > 0 && (
-              <button
-                className="merge-all-button"
-                onClick={() => setShowMergeAllConfirm(true)}
-                disabled={mergeMutation.isPending || mergeAllProgress !== null}
-              >
-                <span className="material-symbols-outlined">merge</span>
-                {mergeAllProgress
-                  ? `Merging ${mergeAllProgress.current}/${mergeAllProgress.total}...`
-                  : `Merge Page (${visibleCount})`}
-              </button>
+              <div className="merge-buttons">
+                <button
+                  className="merge-all-button"
+                  onClick={() => setShowMergeAllConfirm(true)}
+                  disabled={mergeMutation.isPending || mergeAllProgress !== null || mergeAllGlobalProgress !== null}
+                >
+                  <span className="material-symbols-outlined">merge</span>
+                  {mergeAllProgress
+                    ? `Merging ${mergeAllProgress.current}/${mergeAllProgress.total}...`
+                    : `Merge Page (${visibleCount})`}
+                </button>
+                <button
+                  className="merge-all-button merge-all-global"
+                  onClick={() => setShowMergeAllGlobalConfirm(true)}
+                  disabled={mergeMutation.isPending || mergeAllProgress !== null || mergeAllGlobalProgress !== null}
+                >
+                  <span className="material-symbols-outlined">merge_type</span>
+                  {mergeAllGlobalProgress
+                    ? `Merging ${mergeAllGlobalProgress.current}/${mergeAllGlobalProgress.total}...`
+                    : `Merge All (${totalGroups})`}
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -262,6 +326,35 @@ export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
                 onClick={() => {
                   setShowMergeAllConfirm(false);
                   handleMergeAll();
+                }}
+              >
+                Merge All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMergeAllGlobalConfirm && (
+        <div className="modal-overlay" onClick={() => setShowMergeAllGlobalConfirm(false)}>
+          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
+            <h3>Merge All Duplicates?</h3>
+            <p>
+              This will merge all {totalGroups} duplicate group{totalGroups !== 1 ? 's' : ''}
+              {selectedMode === 'recommended' && confidenceFilter.size < 3 &&
+                ' matching the selected confidence levels'}.
+              The first contact in each group will be kept as the primary.
+            </p>
+            <p className="warning-text">This action cannot be undone.</p>
+            <div className="confirm-actions">
+              <button className="cancel-button" onClick={() => setShowMergeAllGlobalConfirm(false)}>
+                Cancel
+              </button>
+              <button
+                className="confirm-button"
+                onClick={() => {
+                  setShowMergeAllGlobalConfirm(false);
+                  handleMergeAllGlobal();
                 }}
               >
                 Merge All
