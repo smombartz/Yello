@@ -1,5 +1,5 @@
 import { Avatar } from './Avatar';
-import type { ContactDetail, DeduplicationMode } from '../api/types';
+import type { ContactDetail, ContactAddress, ContactSocialProfile, DeduplicationMode } from '../api/types';
 
 interface DuplicateContactCardProps {
   contact: ContactDetail;
@@ -7,11 +7,9 @@ interface DuplicateContactCardProps {
   matchingValue: string;
 }
 
-function formatAddress(contact: ContactDetail): string | null {
-  const addr = contact.addresses[0];
-  if (!addr) return null;
+function formatSingleAddress(addr: ContactAddress): string {
   const parts = [addr.street, addr.city, addr.state, addr.postalCode].filter(Boolean);
-  return parts.length > 0 ? parts.join(', ') : null;
+  return parts.length > 0 ? parts.join(', ') : 'No address';
 }
 
 function isMatchingEmail(email: string, matchingValue: string): boolean {
@@ -22,21 +20,18 @@ function isMatchingPhone(phone: string, matchingValue: string): boolean {
   return phone === matchingValue;
 }
 
-function isMatchingAddress(contact: ContactDetail, matchingValue: string): boolean {
+function isMatchingAddressSingle(addr: ContactAddress, matchingValue: string): boolean {
   const [street, city, postalCode] = matchingValue.split('|');
-  return contact.addresses.some(
-    (a) =>
-      (a.street?.toLowerCase() ?? '') === street &&
-      (a.city?.toLowerCase() ?? '') === city &&
-      (a.postalCode?.toLowerCase() ?? '') === postalCode
+  return (
+    (addr.street?.toLowerCase() ?? '') === street &&
+    (addr.city?.toLowerCase() ?? '') === city &&
+    (addr.postalCode?.toLowerCase() ?? '') === postalCode
   );
 }
 
-function isMatchingSocial(contact: ContactDetail, matchingValue: string): boolean {
+function isMatchingSocialSingle(social: ContactSocialProfile, matchingValue: string): boolean {
   const [platform, username] = matchingValue.split(':');
-  return contact.socialProfiles.some(
-    (s) => s.platform === platform && s.username === username
-  );
+  return social.platform === platform && social.username === username;
 }
 
 export function DuplicateContactCard({
@@ -44,12 +39,6 @@ export function DuplicateContactCard({
   matchingField,
   matchingValue,
 }: DuplicateContactCardProps) {
-  const primaryEmail = contact.emails.find((e) => e.isPrimary)?.email ?? contact.emails[0]?.email;
-  const primaryPhone =
-    contact.phones.find((p) => p.isPrimary)?.phoneDisplay ?? contact.phones[0]?.phoneDisplay;
-  const address = formatAddress(contact);
-  const socialProfile = contact.socialProfiles[0];
-
   return (
     <div className="duplicate-card">
       <div className="duplicate-card-header">
@@ -61,64 +50,61 @@ export function DuplicateContactCard({
       </div>
 
       <div className="duplicate-card-fields">
-        {primaryEmail && (
+        {/* Email mode: show all emails */}
+        {matchingField === 'email' && contact.emails.map((email, idx) => (
           <div
-            className={`duplicate-card-field ${
-              matchingField === 'email' && isMatchingEmail(primaryEmail, matchingValue)
-                ? 'matching'
-                : ''
-            }`}
+            key={idx}
+            className={`duplicate-card-field ${isMatchingEmail(email.email, matchingValue) ? 'matching' : ''}`}
           >
             <span className="material-symbols-outlined">mail</span>
-            <span className="value">{primaryEmail}</span>
+            <span className="value">{email.email}</span>
+            {email.type && <span className="type">{email.type}</span>}
           </div>
-        )}
+        ))}
 
-        {primaryPhone && (
+        {/* Phone mode: show all phones */}
+        {matchingField === 'phone' && contact.phones.map((phone, idx) => (
           <div
-            className={`duplicate-card-field ${
-              matchingField === 'phone' &&
-              contact.phones.some((p) => isMatchingPhone(p.phone, matchingValue))
-                ? 'matching'
-                : ''
-            }`}
+            key={idx}
+            className={`duplicate-card-field ${isMatchingPhone(phone.phone, matchingValue) ? 'matching' : ''}`}
           >
             <span className="material-symbols-outlined">phone</span>
-            <span className="value">{primaryPhone}</span>
+            <span className="value">{phone.phoneDisplay}</span>
+            {phone.type && <span className="type">{phone.type}</span>}
           </div>
-        )}
+        ))}
 
-        {address && (
+        {/* Address mode: show all addresses */}
+        {matchingField === 'address' && contact.addresses.map((addr, idx) => (
           <div
-            className={`duplicate-card-field ${
-              matchingField === 'address' && isMatchingAddress(contact, matchingValue)
-                ? 'matching'
-                : ''
-            }`}
+            key={idx}
+            className={`duplicate-card-field ${isMatchingAddressSingle(addr, matchingValue) ? 'matching' : ''}`}
           >
             <span className="material-symbols-outlined">location_on</span>
-            <span className="value">{address}</span>
+            <span className="value">{formatSingleAddress(addr)}</span>
+            {addr.type && <span className="type">{addr.type}</span>}
           </div>
-        )}
+        ))}
 
-        {socialProfile && (
+        {/* Social mode: show all social profiles */}
+        {matchingField === 'social' && contact.socialProfiles.map((social, idx) => (
           <div
-            className={`duplicate-card-field ${
-              matchingField === 'social' && isMatchingSocial(contact, matchingValue)
-                ? 'matching'
-                : ''
-            }`}
+            key={idx}
+            className={`duplicate-card-field ${isMatchingSocialSingle(social, matchingValue) ? 'matching' : ''}`}
           >
             <span className="material-symbols-outlined">share</span>
-            <span className="value">
-              {socialProfile.platform}: @{socialProfile.username}
-            </span>
+            <span className="value">{social.platform}: @{social.username}</span>
+            {social.type && <span className="type">{social.type}</span>}
           </div>
-        )}
+        ))}
 
-        {!primaryEmail && !primaryPhone && !address && !socialProfile && (
+        {/* Show empty state if current mode has no items */}
+        {((matchingField === 'email' && contact.emails.length === 0) ||
+          (matchingField === 'phone' && contact.phones.length === 0) ||
+          (matchingField === 'address' && contact.addresses.length === 0) ||
+          (matchingField === 'social' && contact.socialProfiles.length === 0)) && (
           <div className="duplicate-card-field empty">
-            <span className="value">No contact info</span>
+            <span className="value">No {matchingField} info</span>
           </div>
         )}
       </div>
