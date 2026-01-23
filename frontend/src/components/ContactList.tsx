@@ -1,26 +1,35 @@
-import { useRef } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useContacts } from '../api/hooks';
 import { ContactRow } from './ContactRow';
 
 interface ContactListProps {
   search: string;
-  onSelectContact: (id: number) => void;
 }
 
-const ROW_HEIGHT = 80;
+const COLLAPSED_HEIGHT = 92;   // 80 + 12 (0.75rem gap)
+const EXPANDED_HEIGHT = 462;   // 450 + 12 (0.75rem gap)
 const PAGE_SIZE = 100;
 
-export function ContactList({ search, onSelectContact }: ContactListProps) {
+export function ContactList({ search }: ContactListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const { data, isLoading, error } = useContacts(1, PAGE_SIZE, search || undefined);
+
+  const handleToggle = useCallback((id: number) => {
+    setExpandedId(prev => prev === id ? null : id);
+  }, []);
 
   const virtualizer = useVirtualizer({
     count: data?.contacts.length ?? 0,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: useCallback((index: number) => {
+      const contact = data?.contacts[index];
+      return contact?.id === expandedId ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT;
+    }, [data?.contacts, expandedId]),
     overscan: 5,
+    measureElement: (el) => el.getBoundingClientRect().height,
   });
 
   if (isLoading) {
@@ -65,21 +74,25 @@ export function ContactList({ search, onSelectContact }: ContactListProps) {
         >
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const contact = data.contacts[virtualRow.index];
+            const isExpanded = contact.id === expandedId;
+
             return (
               <div
                 key={contact.id}
+                data-index={virtualRow.index}
+                ref={virtualizer.measureElement}
                 style={{
                   position: 'absolute',
                   top: 0,
                   left: 0,
                   width: '100%',
-                  height: `${virtualRow.size}px`,
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
               >
                 <ContactRow
                   contact={contact}
-                  onClick={onSelectContact}
+                  isExpanded={isExpanded}
+                  onToggle={handleToggle}
                 />
               </div>
             );

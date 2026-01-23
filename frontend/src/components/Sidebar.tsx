@@ -14,7 +14,13 @@ function NavItem({ icon, label, active, onClick }: NavItemProps) {
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  onDeduplicateClick?: () => void;
+  onBackToContacts?: () => void;
+  currentView?: 'contacts' | 'deduplication';
+}
+
+export function Sidebar({ onDeduplicateClick, onBackToContacts, currentView = 'contacts' }: SidebarProps) {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
@@ -24,11 +30,11 @@ export function Sidebar() {
 
       <nav className="sidebar-nav">
         <NavItem icon="dashboard" label="Dashboard" />
-        <NavItem icon="contacts" label="All Contacts" active />
+        <NavItem icon="contacts" label="All Contacts" active={currentView === 'contacts'} onClick={onBackToContacts} />
         <NavItem icon="star" label="Favorites" />
         <NavItem icon="group" label="Groups" />
         <NavItem icon="archive" label="Archived" />
-        <NavItem icon="merge" label="Merge" /> 
+        <NavItem icon="merge" label="Merge" active={currentView === 'deduplication'} onClick={onDeduplicateClick} />
 
         <div className="nav-spacer" />
 
