@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Contact Profile View (Rebeca Matthews)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1313ec",
+                        "primary-dark": "#0b0bb5",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101022",
+                        "text-main": "#111118",
+                        "text-secondary": "#616189",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f6f6f8;}::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }article.card {
+            background-color: white;
+            border-radius: 0.75rem;box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            margin-bottom: 0;}
+        .dark article.card {
+            background-color: #1a1a2e;
+            box-shadow: none;
+            border: 1px solid #2d2d44;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-main antialiased h-screen flex items-center justify-center p-4 sm:p-8">
+<main class="w-full max-w-5xl mx-auto">
+<article class="card relative overflow-hidden transition-all duration-300">
+<header class="flex flex-col sm:flex-row items-center sm:items-start gap-6 p-8 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/5 relative">
+<div class="absolute top-6 right-6 flex items-center gap-2">
+<button aria-label="Edit contact" class="p-2 text-gray-400 hover:text-primary hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-600 shadow-sm hover:shadow">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button aria-label="Delete contact" class="p-2 text-gray-400 hover:text-red-500 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-600 shadow-sm hover:shadow">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+<div class="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1"></div>
+<button aria-label="Close view" class="p-2 text-gray-400 hover:text-text-main hover:bg-white dark:hover:text-white dark:hover:bg-gray-700 rounded-lg transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-600 shadow-sm hover:shadow">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="relative shrink-0">
+<div class="bg-center bg-no-repeat bg-cover rounded-full h-24 w-24 shadow-md ring-4 ring-white dark:ring-gray-800" data-alt="Portrait of Rebeca Matthews" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBWx7fQBATW7bF6W0neNWE8c8RgxWCFOhxvmfyC77c6qQQRoh75xiOT0Bo1YMBVODujknBwX81oaybqf1PBMwVxpDJPghAKy9nlVhG-eifcadjKLwKQlH-PMosKwyn_CZG-7aQ_fYvCH9kWsRoFVDPR_fkMZC5_Sk-TVxSzKbuGrhGIbrjuc8zwbxaH1kQtaUWyPuSrx87hPIoEy3kmQL7UwsXTmit_-xYUx5w6Mf5Oor2OSmkxHOSDfH_MeGbzPXxZPxl_z80zd0my");'></div>
+<span class="absolute bottom-1 right-1 h-5 w-5 bg-green-500 border-4 border-white dark:border-[#1a1a2e] rounded-full" title="Online"></span>
+</div>
+<div class="flex-1 min-w-0 text-center sm:text-left mt-2 sm:mt-4">
+<h2 class="text-3xl font-bold text-primary dark:text-blue-400 tracking-tight">Rebeca Matthews</h2>
+<p class="text-lg font-medium text-text-secondary dark:text-gray-400 mt-1">Spanish Teacher</p>
+<div class="flex items-center justify-center sm:justify-start gap-3 mt-4">
+<a class="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-full text-sm font-semibold transition-all" href="mailto:rebeca.m@autenti.edu">
+<span class="material-symbols-outlined text-[18px]">mail</span>
+                            Email
+                        </a>
+<button class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-text-secondary hover:border-primary hover:text-primary rounded-full text-sm font-semibold transition-all shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">
+<span class="material-symbols-outlined text-[18px]">call</span>
+                            Call
+                        </button>
+</div>
+</div>
+</header>
+<div class="p-8 grid grid-cols-1 lg:grid-cols-12 gap-10">
+<div class="lg:col-span-8 space-y-10">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div>
+<h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 dark:border-gray-800 pb-2">Contact Information</h4>
+<ul class="space-y-4">
+<li class="flex items-start gap-4 text-sm group cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+<div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-[20px]">call</span>
+</div>
+<div class="flex flex-col pt-0.5">
+<span class="font-semibold text-text-main dark:text-white group-hover:text-primary transition-colors text-base">+1 (555) 012-3456</span>
+<span class="text-xs text-text-secondary dark:text-gray-500 font-medium uppercase tracking-wide">Mobile</span>
+</div>
+</li>
+<li class="flex items-start gap-4 text-sm group cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+<div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 shrink-0 group-hover:bg-blue-50 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">call</span>
+</div>
+<div class="flex flex-col pt-0.5">
+<span class="font-semibold text-text-secondary dark:text-gray-400 group-hover:text-text-main transition-colors text-base">+1 (555) 987-1111</span>
+<span class="text-xs text-gray-400 dark:text-gray-600 font-medium uppercase tracking-wide">Work</span>
+</div>
+</li>
+<li class="flex items-start gap-4 text-sm group cursor-pointer p-2 -ml-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+<div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-[20px]">mail</span>
+</div>
+<div class="flex flex-col pt-0.5">
+<span class="font-semibold text-text-main dark:text-white group-hover:text-primary transition-colors text-base">rebeca.m@autenti.edu</span>
+<span class="text-xs text-text-secondary dark:text-gray-500 font-medium uppercase tracking-wide">Work Email</span>
+</div>
+</li>
+</ul>
+</div>
+<div>
+<h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 dark:border-gray-800 pb-2">Locations</h4>
+<ul class="space-y-5">
+<li class="flex items-start gap-4 text-sm p-2 -ml-2">
+<div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-[20px]">location_on</span>
+</div>
+<div class="flex flex-col pt-0.5">
+<span class="text-text-main dark:text-white font-medium leading-relaxed">
+                                            2008 Lakeside Dr W<br/>
+                                            Suite 200<br/>
+                                            Chicago, IL 60614
+                                        </span>
+<span class="text-xs text-text-secondary dark:text-gray-500 mt-1 font-medium uppercase tracking-wide">Office</span>
+</div>
+</li>
+<li class="flex items-start gap-4 text-sm p-2 -ml-2">
+<div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 shrink-0">
+<span class="material-symbols-outlined text-[20px]">home</span>
+</div>
+<div class="flex flex-col pt-0.5">
+<span class="text-text-secondary dark:text-gray-300 font-medium leading-relaxed">
+                                            378 Degraw St<br/>
+                                            Brooklyn, NY 11231
+                                        </span>
+<span class="text-xs text-gray-400 dark:text-gray-600 mt-1 font-medium uppercase tracking-wide">Home</span>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="bg-yellow-50/60 dark:bg-yellow-900/10 rounded-xl p-6 border border-yellow-100 dark:border-yellow-900/30">
+<h4 class="text-xs font-bold text-yellow-700 dark:text-yellow-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">sticky_note_2</span>
+                            Private Notes
+                        </h4>
+<p class="text-base text-text-secondary dark:text-gray-300 font-serif italic leading-relaxed">
+                            "Mom's cell: +34 603-467-851, India +917678066693. Preferred meeting times are Tuesday afternoons. Allergy to peanuts."
+                        </p>
+</div>
+</div>
+<div class="lg:col-span-4 lg:border-l border-gray-100 dark:border-gray-800 lg:pl-10">
+<h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-6">Social &amp; Links</h4>
+<div class="space-y-4">
+<a class="flex items-center gap-4 p-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-gray-800/50 dark:hover:bg-blue-900/20 border border-gray-100 dark:border-gray-700 group transition-all hover:shadow-sm" href="#">
+<div class="w-10 h-10 rounded-full bg-[#0077b5] text-white flex items-center justify-center shadow-sm shrink-0">
+<span class="material-symbols-outlined text-[20px]">work</span> 
+</div>
+<div class="min-w-0">
+<p class="text-sm font-bold text-text-main dark:text-white group-hover:text-primary transition-colors">LinkedIn</p>
+<p class="text-xs text-text-secondary dark:text-gray-500 truncate">/in/rebeca-matthews</p>
+</div>
+<span class="material-symbols-outlined text-gray-300 ml-auto group-hover:text-primary transition-colors text-[18px]">open_in_new</span>
+</a>
+<a class="flex items-center gap-4 p-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-gray-800/50 dark:hover:bg-blue-900/20 border border-gray-100 dark:border-gray-700 group transition-all hover:shadow-sm" href="#">
+<div class="w-10 h-10 rounded-full bg-[#1877F2] text-white flex items-center justify-center shadow-sm shrink-0">
+<span class="material-symbols-outlined text-[20px]">social_leaderboard</span> 
+</div>
+<div class="min-w-0">
+<p class="text-sm font-bold text-text-main dark:text-white group-hover:text-primary transition-colors">Facebook</p>
+<p class="text-xs text-text-secondary dark:text-gray-500 truncate">/rebeca.matthews</p>
+</div>
+<span class="material-symbols-outlined text-gray-300 ml-auto group-hover:text-primary transition-colors text-[18px]">open_in_new</span>
+</a>
+<a class="flex items-center gap-4 p-3 rounded-xl bg-gray-50 hover:bg-purple-50 dark:bg-gray-800/50 dark:hover:bg-purple-900/20 border border-gray-100 dark:border-gray-700 group transition-all hover:shadow-sm" href="#">
+<div class="w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-sm shrink-0">
+<span class="material-symbols-outlined text-[20px]">folder_shared</span> 
+</div>
+<div class="min-w-0">
+<p class="text-sm font-bold text-text-main dark:text-white group-hover:text-purple-600 transition-colors">Dex</p>
+<p class="text-xs text-text-secondary dark:text-gray-500 truncate">Personal Contacts</p>
+</div>
+<span class="material-symbols-outlined text-gray-300 ml-auto group-hover:text-purple-600 transition-colors text-[18px]">open_in_new</span>
+</a>
+</div>
+<div class="mt-10 pt-6 border-t border-gray-100 dark:border-gray-800">
+<h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Metadata</h4>
+<div class="flex flex-col gap-2 text-xs text-text-secondary dark:text-gray-500">
+<div class="flex justify-between">
+<span>Added:</span>
+<span class="font-medium text-text-main dark:text-gray-300">Oct 24, 2023</span>
+</div>
+<div class="flex justify-between">
+<span>Last updated:</span>
+<span class="font-medium text-text-main dark:text-gray-300">2 days ago</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</article>
+</main>
+
+</body></html>

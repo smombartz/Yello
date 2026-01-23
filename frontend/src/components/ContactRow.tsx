@@ -10,45 +10,42 @@ interface ContactRowProps {
 export function ContactRow({ contact, onClick, style }: ContactRowProps) {
   return (
     <div
+      className="contact-card"
       onClick={() => onClick(contact.id)}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        padding: '8px 16px',
-        gap: '12px',
-        cursor: 'pointer',
-        borderBottom: '1px solid var(--pico-muted-border-color)',
-        ...style,
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = 'var(--pico-card-background-color)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = 'transparent';
-      }}
+      style={style}
     >
-      <Avatar photoUrl={contact.photoUrl} name={contact.displayName} size={48} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {contact.displayName}
+      <div className="contact-card-main">
+        <Avatar photoUrl={contact.photoUrl} name={contact.displayName} size={48} />
+        <div className="contact-info">
+          <h3 className="contact-name">{contact.displayName}</h3>
+          {contact.company && (
+            <p className="contact-role">{contact.company}</p>
+          )}
         </div>
-        {contact.company && (
-          <div style={{ fontSize: '0.875rem', color: 'var(--pico-muted-color)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {contact.company}
-          </div>
-        )}
       </div>
-      <div style={{ textAlign: 'right', fontSize: '0.875rem' }}>
+      <div className="contact-details">
         {contact.primaryEmail && (
-          <div style={{ color: 'var(--pico-muted-color)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
-            {contact.primaryEmail}
+          <div className="contact-detail-item">
+            <span className="material-symbols-outlined">mail</span>
+            <span>{contact.primaryEmail}</span>
           </div>
         )}
         {contact.primaryPhone && (
-          <div style={{ color: 'var(--pico-muted-color)' }}>
-            {contact.primaryPhone}
+          <div className="contact-detail-item">
+            <span className="material-symbols-outlined">call</span>
+            <span>{contact.primaryPhone}</span>
           </div>
         )}
+      </div>
+      <div className="contact-actions">
+        <button
+          className="icon-button"
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        >
+          <span className="material-symbols-outlined">more_vert</span>
+        </button>
       </div>
     </div>
   );

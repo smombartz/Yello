@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react';
+import { Sidebar } from './components/Sidebar';
+import { TopHeader } from './components/TopHeader';
 import { ContactList } from './components/ContactList';
 import { ContactDetail } from './components/ContactDetail';
 import { ImportModal } from './components/ImportModal';
+import { DeduplicationView } from './components/DeduplicationView';
+
+type AppView = 'contacts' | 'deduplication';
 
 function App() {
+  const [currentView, setCurrentView] = useState<AppView>('contacts');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
@@ -25,44 +31,61 @@ function App() {
           setShowImportModal(false);
         } else if (selectedContactId !== null) {
           setSelectedContactId(null);
+        } else if (currentView === 'deduplication') {
+          setCurrentView('contacts');
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showImportModal, selectedContactId]);
+  }, [showImportModal, selectedContactId, currentView]);
+
+  const handleDeduplicateClick = () => {
+    setSelectedContactId(null);
+    setCurrentView('deduplication');
+  };
+
+  const handleBackToContacts = () => {
+    setCurrentView('contacts');
+  };
+
+  if (currentView === 'deduplication') {
+    return (
+      <div className="app-layout dedup-layout">
+        <Sidebar />
+        <main className="main-content">
+          <DeduplicationView onBack={handleBackToContacts} />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <>
-      <main className="container" style={{ marginRight: selectedContactId !== null ? '400px' : 0, transition: 'margin-right 0.2s ease' }}>
-        <header>
-          <nav>
-            <ul>
-              <li><strong>Contact Manager</strong></li>
-            </ul>
-            <ul>
-              <li>
-                <input
-                  type="search"
-                  placeholder="Search contacts..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </li>
-              <li>
-                <button onClick={() => setShowImportModal(true)}>Import VCF</button>
-              </li>
-            </ul>
-          </nav>
-        </header>
-
-        <section>
-          <ContactList
-            search={debouncedSearch}
-            onSelectContact={setSelectedContactId}
+      <div className="app-layout">
+        <Sidebar />
+        <main
+          className="main-content"
+          style={{ marginRight: selectedContactId !== null ? '400px' : 0 }}
+        >
+          <TopHeader
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onImportClick={() => setShowImportModal(true)}
+            onDeduplicateClick={handleDeduplicateClick}
           />
-        </section>
-      </main>
+          <div className="page-content">
+            <div className="page-header">
+              <h1>Team Directory</h1>
+              <p>Manage your contacts here.</p>
+            </div>
+            <ContactList
+              search={debouncedSearch}
+              onSelectContact={setSelectedContactId}
+            />
+          </div>
+        </main>
+      </div>
 
       {selectedContactId !== null && (
         <ContactDetail

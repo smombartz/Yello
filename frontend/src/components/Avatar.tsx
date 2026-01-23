@@ -2,6 +2,7 @@ interface AvatarProps {
   photoUrl: string | null;
   name: string;
   size?: number;
+  className?: string;
 }
 
 function getInitials(name: string): string {
@@ -21,29 +22,20 @@ function stringToColor(str: string): string {
   return `hsl(${hue}, 65%, 45%)`;
 }
 
-export function Avatar({ photoUrl, name, size = 48 }: AvatarProps) {
+export function Avatar({ photoUrl, name, size = 48, className = '' }: AvatarProps) {
   const style: React.CSSProperties = {
     width: size,
     height: size,
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
     fontSize: size * 0.4,
-    fontWeight: 600,
-    color: 'white',
     backgroundColor: stringToColor(name),
-    flexShrink: 0,
-    overflow: 'hidden',
   };
 
   if (photoUrl) {
     return (
-      <div style={style}>
+      <div className={`avatar ${className}`} style={style}>
         <img
           src={photoUrl}
           alt={name}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           onError={(e) => {
             e.currentTarget.style.display = 'none';
             e.currentTarget.parentElement!.textContent = getInitials(name);
@@ -53,5 +45,9 @@ export function Avatar({ photoUrl, name, size = 48 }: AvatarProps) {
     );
   }
 
-  return <div style={style}>{getInitials(name)}</div>;
+  return (
+    <div className={`avatar ${className}`} style={style}>
+      {getInitials(name)}
+    </div>
+  );
 }

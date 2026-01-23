@@ -64,6 +64,15 @@ export function getDatabase(): DatabaseType {
       type TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS contact_social_profiles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+      platform TEXT NOT NULL,
+      username TEXT NOT NULL,
+      profile_url TEXT,
+      type TEXT
+    );
+
     CREATE VIRTUAL TABLE IF NOT EXISTS contacts_fts USING fts5(
       display_name,
       company,
@@ -109,6 +118,11 @@ export function getDatabase(): DatabaseType {
     CREATE INDEX IF NOT EXISTS idx_contact_emails_contact_id ON contact_emails(contact_id);
     CREATE INDEX IF NOT EXISTS idx_contact_phones_contact_id ON contact_phones(contact_id);
     CREATE INDEX IF NOT EXISTS idx_contact_addresses_contact_id ON contact_addresses(contact_id);
+    CREATE INDEX IF NOT EXISTS idx_contact_social_profiles_contact_id ON contact_social_profiles(contact_id);
+    CREATE INDEX IF NOT EXISTS idx_contact_social_profiles_platform_username ON contact_social_profiles(platform, username);
+    CREATE INDEX IF NOT EXISTS idx_contact_emails_email_lower ON contact_emails(email COLLATE NOCASE);
+    CREATE INDEX IF NOT EXISTS idx_contact_phones_phone ON contact_phones(phone);
+    CREATE INDEX IF NOT EXISTS idx_contact_addresses_composite ON contact_addresses(street, city, postal_code);
   `);
 
   return db;

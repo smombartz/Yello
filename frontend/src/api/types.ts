@@ -29,6 +29,15 @@ export interface ContactAddress {
   type: string | null;
 }
 
+export interface ContactSocialProfile {
+  id: number;
+  contactId: number;
+  platform: string;
+  username: string;
+  profileUrl: string | null;
+  type: string | null;
+}
+
 export interface ContactDetail {
   id: number;
   firstName: string | null;
@@ -40,6 +49,7 @@ export interface ContactDetail {
   emails: ContactEmail[];
   phones: ContactPhone[];
   addresses: ContactAddress[];
+  socialProfiles: ContactSocialProfile[];
   photoUrl: string | null;
   createdAt: string;
   updatedAt: string;
@@ -57,4 +67,38 @@ export interface ImportResult {
   failed: number;
   photosProcessed: number;
   errors: Array<{ line: number; reason: string }>;
+}
+
+// Deduplication types
+export type DeduplicationMode = 'email' | 'phone' | 'address' | 'social';
+
+export interface DuplicateGroup {
+  id: string;
+  matchingValue: string;
+  matchingField: DeduplicationMode;
+  contacts: ContactDetail[];
+}
+
+export interface DuplicateGroupsResponse {
+  groups: DuplicateGroup[];
+  totalGroups: number;
+  limit: number;
+  offset: number;
+}
+
+export interface DuplicateSummary {
+  email: number;
+  phone: number;
+  address: number;
+  social: number;
+}
+
+export interface MergeRequest {
+  contactIds: number[];
+  primaryContactId: number;
+}
+
+export interface MergeResponse {
+  mergedContact: ContactDetail;
+  deletedContactIds: number[];
 }

@@ -10,12 +10,12 @@ interface ContactDetailProps {
 function EmailList({ emails }: { emails: ContactEmail[] }) {
   if (!emails.length) return null;
   return (
-    <div style={{ marginBottom: '1rem' }}>
-      <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.875rem', color: 'var(--pico-muted-color)' }}>Email</h4>
+    <div className="contact-detail-section">
+      <h4>Email</h4>
       {emails.map((email, i) => (
-        <div key={i} style={{ marginBottom: '0.25rem' }}>
+        <div key={i} className="contact-detail-item">
           <a href={`mailto:${email.email}`}>{email.email}</a>
-          {email.type && <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: 'var(--pico-muted-color)' }}>({email.type})</span>}
+          {email.type && <span className="type">({email.type})</span>}
         </div>
       ))}
     </div>
@@ -25,12 +25,12 @@ function EmailList({ emails }: { emails: ContactEmail[] }) {
 function PhoneList({ phones }: { phones: ContactPhone[] }) {
   if (!phones.length) return null;
   return (
-    <div style={{ marginBottom: '1rem' }}>
-      <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.875rem', color: 'var(--pico-muted-color)' }}>Phone</h4>
+    <div className="contact-detail-section">
+      <h4>Phone</h4>
       {phones.map((phone, i) => (
-        <div key={i} style={{ marginBottom: '0.25rem' }}>
+        <div key={i} className="contact-detail-item">
           <a href={`tel:${phone.phone}`}>{phone.phoneDisplay}</a>
-          {phone.type && <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: 'var(--pico-muted-color)' }}>({phone.type})</span>}
+          {phone.type && <span className="type">({phone.type})</span>}
         </div>
       ))}
     </div>
@@ -40,15 +40,15 @@ function PhoneList({ phones }: { phones: ContactPhone[] }) {
 function AddressList({ addresses }: { addresses: ContactAddress[] }) {
   if (!addresses.length) return null;
   return (
-    <div style={{ marginBottom: '1rem' }}>
-      <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.875rem', color: 'var(--pico-muted-color)' }}>Address</h4>
+    <div className="contact-detail-section">
+      <h4>Address</h4>
       {addresses.map((addr, i) => {
         const parts = [addr.street, addr.city, addr.state, addr.postalCode, addr.country].filter(Boolean);
         if (!parts.length) return null;
         return (
-          <div key={i} style={{ marginBottom: '0.5rem' }}>
+          <div key={i} className="contact-detail-item">
             <div>{parts.join(', ')}</div>
-            {addr.type && <span style={{ fontSize: '0.75rem', color: 'var(--pico-muted-color)' }}>({addr.type})</span>}
+            {addr.type && <span className="type">({addr.type})</span>}
           </div>
         );
       })}
@@ -60,50 +60,34 @@ export function ContactDetail({ contactId, onClose }: ContactDetailProps) {
   const { data: contact, isLoading, error } = useContactDetail(contactId);
 
   return (
-    <aside
-      style={{
-        position: 'fixed',
-        top: 0,
-        right: 0,
-        bottom: 0,
-        width: '400px',
-        maxWidth: '100vw',
-        backgroundColor: 'var(--pico-background-color)',
-        boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.15)',
-        overflow: 'auto',
-        zIndex: 100,
-      }}
-    >
-      <header style={{ padding: '1rem', borderBottom: '1px solid var(--pico-muted-border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ margin: 0 }}>Contact Details</h3>
-        <button
-          onClick={onClose}
-          style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', padding: '0.25rem' }}
-        >
-          ×
+    <aside className="contact-detail-panel">
+      <header className="contact-detail-header">
+        <h3>Contact Details</h3>
+        <button className="icon-button" onClick={onClose}>
+          <span className="material-symbols-outlined">close</span>
         </button>
       </header>
 
-      <div style={{ padding: '1.5rem' }}>
+      <div className="contact-detail-body">
         {isLoading && (
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
+          <div className="loading-state">
             <span aria-busy="true">Loading...</span>
           </div>
         )}
 
         {error && (
-          <div style={{ color: 'var(--pico-del-color)' }}>
+          <div className="error-state">
             Error loading contact: {error.message}
           </div>
         )}
 
         {contact && (
           <>
-            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+            <div className="contact-detail-profile">
               <Avatar photoUrl={contact.photoUrl} name={contact.displayName} size={120} />
-              <h2 style={{ margin: '1rem 0 0.25rem' }}>{contact.displayName}</h2>
-              {contact.title && <div style={{ color: 'var(--pico-muted-color)' }}>{contact.title}</div>}
-              {contact.company && <div style={{ color: 'var(--pico-muted-color)' }}>{contact.company}</div>}
+              <h2>{contact.displayName}</h2>
+              {contact.title && <p className="subtitle">{contact.title}</p>}
+              {contact.company && <p className="subtitle">{contact.company}</p>}
             </div>
 
             <EmailList emails={contact.emails} />
@@ -111,8 +95,8 @@ export function ContactDetail({ contactId, onClose }: ContactDetailProps) {
             <AddressList addresses={contact.addresses} />
 
             {contact.notes && (
-              <div style={{ marginBottom: '1rem' }}>
-                <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.875rem', color: 'var(--pico-muted-color)' }}>Notes</h4>
+              <div className="contact-detail-section">
+                <h4>Notes</h4>
                 <div style={{ whiteSpace: 'pre-wrap' }}>{contact.notes}</div>
               </div>
             )}

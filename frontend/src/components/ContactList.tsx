@@ -8,7 +8,7 @@ interface ContactListProps {
   onSelectContact: (id: number) => void;
 }
 
-const ROW_HEIGHT = 72;
+const ROW_HEIGHT = 80;
 const PAGE_SIZE = 100;
 
 export function ContactList({ search, onSelectContact }: ContactListProps) {
@@ -25,7 +25,7 @@ export function ContactList({ search, onSelectContact }: ContactListProps) {
 
   if (isLoading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <div className="loading-state">
         <span aria-busy="true">Loading contacts...</span>
       </div>
     );
@@ -33,7 +33,7 @@ export function ContactList({ search, onSelectContact }: ContactListProps) {
 
   if (error) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--pico-del-color)' }}>
+      <div className="error-state">
         Error loading contacts: {error.message}
       </div>
     );
@@ -41,23 +41,20 @@ export function ContactList({ search, onSelectContact }: ContactListProps) {
 
   if (!data?.contacts.length) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--pico-muted-color)' }}>
+      <div className="empty-state">
         {search ? `No contacts match "${search}"` : 'No contacts yet. Import a VCF file to get started.'}
       </div>
     );
   }
 
   return (
-    <div>
-      <div style={{ padding: '8px 16px', fontSize: '0.875rem', color: 'var(--pico-muted-color)', borderBottom: '1px solid var(--pico-muted-border-color)' }}>
+    <div className="contact-list">
+      <div className="contact-count">
         {data.total.toLocaleString()} contact{data.total !== 1 ? 's' : ''}
       </div>
       <div
         ref={parentRef}
-        style={{
-          height: 'calc(100vh - 180px)',
-          overflow: 'auto',
-        }}
+        className="virtual-scroll-container"
       >
         <div
           style={{

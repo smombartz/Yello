@@ -63,6 +63,15 @@ interface AddressRow {
   type: string | null;
 }
 
+interface SocialProfileRow {
+  id: number;
+  contact_id: number;
+  platform: string;
+  username: string;
+  profile_url: string | null;
+  type: string | null;
+}
+
 interface CountRow {
   count: number;
 }
@@ -202,6 +211,12 @@ export default async function contactsRoutes(
       WHERE contact_id = ?
     `).all(id) as AddressRow[];
 
+    const socialProfiles = db.prepare(`
+      SELECT id, contact_id, platform, username, profile_url, type
+      FROM contact_social_profiles
+      WHERE contact_id = ?
+    `).all(id) as SocialProfileRow[];
+
     return {
       id: contact.id,
       firstName: contact.first_name,
@@ -238,6 +253,14 @@ export default async function contactsRoutes(
         postalCode: a.postal_code,
         country: a.country,
         type: a.type
+      })),
+      socialProfiles: socialProfiles.map(s => ({
+        id: s.id,
+        contactId: s.contact_id,
+        platform: s.platform,
+        username: s.username,
+        profileUrl: s.profile_url,
+        type: s.type
       })),
       photoUrl: getPhotoUrl(contact.photo_hash, 'medium')
     };

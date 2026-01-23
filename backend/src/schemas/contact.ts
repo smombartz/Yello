@@ -42,6 +42,15 @@ export const ContactAddressSchema = Type.Object({
   type: Type.Union([Type.String(), Type.Null()])
 });
 
+export const ContactSocialProfileSchema = Type.Object({
+  id: Type.Number(),
+  contactId: Type.Number(),
+  platform: Type.String(),
+  username: Type.String(),
+  profileUrl: Type.Union([Type.String(), Type.Null()]),
+  type: Type.Union([Type.String(), Type.Null()])
+});
+
 export const ContactListItemSchema = Type.Object({
   id: Type.Number(),
   displayName: Type.String(),
@@ -73,6 +82,7 @@ export const ContactDetailSchema = Type.Object({
   emails: Type.Array(ContactEmailSchema),
   phones: Type.Array(ContactPhoneSchema),
   addresses: Type.Array(ContactAddressSchema),
+  socialProfiles: Type.Array(ContactSocialProfileSchema),
   photoUrl: Type.Union([Type.String(), Type.Null()])
 });
 

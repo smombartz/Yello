@@ -1,0 +1,68 @@
+import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { findDuplicates, getDuplicateSummary } from '../services/deduplicationService.js';
+import { mergeContacts } from '../services/mergeService.js';
+import {
+  DuplicatesQuerySchema,
+  DuplicatesQuery,
+  DuplicateGroupsResponseSchema,
+  DuplicateSummarySchema,
+  MergeRequestSchema,
+  MergeRequest,
+  MergeResponseSchema
+} from '../schemas/duplicates.js';
+
+export default async function duplicatesRoutes(
+  fastify: FastifyInstance,
+  _opts: FastifyPluginOptions
+): Promise<void> {
+  // GET /api/duplicates/summary
+  fastify.get('/summary', {
+    schema: {
+      response: {
+        200: DuplicateSummarySchema
+      }
+    }
+  }, async (_request, _reply) => {
+    return getDuplicateSummary();
+  });
+
+  // GET /api/duplicates
+  fastify.get<{ Querystring: DuplicatesQuery }>('/', {
+    schema: {
+      querystring: DuplicatesQuerySchema,
+      response: {
+        200: DuplicateGroupsResponseSchema
+      }
+    }
+  }, async (request, _reply) => {
+    const { mode, limit = 50, offset = 0 } = request.query;
+    const { groups, totalGroups } = findDuplicates(mode, limit, offset);
+
+    return {
+      groups,
+      totalGroups,
+      limit,
+      offset
+    };
+  });
+
+  // POST /api/duplicates/merge
+  fastify.post<{ Body: MergeRequest }>('/merge', {
+    schema: {
+      body: MergeRequestSchema,
+      response: {
+        200: MergeResponseSchema
+      }
+    }
+  }, async (request, reply) => {
+    const { contactIds, primaryContactId } = request.body;
+
+    try {
+      const result = mergeContacts(contactIds, primaryContactId);
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return reply.status(400).send({ error: message });
+    }
+  });
+}
