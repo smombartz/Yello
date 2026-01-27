@@ -78,15 +78,15 @@ export function mergeContacts(contactIds: number[], primaryContactId: number): M
     // Merge phones from secondary contacts
     for (const secondaryId of secondaryContactIds) {
       const secondaryPhones = db.prepare(`
-        SELECT phone, phone_display, type, is_primary FROM contact_phones WHERE contact_id = ?
-      `).all(secondaryId) as Array<{ phone: string; phone_display: string; type: string | null; is_primary: number }>;
+        SELECT phone, phone_display, country_code, type, is_primary FROM contact_phones WHERE contact_id = ?
+      `).all(secondaryId) as Array<{ phone: string; phone_display: string; country_code: string | null; type: string | null; is_primary: number }>;
 
       for (const phone of secondaryPhones) {
         if (!primaryPhoneSet.has(phone.phone)) {
           db.prepare(`
-            INSERT INTO contact_phones (contact_id, phone, phone_display, type, is_primary)
-            VALUES (?, ?, ?, ?, 0)
-          `).run(primaryContactId, phone.phone, phone.phone_display, phone.type);
+            INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, is_primary)
+            VALUES (?, ?, ?, ?, ?, 0)
+          `).run(primaryContactId, phone.phone, phone.phone_display, phone.country_code, phone.type);
           primaryPhoneSet.add(phone.phone);
         }
       }
@@ -346,7 +346,7 @@ function getContactDetail(contactId: number): ContactDetail {
   }>;
 
   const phones = db.prepare(`
-    SELECT id, contact_id as contactId, phone, phone_display as phoneDisplay, type, is_primary as isPrimary
+    SELECT id, contact_id as contactId, phone, phone_display as phoneDisplay, country_code as countryCode, type, is_primary as isPrimary
     FROM contact_phones
     WHERE contact_id = ?
   `).all(contactId) as Array<{
@@ -354,6 +354,7 @@ function getContactDetail(contactId: number): ContactDetail {
     contactId: number;
     phone: string;
     phoneDisplay: string;
+    countryCode: string | null;
     type: string | null;
     isPrimary: number;
   }>;

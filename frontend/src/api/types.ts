@@ -4,6 +4,7 @@ export interface ContactListItem {
   company: string | null;
   primaryEmail: string | null;
   primaryPhone: string | null;
+  primaryPhoneCountryCode: string | null;
   photoUrl: string | null;
 }
 
@@ -16,6 +17,7 @@ export interface ContactEmail {
 export interface ContactPhone {
   phone: string;
   phoneDisplay: string;
+  countryCode: string | null;
   type: string | null;
   isPrimary: boolean;
 }

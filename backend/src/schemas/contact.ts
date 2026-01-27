@@ -27,6 +27,7 @@ export const ContactPhoneSchema = Type.Object({
   contactId: Type.Number(),
   phone: Type.String(),
   phoneDisplay: Type.String(),
+  countryCode: Type.Union([Type.String(), Type.Null()]),
   type: Type.Union([Type.String(), Type.Null()]),
   isPrimary: Type.Boolean()
 });
@@ -86,6 +87,7 @@ export const ContactListItemSchema = Type.Object({
   company: Type.Union([Type.String(), Type.Null()]),
   primaryEmail: Type.Union([Type.String(), Type.Null()]),
   primaryPhone: Type.Union([Type.String(), Type.Null()]),
+  primaryPhoneCountryCode: Type.Union([Type.String(), Type.Null()]),
   photoUrl: Type.Union([Type.String(), Type.Null()])
 });
 

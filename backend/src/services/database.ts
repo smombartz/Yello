@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
+import { parsePhoneNumber } from 'libphonenumber-js';
 
 let db: DatabaseType | null = null;
 
@@ -175,6 +176,27 @@ export function getDatabase(): DatabaseType {
       ALTER TABLE contacts ADD COLUMN archived_at DATETIME DEFAULT NULL;
       CREATE INDEX IF NOT EXISTS idx_contacts_archived_at ON contacts(archived_at);
     `);
+  }
+
+  // Migration: Add country_code column to contact_phones if it doesn't exist
+  const phonesTableInfo = db.prepare("PRAGMA table_info(contact_phones)").all() as Array<{ name: string }>;
+  const hasCountryCode = phonesTableInfo.some(col => col.name === 'country_code');
+
+  if (!hasCountryCode) {
+    db.exec(`
+      ALTER TABLE contact_phones ADD COLUMN country_code TEXT DEFAULT NULL;
+    `);
+  }
+
+  // Migration: Update existing phone records with country_code and new display format
+  // Check if migration is needed by looking for phones without country_code
+  const phonesNeedingMigration = db.prepare(`
+    SELECT COUNT(*) as count FROM contact_phones WHERE country_code IS NULL
+  `).get() as { count: number };
+
+  if (phonesNeedingMigration.count > 0) {
+    console.log(`Migrating ${phonesNeedingMigration.count} phone records to new format...`);
+    migratePhoneFormats(db);
   }
 
   // Migration: Recreate unified FTS with proper tokenizer for email search
@@ -456,4 +478,77 @@ export function deleteContactsFromSearch(database: DatabaseType, contactIds: num
   if (contactIds.length === 0) return;
   const placeholders = contactIds.map(() => '?').join(',');
   database.prepare(`DELETE FROM contacts_unified_fts WHERE rowid IN (${placeholders})`).run(...contactIds);
+}
+
+/**
+ * Parse a phone number and return formatted display and country code
+ */
+function parsePhoneForMigration(rawPhone: string): { phoneDisplay: string; countryCode: string | null } {
+  try {
+    // Try parsing with US as default region
+    const parsed = parsePhoneNumber(rawPhone, 'US');
+    if (parsed) {
+      // Get international format: +1 201 555 0123
+      const international = parsed.formatInternational();
+      // Clean up any parentheses or dashes, ensure single spaces
+      const phoneDisplay = international
+        .replace(/[()-]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      return {
+        phoneDisplay,
+        countryCode: parsed.country || null
+      };
+    }
+  } catch {
+    // Fall through to raw value
+  }
+
+  // Return original format if parsing fails
+  return { phoneDisplay: rawPhone, countryCode: null };
+}
+
+/**
+ * Migrate existing phone records to new format with country codes
+ */
+function migratePhoneFormats(database: DatabaseType): void {
+  // Get all phone records
+  const phones = database.prepare(`
+    SELECT id, phone, phone_display FROM contact_phones
+  `).all() as Array<{ id: number; phone: string; phone_display: string }>;
+
+  let updated = 0;
+  let failed = 0;
+
+  const updateStmt = database.prepare(`
+    UPDATE contact_phones
+    SET phone_display = ?, country_code = ?
+    WHERE id = ?
+  `);
+
+  const migrateAll = database.transaction(() => {
+    for (const phoneRecord of phones) {
+      // Try to parse the stored E.164 phone number first
+      let result = parsePhoneForMigration(phoneRecord.phone);
+
+      // If that didn't yield a country code, try the display format
+      if (!result.countryCode && phoneRecord.phone_display) {
+        const altResult = parsePhoneForMigration(phoneRecord.phone_display);
+        if (altResult.countryCode) {
+          result = altResult;
+        }
+      }
+
+      if (result.countryCode || result.phoneDisplay !== phoneRecord.phone_display) {
+        updateStmt.run(result.phoneDisplay, result.countryCode, phoneRecord.id);
+        updated++;
+      } else {
+        failed++;
+      }
+    }
+  });
+
+  migrateAll();
+  console.log(`Phone migration complete: ${updated} updated, ${failed} could not be parsed`);
 }

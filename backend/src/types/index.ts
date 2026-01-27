@@ -26,6 +26,7 @@ export interface ContactPhone {
   contactId: number;
   phone: string;
   phoneDisplay: string;
+  countryCode: string | null;
   type: string | null;
   isPrimary: boolean;
 }

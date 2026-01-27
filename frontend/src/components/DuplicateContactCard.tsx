@@ -1,5 +1,6 @@
 import { Avatar } from './Avatar';
 import type { ContactDetail, ContactAddress, ContactSocialProfile, DeduplicationMode } from '../api/types';
+import { getCountryFlag, getCountryName } from '../lib/phoneUtils';
 
 interface DuplicateContactCardProps {
   contact: ContactDetail;
@@ -79,15 +80,22 @@ export function DuplicateContactCard({
         ))}
 
         {/* Phone mode: show all phones */}
-        {matchingField === 'phone' && contact.phones.map((phone, idx) => (
-          <div
-            key={idx}
-            className={`duplicate-card-field ${isMatchingPhone(phone.phone, matchingValue) ? 'matching' : ''}`}
-          >
-            <span className="material-symbols-outlined">phone</span>
-            <span className="value">{phone.phoneDisplay}</span>
-          </div>
-        ))}
+        {matchingField === 'phone' && contact.phones.map((phone, idx) => {
+          const flag = getCountryFlag(phone.countryCode);
+          const countryName = getCountryName(phone.countryCode);
+          return (
+            <div
+              key={idx}
+              className={`duplicate-card-field ${isMatchingPhone(phone.phone, matchingValue) ? 'matching' : ''}`}
+            >
+              <span className="material-symbols-outlined">phone</span>
+              <span className="value phone-display">
+                {flag && <span className="phone-flag" title={countryName}>{flag}</span>}
+                <span>{phone.phoneDisplay}</span>
+              </span>
+            </div>
+          );
+        })}
 
         {/* Address mode: show all addresses */}
         {matchingField === 'address' && contact.addresses.map((addr, idx) => (
@@ -126,15 +134,22 @@ export function DuplicateContactCard({
             ))}
 
             {/* Phones - highlight all if 'phone' is in matchedCriteria */}
-            {contact.phones.map((phone, idx) => (
-              <div
-                key={`phone-${idx}`}
-                className={`duplicate-card-field ${isFieldTypeMatching('phone') ? 'matching' : ''}`}
-              >
-                <span className="material-symbols-outlined">phone</span>
-                <span className="value">{phone.phoneDisplay}</span>
-              </div>
-            ))}
+            {contact.phones.map((phone, idx) => {
+              const flag = getCountryFlag(phone.countryCode);
+              const countryName = getCountryName(phone.countryCode);
+              return (
+                <div
+                  key={`phone-${idx}`}
+                  className={`duplicate-card-field ${isFieldTypeMatching('phone') ? 'matching' : ''}`}
+                >
+                  <span className="material-symbols-outlined">phone</span>
+                  <span className="value phone-display">
+                    {flag && <span className="phone-flag" title={countryName}>{flag}</span>}
+                    <span>{phone.phoneDisplay}</span>
+                  </span>
+                </div>
+              );
+            })}
 
             {/* Social profiles - highlight all if 'social' is in matchedCriteria */}
             {contact.socialProfiles.map((social, idx) => (

@@ -1,4 +1,5 @@
 import type { ContactDetail, ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson } from '../api/types';
+import { getCountryFlag, getCountryName } from '../lib/phoneUtils';
 
 interface ContactRowExpandedProps {
   contact: ContactDetail;
@@ -19,15 +20,22 @@ function ContactInfoSection({ emails, phones }: { emails: ContactEmail[]; phones
     <div className="expanded-section">
       <h4 className="section-header">Contact Info</h4>
       <div className="section-content">
-        {phones.map((phone, i) => (
-          <div key={`phone-${i}`} className="expanded-item">
-            <span className="material-symbols-outlined">call</span>
-            <div className="expanded-item-content">
-              <a href={`tel:${phone.phone}`}>{phone.phoneDisplay}</a>
-              {phone.type && <span className="item-type">{phone.type}</span>}
+        {phones.map((phone, i) => {
+          const flag = getCountryFlag(phone.countryCode);
+          const countryName = getCountryName(phone.countryCode);
+          return (
+            <div key={`phone-${i}`} className="expanded-item">
+              <span className="material-symbols-outlined">call</span>
+              <div className="expanded-item-content">
+                <a href={`tel:${phone.phone}`} className="phone-display">
+                  {flag && <span className="phone-flag" title={countryName}>{flag}</span>}
+                  <span>{phone.phoneDisplay}</span>
+                </a>
+                {phone.type && <span className="item-type">{phone.type}</span>}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {emails.map((email, i) => (
           <div key={`email-${i}`} className="expanded-item">
             <span className="material-symbols-outlined">mail</span>

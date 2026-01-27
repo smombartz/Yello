@@ -10,6 +10,7 @@ export interface ParsedEmail {
 export interface ParsedPhone {
   phone: string;
   phoneDisplay: string;
+  countryCode: string | null;
   type: string | null;
   isPrimary: boolean;
 }
@@ -84,20 +85,29 @@ function extractType(params: Record<string, string | string[]> | undefined): str
   return typeValue?.toLowerCase() || null;
 }
 
-function parsePhone(rawPhone: string): { phone: string; phoneDisplay: string } {
+function parsePhone(rawPhone: string): { phone: string; phoneDisplay: string; countryCode: string | null } {
   try {
     const parsed = parsePhoneNumber(rawPhone, 'US');
     if (parsed) {
+      // Format as international with spaces: +1 201 555 0123
+      const international = parsed.formatInternational();
+      // Replace dashes and remove parentheses for clean space-separated format
+      const phoneDisplay = international
+        .replace(/[()-]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
       return {
         phone: parsed.format('E.164'),
-        phoneDisplay: parsed.formatNational()
+        phoneDisplay,
+        countryCode: parsed.country || null
       };
     }
   } catch {
     // Fall through to raw value
   }
   const cleaned = rawPhone.replace(/[^\d+]/g, '');
-  return { phone: cleaned, phoneDisplay: rawPhone };
+  return { phone: cleaned, phoneDisplay: rawPhone, countryCode: null };
 }
 
 function parseSingleVcard(vcardText: string): ParsedContact | null {
@@ -149,10 +159,11 @@ function parseSingleVcard(vcardText: string): ParsedContact | null {
   for (const telProp of comp.getAllProperties('tel')) {
     const rawPhone = telProp.getFirstValue() as string;
     if (rawPhone) {
-      const { phone, phoneDisplay } = parsePhone(rawPhone.replace(/^tel:/i, ''));
+      const { phone, phoneDisplay, countryCode } = parsePhone(rawPhone.replace(/^tel:/i, ''));
       phones.push({
         phone,
         phoneDisplay,
+        countryCode,
         type: extractType(telProp.toJSON()[1]),
         isPrimary: phones.length === 0
       });

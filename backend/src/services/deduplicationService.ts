@@ -671,7 +671,7 @@ function getContactDetails(contactIds: number[]): ContactDetail[] {
     }>;
 
     const phones = db.prepare(`
-      SELECT id, contact_id as contactId, phone, phone_display as phoneDisplay, type, is_primary as isPrimary
+      SELECT id, contact_id as contactId, phone, phone_display as phoneDisplay, country_code as countryCode, type, is_primary as isPrimary
       FROM contact_phones
       WHERE contact_id = ?
     `).all(contact.id) as Array<{
@@ -679,6 +679,7 @@ function getContactDetails(contactIds: number[]): ContactDetail[] {
       contactId: number;
       phone: string;
       phoneDisplay: string;
+      countryCode: string | null;
       type: string | null;
       isPrimary: number;
     }>;

@@ -2,6 +2,7 @@ import { Avatar } from './Avatar';
 import { ContactRowExpanded } from './ContactRowExpanded';
 import { useContactDetail } from '../api/hooks';
 import type { ContactListItem } from '../api/types';
+import { getCountryFlag, getCountryName } from '../lib/phoneUtils';
 
 interface ContactRowProps {
   contact: ContactListItem;
@@ -57,7 +58,14 @@ export function ContactRow({
           {contact.primaryPhone && (
             <div className="contact-detail-item">
               <span className="material-symbols-outlined">call</span>
-              <span>{contact.primaryPhone}</span>
+              <span className="phone-display">
+                {contact.primaryPhoneCountryCode && (
+                  <span className="phone-flag" title={getCountryName(contact.primaryPhoneCountryCode)}>
+                    {getCountryFlag(contact.primaryPhoneCountryCode)}
+                  </span>
+                )}
+                <span>{contact.primaryPhone}</span>
+              </span>
             </div>
           )}
         </div>

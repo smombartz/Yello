@@ -26,7 +26,7 @@ export async function importVcf(vcfContent: string): Promise<ImportResult> {
   `);
 
   const insertPhone = db.prepare(`
-    INSERT INTO contact_phones (contact_id, phone, phone_display, type, is_primary) VALUES (?, ?, ?, ?, ?)
+    INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, is_primary) VALUES (?, ?, ?, ?, ?, ?)
   `);
 
   const insertAddress = db.prepare(`
@@ -87,7 +87,7 @@ export async function importVcf(vcfContent: string): Promise<ImportResult> {
       }
 
       for (const phone of contact.phones) {
-        insertPhone.run(contactId, phone.phone, phone.phoneDisplay, phone.type, phone.isPrimary ? 1 : 0);
+        insertPhone.run(contactId, phone.phone, phone.phoneDisplay, phone.countryCode, phone.type, phone.isPrimary ? 1 : 0);
       }
 
       for (const addr of contact.addresses) {

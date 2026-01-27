@@ -37,6 +37,7 @@ interface ContactListRow {
   photo_hash: string | null;
   primary_email: string | null;
   primary_phone: string | null;
+  primary_phone_country_code: string | null;
 }
 
 interface EmailRow {
@@ -52,6 +53,7 @@ interface PhoneRow {
   contact_id: number;
   phone: string;
   phone_display: string;
+  country_code: string | null;
   type: string | null;
   is_primary: number;
 }
@@ -203,7 +205,8 @@ export default async function contactsRoutes(
           c.company,
           c.photo_hash,
           (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
-          (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone
+          (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone,
+          (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code
         FROM contacts c
         WHERE c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
         ORDER BY c.last_name, c.first_name, c.display_name
@@ -220,7 +223,8 @@ export default async function contactsRoutes(
           c.company,
           c.photo_hash,
           (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
-          (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone
+          (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone,
+          (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code
         FROM contacts c
         ORDER BY c.last_name, c.first_name, c.display_name
         LIMIT ? OFFSET ?
@@ -236,6 +240,7 @@ export default async function contactsRoutes(
         company: row.company,
         primaryEmail: row.primary_email,
         primaryPhone: row.primary_phone,
+        primaryPhoneCountryCode: row.primary_phone_country_code,
         photoUrl: getPhotoUrl(row.photo_hash, 'thumbnail')
       })),
       total,
@@ -276,7 +281,7 @@ export default async function contactsRoutes(
     `).all(id) as EmailRow[];
 
     const phones = db.prepare(`
-      SELECT id, contact_id, phone, phone_display, type, is_primary
+      SELECT id, contact_id, phone, phone_display, country_code, type, is_primary
       FROM contact_phones
       WHERE contact_id = ?
     `).all(id) as PhoneRow[];
@@ -342,6 +347,7 @@ export default async function contactsRoutes(
         contactId: p.contact_id,
         phone: p.phone,
         phoneDisplay: p.phone_display,
+        countryCode: p.country_code,
         type: p.type,
         isPrimary: p.is_primary === 1
       })),

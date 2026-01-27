@@ -2507,3 +2507,19 @@ body {
   display: flex;
   gap: 0.5rem;
 }
+
+/* ============================================================
+   Phone Display with Country Flag
+   ============================================================ */
+
+.phone-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.phone-flag {
+  font-size: 1rem;
+  line-height: 1;
+  cursor: help;
+}
