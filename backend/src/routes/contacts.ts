@@ -12,7 +12,8 @@ import {
   ContactDetailSchema,
   ContactCountResponseSchema,
   ContactIdsResponseSchema,
-  ContactNotFoundSchema
+  ContactNotFoundSchema,
+  GroupsResponseSchema
 } from '../schemas/contact.js';
 
 interface ContactRow {
@@ -111,6 +112,11 @@ interface CountRow {
   count: number;
 }
 
+interface GroupRow {
+  category: string;
+  contactCount: number;
+}
+
 export default async function contactsRoutes(
   fastify: FastifyInstance,
   _opts: FastifyPluginOptions
@@ -126,6 +132,25 @@ export default async function contactsRoutes(
     const db = getDatabase();
     const result = db.prepare('SELECT COUNT(*) as count FROM contacts').get() as CountRow;
     return { total: result.count };
+  });
+
+  // GET /api/contacts/groups - Get all categories with contact counts
+  fastify.get('/groups', {
+    schema: {
+      response: {
+        200: GroupsResponseSchema
+      }
+    }
+  }, async (_request, _reply) => {
+    const db = getDatabase();
+    const groups = db.prepare(`
+      SELECT category, COUNT(DISTINCT contact_id) as contactCount
+      FROM contact_categories
+      GROUP BY category
+      ORDER BY category
+    `).all() as GroupRow[];
+
+    return { groups };
   });
 
   // GET /api/contacts/ids - Get all contact IDs for bulk selection
@@ -178,12 +203,18 @@ export default async function contactsRoutes(
       }
     }
   }, async (request, _reply) => {
-    const { page = 1, limit = 50, search } = request.query;
+    const { page = 1, limit = 50, search, category } = request.query;
     const db = getDatabase();
     const offset = (page - 1) * limit;
 
     let contacts: ContactListRow[];
     let total: number;
+
+    // Build category join and condition if filtering by category
+    const categoryJoin = category
+      ? 'INNER JOIN contact_categories cc ON c.id = cc.contact_id'
+      : '';
+    const categoryCondition = category ? 'cc.category = ?' : '';
 
     if (search) {
       // Use FTS5 for search with prefix matching
@@ -191,15 +222,23 @@ export default async function contactsRoutes(
       const escapedSearch = search.replace(/"/g, '""');
       const searchTerm = `"${escapedSearch}"*`;
 
+      const ftsCondition = 'c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)';
+      const whereClause = category
+        ? `WHERE ${ftsCondition} AND ${categoryCondition}`
+        : `WHERE ${ftsCondition}`;
+
+      const countParams = category ? [searchTerm, category] : [searchTerm];
       const countResult = db.prepare(`
-        SELECT COUNT(*) as count
+        SELECT COUNT(DISTINCT c.id) as count
         FROM contacts c
-        WHERE c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
-      `).get(searchTerm) as CountRow;
+        ${categoryJoin}
+        ${whereClause}
+      `).get(...countParams) as CountRow;
       total = countResult.count;
 
+      const queryParams = category ? [searchTerm, category, limit, offset] : [searchTerm, limit, offset];
       contacts = db.prepare(`
-        SELECT
+        SELECT DISTINCT
           c.id,
           c.display_name,
           c.company,
@@ -208,10 +247,35 @@ export default async function contactsRoutes(
           (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone,
           (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code
         FROM contacts c
-        WHERE c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
+        ${categoryJoin}
+        ${whereClause}
         ORDER BY c.last_name, c.first_name, c.display_name
         LIMIT ? OFFSET ?
-      `).all(searchTerm, limit, offset) as ContactListRow[];
+      `).all(...queryParams) as ContactListRow[];
+    } else if (category) {
+      const countResult = db.prepare(`
+        SELECT COUNT(DISTINCT c.id) as count
+        FROM contacts c
+        ${categoryJoin}
+        WHERE ${categoryCondition}
+      `).get(category) as CountRow;
+      total = countResult.count;
+
+      contacts = db.prepare(`
+        SELECT DISTINCT
+          c.id,
+          c.display_name,
+          c.company,
+          c.photo_hash,
+          (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
+          (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone,
+          (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code
+        FROM contacts c
+        ${categoryJoin}
+        WHERE ${categoryCondition}
+        ORDER BY c.last_name, c.first_name, c.display_name
+        LIMIT ? OFFSET ?
+      `).all(category, limit, offset) as ContactListRow[];
     } else {
       const countResult = db.prepare('SELECT COUNT(*) as count FROM contacts').get() as CountRow;
       total = countResult.count;

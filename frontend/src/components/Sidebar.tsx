@@ -18,11 +18,12 @@ interface SidebarProps {
   onDeduplicateClick?: () => void;
   onCleanupClick?: () => void;
   onArchivedClick?: () => void;
+  onGroupsClick?: () => void;
   onBackToContacts?: () => void;
-  currentView?: 'contacts' | 'deduplication' | 'cleanup' | 'archived';
+  currentView?: 'contacts' | 'deduplication' | 'cleanup' | 'archived' | 'groups';
 }
 
-export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, onBackToContacts, currentView = 'contacts' }: SidebarProps) {
+export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, onGroupsClick, onBackToContacts, currentView = 'contacts' }: SidebarProps) {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
@@ -34,7 +35,7 @@ export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, o
         <NavItem icon="dashboard" label="Dashboard" />
         <NavItem icon="contacts" label="All Contacts" active={currentView === 'contacts'} onClick={onBackToContacts} />
         <NavItem icon="star" label="Favorites" />
-        <NavItem icon="group" label="Groups" />
+        <NavItem icon="group" label="Groups" active={currentView === 'groups'} onClick={onGroupsClick} />
         <NavItem icon="archive" label="Archived" active={currentView === 'archived'} onClick={onArchivedClick} />
         <NavItem icon="merge" label="Merge" active={currentView === 'deduplication'} onClick={onDeduplicateClick} />
         <NavItem icon="cleaning_services" label="Cleanup" active={currentView === 'cleanup'} onClick={onCleanupClick} />

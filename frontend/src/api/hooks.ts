@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi, uploadFile } from './client';
-import type { ContactListResponse, ContactDetail, ContactIdsResponse, ImportResult } from './types';
+import type { ContactListResponse, ContactDetail, ContactIdsResponse, ImportResult, GroupsResponse } from './types';
 
-export function useContacts(page: number = 1, limit: number = 50, search?: string) {
+export function useContacts(page: number = 1, limit: number = 50, search?: string, category?: string) {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -10,10 +10,20 @@ export function useContacts(page: number = 1, limit: number = 50, search?: strin
   if (search) {
     params.set('search', search);
   }
+  if (category) {
+    params.set('category', category);
+  }
 
   return useQuery({
-    queryKey: ['contacts', { page, limit, search }],
+    queryKey: ['contacts', { page, limit, search, category }],
     queryFn: () => fetchApi<ContactListResponse>(`/api/contacts?${params}`),
+  });
+}
+
+export function useGroups() {
+  return useQuery({
+    queryKey: ['groups'],
+    queryFn: () => fetchApi<GroupsResponse>('/api/contacts/groups'),
   });
 }
 

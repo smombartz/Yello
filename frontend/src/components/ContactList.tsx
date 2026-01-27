@@ -9,6 +9,7 @@ import { ViewToggle } from './ViewToggle';
 
 interface ContactListProps {
   search: string;
+  categoryFilter?: string;
 }
 
 interface ToastState {
@@ -20,7 +21,7 @@ const COLLAPSED_HEIGHT = 92;   // 80 + 12 (0.75rem gap)
 const EXPANDED_HEIGHT = 462;   // 450 + 12 (0.75rem gap)
 const PAGE_SIZE = 100;
 
-export function ContactList({ search }: ContactListProps) {
+export function ContactList({ search, categoryFilter }: ContactListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
@@ -34,7 +35,7 @@ export function ContactList({ search }: ContactListProps) {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [isSelectingAll, setIsSelectingAll] = useState(false);
 
-  const { data, isLoading, error } = useContacts(1, PAGE_SIZE, search || undefined);
+  const { data, isLoading, error } = useContacts(1, PAGE_SIZE, search || undefined, categoryFilter);
   const deleteMutation = useDeleteContacts();
   const archiveMutation = useArchiveContacts();
 

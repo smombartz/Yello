@@ -220,3 +220,13 @@ export interface UnarchiveResponse {
 export interface DeleteArchivedResponse {
   deletedCount: number;
 }
+
+// Groups types
+export interface Group {
+  category: string;
+  contactCount: number;
+}
+
+export interface GroupsResponse {
+  groups: Group[];
+}

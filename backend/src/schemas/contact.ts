@@ -3,7 +3,8 @@ import { Type, Static } from '@sinclair/typebox';
 export const ContactListQuerySchema = Type.Object({
   page: Type.Optional(Type.Number({ default: 1 })),
   limit: Type.Optional(Type.Number({ default: 50 })),
-  search: Type.Optional(Type.String())
+  search: Type.Optional(Type.String()),
+  category: Type.Optional(Type.String())
 });
 
 export type ContactListQuery = Static<typeof ContactListQuerySchema>;
@@ -139,4 +140,14 @@ export type ContactIdsQuery = Static<typeof ContactIdsQuerySchema>;
 
 export const ContactIdsResponseSchema = Type.Object({
   contactIds: Type.Array(Type.Number())
+});
+
+// Groups endpoint
+export const GroupSchema = Type.Object({
+  category: Type.String(),
+  contactCount: Type.Number()
+});
+
+export const GroupsResponseSchema = Type.Object({
+  groups: Type.Array(GroupSchema)
 });
