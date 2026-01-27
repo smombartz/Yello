@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
-import { getDatabase, closeDatabase } from '../../services/database.js';
+import { getDatabase, closeDatabase, rebuildContactSearch } from '../../services/database.js';
 import contactsRoutes from '../contacts.js';
 
 describe('contacts routes', () => {
@@ -26,6 +26,7 @@ describe('contacts routes', () => {
     db.exec('DELETE FROM contact_phones');
     db.exec('DELETE FROM contact_emails');
     db.exec('DELETE FROM contacts');
+    db.exec('DELETE FROM contacts_unified_fts');
   });
 
   describe('GET /api/contacts/count', () => {
@@ -156,8 +157,10 @@ describe('contacts routes', () => {
 
     it('should search contacts using FTS', async () => {
       const db = getDatabase();
-      db.prepare('INSERT INTO contacts (display_name, company) VALUES (?, ?)').run('John Doe', 'Apple Inc');
-      db.prepare('INSERT INTO contacts (display_name, company) VALUES (?, ?)').run('Jane Smith', 'Microsoft');
+      const result1 = db.prepare('INSERT INTO contacts (display_name, company) VALUES (?, ?)').run('John Doe', 'Apple Inc');
+      rebuildContactSearch(db, result1.lastInsertRowid as number);
+      const result2 = db.prepare('INSERT INTO contacts (display_name, company) VALUES (?, ?)').run('Jane Smith', 'Microsoft');
+      rebuildContactSearch(db, result2.lastInsertRowid as number);
 
       const response = await app.inject({
         method: 'GET',
@@ -172,9 +175,12 @@ describe('contacts routes', () => {
 
     it('should search with prefix matching', async () => {
       const db = getDatabase();
-      db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Smith Anderson');
-      db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Smithson Jones');
-      db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Jane Doe');
+      const result1 = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Smith Anderson');
+      rebuildContactSearch(db, result1.lastInsertRowid as number);
+      const result2 = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Smithson Jones');
+      rebuildContactSearch(db, result2.lastInsertRowid as number);
+      const result3 = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Jane Doe');
+      rebuildContactSearch(db, result3.lastInsertRowid as number);
 
       const response = await app.inject({
         method: 'GET',

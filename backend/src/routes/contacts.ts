@@ -142,12 +142,14 @@ export default async function contactsRoutes(
 
     if (search) {
       // Use FTS5 for search with prefix matching
-      const searchTerm = `${search}*`;
+      // Escape double quotes and wrap in quotes for FTS5 phrase matching
+      const escapedSearch = search.replace(/"/g, '""');
+      const searchTerm = `"${escapedSearch}"*`;
 
       const rows = db.prepare(`
         SELECT c.id
         FROM contacts c
-        WHERE c.id IN (SELECT rowid FROM contacts_fts WHERE contacts_fts MATCH ?)
+        WHERE c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
         ORDER BY c.last_name, c.first_name, c.display_name
       `).all(searchTerm) as { id: number }[];
 
@@ -183,12 +185,14 @@ export default async function contactsRoutes(
 
     if (search) {
       // Use FTS5 for search with prefix matching
-      const searchTerm = `${search}*`;
+      // Escape double quotes and wrap in quotes for FTS5 phrase matching
+      const escapedSearch = search.replace(/"/g, '""');
+      const searchTerm = `"${escapedSearch}"*`;
 
       const countResult = db.prepare(`
         SELECT COUNT(*) as count
         FROM contacts c
-        WHERE c.id IN (SELECT rowid FROM contacts_fts WHERE contacts_fts MATCH ?)
+        WHERE c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
       `).get(searchTerm) as CountRow;
       total = countResult.count;
 
@@ -201,7 +205,7 @@ export default async function contactsRoutes(
           (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
           (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone
         FROM contacts c
-        WHERE c.id IN (SELECT rowid FROM contacts_fts WHERE contacts_fts MATCH ?)
+        WHERE c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
         ORDER BY c.last_name, c.first_name, c.display_name
         LIMIT ? OFFSET ?
       `).all(searchTerm, limit, offset) as ContactListRow[];

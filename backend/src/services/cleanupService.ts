@@ -1,4 +1,4 @@
-import { getDatabase } from './database.js';
+import { getDatabase, deleteContactsFromSearch } from './database.js';
 import type { ContactDetail, ContactSocialProfile } from '../types/index.js';
 import { getPhotoUrl } from './photoProcessor.js';
 
@@ -623,6 +623,7 @@ export function deleteContacts(contactIds: number[]): { deletedCount: number } {
 
     // Delete from FTS tables
     db.prepare(`DELETE FROM contacts_fts WHERE rowid IN (${placeholders})`).run(...contactIds);
+    deleteContactsFromSearch(db, contactIds);
 
     // Delete contacts
     const result = db.prepare(`DELETE FROM contacts WHERE id IN (${placeholders})`).run(...contactIds);

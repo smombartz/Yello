@@ -1,4 +1,4 @@
-import { getDatabase } from './database.js';
+import { getDatabase, deleteContactsFromSearch } from './database.js';
 import type { ContactDetail, ContactSocialProfile } from '../types/index.js';
 import { getPhotoUrl } from './photoProcessor.js';
 
@@ -214,6 +214,7 @@ export function deleteArchivedContacts(contactIds: number[]): { deletedCount: nu
 
     // Delete from FTS tables
     db.prepare(`DELETE FROM contacts_fts WHERE rowid IN (${placeholders})`).run(...contactIds);
+    deleteContactsFromSearch(db, contactIds);
 
     // Delete contacts (only if archived)
     const result = db.prepare(`

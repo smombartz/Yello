@@ -1,4 +1,4 @@
-import { getDatabase } from './database.js';
+import { getDatabase, rebuildContactSearch, deleteContactsFromSearch } from './database.js';
 import { getPhotoUrl } from './photoProcessor.js';
 import type { ContactDetail, ContactSocialProfile } from '../types/index.js';
 
@@ -285,6 +285,10 @@ export function mergeContacts(contactIds: number[], primaryContactId: number): M
   });
 
   mergeTransaction();
+
+  // Update unified FTS index: delete secondary contacts and rebuild primary
+  deleteContactsFromSearch(db, secondaryContactIds);
+  rebuildContactSearch(db, primaryContactId);
 
   // Fetch the merged contact to return
   const mergedContact = getContactDetail(primaryContactId);

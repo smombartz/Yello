@@ -1,4 +1,4 @@
-import { getDatabase } from './database.js';
+import { getDatabase, rebuildContactSearch } from './database.js';
 import { parseVcf, type ParsedContact } from './vcardParser.js';
 import { processPhoto } from './photoProcessor.js';
 
@@ -136,6 +136,9 @@ export async function importVcf(vcfContent: string): Promise<ImportResult> {
           null
         );
       }
+
+      // Rebuild unified FTS index for this contact
+      rebuildContactSearch(db, contactId);
 
       imported++;
     } catch (e) {
