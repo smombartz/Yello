@@ -127,3 +127,14 @@ export const ContactCountResponseSchema = Type.Object({
 export const ContactNotFoundSchema = Type.Object({
   error: Type.String()
 });
+
+// Contact IDs endpoint (for bulk selection)
+export const ContactIdsQuerySchema = Type.Object({
+  search: Type.Optional(Type.String())
+});
+
+export type ContactIdsQuery = Static<typeof ContactIdsQuerySchema>;
+
+export const ContactIdsResponseSchema = Type.Object({
+  contactIds: Type.Array(Type.Number())
+});

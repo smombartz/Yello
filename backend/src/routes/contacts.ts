@@ -6,9 +6,12 @@ import {
   ContactListQuery,
   ContactIdParamsSchema,
   ContactIdParams,
+  ContactIdsQuerySchema,
+  ContactIdsQuery,
   ContactListResponseSchema,
   ContactDetailSchema,
   ContactCountResponseSchema,
+  ContactIdsResponseSchema,
   ContactNotFoundSchema
 } from '../schemas/contact.js';
 
@@ -121,6 +124,45 @@ export default async function contactsRoutes(
     const db = getDatabase();
     const result = db.prepare('SELECT COUNT(*) as count FROM contacts').get() as CountRow;
     return { total: result.count };
+  });
+
+  // GET /api/contacts/ids - Get all contact IDs for bulk selection
+  fastify.get<{ Querystring: ContactIdsQuery }>('/ids', {
+    schema: {
+      querystring: ContactIdsQuerySchema,
+      response: {
+        200: ContactIdsResponseSchema
+      }
+    }
+  }, async (request, _reply) => {
+    const { search } = request.query;
+    const db = getDatabase();
+
+    let contactIds: number[];
+
+    if (search) {
+      // Use FTS5 for search with prefix matching
+      const searchTerm = `${search}*`;
+
+      const rows = db.prepare(`
+        SELECT c.id
+        FROM contacts c
+        WHERE c.id IN (SELECT rowid FROM contacts_fts WHERE contacts_fts MATCH ?)
+        ORDER BY c.last_name, c.first_name, c.display_name
+      `).all(searchTerm) as { id: number }[];
+
+      contactIds = rows.map(r => r.id);
+    } else {
+      const rows = db.prepare(`
+        SELECT id
+        FROM contacts
+        ORDER BY last_name, first_name, display_name
+      `).all() as { id: number }[];
+
+      contactIds = rows.map(r => r.id);
+    }
+
+    return { contactIds };
   });
 
   // GET /api/contacts

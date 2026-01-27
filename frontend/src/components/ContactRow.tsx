@@ -7,18 +7,38 @@ interface ContactRowProps {
   contact: ContactListItem;
   isExpanded: boolean;
   onToggle: (id: number) => void;
+  isSelected?: boolean;
+  onToggleSelect?: (id: number) => void;
+  selectionEnabled?: boolean;
 }
 
-export function ContactRow({ contact, isExpanded, onToggle }: ContactRowProps) {
+export function ContactRow({
+  contact,
+  isExpanded,
+  onToggle,
+  isSelected = false,
+  onToggleSelect,
+  selectionEnabled = false
+}: ContactRowProps) {
   const { data: detailedContact, isLoading } = useContactDetail(isExpanded ? contact.id : null);
 
   return (
     <div
-      className={`contact-card ${isExpanded ? 'expanded' : ''}`}
+      className={`contact-card ${isExpanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''}`}
       onClick={() => onToggle(contact.id)}
     >
       <div className="collapsed-content">
         <div className="contact-card-main">
+          {selectionEnabled && (
+            <div className="contact-card-checkbox">
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => onToggleSelect?.(contact.id)}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          )}
           <Avatar photoUrl={contact.photoUrl} name={contact.displayName} size={48} />
           <div className="contact-info">
             <h3 className="contact-name">{contact.displayName}</h3>

@@ -13,6 +13,8 @@ interface DuplicateGroupListProps {
   onPageChange: (page: number) => void;
   isLoading: boolean;
   mode: DeduplicationMode;
+  selectedContactIds?: Set<number>;
+  onToggleContactSelect?: (contactId: number) => void;
 }
 
 export function DuplicateGroupList({
@@ -25,6 +27,8 @@ export function DuplicateGroupList({
   totalPages,
   onPageChange,
   isLoading,
+  selectedContactIds,
+  onToggleContactSelect,
 }: DuplicateGroupListProps) {
   const visibleGroups = groups.filter((g) => !hiddenGroupIds.has(g.id));
 
@@ -47,6 +51,8 @@ export function DuplicateGroupList({
             onMerge={onMerge}
             onKeepSeparate={onKeepSeparate}
             isMerging={isMerging}
+            selectedContactIds={selectedContactIds}
+            onToggleContactSelect={onToggleContactSelect}
           />
         ))}
       </div>

@@ -3,6 +3,8 @@ import { ModeSelector } from './ModeSelector';
 import { DuplicateGroupList } from './DuplicateGroupList';
 import { ConfidenceFilter } from './ConfidenceFilter';
 import { useDuplicateSummary, useDuplicatesPaginated, useMergeContacts, fetchAllDuplicateGroups } from '../api/deduplicationHooks';
+import { useDeleteContacts } from '../api/cleanupHooks';
+import { useArchiveContacts } from '../api/archiveHooks';
 import type { ConfidenceLevel, DeduplicationMode, DuplicateGroup } from '../api/types';
 
 interface DeduplicationViewProps {
@@ -28,6 +30,11 @@ export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
   const [confidenceFilter, setConfidenceFilter] = useState<Set<ConfidenceLevel>>(new Set(ALL_CONFIDENCE_LEVELS));
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Selection state for individual contacts across groups
+  const [selectedContactIds, setSelectedContactIds] = useState<Set<number>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+
   const PAGE_SIZE = 100;
 
   const { data: summary, isLoading: isSummaryLoading } = useDuplicateSummary();
@@ -44,12 +51,15 @@ export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
   );
 
   const mergeMutation = useMergeContacts();
+  const deleteMutation = useDeleteContacts();
+  const archiveMutation = useArchiveContacts();
 
-  // Clear hidden groups, reset confidence filter, and reset page when mode changes
+  // Clear hidden groups, reset confidence filter, selection, and reset page when mode changes
   useEffect(() => {
     setHiddenGroupIds(new Set());
     setConfidenceFilter(new Set(ALL_CONFIDENCE_LEVELS));
     setCurrentPage(1);
+    setSelectedContactIds(new Set());
   }, [selectedMode]);
 
   // Reset page when confidence filter changes
@@ -115,6 +125,75 @@ export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
       return newSet;
     });
   }, []);
+
+  // Contact selection handlers
+  const handleToggleContactSelect = useCallback((contactId: number) => {
+    setSelectedContactIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(contactId)) {
+        newSet.delete(contactId);
+      } else {
+        newSet.add(contactId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedContactIds.size === 0) return;
+
+    deleteMutation.mutate(Array.from(selectedContactIds), {
+      onSuccess: (result) => {
+        const message = `Deleted ${result.deletedCount} contact${result.deletedCount !== 1 ? 's' : ''}`;
+
+        // Clear selection
+        setSelectedContactIds(new Set());
+
+        // Clear any existing undo timeout
+        if (undoState?.timeout) {
+          clearTimeout(undoState.timeout);
+        }
+
+        // Show success toast
+        const timeout = setTimeout(() => setUndoState(null), 5000);
+        setUndoState({
+          groupId: '',
+          message,
+          timeout,
+        });
+      },
+    });
+
+    setShowDeleteConfirm(false);
+  }, [selectedContactIds, deleteMutation, undoState]);
+
+  const handleArchiveSelected = useCallback(() => {
+    if (selectedContactIds.size === 0) return;
+
+    archiveMutation.mutate(Array.from(selectedContactIds), {
+      onSuccess: (result) => {
+        const message = `Archived ${result.archivedCount} contact${result.archivedCount !== 1 ? 's' : ''}`;
+
+        // Clear selection
+        setSelectedContactIds(new Set());
+
+        // Clear any existing undo timeout
+        if (undoState?.timeout) {
+          clearTimeout(undoState.timeout);
+        }
+
+        // Show success toast
+        const timeout = setTimeout(() => setUndoState(null), 5000);
+        setUndoState({
+          groupId: '',
+          message,
+          timeout,
+        });
+      },
+    });
+
+    setShowArchiveConfirm(false);
+  }, [selectedContactIds, archiveMutation, undoState]);
 
   const groups: DuplicateGroup[] = duplicatesData?.groups ?? [];
   const totalGroups = duplicatesData?.totalGroups ?? 0;
@@ -242,6 +321,37 @@ export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
                   ({hiddenGroupIds.size} marked as separate)
                 </span>
               )}
+              {selectedContactIds.size > 0 && (
+                <span className="hidden-count">
+                  | {selectedContactIds.size} contact{selectedContactIds.size !== 1 ? 's' : ''} selected
+                </span>
+              )}
+            </div>
+            <div className="dedup-action-buttons">
+              {selectedContactIds.size > 0 && (
+                <>
+                  <button
+                    className="archive-selected-button"
+                    onClick={() => setShowArchiveConfirm(true)}
+                    disabled={archiveMutation.isPending}
+                  >
+                    <span className="material-symbols-outlined">archive</span>
+                    {archiveMutation.isPending
+                      ? 'Archiving...'
+                      : `Archive (${selectedContactIds.size})`}
+                  </button>
+                  <button
+                    className="delete-selected-button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <span className="material-symbols-outlined">delete</span>
+                    {deleteMutation.isPending
+                      ? 'Deleting...'
+                      : `Delete (${selectedContactIds.size})`}
+                  </button>
+                </>
+              )}
             </div>
             {visibleCount > 0 && (
               <div className="merge-buttons">
@@ -289,6 +399,8 @@ export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
             onPageChange={setCurrentPage}
             isLoading={isFetching}
             mode={selectedMode}
+            selectedContactIds={selectedContactIds}
+            onToggleContactSelect={handleToggleContactSelect}
           />
         )}
       </div>
@@ -358,6 +470,52 @@ export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
                 }}
               >
                 Merge All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
+            <h3>Delete {selectedContactIds.size} Contact{selectedContactIds.size !== 1 ? 's' : ''}?</h3>
+            <p>
+              This action cannot be undone. The selected contacts will be permanently deleted.
+            </p>
+            <div className="confirm-actions">
+              <button className="cancel-button" onClick={() => setShowDeleteConfirm(false)}>
+                Cancel
+              </button>
+              <button
+                className="confirm-button danger"
+                onClick={handleDeleteSelected}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Archive confirmation modal */}
+      {showArchiveConfirm && (
+        <div className="modal-overlay" onClick={() => setShowArchiveConfirm(false)}>
+          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
+            <h3>Archive {selectedContactIds.size} Contact{selectedContactIds.size !== 1 ? 's' : ''}?</h3>
+            <p>
+              Archived contacts will be moved to the Archive section. You can restore them later or permanently delete them.
+            </p>
+            <div className="confirm-actions">
+              <button className="cancel-button" onClick={() => setShowArchiveConfirm(false)}>
+                Cancel
+              </button>
+              <button
+                className="confirm-button"
+                onClick={handleArchiveSelected}
+              >
+                Archive
               </button>
             </div>
           </div>

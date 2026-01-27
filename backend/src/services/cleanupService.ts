@@ -4,9 +4,10 @@ import { getPhotoUrl } from './photoProcessor.js';
 
 export type EmptyContactType = 'truly_empty' | 'name_only';
 export type ProblematicContactType = 'many_domains' | 'same_domain';
+export type NoIdentityContactType = 'no_identity';
 
 export interface CleanupContact extends ContactDetail {
-  issueType: EmptyContactType | ProblematicContactType;
+  issueType: EmptyContactType | ProblematicContactType | NoIdentityContactType;
   issueDetails?: string;
 }
 

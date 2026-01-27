@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi, uploadFile } from './client';
-import type { ContactListResponse, ContactDetail, ImportResult } from './types';
+import type { ContactListResponse, ContactDetail, ContactIdsResponse, ImportResult } from './types';
 
 export function useContacts(page: number = 1, limit: number = 50, search?: string) {
   const params = new URLSearchParams({
@@ -43,4 +43,19 @@ export function useImportVcf() {
       queryClient.invalidateQueries({ queryKey: ['contactCount'] });
     },
   });
+}
+
+// Fetch all contact IDs for bulk "Select All" across pages
+export async function fetchAllContactIds(search?: string): Promise<number[]> {
+  const params = new URLSearchParams();
+
+  if (search) {
+    params.set('search', search);
+  }
+
+  const queryString = params.toString();
+  const url = queryString ? `/api/contacts/ids?${queryString}` : '/api/contacts/ids';
+
+  const response = await fetchApi<ContactIdsResponse>(url);
+  return response.contactIds;
 }

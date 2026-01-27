@@ -4,11 +4,30 @@ import { Avatar } from './Avatar';
 interface ContactGridCardProps {
   contact: ContactListItem;
   onClick: () => void;
+  isSelected?: boolean;
+  onToggleSelect?: (id: number) => void;
+  selectionEnabled?: boolean;
 }
 
-export function ContactGridCard({ contact, onClick }: ContactGridCardProps) {
+export function ContactGridCard({
+  contact,
+  onClick,
+  isSelected = false,
+  onToggleSelect,
+  selectionEnabled = false
+}: ContactGridCardProps) {
   return (
-    <div className="contact-grid-card" onClick={onClick}>
+    <div className={`contact-grid-card ${isSelected ? 'selected' : ''}`} onClick={onClick}>
+      {selectionEnabled && (
+        <div className="contact-grid-card-checkbox">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelect?.(contact.id)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
       <Avatar photoUrl={contact.photoUrl} name={contact.displayName} size={64} />
       <div className="contact-grid-card-info">
         <div className="contact-grid-card-name">{contact.displayName}</div>

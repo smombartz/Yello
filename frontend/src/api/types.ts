@@ -96,6 +96,10 @@ export interface ContactListResponse {
   totalPages: number;
 }
 
+export interface ContactIdsResponse {
+  contactIds: number[];
+}
+
 export interface ImportResult {
   imported: number;
   failed: number;

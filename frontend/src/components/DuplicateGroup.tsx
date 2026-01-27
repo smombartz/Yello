@@ -7,6 +7,8 @@ interface DuplicateGroupProps {
   onMerge: (contactIds: number[], primaryContactId: number) => void;
   onKeepSeparate: (groupId: string) => void;
   isMerging: boolean;
+  selectedContactIds?: Set<number>;
+  onToggleContactSelect?: (contactId: number) => void;
 }
 
 function formatMatchingValue(value: string, field: string, matchedCriteria?: string[]): string {
@@ -58,6 +60,8 @@ export function DuplicateGroup({
   onMerge,
   onKeepSeparate,
   isMerging,
+  selectedContactIds,
+  onToggleContactSelect,
 }: DuplicateGroupProps) {
   const [selectedPrimaryId, setSelectedPrimaryId] = useState<number>(group.contacts[0].id);
 
@@ -112,23 +116,36 @@ export function DuplicateGroup({
       </div>
 
       <div className="duplicate-group-cards">
-        {group.contacts.map((contact) => (
-          <div
-            key={contact.id}
-            className={`duplicate-card-wrapper ${selectedPrimaryId === contact.id ? 'primary' : ''}`}
-            onClick={() => setSelectedPrimaryId(contact.id)}
-          >
-            {selectedPrimaryId === contact.id && (
-              <div className="primary-badge">Primary</div>
-            )}
-            <DuplicateContactCard
-              contact={contact}
-              matchingField={group.matchingField}
-              matchingValue={group.matchingValue}
-              matchedCriteria={group.matchedCriteria}
-            />
-          </div>
-        ))}
+        {group.contacts.map((contact) => {
+          const isSelected = selectedContactIds?.has(contact.id) ?? false;
+          return (
+            <div
+              key={contact.id}
+              className={`duplicate-card-wrapper ${selectedPrimaryId === contact.id ? 'primary' : ''} ${isSelected ? 'selected' : ''}`}
+              onClick={() => setSelectedPrimaryId(contact.id)}
+            >
+              {selectedContactIds && onToggleContactSelect && (
+                <div className="duplicate-card-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => onToggleContactSelect(contact.id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              )}
+              {selectedPrimaryId === contact.id && (
+                <div className="primary-badge">Primary</div>
+              )}
+              <DuplicateContactCard
+                contact={contact}
+                matchingField={group.matchingField}
+                matchingValue={group.matchingValue}
+                matchedCriteria={group.matchedCriteria}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
