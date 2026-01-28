@@ -12,6 +12,7 @@ import importRoutes from './routes/import.js';
 import duplicatesRoutes from './routes/duplicates.js';
 import cleanupRoutes from './routes/cleanup.js';
 import archiveRoutes from './routes/archive.js';
+import settingsRoutes from './routes/settings.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -64,6 +65,7 @@ await app.register(importRoutes, { prefix: '/api' });
 await app.register(duplicatesRoutes, { prefix: '/api/duplicates' });
 await app.register(cleanupRoutes, { prefix: '/api/cleanup' });
 await app.register(archiveRoutes, { prefix: '/api/archive' });
+await app.register(settingsRoutes, { prefix: '/api/settings' });
 
 const port = parseInt(process.env.PORT || '3000');
 app.listen({ port, host: '0.0.0.0' }).then(() => {
