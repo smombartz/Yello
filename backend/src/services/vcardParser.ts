@@ -172,7 +172,7 @@ function parseSingleVcard(vcardText: string): ParsedContact | null {
 
   const addresses: ParsedAddress[] = [];
   for (const adrProp of comp.getAllProperties('adr')) {
-    const adrValue = adrProp.getValues() as string[];
+    const adrValue = adrProp.getFirstValue() as string[] | null;
     if (adrValue && adrValue.length > 0) {
       addresses.push({
         street: adrValue[2] || null,
