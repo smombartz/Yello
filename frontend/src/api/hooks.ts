@@ -1,6 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi, uploadFile } from './client';
-import type { ContactListResponse, ContactDetail, ContactIdsResponse, ImportResult, GroupsResponse, UpdateContactRequest } from './types';
+import type {
+  ContactListResponse,
+  ContactDetail,
+  ContactIdsResponse,
+  ImportResult,
+  GroupsResponse,
+  UpdateContactRequest,
+  MergePreviewResponse,
+  MergeRequest,
+  MergeResponse
+} from './types';
 
 export function useContacts(page: number = 1, limit: number = 50, search?: string, category?: string) {
   const params = new URLSearchParams({
@@ -84,6 +94,36 @@ export function useUpdateContact() {
       queryClient.setQueryData(['contact', updatedContact.id], updatedContact);
       // Invalidate contact list since display name or other visible fields may have changed
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+    },
+  });
+}
+
+// Merge preview - check for conflicts before merging
+export function useMergePreview() {
+  return useMutation({
+    mutationFn: (contactIds: number[]) =>
+      fetchApi<MergePreviewResponse>('/api/contacts/merge/preview', {
+        method: 'POST',
+        body: JSON.stringify({ contactIds }),
+      }),
+  });
+}
+
+// Merge contacts with optional conflict resolutions
+export function useMergeSelectedContacts() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: MergeRequest) =>
+      fetchApi<MergeResponse>('/api/contacts/merge', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['contactCount'] });
+      queryClient.invalidateQueries({ queryKey: ['duplicates'] });
       queryClient.invalidateQueries({ queryKey: ['groups'] });
     },
   });

@@ -143,9 +143,26 @@ export interface DuplicateSummary {
   };
 }
 
+export interface MergeConflictValue {
+  contactId: number;
+  contactName: string;
+  value: string;
+}
+
+export interface MergeConflict {
+  field: string;
+  values: MergeConflictValue[];
+}
+
+export interface MergePreviewResponse {
+  conflicts: MergeConflict[];
+  contacts: ContactDetail[];
+}
+
 export interface MergeRequest {
   contactIds: number[];
   primaryContactId: number;
+  resolutions?: Record<string, string | null>;
 }
 
 export interface MergeResponse {

@@ -240,6 +240,135 @@ curl "http://localhost:3000/api/contacts/ids"
 
 ---
 
+## Preview Merge Conflicts
+
+Check for conflicts before merging contacts. Returns any fields with conflicting values across the selected contacts.
+
+<ParamField body="contactIds" type="number[]" required>
+  Array of contact IDs to merge (minimum 2)
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "http://localhost:3000/api/contacts/merge/preview" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contactIds": [1, 2, 3]
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('/api/contacts/merge/preview', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ contactIds: [1, 2, 3] })
+});
+const data = await response.json();
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "conflicts": [
+    {
+      "field": "company",
+      "values": [
+        { "contactId": 1, "contactName": "John Smith", "value": "Acme Inc" },
+        { "contactId": 2, "contactName": "John S.", "value": "Acme Corporation" }
+      ]
+    },
+    {
+      "field": "title",
+      "values": [
+        { "contactId": 1, "contactName": "John Smith", "value": "CEO" },
+        { "contactId": 3, "contactName": "J. Smith", "value": "Founder" }
+      ]
+    }
+  ],
+  "contacts": [
+    { "id": 1, "displayName": "John Smith", ... },
+    { "id": 2, "displayName": "John S.", ... },
+    { "id": 3, "displayName": "J. Smith", ... }
+  ]
+}
+```
+</ResponseExample>
+
+---
+
+## Merge Contacts
+
+Merge multiple contacts into one, with optional conflict resolutions.
+
+<ParamField body="contactIds" type="number[]" required>
+  Array of contact IDs to merge (minimum 2)
+</ParamField>
+
+<ParamField body="primaryContactId" type="number" required>
+  ID of the contact to keep (must be in contactIds)
+</ParamField>
+
+<ParamField body="resolutions" type="object">
+  Map of field names to resolved values. Use `null` to keep field empty.
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "http://localhost:3000/api/contacts/merge" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contactIds": [1, 2, 3],
+    "primaryContactId": 1,
+    "resolutions": {
+      "company": "Acme Corporation",
+      "title": "CEO & Founder"
+    }
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('/api/contacts/merge', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    contactIds: [1, 2, 3],
+    primaryContactId: 1,
+    resolutions: {
+      company: 'Acme Corporation',
+      title: 'CEO & Founder'
+    }
+  })
+});
+const data = await response.json();
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "mergedContact": {
+    "id": 1,
+    "displayName": "John Smith",
+    "company": "Acme Corporation",
+    "title": "CEO & Founder",
+    "emails": [
+      { "email": "john@acme.com", "type": "work", "isPrimary": true },
+      { "email": "john.s@gmail.com", "type": "home", "isPrimary": false }
+    ],
+    ...
+  },
+  "deletedContactIds": [2, 3]
+}
+```
+</ResponseExample>
+
+<Note>
+Merge is a destructive operation. The secondary contacts (non-primary) are permanently deleted. Their emails, phones, addresses, and other collection data are merged into the primary contact with deduplication.
+</Note>
+
+---
+
 ## Response Schemas
 
 ### Contact List Item

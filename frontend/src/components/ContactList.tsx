@@ -1,11 +1,12 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useContacts, fetchAllContactIds } from '../api/hooks';
+import { useContacts, fetchAllContactIds, useMergePreview, useMergeSelectedContacts } from '../api/hooks';
 import { useDeleteContacts } from '../api/cleanupHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
 import { ContactRow } from './ContactRow';
 import { ContactGridCard } from './ContactGridCard';
 import { ViewToggle } from './ViewToggle';
+import type { MergeConflict, ContactDetail } from '../api/types';
 
 interface ContactListProps {
   search: string;
@@ -35,9 +36,18 @@ export function ContactList({ search, categoryFilter }: ContactListProps) {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [isSelectingAll, setIsSelectingAll] = useState(false);
 
+  // Merge state
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [mergeConflicts, setMergeConflicts] = useState<MergeConflict[]>([]);
+  const [mergeContacts, setMergeContacts] = useState<ContactDetail[]>([]);
+  const [mergePrimaryId, setMergePrimaryId] = useState<number | null>(null);
+  const [mergeResolutions, setMergeResolutions] = useState<Record<string, string | null>>({});
+
   const { data, isLoading, error } = useContacts(1, PAGE_SIZE, search || undefined, categoryFilter);
   const deleteMutation = useDeleteContacts();
   const archiveMutation = useArchiveContacts();
+  const mergePreviewMutation = useMergePreview();
+  const mergeMutation = useMergeSelectedContacts();
 
   // Clear selection when search changes
   useEffect(() => {
@@ -148,6 +158,79 @@ export function ContactList({ search, categoryFilter }: ContactListProps) {
     setShowArchiveConfirm(false);
   }, [selectedIds, archiveMutation, toast]);
 
+  const handleMergeClick = useCallback(() => {
+    if (selectedIds.size < 2) return;
+
+    mergePreviewMutation.mutate(Array.from(selectedIds), {
+      onSuccess: (result) => {
+        setMergeConflicts(result.conflicts);
+        setMergeContacts(result.contacts);
+        setMergePrimaryId(result.contacts[0]?.id ?? null);
+        // Initialize resolutions with primary contact's values for conflict fields
+        const initialResolutions: Record<string, string | null> = {};
+        result.conflicts.forEach(conflict => {
+          const primaryValue = conflict.values.find(v => v.contactId === result.contacts[0]?.id);
+          initialResolutions[conflict.field] = primaryValue?.value ?? null;
+        });
+        setMergeResolutions(initialResolutions);
+        setShowMergeModal(true);
+      },
+    });
+  }, [selectedIds, mergePreviewMutation]);
+
+  const handleMergeConfirm = useCallback(() => {
+    if (!mergePrimaryId || mergeContacts.length < 2) return;
+
+    const contactIds = mergeContacts.map(c => c.id);
+    mergeMutation.mutate(
+      {
+        contactIds,
+        primaryContactId: mergePrimaryId,
+        resolutions: mergeConflicts.length > 0 ? mergeResolutions : undefined,
+      },
+      {
+        onSuccess: (result) => {
+          const deletedCount = result.deletedContactIds.length;
+          const message = `Merged ${deletedCount + 1} contacts into one`;
+
+          // Clear selection
+          setSelectedIds(new Set());
+
+          // Clear merge state
+          setShowMergeModal(false);
+          setMergeConflicts([]);
+          setMergeContacts([]);
+          setMergePrimaryId(null);
+          setMergeResolutions({});
+
+          // Clear any existing toast timeout
+          if (toast?.timeout) {
+            clearTimeout(toast.timeout);
+          }
+
+          // Show success toast
+          const timeout = setTimeout(() => setToast(null), 5000);
+          setToast({ message, timeout });
+        },
+      }
+    );
+  }, [mergePrimaryId, mergeContacts, mergeConflicts, mergeResolutions, mergeMutation, toast]);
+
+  const handleMergeCancel = useCallback(() => {
+    setShowMergeModal(false);
+    setMergeConflicts([]);
+    setMergeContacts([]);
+    setMergePrimaryId(null);
+    setMergeResolutions({});
+  }, []);
+
+  const handleResolutionChange = useCallback((field: string, value: string | null) => {
+    setMergeResolutions(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  }, []);
+
   const virtualizer = useVirtualizer({
     count: data?.contacts.length ?? 0,
     getScrollElement: () => parentRef.current,
@@ -222,6 +305,18 @@ export function ContactList({ search, categoryFilter }: ContactListProps) {
 
         {selectedIds.size > 0 && (
           <div className="contact-action-buttons">
+            {selectedIds.size >= 2 && (
+              <button
+                className="merge-selected-button"
+                onClick={handleMergeClick}
+                disabled={mergePreviewMutation.isPending || mergeMutation.isPending}
+              >
+                <span className="material-symbols-outlined">merge</span>
+                {mergePreviewMutation.isPending
+                  ? 'Loading...'
+                  : `Merge Selected (${selectedIds.size})`}
+              </button>
+            )}
             <button
               className="archive-selected-button"
               onClick={() => setShowArchiveConfirm(true)}
@@ -360,6 +455,116 @@ export function ContactList({ search, categoryFilter }: ContactListProps) {
                 onClick={handleArchive}
               >
                 Archive
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Merge conflict resolution modal */}
+      {showMergeModal && (
+        <div className="modal-overlay" onClick={handleMergeCancel}>
+          <div className="modal-content merge-conflict-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="merge-modal-header">
+              <h3>Merge {mergeContacts.length} Contacts</h3>
+              <button className="close-button" onClick={handleMergeCancel}>
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="merge-modal-body">
+              {/* Primary contact selector */}
+              <div className="merge-primary-section">
+                <p className="merge-section-label">Select primary contact (click to select):</p>
+                <div className="merge-contact-cards">
+                  {mergeContacts.map((contact) => (
+                    <div
+                      key={contact.id}
+                      className={`merge-contact-card ${mergePrimaryId === contact.id ? 'primary' : ''}`}
+                      onClick={() => setMergePrimaryId(contact.id)}
+                    >
+                      {mergePrimaryId === contact.id && (
+                        <div className="primary-badge">Primary</div>
+                      )}
+                      <div className="merge-contact-avatar">
+                        {contact.photoUrl ? (
+                          <img src={contact.photoUrl} alt={contact.displayName} />
+                        ) : (
+                          <span className="material-symbols-outlined">person</span>
+                        )}
+                      </div>
+                      <div className="merge-contact-info">
+                        <div className="merge-contact-name">{contact.displayName}</div>
+                        {contact.company && (
+                          <div className="merge-contact-company">{contact.company}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Conflict resolution */}
+              {mergeConflicts.length > 0 && (
+                <div className="merge-conflicts-section">
+                  <p className="merge-section-label">Resolve conflicts:</p>
+                  {mergeConflicts.map((conflict) => (
+                    <div key={conflict.field} className="merge-conflict-field">
+                      <div className="conflict-field-name">
+                        {conflict.field === 'firstName' && 'First Name'}
+                        {conflict.field === 'lastName' && 'Last Name'}
+                        {conflict.field === 'company' && 'Company'}
+                        {conflict.field === 'title' && 'Title'}
+                        {conflict.field === 'birthday' && 'Birthday'}
+                      </div>
+                      <div className="conflict-options">
+                        {conflict.values.map((option) => (
+                          <label key={`${conflict.field}-${option.contactId}`} className="conflict-option">
+                            <input
+                              type="radio"
+                              name={conflict.field}
+                              value={option.value}
+                              checked={mergeResolutions[conflict.field] === option.value}
+                              onChange={() => handleResolutionChange(conflict.field, option.value)}
+                            />
+                            <span className="option-value">"{option.value}"</span>
+                            <span className="option-source">from {option.contactName}</span>
+                          </label>
+                        ))}
+                        <label className="conflict-option">
+                          <input
+                            type="radio"
+                            name={conflict.field}
+                            value=""
+                            checked={mergeResolutions[conflict.field] === null}
+                            onChange={() => handleResolutionChange(conflict.field, null)}
+                          />
+                          <span className="option-value empty">Keep empty</span>
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {mergeConflicts.length === 0 && (
+                <div className="merge-no-conflicts">
+                  <span className="material-symbols-outlined">check_circle</span>
+                  <p>No conflicts detected. Contacts can be merged directly.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="merge-modal-footer">
+              <button className="cancel-button" onClick={handleMergeCancel}>
+                Cancel
+              </button>
+              <button
+                className="confirm-button"
+                onClick={handleMergeConfirm}
+                disabled={mergeMutation.isPending || !mergePrimaryId}
+              >
+                {mergeMutation.isPending ? 'Merging...' : 'Merge Contacts'}
               </button>
             </div>
           </div>

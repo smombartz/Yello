@@ -7,6 +7,155 @@ interface MergeResult {
   deletedContactIds: number[];
 }
 
+export interface MergeConflictValue {
+  contactId: number;
+  contactName: string;
+  value: string;
+}
+
+export interface MergeConflict {
+  field: string;
+  values: MergeConflictValue[];
+}
+
+export interface MergePreviewResult {
+  conflicts: MergeConflict[];
+  contacts: ContactDetail[];
+}
+
+// Fields that can have conflicts during merge
+const SCALAR_FIELDS = ['firstName', 'lastName', 'company', 'title', 'birthday'] as const;
+type ScalarField = typeof SCALAR_FIELDS[number];
+
+const FIELD_DB_MAP: Record<ScalarField, string> = {
+  firstName: 'first_name',
+  lastName: 'last_name',
+  company: 'company',
+  title: 'title',
+  birthday: 'birthday',
+};
+
+export function detectMergeConflicts(contactIds: number[]): MergePreviewResult {
+  const db = getDatabase();
+
+  if (contactIds.length < 2) {
+    throw new Error('At least 2 contacts are required to merge');
+  }
+
+  // Check all contacts exist and fetch their details
+  const placeholders = contactIds.map(() => '?').join(',');
+  const contacts = db.prepare(`
+    SELECT
+      id,
+      first_name as firstName,
+      last_name as lastName,
+      display_name as displayName,
+      company,
+      title,
+      birthday
+    FROM contacts
+    WHERE id IN (${placeholders})
+  `).all(...contactIds) as Array<{
+    id: number;
+    firstName: string | null;
+    lastName: string | null;
+    displayName: string;
+    company: string | null;
+    title: string | null;
+    birthday: string | null;
+  }>;
+
+  if (contacts.length !== contactIds.length) {
+    throw new Error('One or more contact IDs do not exist');
+  }
+
+  // Detect conflicts for each scalar field
+  const conflicts: MergeConflict[] = [];
+
+  for (const field of SCALAR_FIELDS) {
+    // Get all unique non-null values for this field
+    const valuesMap = new Map<string, MergeConflictValue[]>();
+
+    for (const contact of contacts) {
+      const value = contact[field];
+      if (value !== null && value !== undefined && value.trim() !== '') {
+        const normalizedValue = value.trim();
+        if (!valuesMap.has(normalizedValue)) {
+          valuesMap.set(normalizedValue, []);
+        }
+        valuesMap.get(normalizedValue)!.push({
+          contactId: contact.id,
+          contactName: contact.displayName,
+          value: normalizedValue,
+        });
+      }
+    }
+
+    // If there are 2+ different values, it's a conflict
+    if (valuesMap.size > 1) {
+      const conflictValues: MergeConflictValue[] = [];
+      for (const [, contactsWithValue] of valuesMap) {
+        // Just take the first contact with this value to represent it
+        conflictValues.push(contactsWithValue[0]);
+      }
+      conflicts.push({
+        field,
+        values: conflictValues,
+      });
+    }
+  }
+
+  // Fetch full contact details for UI display
+  const contactDetails = contactIds.map(id => getContactDetail(id));
+
+  return {
+    conflicts,
+    contacts: contactDetails,
+  };
+}
+
+export function mergeContactsWithResolutions(
+  contactIds: number[],
+  primaryContactId: number,
+  resolutions?: Record<string, string | null>
+): MergeResult {
+  const db = getDatabase();
+
+  // Validate inputs
+  if (!contactIds.includes(primaryContactId)) {
+    throw new Error('Primary contact ID must be in the list of contact IDs to merge');
+  }
+
+  if (contactIds.length < 2) {
+    throw new Error('At least 2 contacts are required to merge');
+  }
+
+  // If there are resolutions to apply, update the primary contact first
+  if (resolutions && Object.keys(resolutions).length > 0) {
+    const updates: string[] = [];
+    const values: (string | null)[] = [];
+
+    for (const [field, value] of Object.entries(resolutions)) {
+      if (field in FIELD_DB_MAP) {
+        const dbField = FIELD_DB_MAP[field as ScalarField];
+        updates.push(`${dbField} = ?`);
+        values.push(value);
+      }
+    }
+
+    if (updates.length > 0) {
+      values.push(primaryContactId.toString());
+      db.prepare(`
+        UPDATE contacts SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(...values.slice(0, -1), primaryContactId);
+    }
+  }
+
+  // Now proceed with the regular merge
+  return mergeContacts(contactIds, primaryContactId);
+}
+
 export function mergeContacts(contactIds: number[], primaryContactId: number): MergeResult {
   const db = getDatabase();
 

@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { getDatabase } from '../services/database.js';
 import { getPhotoUrl } from '../services/photoProcessor.js';
+import { detectMergeConflicts, mergeContactsWithResolutions } from '../services/mergeService.js';
 import {
   ContactListQuerySchema,
   ContactListQuery,
@@ -766,5 +767,113 @@ export default async function contactsRoutes(
       })),
       photoUrl: getPhotoUrl(contact.photo_hash, 'medium')
     };
+  });
+
+  // POST /api/contacts/merge/preview - Check for conflicts before merging
+  fastify.post<{ Body: { contactIds: number[] } }>('/merge/preview', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['contactIds'],
+        properties: {
+          contactIds: {
+            type: 'array',
+            items: { type: 'number' },
+            minItems: 2
+          }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            conflicts: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  field: { type: 'string' },
+                  values: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        contactId: { type: 'number' },
+                        contactName: { type: 'string' },
+                        value: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            contacts: {
+              type: 'array',
+              items: ContactDetailSchema
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const { contactIds } = request.body;
+
+    try {
+      const result = detectMergeConflicts(contactIds);
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return reply.status(400).send({ error: message });
+    }
+  });
+
+  // POST /api/contacts/merge - Merge contacts with optional conflict resolutions
+  fastify.post<{
+    Body: {
+      contactIds: number[];
+      primaryContactId: number;
+      resolutions?: Record<string, string | null>;
+    }
+  }>('/merge', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['contactIds', 'primaryContactId'],
+        properties: {
+          contactIds: {
+            type: 'array',
+            items: { type: 'number' },
+            minItems: 2
+          },
+          primaryContactId: { type: 'number' },
+          resolutions: {
+            type: 'object',
+            additionalProperties: { type: ['string', 'null'] }
+          }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            mergedContact: ContactDetailSchema,
+            deletedContactIds: {
+              type: 'array',
+              items: { type: 'number' }
+            }
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const { contactIds, primaryContactId, resolutions } = request.body;
+
+    try {
+      const result = mergeContactsWithResolutions(contactIds, primaryContactId, resolutions);
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return reply.status(400).send({ error: message });
+    }
   });
 }

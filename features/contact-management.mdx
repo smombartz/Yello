@@ -95,6 +95,65 @@ From the contact detail view, you can:
 - **Archive** → Soft-delete the contact
 - **Edit** → Modify contact fields
 
+## Bulk Actions
+
+Select multiple contacts using checkboxes to perform bulk operations:
+
+### Selection Options
+
+| Action | Description |
+|--------|-------------|
+| **Select Page** | Select all visible contacts on current page |
+| **Select All** | Select all contacts matching current search/filter |
+| **Select None** | Clear all selections |
+
+### Available Bulk Actions
+
+When contacts are selected, action buttons appear:
+
+- **Merge Selected** (2+ contacts) → Combine contacts into one
+- **Archive Selected** → Move contacts to archive
+- **Delete Selected** → Permanently delete contacts
+
+## Merging Contacts
+
+When you select 2 or more contacts and click **Merge Selected**, Ello checks for conflicts and lets you resolve them:
+
+### Conflict Detection
+
+Conflicts occur when contacts have different values for the same field:
+
+| Field | Conflict Example |
+|-------|------------------|
+| First Name | "John" vs "Jonathan" |
+| Last Name | "Smith" vs "Smith-Jones" |
+| Company | "Acme Inc" vs "Acme Corporation" |
+| Title | "CEO" vs "Founder" |
+| Birthday | "1985-03-15" vs "1985-03-16" |
+
+### Conflict Resolution
+
+If conflicts are detected, a modal appears where you can:
+
+1. **Select the primary contact** - Click a contact card to designate it as primary
+2. **Resolve each conflict** - Choose which value to keep for each conflicting field
+3. **Keep empty option** - Choose to leave a field empty instead
+
+### Merge Behavior
+
+When merging contacts:
+
+- **Primary contact** keeps its ID and is updated with resolved values
+- **Secondary contacts** are deleted after their data is merged
+- **Emails, phones, addresses** are combined (duplicates removed)
+- **Social profiles, URLs, categories** are merged without duplicates
+- **Notes** are combined with attribution (e.g., "[From John Smith]: ...")
+- **Photos** - Primary's photo is kept; if empty, uses first available from secondary
+
+<Note>
+Merge is a destructive operation. Secondary contacts are permanently deleted. Use Archive if you want to preserve the original contacts.
+</Note>
+
 ## Editing Contacts
 
 Click the edit button on a contact detail to modify:
@@ -145,6 +204,8 @@ Total count and page info are included in responses:
 | `GET /api/contacts/:id` | Get single contact with all details |
 | `GET /api/contacts/count` | Get total contact count |
 | `PUT /api/contacts/:id` | Update contact fields |
+| `POST /api/contacts/merge/preview` | Check for merge conflicts |
+| `POST /api/contacts/merge` | Merge contacts with conflict resolutions |
 
 See [Contacts API Reference](/api-reference/contacts) for full documentation.
 
