@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi, uploadFile } from './client';
-import type { ContactListResponse, ContactDetail, ContactIdsResponse, ImportResult, GroupsResponse } from './types';
+import type { ContactListResponse, ContactDetail, ContactIdsResponse, ImportResult, GroupsResponse, UpdateContactRequest } from './types';
 
 export function useContacts(page: number = 1, limit: number = 50, search?: string, category?: string) {
   const params = new URLSearchParams({
@@ -68,4 +68,23 @@ export async function fetchAllContactIds(search?: string): Promise<number[]> {
 
   const response = await fetchApi<ContactIdsResponse>(url);
   return response.contactIds;
+}
+
+export function useUpdateContact() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: UpdateContactRequest }) =>
+      fetchApi<ContactDetail>(`/api/contacts/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (updatedContact) => {
+      // Update the contact detail cache
+      queryClient.setQueryData(['contact', updatedContact.id], updatedContact);
+      // Invalidate contact list since display name or other visible fields may have changed
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+    },
+  });
 }

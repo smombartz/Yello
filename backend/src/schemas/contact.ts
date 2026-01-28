@@ -151,3 +151,75 @@ export const GroupSchema = Type.Object({
 export const GroupsResponseSchema = Type.Object({
   groups: Type.Array(GroupSchema)
 });
+
+// Update contact schemas
+export const UpdateContactEmailSchema = Type.Object({
+  email: Type.String(),
+  type: Type.Union([Type.String(), Type.Null()]),
+  isPrimary: Type.Boolean()
+});
+
+export const UpdateContactPhoneSchema = Type.Object({
+  phone: Type.String(),
+  phoneDisplay: Type.String(),
+  countryCode: Type.Union([Type.String(), Type.Null()]),
+  type: Type.Union([Type.String(), Type.Null()]),
+  isPrimary: Type.Boolean()
+});
+
+export const UpdateContactAddressSchema = Type.Object({
+  street: Type.Union([Type.String(), Type.Null()]),
+  city: Type.Union([Type.String(), Type.Null()]),
+  state: Type.Union([Type.String(), Type.Null()]),
+  postalCode: Type.Union([Type.String(), Type.Null()]),
+  country: Type.Union([Type.String(), Type.Null()]),
+  type: Type.Union([Type.String(), Type.Null()])
+});
+
+export const UpdateContactSocialProfileSchema = Type.Object({
+  platform: Type.String(),
+  username: Type.String(),
+  profileUrl: Type.Union([Type.String(), Type.Null()]),
+  type: Type.Union([Type.String(), Type.Null()])
+});
+
+export const UpdateContactCategorySchema = Type.Object({
+  category: Type.String()
+});
+
+export const UpdateContactInstantMessageSchema = Type.Object({
+  service: Type.String(),
+  handle: Type.String(),
+  type: Type.Union([Type.String(), Type.Null()])
+});
+
+export const UpdateContactUrlSchema = Type.Object({
+  url: Type.String(),
+  label: Type.Union([Type.String(), Type.Null()]),
+  type: Type.Union([Type.String(), Type.Null()])
+});
+
+export const UpdateContactRelatedPersonSchema = Type.Object({
+  name: Type.String(),
+  relationship: Type.Union([Type.String(), Type.Null()])
+});
+
+export const UpdateContactBodySchema = Type.Object({
+  firstName: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  lastName: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  displayName: Type.Optional(Type.String()),
+  company: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  title: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  notes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  birthday: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  emails: Type.Optional(Type.Array(UpdateContactEmailSchema)),
+  phones: Type.Optional(Type.Array(UpdateContactPhoneSchema)),
+  addresses: Type.Optional(Type.Array(UpdateContactAddressSchema)),
+  socialProfiles: Type.Optional(Type.Array(UpdateContactSocialProfileSchema)),
+  categories: Type.Optional(Type.Array(UpdateContactCategorySchema)),
+  instantMessages: Type.Optional(Type.Array(UpdateContactInstantMessageSchema)),
+  urls: Type.Optional(Type.Array(UpdateContactUrlSchema)),
+  relatedPeople: Type.Optional(Type.Array(UpdateContactRelatedPersonSchema))
+});
+
+export type UpdateContactBody = Static<typeof UpdateContactBodySchema>;

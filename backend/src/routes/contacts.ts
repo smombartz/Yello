@@ -13,7 +13,9 @@ import {
   ContactCountResponseSchema,
   ContactIdsResponseSchema,
   ContactNotFoundSchema,
-  GroupsResponseSchema
+  GroupsResponseSchema,
+  UpdateContactBodySchema,
+  UpdateContactBody
 } from '../schemas/contact.js';
 
 interface ContactRow {
@@ -337,6 +339,310 @@ export default async function contactsRoutes(
     if (!contact) {
       return reply.status(404).send({ error: 'Contact not found' });
     }
+
+    const emails = db.prepare(`
+      SELECT id, contact_id, email, type, is_primary
+      FROM contact_emails
+      WHERE contact_id = ?
+    `).all(id) as EmailRow[];
+
+    const phones = db.prepare(`
+      SELECT id, contact_id, phone, phone_display, country_code, type, is_primary
+      FROM contact_phones
+      WHERE contact_id = ?
+    `).all(id) as PhoneRow[];
+
+    const addresses = db.prepare(`
+      SELECT id, contact_id, street, city, state, postal_code, country, type
+      FROM contact_addresses
+      WHERE contact_id = ?
+    `).all(id) as AddressRow[];
+
+    const socialProfiles = db.prepare(`
+      SELECT id, contact_id, platform, username, profile_url, type
+      FROM contact_social_profiles
+      WHERE contact_id = ?
+    `).all(id) as SocialProfileRow[];
+
+    const categories = db.prepare(`
+      SELECT id, contact_id, category
+      FROM contact_categories
+      WHERE contact_id = ?
+    `).all(id) as CategoryRow[];
+
+    const instantMessages = db.prepare(`
+      SELECT id, contact_id, service, handle, type
+      FROM contact_instant_messages
+      WHERE contact_id = ?
+    `).all(id) as InstantMessageRow[];
+
+    const urls = db.prepare(`
+      SELECT id, contact_id, url, label, type
+      FROM contact_urls
+      WHERE contact_id = ?
+    `).all(id) as UrlRow[];
+
+    const relatedPeople = db.prepare(`
+      SELECT id, contact_id, name, relationship
+      FROM contact_related_people
+      WHERE contact_id = ?
+    `).all(id) as RelatedPersonRow[];
+
+    return {
+      id: contact.id,
+      firstName: contact.first_name,
+      lastName: contact.last_name,
+      displayName: contact.display_name,
+      company: contact.company,
+      title: contact.title,
+      notes: contact.notes,
+      birthday: contact.birthday,
+      photoHash: contact.photo_hash,
+      rawVcard: contact.raw_vcard,
+      createdAt: contact.created_at,
+      updatedAt: contact.updated_at,
+      emails: emails.map(e => ({
+        id: e.id,
+        contactId: e.contact_id,
+        email: e.email,
+        type: e.type,
+        isPrimary: e.is_primary === 1
+      })),
+      phones: phones.map(p => ({
+        id: p.id,
+        contactId: p.contact_id,
+        phone: p.phone,
+        phoneDisplay: p.phone_display,
+        countryCode: p.country_code,
+        type: p.type,
+        isPrimary: p.is_primary === 1
+      })),
+      addresses: addresses.map(a => ({
+        id: a.id,
+        contactId: a.contact_id,
+        street: a.street,
+        city: a.city,
+        state: a.state,
+        postalCode: a.postal_code,
+        country: a.country,
+        type: a.type
+      })),
+      socialProfiles: socialProfiles.map(s => ({
+        id: s.id,
+        contactId: s.contact_id,
+        platform: s.platform,
+        username: s.username,
+        profileUrl: s.profile_url,
+        type: s.type
+      })),
+      categories: categories.map(c => ({
+        id: c.id,
+        contactId: c.contact_id,
+        category: c.category
+      })),
+      instantMessages: instantMessages.map(im => ({
+        id: im.id,
+        contactId: im.contact_id,
+        service: im.service,
+        handle: im.handle,
+        type: im.type
+      })),
+      urls: urls.map(u => ({
+        id: u.id,
+        contactId: u.contact_id,
+        url: u.url,
+        label: u.label,
+        type: u.type
+      })),
+      relatedPeople: relatedPeople.map(rp => ({
+        id: rp.id,
+        contactId: rp.contact_id,
+        name: rp.name,
+        relationship: rp.relationship
+      })),
+      photoUrl: getPhotoUrl(contact.photo_hash, 'medium')
+    };
+  });
+
+  // PUT /api/contacts/:id - Update a contact
+  fastify.put<{ Params: ContactIdParams; Body: UpdateContactBody }>('/:id', {
+    schema: {
+      params: ContactIdParamsSchema,
+      body: UpdateContactBodySchema,
+      response: {
+        200: ContactDetailSchema,
+        404: ContactNotFoundSchema
+      }
+    }
+  }, async (request, reply) => {
+    const { id } = request.params;
+    const updates = request.body;
+    const db = getDatabase();
+
+    // Check if contact exists
+    const existingContact = db.prepare('SELECT id FROM contacts WHERE id = ?').get(id) as { id: number } | undefined;
+    if (!existingContact) {
+      return reply.status(404).send({ error: 'Contact not found' });
+    }
+
+    // Build the display name if first/last names are being updated
+    let displayName = updates.displayName;
+    if (!displayName && (updates.firstName !== undefined || updates.lastName !== undefined)) {
+      const currentContact = db.prepare('SELECT first_name, last_name, display_name FROM contacts WHERE id = ?').get(id) as {
+        first_name: string | null;
+        last_name: string | null;
+        display_name: string;
+      };
+      const firstName = updates.firstName !== undefined ? updates.firstName : currentContact.first_name;
+      const lastName = updates.lastName !== undefined ? updates.lastName : currentContact.last_name;
+      displayName = [firstName, lastName].filter(Boolean).join(' ') || currentContact.display_name;
+    }
+
+    // Update main contact fields
+    const contactFields: string[] = [];
+    const contactValues: (string | null)[] = [];
+
+    if (updates.firstName !== undefined) {
+      contactFields.push('first_name = ?');
+      contactValues.push(updates.firstName);
+    }
+    if (updates.lastName !== undefined) {
+      contactFields.push('last_name = ?');
+      contactValues.push(updates.lastName);
+    }
+    if (displayName !== undefined) {
+      contactFields.push('display_name = ?');
+      contactValues.push(displayName);
+    }
+    if (updates.company !== undefined) {
+      contactFields.push('company = ?');
+      contactValues.push(updates.company);
+    }
+    if (updates.title !== undefined) {
+      contactFields.push('title = ?');
+      contactValues.push(updates.title);
+    }
+    if (updates.notes !== undefined) {
+      contactFields.push('notes = ?');
+      contactValues.push(updates.notes);
+    }
+    if (updates.birthday !== undefined) {
+      contactFields.push('birthday = ?');
+      contactValues.push(updates.birthday);
+    }
+
+    // Always update the updated_at timestamp
+    contactFields.push('updated_at = datetime(\'now\')');
+
+    if (contactFields.length > 0) {
+      const updateSql = `UPDATE contacts SET ${contactFields.join(', ')} WHERE id = ?`;
+      db.prepare(updateSql).run(...contactValues, id);
+    }
+
+    // Update emails (delete all and re-insert)
+    if (updates.emails !== undefined) {
+      db.prepare('DELETE FROM contact_emails WHERE contact_id = ?').run(id);
+      const insertEmail = db.prepare(`
+        INSERT INTO contact_emails (contact_id, email, type, is_primary)
+        VALUES (?, ?, ?, ?)
+      `);
+      for (const email of updates.emails) {
+        insertEmail.run(id, email.email, email.type, email.isPrimary ? 1 : 0);
+      }
+    }
+
+    // Update phones (delete all and re-insert)
+    if (updates.phones !== undefined) {
+      db.prepare('DELETE FROM contact_phones WHERE contact_id = ?').run(id);
+      const insertPhone = db.prepare(`
+        INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, is_primary)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      for (const phone of updates.phones) {
+        insertPhone.run(id, phone.phone, phone.phoneDisplay, phone.countryCode, phone.type, phone.isPrimary ? 1 : 0);
+      }
+    }
+
+    // Update addresses (delete all and re-insert)
+    if (updates.addresses !== undefined) {
+      db.prepare('DELETE FROM contact_addresses WHERE contact_id = ?').run(id);
+      const insertAddress = db.prepare(`
+        INSERT INTO contact_addresses (contact_id, street, city, state, postal_code, country, type)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      for (const addr of updates.addresses) {
+        insertAddress.run(id, addr.street, addr.city, addr.state, addr.postalCode, addr.country, addr.type);
+      }
+    }
+
+    // Update social profiles (delete all and re-insert)
+    if (updates.socialProfiles !== undefined) {
+      db.prepare('DELETE FROM contact_social_profiles WHERE contact_id = ?').run(id);
+      const insertSocial = db.prepare(`
+        INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url, type)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      for (const profile of updates.socialProfiles) {
+        insertSocial.run(id, profile.platform, profile.username, profile.profileUrl, profile.type);
+      }
+    }
+
+    // Update categories (delete all and re-insert)
+    if (updates.categories !== undefined) {
+      db.prepare('DELETE FROM contact_categories WHERE contact_id = ?').run(id);
+      const insertCategory = db.prepare(`
+        INSERT INTO contact_categories (contact_id, category)
+        VALUES (?, ?)
+      `);
+      for (const cat of updates.categories) {
+        insertCategory.run(id, cat.category);
+      }
+    }
+
+    // Update instant messages (delete all and re-insert)
+    if (updates.instantMessages !== undefined) {
+      db.prepare('DELETE FROM contact_instant_messages WHERE contact_id = ?').run(id);
+      const insertIM = db.prepare(`
+        INSERT INTO contact_instant_messages (contact_id, service, handle, type)
+        VALUES (?, ?, ?, ?)
+      `);
+      for (const im of updates.instantMessages) {
+        insertIM.run(id, im.service, im.handle, im.type);
+      }
+    }
+
+    // Update URLs (delete all and re-insert)
+    if (updates.urls !== undefined) {
+      db.prepare('DELETE FROM contact_urls WHERE contact_id = ?').run(id);
+      const insertUrl = db.prepare(`
+        INSERT INTO contact_urls (contact_id, url, label, type)
+        VALUES (?, ?, ?, ?)
+      `);
+      for (const url of updates.urls) {
+        insertUrl.run(id, url.url, url.label, url.type);
+      }
+    }
+
+    // Update related people (delete all and re-insert)
+    if (updates.relatedPeople !== undefined) {
+      db.prepare('DELETE FROM contact_related_people WHERE contact_id = ?').run(id);
+      const insertRelated = db.prepare(`
+        INSERT INTO contact_related_people (contact_id, name, relationship)
+        VALUES (?, ?, ?)
+      `);
+      for (const person of updates.relatedPeople) {
+        insertRelated.run(id, person.name, person.relationship);
+      }
+    }
+
+    // Fetch and return the updated contact (reuse the GET logic)
+    const contact = db.prepare(`
+      SELECT
+        id, first_name, last_name, display_name, company, title, notes, birthday,
+        photo_hash, raw_vcard, created_at, updated_at
+      FROM contacts
+      WHERE id = ?
+    `).get(id) as ContactRow;
 
     const emails = db.prepare(`
       SELECT id, contact_id, email, type, is_primary

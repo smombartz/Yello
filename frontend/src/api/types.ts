@@ -230,3 +230,73 @@ export interface Group {
 export interface GroupsResponse {
   groups: Group[];
 }
+
+// Update contact types
+export interface UpdateContactEmail {
+  email: string;
+  type: string | null;
+  isPrimary: boolean;
+}
+
+export interface UpdateContactPhone {
+  phone: string;
+  phoneDisplay: string;
+  countryCode: string | null;
+  type: string | null;
+  isPrimary: boolean;
+}
+
+export interface UpdateContactAddress {
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
+  type: string | null;
+}
+
+export interface UpdateContactSocialProfile {
+  platform: string;
+  username: string;
+  profileUrl: string | null;
+  type: string | null;
+}
+
+export interface UpdateContactCategory {
+  category: string;
+}
+
+export interface UpdateContactInstantMessage {
+  service: string;
+  handle: string;
+  type: string | null;
+}
+
+export interface UpdateContactUrl {
+  url: string;
+  label: string | null;
+  type: string | null;
+}
+
+export interface UpdateContactRelatedPerson {
+  name: string;
+  relationship: string | null;
+}
+
+export interface UpdateContactRequest {
+  firstName?: string | null;
+  lastName?: string | null;
+  displayName?: string;
+  company?: string | null;
+  title?: string | null;
+  notes?: string | null;
+  birthday?: string | null;
+  emails?: UpdateContactEmail[];
+  phones?: UpdateContactPhone[];
+  addresses?: UpdateContactAddress[];
+  socialProfiles?: UpdateContactSocialProfile[];
+  categories?: UpdateContactCategory[];
+  instantMessages?: UpdateContactInstantMessage[];
+  urls?: UpdateContactUrl[];
+  relatedPeople?: UpdateContactRelatedPerson[];
+}
