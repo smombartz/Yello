@@ -1,0 +1,160 @@
+---
+title: Contact Management
+description: Browse, search, and manage your contacts with a fast, responsive interface
+---
+
+# Contact Management
+
+Ello provides a fast, responsive interface for browsing and managing thousands of contacts.
+
+## Contact List
+
+The main contact list displays all your contacts in a scrollable view:
+
+- **Photo thumbnail** (48x48px) with initials fallback
+- **Display name** (full name or formatted name)
+- **Company** (if available)
+- **Primary email**
+- **Primary phone** (formatted for display)
+
+### Virtual Scrolling
+
+Ello uses TanStack Virtual for windowed rendering. Only visible rows are in the DOM, enabling smooth 60fps scrolling even with 10,000+ contacts.
+
+### Sorting
+
+Contacts are sorted alphabetically by:
+1. Last name
+2. First name
+3. Display name (fallback)
+
+## Search
+
+The search box provides instant full-text search across your contacts.
+
+### Searchable Fields
+
+- Display name (first name, last name)
+- Company/organization
+- Email addresses
+- Phone numbers
+
+### Search Features
+
+| Feature | Description |
+|---------|-------------|
+| Prefix matching | "joh" matches "John", "Johnson" |
+| Multi-word | "john smith" matches both words |
+| Email search | Search by partial or full email |
+| Instant results | Results update as you type (200ms debounce) |
+
+### Search Implementation
+
+Ello uses SQLite FTS5 (Full-Text Search) with Porter stemming and Unicode support:
+
+```sql
+-- Search query transformation
+"john sm" → "john* sm*"  -- Prefix matching
+
+-- FTS5 query
+SELECT * FROM contacts c
+JOIN contacts_fts ON contacts_fts.rowid = c.id
+WHERE contacts_fts MATCH 'john* sm*'
+ORDER BY bm25(contacts_fts)
+```
+
+## Contact Detail
+
+Click any contact to view full details in an expanded card:
+
+### Basic Information
+- Full name
+- Company and title
+- Birthday
+- Notes
+
+### Contact Methods
+- All email addresses with type labels (work, home, other)
+- All phone numbers with type labels (mobile, work, home)
+- All addresses with type labels
+
+### Social & Online
+- Social profiles (Twitter, LinkedIn, Facebook, etc.)
+- Instant message handles (Jabber, Skype, etc.)
+- Website URLs
+
+### Relationships
+- Related people (spouse, child, parent, etc.)
+
+### Actions
+
+From the contact detail view, you can:
+
+- **Click email** → Opens mail client (mailto: link)
+- **Click phone** → Opens phone dialer (tel: link)
+- **Archive** → Soft-delete the contact
+- **Edit** → Modify contact fields
+
+## Editing Contacts
+
+Click the edit button on a contact detail to modify:
+
+- Display name
+- Company
+- Title
+- Notes
+- Birthday
+
+<Note>
+Multi-value fields (emails, phones, addresses) can be edited via the API. UI editing for these fields is planned for a future release.
+</Note>
+
+## Categories & Groups
+
+Contacts can be organized by category (imported from vCard `CATEGORIES` field):
+
+- View all categories in the **Groups** sidebar section
+- Click a category to filter contacts
+- See contact count per category
+
+## Pagination
+
+The API returns paginated results for efficiency:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `page` | 1 | Page number (1-indexed) |
+| `limit` | 50 | Contacts per page |
+
+Total count and page info are included in responses:
+
+```json
+{
+  "contacts": [...],
+  "total": 10432,
+  "page": 1,
+  "totalPages": 209
+}
+```
+
+## API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/contacts` | List contacts with search and pagination |
+| `GET /api/contacts/:id` | Get single contact with all details |
+| `GET /api/contacts/count` | Get total contact count |
+| `PUT /api/contacts/:id` | Update contact fields |
+
+See [Contacts API Reference](/api-reference/contacts) for full documentation.
+
+## Performance
+
+Ello is optimized for large contact databases:
+
+| Metric | Target | Achieved |
+|--------|--------|----------|
+| Initial load | < 2s | ~500ms |
+| Search response | < 100ms | ~20ms |
+| Scroll performance | 60fps | 60fps |
+| Memory (10K contacts) | < 200MB | ~80MB |

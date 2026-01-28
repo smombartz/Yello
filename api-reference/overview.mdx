@@ -1,0 +1,190 @@
+---
+title: API Overview
+description: Introduction to the Ello REST API
+---
+
+# API Overview
+
+Ello provides a REST API for programmatic access to contact management features.
+
+## Base URL
+
+<CodeGroup>
+```bash Local Development
+http://localhost:3000
+```
+
+```bash Production (Railway)
+https://your-app.railway.app
+```
+</CodeGroup>
+
+## Authentication
+
+Ello is designed as a single-user application and does not require authentication. All API endpoints are open.
+
+<Warning>
+If deploying to the public internet, consider adding authentication via a reverse proxy or Fastify plugin.
+</Warning>
+
+## Request Format
+
+### Content Types
+
+| Type | Used For |
+|------|----------|
+| `application/json` | Most requests and all responses |
+| `multipart/form-data` | File uploads (import) |
+
+### JSON Requests
+
+```bash
+curl -X POST http://localhost:3000/api/duplicates/merge \
+  -H "Content-Type: application/json" \
+  -d '{"contactIds": [1, 2, 3], "primaryContactId": 1}'
+```
+
+### File Uploads
+
+```bash
+curl -X POST http://localhost:3000/api/import \
+  -F "file=@contacts.vcf"
+```
+
+## Response Format
+
+All responses are JSON with consistent structure.
+
+### Success Response
+
+```json
+{
+  "contacts": [...],
+  "total": 1523,
+  "page": 1,
+  "totalPages": 31
+}
+```
+
+### Error Response
+
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "Invalid contact ID"
+}
+```
+
+## HTTP Status Codes
+
+| Code | Meaning |
+|------|---------|
+| `200` | Success |
+| `400` | Bad Request - Invalid parameters |
+| `404` | Not Found - Resource doesn't exist |
+| `500` | Internal Server Error |
+
+## Pagination
+
+List endpoints support pagination:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | number | 1 | Page number (1-indexed) |
+| `limit` | number | 50 | Items per page |
+| `offset` | number | 0 | Alternative to page (used by some endpoints) |
+
+### Paginated Response
+
+```json
+{
+  "contacts": [...],
+  "total": 10432,
+  "page": 1,
+  "totalPages": 209
+}
+```
+
+## Common Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `search` | string | Full-text search query |
+| `category` | string | Filter by category |
+| `limit` | number | Results per page |
+| `page` | number | Page number |
+| `offset` | number | Skip N results |
+
+## API Endpoints
+
+### Contacts
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/contacts` | List contacts |
+| GET | `/api/contacts/count` | Get total count |
+| GET | `/api/contacts/groups` | List categories |
+| GET | `/api/contacts/:id` | Get contact detail |
+| PUT | `/api/contacts/:id` | Update contact |
+
+### Import
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/import` | Import VCF file |
+
+### Duplicates
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/duplicates` | Find duplicates |
+| GET | `/api/duplicates/summary` | Get counts by mode |
+| GET | `/api/duplicates/all-groups` | Get all group IDs |
+| POST | `/api/duplicates/merge` | Merge contacts |
+
+### Cleanup
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/cleanup` | Find cleanup candidates |
+| GET | `/api/cleanup/summary` | Get cleanup stats |
+| GET | `/api/cleanup/ids` | Get all matching IDs |
+| POST | `/api/cleanup/delete` | Delete contacts |
+
+### Archive
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/archive` | List archived contacts |
+| GET | `/api/archive/count` | Get archived count |
+| POST | `/api/archive` | Archive contacts |
+| POST | `/api/archive/unarchive` | Restore contacts |
+| DELETE | `/api/archive/delete` | Permanently delete |
+| GET | `/api/archive/export/vcf` | Export as VCF |
+
+### Health
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check |
+
+## Rate Limiting
+
+Ello does not implement rate limiting by default. For production deployments, consider adding rate limiting at the reverse proxy level.
+
+## CORS
+
+CORS is enabled for all origins in development. For production, configure allowed origins in the Fastify CORS plugin.
+
+## Validation
+
+All endpoints use TypeBox schemas for request validation. Invalid requests return a 400 status with details:
+
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "body/contactIds must be array"
+}
+```

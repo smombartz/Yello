@@ -1,0 +1,180 @@
+---
+title: Cleanup
+description: Find and remove empty, incomplete, and problematic contacts
+---
+
+# Contact Cleanup
+
+Contact databases often contain low-quality entries: empty placeholders, incomplete records, or suspicious patterns. Ello's cleanup tools help you identify and remove these contacts.
+
+## Cleanup Modes
+
+### Empty Contacts
+
+Contacts with little or no useful data.
+
+#### Truly Empty
+
+Contacts with absolutely no data:
+- No name
+- No emails
+- No phones
+- No addresses
+- No other contact information
+
+These are often created by accident or from failed imports.
+
+#### Name Only
+
+Contacts with a name but no contact information:
+- Has display name
+- No emails
+- No phones
+- No addresses
+
+These contacts exist but have no way to reach them.
+
+### Problematic Contacts
+
+Contacts that exhibit suspicious or undesirable patterns.
+
+#### Many Domains
+
+Contacts with email addresses from many different domains:
+- Configurable threshold (default: 3+ domains)
+- Often indicates data aggregation or scraping
+- Example: Same contact has `@gmail.com`, `@yahoo.com`, `@hotmail.com`, `@work.com`
+
+#### Same Domain
+
+Contacts where all emails are from the same domain:
+- May indicate email list imports
+- Example: Contact has only `sales@company.com`, `support@company.com`, `info@company.com`
+
+## Using Cleanup
+
+1. Click **Cleanup** in the sidebar
+2. Select a mode: **Empty** or **Problematic**
+3. For Empty mode, choose types: `truly_empty`, `name_only`, or both
+4. For Problematic mode, choose types: `many_domains`, `same_domain`, or both
+5. Review the matched contacts
+
+## Cleanup Summary
+
+The summary view shows counts for each category:
+
+```json
+{
+  "empty": {
+    "truly_empty": 23,
+    "name_only": 156
+  },
+  "problematic": {
+    "many_domains": 12,
+    "same_domain": 34
+  }
+}
+```
+
+## Reviewing Contacts
+
+Before deleting, review each contact to ensure it should be removed:
+
+- Click on a contact to see full details
+- Verify it matches the cleanup criteria
+- Consider archiving instead of deleting if unsure
+
+## Deleting Contacts
+
+### Individual Delete
+
+Click the delete button on any contact card to remove it.
+
+### Bulk Delete
+
+1. Select multiple contacts using checkboxes
+2. Click **Delete Selected**
+3. Confirm the operation
+
+<Warning>
+Deletion is permanent. Consider using **Archive** instead if you're not certain.
+</Warning>
+
+### Select All
+
+Use **Select All** to quickly select all contacts matching the current filters.
+
+## Threshold Configuration
+
+For problematic contact detection, the threshold can be adjusted:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `threshold` | 3 | Minimum domains for "many domains" detection |
+
+A lower threshold catches more contacts but may include false positives.
+
+## API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/cleanup` | Find cleanup candidates |
+| `GET /api/cleanup/summary` | Get cleanup stats |
+| `GET /api/cleanup/ids` | Get all IDs for mode |
+| `POST /api/cleanup/delete` | Delete contacts |
+
+### Query Parameters
+
+```http
+GET /api/cleanup?mode=empty&types=truly_empty,name_only&limit=50&offset=0
+```
+
+| Parameter | Values | Description |
+|-----------|--------|-------------|
+| `mode` | `empty`, `problematic` | Cleanup category |
+| `types` | Comma-separated | Specific types to match |
+| `threshold` | number | Domain threshold for problematic mode |
+| `limit` | number | Results per page |
+| `offset` | number | Pagination offset |
+
+See [Cleanup API Reference](/api-reference/cleanup) for full documentation.
+
+## Best Practices
+
+<Tip>
+**Start with Truly Empty**: These are the safest to delete since they contain no useful data.
+</Tip>
+
+<Tip>
+**Review Name-Only**: Some contacts may just need updating rather than deletion.
+</Tip>
+
+<Tip>
+**Archive First**: When in doubt, archive contacts instead of deleting. You can always restore or permanently delete later.
+</Tip>
+
+## Cleanup Workflow
+
+A recommended workflow for cleaning up a large contact database:
+
+<Steps>
+  <Step title="Run Deduplication First">
+    Merge duplicates before cleanup to avoid deleting contacts that could be merged.
+  </Step>
+
+  <Step title="Delete Truly Empty">
+    These contacts have no value and are safe to remove.
+  </Step>
+
+  <Step title="Review Name-Only">
+    Decide whether to add contact info, archive, or delete.
+  </Step>
+
+  <Step title="Check Problematic">
+    Review many-domains and same-domain contacts for legitimacy.
+  </Step>
+
+  <Step title="Archive Uncertain">
+    Move uncertain contacts to archive for later review.
+  </Step>
+</Steps>

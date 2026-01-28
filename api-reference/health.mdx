@@ -1,0 +1,128 @@
+---
+title: Health Check
+description: API endpoint for monitoring service health
+---
+
+# Health Check API
+
+Endpoint for monitoring the health of the Ello service.
+
+## Get Health Status
+
+Check if the service is running and get basic statistics.
+
+<RequestExample>
+```bash cURL
+curl "http://localhost:3000/health"
+```
+
+```javascript JavaScript
+const response = await fetch('/health');
+const status = await response.json();
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "status": "ok",
+  "contacts": 10432
+}
+```
+</ResponseExample>
+
+---
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Service status (`ok` when healthy) |
+| `contacts` | number | Total number of active contacts |
+
+---
+
+## Use Cases
+
+### Load Balancer Health Check
+
+Configure your load balancer to poll `/health`:
+
+```nginx
+# nginx upstream health check
+upstream ello {
+    server localhost:3000;
+    health_check uri=/health interval=30s;
+}
+```
+
+### Railway Health Check
+
+Railway uses this endpoint for deployment health checks:
+
+```toml
+# railway.toml
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+```
+
+### Monitoring Integration
+
+Poll the health endpoint for monitoring dashboards:
+
+```javascript
+// Simple uptime monitor
+setInterval(async () => {
+  try {
+    const start = Date.now();
+    const response = await fetch('http://localhost:3000/health');
+    const latency = Date.now() - start;
+
+    if (response.ok) {
+      const { status, contacts } = await response.json();
+      console.log(`Status: ${status}, Contacts: ${contacts}, Latency: ${latency}ms`);
+    } else {
+      console.error(`Health check failed: ${response.status}`);
+    }
+  } catch (error) {
+    console.error(`Health check error: ${error.message}`);
+  }
+}, 30000); // Every 30 seconds
+```
+
+---
+
+## Failure Scenarios
+
+The health endpoint can fail in these scenarios:
+
+| Scenario | HTTP Status | Response |
+|----------|-------------|----------|
+| Service running | 200 | `{ "status": "ok", "contacts": N }` |
+| Database error | 500 | `{ "error": "Database connection failed" }` |
+| Service down | Connection refused | N/A |
+
+---
+
+## Database Check
+
+The health endpoint queries the database to count contacts, which serves as an implicit database connectivity check:
+
+```sql
+SELECT COUNT(*) as total FROM contacts WHERE archived_at IS NULL
+```
+
+If the database is unreachable, the endpoint returns a 500 error.
+
+---
+
+## Notes
+
+<Note>
+The health endpoint does not require authentication and should be publicly accessible for load balancer and monitoring integration.
+</Note>
+
+<Note>
+The contact count excludes archived contacts, showing only active contacts.
+</Note>

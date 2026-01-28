@@ -1,0 +1,106 @@
+---
+title: Quickstart
+description: Get Ello running in under 5 minutes
+---
+
+# Quickstart
+
+Get Ello up and running on your local machine.
+
+## Prerequisites
+
+- **Node.js 20+** - [Download from nodejs.org](https://nodejs.org/)
+- **Git** - For cloning the repository
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/smombartz/ello-claude.git
+    cd ello-claude
+    ```
+  </Step>
+
+  <Step title="Install backend dependencies">
+    ```bash
+    cd backend
+    npm install
+    ```
+  </Step>
+
+  <Step title="Install frontend dependencies">
+    Open a new terminal window:
+    ```bash
+    cd frontend
+    npm install
+    ```
+  </Step>
+
+  <Step title="Start the backend">
+    In the backend directory:
+    ```bash
+    npm run dev
+    ```
+    The API server starts at `http://localhost:3000`
+  </Step>
+
+  <Step title="Start the frontend">
+    In the frontend directory:
+    ```bash
+    npm run dev
+    ```
+    The web app opens at `http://localhost:5173`
+  </Step>
+</Steps>
+
+## Import Your First Contacts
+
+<Steps>
+  <Step title="Export contacts from your current app">
+    Export your contacts as a `.vcf` file from Apple Contacts, Google Contacts, or another contact manager.
+  </Step>
+
+  <Step title="Click the Import button">
+    In Ello, click the **Import** button in the top header.
+  </Step>
+
+  <Step title="Select your VCF file">
+    Choose your exported `.vcf` file. Ello supports files up to 100MB containing thousands of contacts.
+  </Step>
+
+  <Step title="Wait for processing">
+    Ello will parse your contacts, extract photos, and index everything for search. You'll see a summary when complete:
+    - Number of contacts imported
+    - Number of photos processed
+    - Any errors encountered
+  </Step>
+</Steps>
+
+## Explore the Interface
+
+Once your contacts are imported, you can:
+
+- **Search** - Type in the search box to find contacts by name, email, or company
+- **Browse** - Scroll through your contacts (uses virtual scrolling for performance)
+- **View Details** - Click any contact to see full information
+- **Find Duplicates** - Click "Deduplication" in the sidebar to find and merge duplicates
+- **Cleanup** - Click "Cleanup" to find empty or problematic contacts
+- **Archive** - Soft-delete contacts you want to remove but keep as backup
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Import Contacts" icon="upload" href="/features/contact-import">
+    Learn about VCF format support and import options
+  </Card>
+  <Card title="Find Duplicates" icon="copy" href="/features/deduplication">
+    Understand the five deduplication modes
+  </Card>
+  <Card title="Deploy to Railway" icon="cloud" href="/deployment/railway">
+    Run Ello in the cloud with persistent storage
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    Explore the REST API endpoints
+  </Card>
+</CardGroup>

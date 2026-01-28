@@ -1,0 +1,304 @@
+---
+title: Cleanup
+description: API endpoints for finding and removing problematic contacts
+---
+
+# Cleanup API
+
+Endpoints for identifying and removing empty or problematic contacts.
+
+## Find Cleanup Candidates
+
+Retrieve contacts matching cleanup criteria.
+
+<ParamField query="mode" type="string" required>
+  Cleanup mode: `empty` or `problematic`
+</ParamField>
+
+<ParamField query="types" type="string">
+  Comma-separated types to match.
+  - For `empty`: `truly_empty`, `name_only`
+  - For `problematic`: `many_domains`, `same_domain`
+</ParamField>
+
+<ParamField query="threshold" type="number" default="3">
+  Domain threshold for problematic mode
+</ParamField>
+
+<ParamField query="limit" type="number" default="50">
+  Maximum contacts to return
+</ParamField>
+
+<ParamField query="offset" type="number" default="0">
+  Number of contacts to skip
+</ParamField>
+
+<RequestExample>
+```bash cURL - Empty Contacts
+curl "http://localhost:3000/api/cleanup?mode=empty&types=truly_empty,name_only&limit=50"
+```
+
+```bash cURL - Problematic Contacts
+curl "http://localhost:3000/api/cleanup?mode=problematic&types=many_domains&threshold=3&limit=50"
+```
+
+```javascript JavaScript
+const response = await fetch('/api/cleanup?mode=empty&types=truly_empty');
+const data = await response.json();
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "contacts": [
+    {
+      "id": 123,
+      "displayName": "",
+      "company": null,
+      "primaryEmail": null,
+      "primaryPhone": null,
+      "photoUrl": null,
+      "type": "truly_empty"
+    },
+    {
+      "id": 456,
+      "displayName": "Unknown Contact",
+      "company": null,
+      "primaryEmail": null,
+      "primaryPhone": null,
+      "photoUrl": null,
+      "type": "name_only"
+    }
+  ],
+  "total": 179,
+  "limit": 50,
+  "offset": 0
+}
+```
+</ResponseExample>
+
+---
+
+## Get Cleanup Summary
+
+Get counts for each cleanup category.
+
+<ParamField query="threshold" type="number" default="3">
+  Domain threshold for problematic calculations
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl "http://localhost:3000/api/cleanup/summary?threshold=3"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "empty": {
+    "truly_empty": 23,
+    "name_only": 156
+  },
+  "problematic": {
+    "many_domains": 12,
+    "same_domain": 34
+  }
+}
+```
+</ResponseExample>
+
+---
+
+## Get Cleanup IDs
+
+Get all contact IDs matching cleanup criteria (for bulk selection).
+
+<ParamField query="mode" type="string" required>
+  Cleanup mode
+</ParamField>
+
+<ParamField query="types" type="string">
+  Comma-separated types to match
+</ParamField>
+
+<ParamField query="threshold" type="number" default="3">
+  Domain threshold for problematic mode
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl "http://localhost:3000/api/cleanup/ids?mode=empty&types=truly_empty"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "ids": [123, 456, 789, ...],
+  "total": 23
+}
+```
+</ResponseExample>
+
+---
+
+## Delete Contacts
+
+Permanently delete contacts.
+
+<ParamField body="contactIds" type="array" required>
+  Array of contact IDs to delete
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "http://localhost:3000/api/cleanup/delete" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contactIds": [123, 456, 789]
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('/api/cleanup/delete', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    contactIds: [123, 456, 789]
+  })
+});
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "deletedCount": 3
+}
+```
+</ResponseExample>
+
+<Warning>
+Deletion is permanent. Consider using the Archive API instead if you want to preserve data.
+</Warning>
+
+---
+
+## Cleanup Types
+
+### Empty Mode
+
+#### truly_empty
+
+Contacts with no meaningful data:
+- No display name (empty or whitespace)
+- No emails
+- No phones
+- No addresses
+- No other contact information
+
+#### name_only
+
+Contacts with a name but no contact methods:
+- Has display name
+- No emails
+- No phones
+- No addresses
+
+---
+
+### Problematic Mode
+
+#### many_domains
+
+Contacts with emails from many different domains:
+- Number of unique domains >= threshold
+- Default threshold: 3
+
+Example: Contact with `john@gmail.com`, `john@yahoo.com`, `john@hotmail.com`, `john@outlook.com` would match with threshold 3.
+
+#### same_domain
+
+Contacts where all emails share the same domain:
+- Multiple emails
+- All from same domain (excluding personal email providers)
+
+Example: Contact with only `sales@company.com`, `support@company.com`, `info@company.com`.
+
+---
+
+## Threshold Configuration
+
+The `threshold` parameter affects problematic detection:
+
+| Threshold | Effect |
+|-----------|--------|
+| 2 | Catches contacts with 2+ domains (more aggressive) |
+| 3 | Default - balanced detection |
+| 5 | Only catches contacts with 5+ domains (conservative) |
+
+---
+
+## Bulk Delete
+
+To delete all contacts matching a cleanup mode:
+
+```javascript
+// 1. Get all matching IDs
+const { ids } = await fetch('/api/cleanup/ids?mode=empty&types=truly_empty')
+  .then(r => r.json());
+
+// 2. Delete in batches
+const batchSize = 100;
+for (let i = 0; i < ids.length; i += batchSize) {
+  const batch = ids.slice(i, i + batchSize);
+  await fetch('/api/cleanup/delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contactIds: batch })
+  });
+}
+```
+
+---
+
+## Response Schemas
+
+### Cleanup Contact
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | number | Contact ID |
+| `displayName` | string | Display name (may be empty) |
+| `company` | string | Company name |
+| `primaryEmail` | string | Primary email |
+| `primaryPhone` | string | Primary phone |
+| `photoUrl` | string | Photo URL |
+| `type` | string | Cleanup type matched |
+
+### Cleanup Summary
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `empty.truly_empty` | number | Count of truly empty contacts |
+| `empty.name_only` | number | Count of name-only contacts |
+| `problematic.many_domains` | number | Count of many-domains contacts |
+| `problematic.same_domain` | number | Count of same-domain contacts |
+
+---
+
+## Best Practices
+
+<Tip>
+Start with `truly_empty` contacts as they are the safest to delete.
+</Tip>
+
+<Tip>
+Review `name_only` contacts manually - some may just need contact info added.
+</Tip>
+
+<Tip>
+Use Archive instead of Delete when unsure - you can always permanently delete later.
+</Tip>

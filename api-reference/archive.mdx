@@ -1,0 +1,350 @@
+---
+title: Archive
+description: API endpoints for archiving, restoring, and exporting contacts
+---
+
+# Archive API
+
+Endpoints for soft-deleting contacts with the ability to restore or export.
+
+## List Archived Contacts
+
+Retrieve paginated list of archived contacts.
+
+<ParamField query="limit" type="number" default="50">
+  Contacts per page
+</ParamField>
+
+<ParamField query="offset" type="number" default="0">
+  Number of contacts to skip
+</ParamField>
+
+<ParamField query="search" type="string">
+  Search within archived contacts
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl "http://localhost:3000/api/archive?limit=50&offset=0"
+```
+
+```bash cURL - With Search
+curl "http://localhost:3000/api/archive?search=john&limit=50"
+```
+
+```javascript JavaScript
+const response = await fetch('/api/archive?limit=50&offset=0');
+const data = await response.json();
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "contacts": [
+    {
+      "id": 123,
+      "displayName": "John Smith",
+      "company": "Acme Inc",
+      "primaryEmail": "john@acme.com",
+      "primaryPhone": "(555) 123-4567",
+      "photoUrl": "/photos/thumbnail/a1/a1b2c3d4.jpg",
+      "archivedAt": "2025-01-20T10:30:00Z"
+    }
+  ],
+  "total": 45,
+  "limit": 50,
+  "offset": 0
+}
+```
+</ResponseExample>
+
+---
+
+## Get Archive Count
+
+Get total number of archived contacts.
+
+<RequestExample>
+```bash cURL
+curl "http://localhost:3000/api/archive/count"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "total": 45
+}
+```
+</ResponseExample>
+
+---
+
+## Archive Contacts
+
+Move contacts to the archive.
+
+<ParamField body="contactIds" type="array" required>
+  Array of contact IDs to archive
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "http://localhost:3000/api/archive" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contactIds": [1, 2, 3]
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('/api/archive', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    contactIds: [1, 2, 3]
+  })
+});
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "archivedCount": 3
+}
+```
+</ResponseExample>
+
+---
+
+## Restore Contacts
+
+Restore archived contacts to the main list.
+
+<ParamField body="contactIds" type="array" required>
+  Array of contact IDs to restore
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "http://localhost:3000/api/archive/unarchive" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contactIds": [1, 2, 3]
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('/api/archive/unarchive', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    contactIds: [1, 2, 3]
+  })
+});
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "unarchivedCount": 3
+}
+```
+</ResponseExample>
+
+---
+
+## Delete Archived Contacts
+
+Permanently delete contacts from the archive.
+
+<ParamField body="contactIds" type="array" required>
+  Array of contact IDs to delete
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X DELETE "http://localhost:3000/api/archive/delete" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contactIds": [1, 2, 3]
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('/api/archive/delete', {
+  method: 'DELETE',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    contactIds: [1, 2, 3]
+  })
+});
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "deletedCount": 3
+}
+```
+</ResponseExample>
+
+<Warning>
+Permanent deletion cannot be undone. All contact data including related records is removed.
+</Warning>
+
+---
+
+## Export Archive as VCF
+
+Export all archived contacts as a VCF file.
+
+<RequestExample>
+```bash cURL
+curl "http://localhost:3000/api/archive/export/vcf" -o archived-contacts.vcf
+```
+
+```javascript JavaScript
+const response = await fetch('/api/archive/export/vcf');
+const blob = await response.blob();
+const url = URL.createObjectURL(blob);
+
+// Download file
+const a = document.createElement('a');
+a.href = url;
+a.download = 'archived-contacts.vcf';
+a.click();
+```
+</RequestExample>
+
+<ResponseExample>
+```text Response (VCF file content)
+BEGIN:VCARD
+VERSION:3.0
+FN:John Smith
+N:Smith;John;;;
+ORG:Acme Inc
+EMAIL;TYPE=work:john@acme.com
+TEL;TYPE=mobile:+15551234567
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+FN:Jane Doe
+...
+END:VCARD
+```
+</ResponseExample>
+
+Response headers:
+```
+Content-Type: text/vcard
+Content-Disposition: attachment; filename="archived-contacts.vcf"
+```
+
+---
+
+## Archive vs Delete
+
+| Operation | Effect | Reversible |
+|-----------|--------|------------|
+| Archive | Soft-delete, hidden from main list | Yes |
+| Restore | Returns to main list | N/A |
+| Delete | Permanent removal from database | No |
+
+---
+
+## Archive Workflow
+
+<Steps>
+  <Step title="Archive">
+    Contact is marked with `archived_at` timestamp and hidden from main views.
+  </Step>
+
+  <Step title="Review">
+    Archived contacts can be browsed, searched, and reviewed.
+  </Step>
+
+  <Step title="Decision">
+    Choose to restore (if needed) or delete permanently.
+  </Step>
+
+  <Step title="Export (Optional)">
+    Before permanent deletion, export as VCF for backup.
+  </Step>
+</Steps>
+
+---
+
+## Response Schemas
+
+### Archived Contact
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | number | Contact ID |
+| `displayName` | string | Display name |
+| `company` | string | Company name |
+| `primaryEmail` | string | Primary email |
+| `primaryPhone` | string | Primary phone |
+| `photoUrl` | string | Photo URL |
+| `archivedAt` | string | ISO timestamp of archive date |
+
+---
+
+## Bulk Operations
+
+### Archive All Cleanup Candidates
+
+```javascript
+// Get cleanup candidates
+const { ids } = await fetch('/api/cleanup/ids?mode=empty&types=name_only')
+  .then(r => r.json());
+
+// Archive them
+await fetch('/api/archive', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ contactIds: ids })
+});
+```
+
+### Clear Archive
+
+```javascript
+// Get all archived IDs
+const archived = await fetch('/api/archive?limit=10000')
+  .then(r => r.json());
+
+const ids = archived.contacts.map(c => c.id);
+
+// Export first
+const vcf = await fetch('/api/archive/export/vcf').then(r => r.blob());
+// Save vcf blob...
+
+// Then delete
+await fetch('/api/archive/delete', {
+  method: 'DELETE',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ contactIds: ids })
+});
+```
+
+---
+
+## Best Practices
+
+<Tip>
+Archive contacts instead of deleting when doing cleanup. You can always delete later.
+</Tip>
+
+<Tip>
+Export archived contacts before permanent deletion for backup purposes.
+</Tip>
+
+<Tip>
+Review the archive periodically to either restore needed contacts or clear old entries.
+</Tip>

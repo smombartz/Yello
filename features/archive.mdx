@@ -1,0 +1,195 @@
+---
+title: Archive
+description: Soft-delete contacts with the ability to restore or export
+---
+
+# Archive
+
+The archive feature provides a safety net for contact removal. Instead of permanently deleting contacts, you can archive them first. Archived contacts can be restored or exported as VCF.
+
+## How Archive Works
+
+When you archive a contact:
+
+1. Contact is marked with an `archived_at` timestamp
+2. Contact disappears from the main list and search
+3. Contact is preserved in the archive section
+4. All related data (emails, phones, etc.) is preserved
+
+<Note>
+Archiving is a "soft delete" - the data remains in the database but is filtered from normal views.
+</Note>
+
+## Archiving Contacts
+
+### From Contact Detail
+
+1. Click on a contact to open the detail view
+2. Click the **Archive** button
+3. Contact moves to the archive
+
+### From Cleanup View
+
+1. Select contacts in the cleanup view
+2. Click **Archive Selected** instead of Delete
+
+### Bulk Archive
+
+1. Select multiple contacts
+2. Click **Archive Selected**
+3. All selected contacts are archived
+
+## Viewing Archived Contacts
+
+1. Click **Archived** in the sidebar
+2. Browse archived contacts
+3. Search within archived contacts
+
+The archive view shows:
+- Contact name and details
+- Archive date
+- Restore and delete options
+
+## Restoring Contacts
+
+### Individual Restore
+
+1. Find the contact in the archive view
+2. Click **Restore**
+3. Contact returns to the main list
+
+### Bulk Restore
+
+1. Select multiple archived contacts
+2. Click **Restore Selected**
+3. All selected contacts are restored
+
+## Permanent Deletion
+
+Archived contacts can be permanently deleted when you're certain they're no longer needed:
+
+### Individual Delete
+
+1. Find the contact in the archive view
+2. Click **Delete Permanently**
+3. Confirm the action
+4. Contact is permanently removed
+
+### Bulk Delete
+
+1. Select multiple archived contacts
+2. Click **Delete Permanently**
+3. Confirm the action
+
+<Warning>
+Permanent deletion cannot be undone. The contact and all related data are removed from the database.
+</Warning>
+
+## Export Archive
+
+Export all archived contacts as a VCF file:
+
+1. Go to the Archive view
+2. Click **Export as VCF**
+3. Download the `.vcf` file
+
+This allows you to:
+- Back up archived contacts before permanent deletion
+- Import archived contacts into another system
+- Keep a record of removed contacts
+
+## API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/archive` | List archived contacts |
+| `GET /api/archive/count` | Get archived contact count |
+| `POST /api/archive` | Archive contacts |
+| `POST /api/archive/unarchive` | Restore contacts |
+| `DELETE /api/archive/delete` | Permanently delete |
+| `GET /api/archive/export/vcf` | Export as VCF |
+
+### Archive Contacts
+
+```http
+POST /api/archive
+Content-Type: application/json
+
+{
+  "contactIds": [1, 2, 3]
+}
+```
+
+Response:
+```json
+{
+  "archivedCount": 3
+}
+```
+
+### Restore Contacts
+
+```http
+POST /api/archive/unarchive
+Content-Type: application/json
+
+{
+  "contactIds": [1, 2, 3]
+}
+```
+
+Response:
+```json
+{
+  "unarchivedCount": 3
+}
+```
+
+See [Archive API Reference](/api-reference/archive) for full documentation.
+
+## Archive vs Delete
+
+| Action | Reversible | Data Preserved | Use When |
+|--------|------------|----------------|----------|
+| Archive | Yes | Yes | Unsure about deletion |
+| Permanent Delete | No | No | Certain contact is not needed |
+
+## Best Practices
+
+<Tip>
+**Archive First, Delete Later**: When cleaning up contacts, archive them first. After a waiting period (e.g., 30 days), permanently delete if not needed.
+</Tip>
+
+<Tip>
+**Export Before Purging**: Before permanently deleting many archived contacts, export them as VCF for backup.
+</Tip>
+
+<Tip>
+**Regular Review**: Periodically review the archive to permanently delete contacts you're certain about.
+</Tip>
+
+## Archive Workflow
+
+A recommended workflow for managing archived contacts:
+
+<Steps>
+  <Step title="Archive Uncertain Contacts">
+    When cleaning up or deduplicating, archive contacts instead of deleting.
+  </Step>
+
+  <Step title="Wait Period">
+    Let archived contacts sit for 30 days. If you need them, they're easy to restore.
+  </Step>
+
+  <Step title="Review Archive">
+    After the waiting period, review archived contacts.
+  </Step>
+
+  <Step title="Export Backup">
+    Export archived contacts as VCF before permanent deletion.
+  </Step>
+
+  <Step title="Permanent Delete">
+    Permanently delete archived contacts you no longer need.
+  </Step>
+</Steps>

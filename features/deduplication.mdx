@@ -1,0 +1,177 @@
+---
+title: Deduplication
+description: Find and merge duplicate contacts using multiple detection modes
+---
+
+# Deduplication
+
+Over time, contact databases accumulate duplicates from multiple imports, syncs, and manual entry. Ello provides five detection modes to find and merge duplicate contacts.
+
+## Detection Modes
+
+### Email Mode
+
+Finds contacts that share the same email address.
+
+- **Matching**: Exact email address match (case-insensitive)
+- **Use case**: Most reliable for business contacts
+- **Example**: Two contacts both have `john@company.com`
+
+### Phone Mode
+
+Finds contacts that share the same phone number.
+
+- **Matching**: Normalized E.164 format comparison
+- **Use case**: Personal contacts often share mobile numbers
+- **Example**: `(555) 123-4567` matches `+1 555-123-4567`
+
+<Note>
+Phone numbers are normalized using `libphonenumber-js` to handle different formatting styles.
+</Note>
+
+### Address Mode
+
+Finds contacts that share the same street address.
+
+- **Matching**: Normalized address components (street, city, postal code)
+- **Use case**: Family members or coworkers at same location
+- **Example**: Two contacts at "123 Main Street, New York, NY 10001"
+
+### Social Mode
+
+Finds contacts that share the same social media profile.
+
+- **Matching**: Platform + username combination
+- **Use case**: Contacts imported from different sources with social links
+- **Example**: Two contacts with Twitter handle `@johndoe`
+
+### Recommended Mode
+
+AI-powered multi-signal matching with confidence scoring.
+
+- **Signals**: Combines name similarity, email patterns, phone patterns, and more
+- **Confidence levels**: `very_high`, `high`, `medium`
+- **Use case**: Catch duplicates missed by single-field matching
+
+#### Confidence Levels
+
+| Level | Description | Example |
+|-------|-------------|---------|
+| `very_high` | Multiple strong signals match | Same name + same email domain + similar phone |
+| `high` | Two signals match strongly | Same name + same company |
+| `medium` | Single strong or multiple weak signals | Similar names only |
+
+## Viewing Duplicates
+
+1. Click **Deduplication** in the sidebar
+2. Select a detection mode from the tabs
+3. For Recommended mode, optionally filter by confidence level
+4. Browse duplicate groups
+
+Each duplicate group shows:
+- All contacts in the group
+- Shared attribute that linked them
+- Contact details for comparison
+
+## Merging Contacts
+
+<Steps>
+  <Step title="Review the group">
+    Compare contacts in the duplicate group to verify they're truly duplicates.
+  </Step>
+
+  <Step title="Select primary contact">
+    Choose which contact should be the "primary" - its name and basic info will be preserved.
+  </Step>
+
+  <Step title="Merge">
+    Click **Merge** to combine all contacts into one.
+  </Step>
+</Steps>
+
+### What Happens During Merge
+
+1. **Primary contact** is updated with combined data
+2. **Emails** from all contacts are preserved (duplicates removed)
+3. **Phones** from all contacts are preserved (duplicates removed)
+4. **Addresses** from all contacts are preserved
+5. **Other fields** (social, IM, URLs) are combined
+6. **Non-primary contacts** are deleted
+
+<Warning>
+Merging cannot be undone. The non-primary contacts are permanently deleted.
+</Warning>
+
+## Bulk Merge
+
+For modes with many duplicate groups, use **Merge All**:
+
+1. Click **Merge All** button
+2. Confirm the operation
+3. Wait for batch processing
+
+The first contact in each group becomes the primary by default.
+
+## Duplicate Summary
+
+The summary view shows counts for each mode:
+
+```json
+{
+  "email": 45,
+  "phone": 23,
+  "address": 12,
+  "social": 5,
+  "recommended": 78
+}
+```
+
+Use this to prioritize which mode to review first.
+
+## API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/duplicates` | Find duplicate groups |
+| `GET /api/duplicates/summary` | Get counts by mode |
+| `GET /api/duplicates/all-groups` | Get all group IDs (lightweight) |
+| `POST /api/duplicates/merge` | Merge contacts |
+
+### Query Parameters
+
+```http
+GET /api/duplicates?mode=recommended&confidence=very_high,high&limit=50&offset=0
+```
+
+| Parameter | Values | Description |
+|-----------|--------|-------------|
+| `mode` | `email`, `phone`, `address`, `social`, `recommended` | Detection mode |
+| `confidence` | `very_high`, `high`, `medium` | Filter for recommended mode |
+| `limit` | number | Results per page |
+| `offset` | number | Pagination offset |
+
+See [Duplicates API Reference](/api-reference/duplicates) for full documentation.
+
+## Algorithm Details
+
+### Union-Find Grouping
+
+Ello uses a Union-Find (Disjoint Set) algorithm to group duplicates:
+
+1. Each contact starts in its own set
+2. Contacts with matching attributes are unioned
+3. Final groups are the connected components
+
+This handles transitive duplicates: if A matches B and B matches C, all three are grouped together.
+
+### Recommended Mode Scoring
+
+The recommended mode calculates a confidence score based on:
+
+- **Name similarity** (Jaro-Winkler distance)
+- **Email domain match**
+- **Phone number patterns**
+- **Company match**
+- **Other shared attributes**
+
+Scores are bucketed into confidence levels for easier filtering.

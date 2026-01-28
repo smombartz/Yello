@@ -1,0 +1,72 @@
+---
+title: Introduction
+description: A personal contact manager that gives you full control over your contacts
+---
+
+# Welcome to Ello
+
+Ello is a personal contact manager that imports contacts from VCF files and provides powerful tools for organizing, deduplicating, and managing large contact databases. Built for single users managing 10,000+ contacts with photos.
+
+## Why Ello?
+
+Existing contact managers either lock you into an ecosystem (Apple, Google) or are bloated with features you don't need. Ello is different:
+
+<CardGroup cols={2}>
+  <Card title="Own Your Data" icon="database">
+    All contacts stored in a portable SQLite database. No vendor lock-in.
+  </Card>
+  <Card title="Lightning Fast" icon="bolt">
+    Virtual scrolling and FTS5 search handles 10,000+ contacts without breaking a sweat.
+  </Card>
+  <Card title="Smart Deduplication" icon="copy">
+    Find and merge duplicate contacts using email, phone, address, or AI-powered matching.
+  </Card>
+  <Card title="Easy Cleanup" icon="broom">
+    Identify empty, incomplete, and problematic contacts for bulk removal.
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Contact Import
+Import contacts from VCF files (vCard 2.1, 3.0, and 4.0). Supports single or multi-contact files up to 100MB with automatic photo extraction and processing.
+
+### Fast Search
+Full-text search across names, emails, companies, and phone numbers. Results appear as you type with prefix matching support.
+
+### Deduplication
+Five detection modes to find duplicates:
+- **Email** - Exact email address matches
+- **Phone** - Normalized phone number matches (E.164)
+- **Address** - Street address matches
+- **Social** - Social profile matches
+- **Recommended** - Multi-signal AI matching with confidence scores
+
+### Contact Cleanup
+Identify contacts that need attention:
+- Truly empty contacts (no data at all)
+- Name-only contacts (name but no contact info)
+- Problematic contacts (suspicious patterns like many domains)
+
+### Archive & Restore
+Soft-delete contacts without losing them permanently. Archive, restore, or export archived contacts as VCF.
+
+### Groups & Categories
+Organize contacts by category. Filter and view contacts by group.
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 19, Vite, TanStack Virtual, TanStack Query, Pico CSS |
+| Backend | Node.js 20, Fastify 5, better-sqlite3, Sharp |
+| Database | SQLite with FTS5 (Full-Text Search) |
+| Deployment | Railway with persistent storage |
+
+## Getting Started
+
+Ready to take control of your contacts?
+
+<Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+  Get Ello running in under 5 minutes
+</Card>

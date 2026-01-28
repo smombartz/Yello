@@ -1,0 +1,306 @@
+---
+title: Environment Variables
+description: Configuration reference for Ello environment variables
+---
+
+# Environment Variables
+
+Configure Ello behavior using environment variables.
+
+## Core Variables
+
+### DATABASE_PATH
+
+Path to the SQLite database file.
+
+| Property | Value |
+|----------|-------|
+| **Default** | `./data/contacts.db` |
+| **Required** | No |
+| **Example** | `/data/contacts.db` |
+
+```bash
+DATABASE_PATH=/data/contacts.db
+```
+
+<Note>
+The directory must exist and be writable. Ello creates the database file if it doesn't exist.
+</Note>
+
+---
+
+### PHOTOS_PATH
+
+Directory for storing contact photos.
+
+| Property | Value |
+|----------|-------|
+| **Default** | `./data/photos` |
+| **Required** | No |
+| **Example** | `/data/photos` |
+
+```bash
+PHOTOS_PATH=/data/photos
+```
+
+The directory structure is created automatically:
+```
+photos/
+├── thumbnail/   # 48x48px
+├── small/       # 96x96px
+├── medium/      # 200x200px
+└── large/       # 400x400px
+```
+
+---
+
+### PORT
+
+HTTP server port.
+
+| Property | Value |
+|----------|-------|
+| **Default** | `3000` |
+| **Required** | No |
+| **Example** | `8080` |
+
+```bash
+PORT=3000
+```
+
+<Note>
+Railway automatically sets this variable. Don't override it in Railway deployments.
+</Note>
+
+---
+
+### NODE_ENV
+
+Application environment mode.
+
+| Property | Value |
+|----------|-------|
+| **Default** | `development` |
+| **Required** | No |
+| **Values** | `development`, `production`, `test` |
+
+```bash
+NODE_ENV=production
+```
+
+#### Effects by Environment
+
+| Feature | Development | Production |
+|---------|-------------|------------|
+| Logging | Verbose | Minimal |
+| Error details | Full stack traces | Generic messages |
+| Static files | Proxied via Vite | Served by Fastify |
+| Hot reload | Enabled | Disabled |
+
+---
+
+## Optional Variables
+
+### LOG_LEVEL
+
+Pino logging level.
+
+| Property | Value |
+|----------|-------|
+| **Default** | `info` |
+| **Required** | No |
+| **Values** | `trace`, `debug`, `info`, `warn`, `error`, `fatal`, `silent` |
+
+```bash
+LOG_LEVEL=debug
+```
+
+---
+
+### MAX_FILE_SIZE
+
+Maximum upload file size in bytes.
+
+| Property | Value |
+|----------|-------|
+| **Default** | `104857600` (100MB) |
+| **Required** | No |
+| **Example** | `209715200` (200MB) |
+
+```bash
+MAX_FILE_SIZE=209715200
+```
+
+---
+
+## Configuration by Environment
+
+### Development
+
+```bash
+# .env (backend directory)
+NODE_ENV=development
+DATABASE_PATH=./data/contacts.db
+PHOTOS_PATH=./data/photos
+PORT=3000
+LOG_LEVEL=debug
+```
+
+### Production (Railway)
+
+```bash
+# Railway environment variables
+NODE_ENV=production
+DATABASE_PATH=/data/contacts.db
+PHOTOS_PATH=/data/photos
+# PORT is set automatically by Railway
+```
+
+### Production (Docker)
+
+```bash
+# docker-compose.yml environment section
+NODE_ENV=production
+DATABASE_PATH=/data/contacts.db
+PHOTOS_PATH=/data/photos
+PORT=3000
+```
+
+### Testing
+
+```bash
+# .env.test
+NODE_ENV=test
+DATABASE_PATH=./data/test.db
+PHOTOS_PATH=./data/test-photos
+PORT=3001
+LOG_LEVEL=silent
+```
+
+---
+
+## Loading Environment Variables
+
+### Using dotenv
+
+The backend loads `.env` files automatically:
+
+```typescript
+// Loaded by Node.js --env-file flag or dotenv package
+import 'dotenv/config';
+```
+
+### From Shell
+
+```bash
+export DATABASE_PATH=/data/contacts.db
+export PHOTOS_PATH=/data/photos
+npm run dev
+```
+
+### Inline
+
+```bash
+DATABASE_PATH=/data/contacts.db npm run dev
+```
+
+### Docker
+
+```bash
+docker run -e NODE_ENV=production -e DATABASE_PATH=/data/contacts.db ello
+```
+
+Or with env file:
+
+```bash
+docker run --env-file .env.production ello
+```
+
+---
+
+## Variable Reference Table
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `DATABASE_PATH` | `./data/contacts.db` | No | SQLite database file path |
+| `PHOTOS_PATH` | `./data/photos` | No | Photo storage directory |
+| `PORT` | `3000` | No | HTTP server port |
+| `NODE_ENV` | `development` | No | Environment mode |
+| `LOG_LEVEL` | `info` | No | Logging verbosity |
+| `MAX_FILE_SIZE` | `104857600` | No | Max upload size (bytes) |
+
+---
+
+## Path Requirements
+
+### DATABASE_PATH
+
+- Must be absolute or relative to working directory
+- Parent directory must exist
+- Must be writable
+- File is created if it doesn't exist
+
+### PHOTOS_PATH
+
+- Must be absolute or relative to working directory
+- Must be writable
+- Subdirectories are created automatically
+
+---
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Database not found">
+    Check that:
+    1. `DATABASE_PATH` points to a valid location
+    2. The parent directory exists
+    3. The process has write permissions
+
+    ```bash
+    # Check path
+    echo $DATABASE_PATH
+    ls -la $(dirname $DATABASE_PATH)
+    ```
+  </Accordion>
+
+  <Accordion title="Photos not saving">
+    Verify:
+    1. `PHOTOS_PATH` is writable
+    2. Sufficient disk space
+    3. Sharp is installed correctly
+
+    ```bash
+    # Check path
+    echo $PHOTOS_PATH
+    ls -la $PHOTOS_PATH
+    ```
+  </Accordion>
+
+  <Accordion title="Port already in use">
+    Either:
+    1. Change `PORT` to an available port
+    2. Kill the process using the port
+
+    ```bash
+    lsof -i :3000
+    kill -9 <PID>
+    ```
+  </Accordion>
+
+  <Accordion title="Environment variables not loading">
+    Ensure:
+    1. `.env` file is in the correct directory
+    2. Variable names have no spaces around `=`
+    3. No quotes around values (usually)
+
+    ```bash
+    # Correct
+    DATABASE_PATH=/data/contacts.db
+
+    # Incorrect
+    DATABASE_PATH = /data/contacts.db
+    DATABASE_PATH="/data/contacts.db"
+    ```
+  </Accordion>
+</AccordionGroup>

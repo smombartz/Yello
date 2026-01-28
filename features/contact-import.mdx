@@ -1,0 +1,152 @@
+---
+title: Contact Import
+description: Import contacts from VCF files with automatic photo extraction
+---
+
+# Contact Import
+
+Ello imports contacts from VCF (vCard) files, the universal standard for contact data exchange. Export from Apple Contacts, Google Contacts, Outlook, or any other contact manager that supports VCF export.
+
+## Supported Formats
+
+Ello supports all major vCard versions:
+
+| Version | Support | Notes |
+|---------|---------|-------|
+| vCard 2.1 | Full | Legacy format, common in older exports |
+| vCard 3.0 | Full | Most widely used format |
+| vCard 4.0 | Full | Latest standard with extended fields |
+
+## File Requirements
+
+- **File extension**: `.vcf`
+- **Maximum size**: 100MB
+- **Encoding**: UTF-8 (recommended), Latin-1/ISO-8859-1 supported
+- **Content**: Single or multi-contact files (multiple `BEGIN:VCARD` blocks)
+
+## Imported Fields
+
+Ello extracts and stores the following fields from vCard data:
+
+### Basic Information
+| vCard Field | Ello Field | Description |
+|-------------|------------|-------------|
+| `N` | firstName, lastName | Structured name components |
+| `FN` | displayName | Formatted display name |
+| `ORG` | company | Organization/company name |
+| `TITLE` | title | Job title |
+| `NOTE` | notes | Free-form notes |
+| `BDAY` | birthday | Birthday date |
+
+### Contact Methods
+| vCard Field | Ello Field | Description |
+|-------------|------------|-------------|
+| `EMAIL` | emails[] | Email addresses with type labels |
+| `TEL` | phones[] | Phone numbers (normalized to E.164) |
+| `ADR` | addresses[] | Street addresses with components |
+
+### Additional Fields
+| vCard Field | Ello Field | Description |
+|-------------|------------|-------------|
+| `URL` | urls[] | Website URLs |
+| `X-SOCIALPROFILE` | socialProfiles[] | Social media handles |
+| `IMPP` | instantMessages[] | IM handles (Jabber, AIM, etc.) |
+| `RELATED` | relatedPeople[] | Related contacts (spouse, child, etc.) |
+| `CATEGORIES` | categories[] | Contact categories/groups |
+| `PHOTO` | photoHash | Embedded photo (base64) |
+
+## Photo Processing
+
+When a contact includes an embedded photo, Ello automatically:
+
+1. **Extracts** the base64-encoded image data
+2. **Processes** using Sharp for optimal quality
+3. **Generates** four size variants:
+   - Thumbnail: 48x48px (list view)
+   - Small: 96x96px (compact cards)
+   - Medium: 200x200px (detail view)
+   - Large: 400x400px (full view)
+4. **Optimizes** using mozjpeg compression with progressive loading
+5. **Stores** in a hash-based directory structure
+
+Photos are served via static URLs: `/photos/{size}/{prefix}/{hash}.jpg`
+
+## Import Process
+
+<Steps>
+  <Step title="Upload VCF file">
+    Click the **Import** button and select your `.vcf` file. Progress begins immediately.
+  </Step>
+
+  <Step title="Parsing">
+    Ello splits the file into individual vCard blocks and parses each one. Invalid entries are skipped and logged.
+  </Step>
+
+  <Step title="Phone Normalization">
+    Phone numbers are normalized to E.164 format using `libphonenumber-js`. Original formatting is preserved for display.
+  </Step>
+
+  <Step title="Photo Extraction">
+    Embedded photos are decoded, processed, and saved in multiple sizes.
+  </Step>
+
+  <Step title="Database Insert">
+    Contacts are inserted in a database transaction for data integrity.
+  </Step>
+
+  <Step title="FTS Indexing">
+    Full-text search indexes are updated automatically via database triggers.
+  </Step>
+</Steps>
+
+## Import Summary
+
+After import completes, you'll see a summary:
+
+```json
+{
+  "imported": 1523,
+  "failed": 3,
+  "photosProcessed": 892,
+  "errors": [
+    { "line": 234, "reason": "Missing required FN field" },
+    { "line": 567, "reason": "Invalid date format in BDAY" },
+    { "line": 1201, "reason": "Malformed vCard structure" }
+  ]
+}
+```
+
+## Error Handling
+
+Ello is designed to handle imperfect data gracefully:
+
+| Scenario | Behavior |
+|----------|----------|
+| Missing `FN` field | Falls back to constructing name from `N` field |
+| Invalid photo data | Skips photo, imports contact without image |
+| Malformed vCard | Skips entry, continues with next contact |
+| Duplicate entry | Imports as separate contact (use Deduplication to merge) |
+| Unknown field | Preserved in raw vCard data for future use |
+
+## API Endpoint
+
+```http
+POST /api/import
+Content-Type: multipart/form-data
+```
+
+See [Import API Reference](/api-reference/import) for full documentation.
+
+## Tips
+
+<Tip>
+**Export from Google Contacts**: Go to contacts.google.com → Settings → Export → vCard format
+</Tip>
+
+<Tip>
+**Export from Apple Contacts**: Select contacts → File → Export → Export vCard
+</Tip>
+
+<Warning>
+Large files (10,000+ contacts) may take several minutes to process. Don't close the browser during import.
+</Warning>

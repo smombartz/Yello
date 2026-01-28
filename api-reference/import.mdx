@@ -1,0 +1,255 @@
+---
+title: Import
+description: API endpoint for importing contacts from VCF files
+---
+
+# Import API
+
+Import contacts from VCF (vCard) files.
+
+## Import VCF File
+
+Upload a VCF file to import contacts.
+
+<ParamField body="file" type="file" required>
+  VCF file to import (max 100MB)
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "http://localhost:3000/api/import" \
+  -F "file=@contacts.vcf"
+```
+
+```javascript JavaScript
+const formData = new FormData();
+formData.append('file', vcfFile);
+
+const response = await fetch('/api/import', {
+  method: 'POST',
+  body: formData
+});
+const result = await response.json();
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success Response
+{
+  "imported": 1523,
+  "failed": 3,
+  "photosProcessed": 892,
+  "errors": [
+    { "line": 234, "reason": "Missing required FN field" },
+    { "line": 567, "reason": "Invalid date format in BDAY" },
+    { "line": 1201, "reason": "Malformed vCard structure" }
+  ]
+}
+```
+
+```json Error Response
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "No file uploaded"
+}
+```
+</ResponseExample>
+
+---
+
+## Request Details
+
+### Content Type
+
+The request must use `multipart/form-data` encoding.
+
+### File Constraints
+
+| Constraint | Value |
+|------------|-------|
+| Maximum file size | 100 MB |
+| File extension | `.vcf` |
+| Encoding | UTF-8 (recommended) |
+
+### Supported vCard Versions
+
+| Version | Support Level |
+|---------|---------------|
+| vCard 2.1 | Full |
+| vCard 3.0 | Full |
+| vCard 4.0 | Full |
+
+---
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `imported` | number | Number of contacts successfully imported |
+| `failed` | number | Number of contacts that failed to import |
+| `photosProcessed` | number | Number of photos extracted and processed |
+| `errors` | array | Details of failed imports |
+
+### Error Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `line` | number | vCard block number (1-indexed) |
+| `reason` | string | Description of the error |
+
+---
+
+## Import Process
+
+<Steps>
+  <Step title="File Upload">
+    The VCF file is uploaded and validated (size, extension).
+  </Step>
+
+  <Step title="Parsing">
+    File is split into individual vCard blocks at `BEGIN:VCARD` boundaries.
+  </Step>
+
+  <Step title="Processing">
+    Each vCard is parsed to extract:
+    - Name fields (N, FN)
+    - Contact methods (TEL, EMAIL, ADR)
+    - Organizational data (ORG, TITLE)
+    - Additional fields (NOTE, BDAY, URL, etc.)
+    - Embedded photos (PHOTO)
+  </Step>
+
+  <Step title="Phone Normalization">
+    Phone numbers are normalized to E.164 format using libphonenumber-js.
+  </Step>
+
+  <Step title="Photo Processing">
+    Embedded photos are:
+    - Decoded from base64
+    - Resized to 4 variants (48, 96, 200, 400px)
+    - Compressed with mozjpeg
+    - Saved to disk
+  </Step>
+
+  <Step title="Database Insert">
+    Contacts are inserted in a transaction with all related data.
+  </Step>
+
+  <Step title="FTS Indexing">
+    Full-text search indexes are updated automatically via triggers.
+  </Step>
+</Steps>
+
+---
+
+## Error Handling
+
+The import process is designed to be resilient:
+
+| Scenario | Behavior |
+|----------|----------|
+| Invalid vCard block | Skipped, error logged |
+| Missing required FN | Falls back to N field |
+| Invalid photo data | Contact imported without photo |
+| Malformed field | Field skipped, contact imported |
+| Database error | Transaction rolled back |
+
+---
+
+## Imported Fields
+
+### From vCard to Database
+
+| vCard Field | Database Field | Notes |
+|-------------|----------------|-------|
+| `N` | firstName, lastName | Structured name |
+| `FN` | displayName | Formatted name |
+| `ORG` | company | Organization |
+| `TITLE` | title | Job title |
+| `NOTE` | notes | Notes |
+| `BDAY` | birthday | Birthday |
+| `EMAIL` | contact_emails | Multiple allowed |
+| `TEL` | contact_phones | Normalized to E.164 |
+| `ADR` | contact_addresses | Structured address |
+| `URL` | contact_urls | Website URLs |
+| `X-SOCIALPROFILE` | contact_social_profiles | Social handles |
+| `IMPP` | contact_instant_messages | IM handles |
+| `RELATED` | contact_related_people | Relationships |
+| `CATEGORIES` | contact_categories | Categories |
+| `PHOTO` | photoHash | Photo reference |
+
+---
+
+## Performance
+
+| Contacts | Expected Time | Notes |
+|----------|---------------|-------|
+| 100 | ~5 seconds | Small file |
+| 1,000 | ~30 seconds | Medium file |
+| 10,000 | ~5 minutes | Large file with photos |
+
+<Note>
+Import time depends heavily on the number of embedded photos. Contacts without photos import much faster.
+</Note>
+
+---
+
+## Examples
+
+### Basic Import
+
+```bash
+curl -X POST "http://localhost:3000/api/import" \
+  -F "file=@my-contacts.vcf"
+```
+
+### With Progress Monitoring
+
+For large imports, consider implementing client-side progress tracking:
+
+```javascript
+const formData = new FormData();
+formData.append('file', file);
+
+const xhr = new XMLHttpRequest();
+xhr.upload.onprogress = (e) => {
+  const percent = (e.loaded / e.total) * 100;
+  console.log(`Upload: ${percent.toFixed(0)}%`);
+};
+
+xhr.onload = () => {
+  const result = JSON.parse(xhr.responseText);
+  console.log(`Imported: ${result.imported} contacts`);
+};
+
+xhr.open('POST', '/api/import');
+xhr.send(formData);
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+<AccordionGroup>
+  <Accordion title="File too large">
+    Split your VCF file into smaller chunks. Most contact apps allow exporting selected contacts.
+  </Accordion>
+
+  <Accordion title="Many failed imports">
+    Check the error details in the response. Common causes:
+    - Missing FN field (some exports omit this)
+    - Invalid date formats
+    - Malformed vCard structure
+  </Accordion>
+
+  <Accordion title="Photos not appearing">
+    Verify the source vCard includes embedded photos. Some exports only include photo URLs which are not supported.
+  </Accordion>
+
+  <Accordion title="Duplicates after import">
+    Import does not deduplicate. Use the Deduplication feature after import to find and merge duplicates.
+  </Accordion>
+</AccordionGroup>

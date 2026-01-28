@@ -1,0 +1,170 @@
+---
+title: Groups & Categories
+description: Organize contacts by category for easier management
+---
+
+# Groups & Categories
+
+Ello supports organizing contacts into groups using the vCard `CATEGORIES` field. Categories are imported automatically and can be used to filter and manage contacts.
+
+## How Categories Work
+
+Categories are labels assigned to contacts. A contact can belong to multiple categories:
+
+- **Work** - Professional contacts
+- **Family** - Family members
+- **Friends** - Personal friends
+- **VIP** - Important contacts
+- Custom categories from your imports
+
+## Importing Categories
+
+Categories are automatically extracted from vCard data:
+
+```
+BEGIN:VCARD
+VERSION:3.0
+FN:John Smith
+CATEGORIES:Work,VIP,Project Alpha
+END:VCARD
+```
+
+This contact would be assigned to three categories: Work, VIP, and Project Alpha.
+
+## Viewing Groups
+
+1. Click **Groups** in the sidebar
+2. See all categories with contact counts
+3. Click a category to view contacts in that group
+
+The groups view displays:
+- Category name
+- Number of contacts in the category
+- Quick access to filter by category
+
+## Filtering by Category
+
+### From Groups View
+
+1. Click on a category name
+2. View all contacts in that category
+3. Search within the category
+
+### From Contact List
+
+Use the category filter in the contact list:
+
+```http
+GET /api/contacts?category=Work
+```
+
+## Category Statistics
+
+Each category shows:
+- Total contacts in the category
+- Percentage of total contacts
+
+```json
+{
+  "groups": [
+    { "name": "Work", "count": 523 },
+    { "name": "Family", "count": 45 },
+    { "name": "Friends", "count": 234 },
+    { "name": "VIP", "count": 12 }
+  ]
+}
+```
+
+## Multiple Categories
+
+Contacts can belong to multiple categories. When viewing a category, you see all contacts that include that category, even if they have others.
+
+Example: A contact with `CATEGORIES:Work,VIP` appears in both the Work and VIP views.
+
+## API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/contacts/groups` | List all categories with counts |
+| `GET /api/contacts?category=X` | Filter contacts by category |
+
+### List Categories
+
+```http
+GET /api/contacts/groups
+```
+
+Response:
+```json
+{
+  "groups": [
+    { "name": "Work", "count": 523 },
+    { "name": "Family", "count": 45 },
+    { "name": "Friends", "count": 234 }
+  ]
+}
+```
+
+### Filter by Category
+
+```http
+GET /api/contacts?category=Work&page=1&limit=50
+```
+
+Response includes only contacts in the "Work" category.
+
+See [Contacts API Reference](/api-reference/contacts) for full documentation.
+
+## Category Sources
+
+Categories typically come from:
+
+| Source | vCard Field |
+|--------|-------------|
+| Apple Contacts | `CATEGORIES` |
+| Google Contacts | `CATEGORIES` (via labels) |
+| Outlook | `CATEGORIES` |
+| Custom exports | `CATEGORIES` |
+
+## Use Cases
+
+### Organizing by Relationship
+
+- **Work** - Colleagues, clients, vendors
+- **Family** - Immediate and extended family
+- **Friends** - Personal relationships
+
+### Organizing by Project
+
+- **Project Alpha** - Team members for a specific project
+- **Conference 2024** - Contacts met at an event
+- **Book Club** - Members of a group
+
+### Organizing by Priority
+
+- **VIP** - High-priority contacts
+- **Newsletter** - Contacts for regular updates
+- **Archive Candidate** - Contacts to review for archiving
+
+## Best Practices
+
+<Tip>
+**Use Consistent Naming**: Establish a naming convention for categories before importing to avoid duplicates like "Work" vs "work" vs "Business".
+</Tip>
+
+<Tip>
+**Review Uncategorized**: Contacts without categories can be found by looking at the total count vs categorized counts.
+</Tip>
+
+<Tip>
+**Combine with Search**: Use category filtering with search for precise results, e.g., find "John" in the "Work" category.
+</Tip>
+
+## Future Enhancements
+
+Planned features for groups:
+
+- Create and assign categories in the UI
+- Rename and merge categories
+- Bulk category assignment
+- Category-based export

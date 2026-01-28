@@ -1,0 +1,278 @@
+---
+title: Contacts
+description: API endpoints for listing, viewing, and updating contacts
+---
+
+# Contacts API
+
+Endpoints for managing contacts.
+
+## List Contacts
+
+Retrieve a paginated list of contacts with optional search and filtering.
+
+<ParamField query="page" type="number" default="1">
+  Page number (1-indexed)
+</ParamField>
+
+<ParamField query="limit" type="number" default="50">
+  Contacts per page (max 100)
+</ParamField>
+
+<ParamField query="search" type="string">
+  Full-text search query across name, email, company
+</ParamField>
+
+<ParamField query="category" type="string">
+  Filter by category name
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl "http://localhost:3000/api/contacts?page=1&limit=50&search=john"
+```
+
+```javascript JavaScript
+const response = await fetch('/api/contacts?page=1&limit=50&search=john');
+const data = await response.json();
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "contacts": [
+    {
+      "id": 1,
+      "displayName": "John Smith",
+      "company": "Acme Inc",
+      "primaryEmail": "john@acme.com",
+      "primaryPhone": "(555) 123-4567",
+      "photoUrl": "/photos/thumbnail/a1/a1b2c3d4.jpg"
+    }
+  ],
+  "total": 1523,
+  "page": 1,
+  "totalPages": 31
+}
+```
+</ResponseExample>
+
+---
+
+## Get Contact Count
+
+Get the total number of active (non-archived) contacts.
+
+<RequestExample>
+```bash cURL
+curl "http://localhost:3000/api/contacts/count"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "total": 10432
+}
+```
+</ResponseExample>
+
+---
+
+## Get Contact Groups
+
+List all categories with contact counts.
+
+<RequestExample>
+```bash cURL
+curl "http://localhost:3000/api/contacts/groups"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "groups": [
+    { "name": "Work", "count": 523 },
+    { "name": "Family", "count": 45 },
+    { "name": "Friends", "count": 234 },
+    { "name": "VIP", "count": 12 }
+  ]
+}
+```
+</ResponseExample>
+
+---
+
+## Get Contact Detail
+
+Retrieve a single contact with all related data.
+
+<ParamField path="id" type="number" required>
+  Contact ID
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl "http://localhost:3000/api/contacts/123"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "id": 123,
+  "firstName": "John",
+  "lastName": "Smith",
+  "displayName": "John Smith",
+  "company": "Acme Inc",
+  "title": "CEO",
+  "notes": "Met at conference 2024",
+  "birthday": "1985-03-15",
+  "emails": [
+    { "id": 1, "email": "john@acme.com", "type": "work", "isPrimary": true },
+    { "id": 2, "email": "john.smith@gmail.com", "type": "home", "isPrimary": false }
+  ],
+  "phones": [
+    { "id": 1, "phone": "+15551234567", "phoneDisplay": "(555) 123-4567", "type": "mobile", "isPrimary": true, "countryCode": "US" }
+  ],
+  "addresses": [
+    { "id": 1, "street": "123 Main St", "city": "New York", "state": "NY", "postalCode": "10001", "country": "USA", "type": "work" }
+  ],
+  "socialProfiles": [
+    { "id": 1, "platform": "twitter", "username": "johnsmith", "url": "https://twitter.com/johnsmith" }
+  ],
+  "categories": [
+    { "id": 1, "category": "Work" },
+    { "id": 2, "category": "VIP" }
+  ],
+  "instantMessages": [
+    { "id": 1, "service": "jabber", "handle": "john@jabber.org", "type": "work" }
+  ],
+  "urls": [
+    { "id": 1, "url": "https://johnsmith.com", "label": "Website" }
+  ],
+  "relatedPeople": [
+    { "id": 1, "name": "Jane Smith", "relationship": "spouse" }
+  ],
+  "photoUrl": "/photos/medium/a1/a1b2c3d4.jpg",
+  "createdAt": "2025-01-20T10:30:00Z",
+  "updatedAt": "2025-01-20T10:30:00Z"
+}
+```
+</ResponseExample>
+
+---
+
+## Update Contact
+
+Update a contact's basic information.
+
+<ParamField path="id" type="number" required>
+  Contact ID
+</ParamField>
+
+<ParamField body="displayName" type="string">
+  Display name
+</ParamField>
+
+<ParamField body="company" type="string">
+  Company name
+</ParamField>
+
+<ParamField body="title" type="string">
+  Job title
+</ParamField>
+
+<ParamField body="notes" type="string">
+  Notes
+</ParamField>
+
+<ParamField body="birthday" type="string">
+  Birthday (YYYY-MM-DD format)
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X PUT "http://localhost:3000/api/contacts/123" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "displayName": "John D. Smith",
+    "company": "Acme Corporation",
+    "title": "Chief Executive Officer"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "id": 123,
+  "displayName": "John D. Smith",
+  "company": "Acme Corporation",
+  "title": "Chief Executive Officer",
+  "notes": "Met at conference 2024",
+  "updatedAt": "2025-01-21T14:22:00Z"
+}
+```
+</ResponseExample>
+
+---
+
+## Get All Contact IDs
+
+Get all contact IDs (useful for bulk selection).
+
+<RequestExample>
+```bash cURL
+curl "http://localhost:3000/api/contacts/ids"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "ids": [1, 2, 3, 4, 5, ...]
+}
+```
+</ResponseExample>
+
+---
+
+## Response Schemas
+
+### Contact List Item
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | number | Contact ID |
+| `displayName` | string | Formatted display name |
+| `company` | string | Company name |
+| `primaryEmail` | string | Primary email address |
+| `primaryPhone` | string | Primary phone (formatted) |
+| `photoUrl` | string | Thumbnail photo URL |
+
+### Contact Detail
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | number | Contact ID |
+| `firstName` | string | First name |
+| `lastName` | string | Last name |
+| `displayName` | string | Display name |
+| `company` | string | Company |
+| `title` | string | Job title |
+| `notes` | string | Notes |
+| `birthday` | string | Birthday (YYYY-MM-DD) |
+| `emails` | array | Email addresses |
+| `phones` | array | Phone numbers |
+| `addresses` | array | Street addresses |
+| `socialProfiles` | array | Social media profiles |
+| `categories` | array | Category memberships |
+| `instantMessages` | array | IM handles |
+| `urls` | array | Website URLs |
+| `relatedPeople` | array | Related contacts |
+| `photoUrl` | string | Photo URL |
+| `createdAt` | string | Creation timestamp |
+| `updatedAt` | string | Last update timestamp |

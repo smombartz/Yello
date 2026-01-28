@@ -1,0 +1,279 @@
+---
+title: Railway Deployment
+description: Deploy Ello to Railway with persistent storage
+---
+
+# Railway Deployment
+
+Deploy Ello to [Railway](https://railway.app) with persistent storage for production use.
+
+## Prerequisites
+
+- Railway account ([sign up](https://railway.app))
+- GitHub account with the repository
+- Railway CLI (optional)
+
+## Deployment Steps
+
+<Steps>
+  <Step title="Create Railway Project">
+    1. Log in to [Railway Dashboard](https://railway.app/dashboard)
+    2. Click **New Project**
+    3. Select **Deploy from GitHub repo**
+    4. Connect your GitHub account and select the Ello repository
+  </Step>
+
+  <Step title="Configure Build Settings">
+    Railway auto-detects the Dockerfile. Verify settings:
+    - **Builder**: Dockerfile
+    - **Build command**: (uses Dockerfile)
+    - **Start command**: (uses Dockerfile CMD)
+  </Step>
+
+  <Step title="Add Persistent Volume">
+    1. Go to your service settings
+    2. Click **+ New Volume**
+    3. Configure:
+       - **Name**: `contacts_data`
+       - **Mount Path**: `/data`
+       - **Size**: 1GB (or more for large contact databases)
+  </Step>
+
+  <Step title="Configure Environment Variables">
+    Add these variables in the Railway dashboard:
+
+    ```
+    NODE_ENV=production
+    DATABASE_PATH=/data/contacts.db
+    PHOTOS_PATH=/data/photos
+    PORT=3000
+    ```
+  </Step>
+
+  <Step title="Deploy">
+    Railway automatically deploys when you push to the connected branch.
+
+    Or trigger manually:
+    1. Go to **Deployments**
+    2. Click **Deploy** or **Redeploy**
+  </Step>
+</Steps>
+
+## railway.toml Configuration
+
+The repository includes a `railway.toml` file:
+
+```toml
+[build]
+builder = "dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[[mounts]]
+source = "contacts_data"
+destination = "/data"
+```
+
+### Configuration Options
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `builder` | `dockerfile` | Use the project's Dockerfile |
+| `healthcheckPath` | `/health` | Endpoint for health monitoring |
+| `healthcheckTimeout` | `30` | Seconds to wait for health response |
+| `restartPolicyType` | `on_failure` | Restart only on failures |
+| `restartPolicyMaxRetries` | `3` | Maximum restart attempts |
+
+## Dockerfile
+
+The multi-stage Dockerfile builds both frontend and backend:
+
+```dockerfile
+# Stage 1: Build frontend
+FROM node:20-alpine AS frontend-build
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2: Build backend
+FROM node:20-alpine AS backend-build
+WORKDIR /app/backend
+COPY backend/package*.json ./
+RUN npm ci
+COPY backend/ ./
+RUN npm run build
+
+# Stage 3: Production
+FROM node:20-alpine
+WORKDIR /app
+
+# Install production dependencies
+COPY backend/package*.json ./
+RUN npm ci --only=production
+
+# Copy built files
+COPY --from=backend-build /app/backend/dist ./dist
+COPY --from=frontend-build /app/frontend/dist ./public
+
+# Create data directory
+RUN mkdir -p /data/photos
+
+ENV NODE_ENV=production
+ENV DATABASE_PATH=/data/contacts.db
+ENV PHOTOS_PATH=/data/photos
+ENV PORT=3000
+
+EXPOSE 3000
+
+CMD ["node", "dist/server.js"]
+```
+
+## Persistent Volume
+
+<Warning>
+The persistent volume is **critical** for data persistence. Without it, your contacts and photos will be lost on each deployment.
+</Warning>
+
+### Volume Contents
+
+The `/data` volume stores:
+- `contacts.db` - SQLite database
+- `contacts.db-wal` - Write-ahead log
+- `contacts.db-shm` - Shared memory file
+- `photos/` - Contact photo directory
+
+### Volume Size
+
+| Contacts | Photos | Recommended Size |
+|----------|--------|------------------|
+| 1,000 | ~500 | 500 MB |
+| 10,000 | ~5,000 | 2 GB |
+| 50,000 | ~25,000 | 10 GB |
+
+## Custom Domain
+
+<Steps>
+  <Step title="Add Domain in Railway">
+    1. Go to **Settings** → **Domains**
+    2. Click **+ Custom Domain**
+    3. Enter your domain (e.g., `contacts.yourdomain.com`)
+  </Step>
+
+  <Step title="Configure DNS">
+    Add a CNAME record at your DNS provider:
+    ```
+    contacts.yourdomain.com  CNAME  your-app.railway.app
+    ```
+  </Step>
+
+  <Step title="Enable HTTPS">
+    Railway automatically provisions SSL certificates via Let's Encrypt.
+  </Step>
+</Steps>
+
+## Monitoring
+
+### Health Check
+
+Railway monitors the `/health` endpoint:
+
+```bash
+curl https://your-app.railway.app/health
+```
+
+Expected response:
+```json
+{ "status": "ok", "contacts": 10432 }
+```
+
+### Logs
+
+View logs in the Railway dashboard:
+1. Go to your service
+2. Click **Logs**
+3. Filter by time range or search
+
+### Metrics
+
+Railway provides basic metrics:
+- CPU usage
+- Memory usage
+- Network I/O
+- Disk usage
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Deployment fails">
+    Check the build logs for errors:
+    - Missing dependencies
+    - TypeScript compilation errors
+    - Dockerfile syntax errors
+  </Accordion>
+
+  <Accordion title="Health check fails">
+    Ensure:
+    1. The app starts successfully
+    2. Port 3000 is exposed
+    3. `/health` endpoint returns 200
+
+    Check logs for startup errors.
+  </Accordion>
+
+  <Accordion title="Data not persisting">
+    Verify:
+    1. Volume is attached at `/data`
+    2. `DATABASE_PATH` points to `/data/contacts.db`
+    3. `PHOTOS_PATH` points to `/data/photos`
+  </Accordion>
+
+  <Accordion title="Photos not loading">
+    Check:
+    1. Photos directory exists in volume
+    2. Correct permissions on `/data/photos`
+    3. Static file route is configured
+  </Accordion>
+
+  <Accordion title="Out of memory">
+    Large imports may require more memory:
+    1. Upgrade your Railway plan
+    2. Import in smaller batches
+    3. Process photos offline
+  </Accordion>
+</AccordionGroup>
+
+## Backup
+
+### Export Contacts
+
+Use the API to export contacts as VCF:
+
+```bash
+curl https://your-app.railway.app/api/archive/export/vcf -o backup.vcf
+```
+
+### Database Backup
+
+SSH into the Railway container and copy the database:
+
+```bash
+railway run sqlite3 /data/contacts.db ".backup /tmp/backup.db"
+railway run cat /tmp/backup.db > backup.db
+```
+
+Or use Railway's volume snapshot feature.
+
+## Cost
+
+Railway pricing (as of 2025):
+- **Hobby**: $5/month includes 512MB RAM, 1GB disk
+- **Pro**: $20/month includes more resources
+- **Volume storage**: $0.25/GB/month
+
+For a typical contact database with 10,000 contacts, the Hobby plan is sufficient.

@@ -1,19 +1,82 @@
 {
+  "$schema": "https://mintlify.com/schema.json",
   "name": "Ello",
   "favicon": "/favicon.svg",
   "logo": {
-    "dark": "/logo/light.svg",
-    "light": "/logo/dark.svg"
+    "dark": "/logo/logo-light.svg",
+    "light": "/logo/logo-dark.svg"
   },
   "colors": {
     "primary": "#6366f1",
     "light": "#818cf8",
     "dark": "#4f46e5"
   },
+  "topbarLinks": [
+    {
+      "name": "GitHub",
+      "url": "https://github.com/smombartz/ello-claude"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Get Started",
+    "url": "/quickstart"
+  },
+  "tabs": [
+    {
+      "name": "API Reference",
+      "url": "api-reference"
+    }
+  ],
   "navigation": [
     {
       "group": "Getting Started",
       "pages": ["introduction", "quickstart"]
+    },
+    {
+      "group": "Features",
+      "pages": [
+        "features/contact-import",
+        "features/contact-management",
+        "features/deduplication",
+        "features/cleanup",
+        "features/archive",
+        "features/groups"
+      ]
+    },
+    {
+      "group": "Deployment",
+      "pages": [
+        "deployment/local-development",
+        "deployment/railway",
+        "deployment/docker",
+        "deployment/environment-variables"
+      ]
+    },
+    {
+      "group": "Technical Reference",
+      "pages": [
+        "technical/database-schema",
+        "technical/vcard-parsing",
+        "technical/photo-processing"
+      ]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "api-reference/overview",
+        "api-reference/contacts",
+        "api-reference/import",
+        "api-reference/duplicates",
+        "api-reference/cleanup",
+        "api-reference/archive",
+        "api-reference/health"
+      ]
     }
-  ]
+  ],
+  "footerSocials": {
+    "github": "https://github.com/smombartz/ello-claude"
+  },
+  "feedback": {
+    "thumbsRating": true
+  }
 }

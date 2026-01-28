@@ -1,0 +1,323 @@
+---
+title: Duplicates
+description: API endpoints for finding and merging duplicate contacts
+---
+
+# Duplicates API
+
+Endpoints for detecting and merging duplicate contacts.
+
+## Find Duplicates
+
+Retrieve groups of duplicate contacts.
+
+<ParamField query="mode" type="string" required>
+  Detection mode: `email`, `phone`, `address`, `social`, or `recommended`
+</ParamField>
+
+<ParamField query="confidence" type="string">
+  Confidence filter for recommended mode. Comma-separated: `very_high`, `high`, `medium`
+</ParamField>
+
+<ParamField query="limit" type="number" default="50">
+  Maximum groups to return
+</ParamField>
+
+<ParamField query="offset" type="number" default="0">
+  Number of groups to skip
+</ParamField>
+
+<RequestExample>
+```bash cURL - Email Mode
+curl "http://localhost:3000/api/duplicates?mode=email&limit=50&offset=0"
+```
+
+```bash cURL - Recommended Mode with Confidence
+curl "http://localhost:3000/api/duplicates?mode=recommended&confidence=very_high,high&limit=50"
+```
+
+```javascript JavaScript
+const response = await fetch('/api/duplicates?mode=email&limit=50');
+const data = await response.json();
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "groups": [
+    {
+      "id": "group_1",
+      "contacts": [
+        {
+          "id": 1,
+          "displayName": "John Smith",
+          "company": "Acme Inc",
+          "primaryEmail": "john@acme.com",
+          "primaryPhone": "(555) 123-4567",
+          "photoUrl": "/photos/thumbnail/a1/a1b2c3d4.jpg"
+        },
+        {
+          "id": 42,
+          "displayName": "J. Smith",
+          "company": "Acme",
+          "primaryEmail": "john@acme.com",
+          "primaryPhone": "(555) 123-4567",
+          "photoUrl": null
+        }
+      ],
+      "matchedValue": "john@acme.com",
+      "confidence": "very_high"
+    }
+  ],
+  "totalGroups": 45,
+  "limit": 50,
+  "offset": 0
+}
+```
+</ResponseExample>
+
+---
+
+## Get Duplicate Summary
+
+Get counts of duplicate groups by mode.
+
+<RequestExample>
+```bash cURL
+curl "http://localhost:3000/api/duplicates/summary"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "email": 45,
+  "phone": 23,
+  "address": 12,
+  "social": 5,
+  "recommended": 78
+}
+```
+</ResponseExample>
+
+---
+
+## Get All Group IDs
+
+Get all duplicate group IDs (lightweight, for bulk operations).
+
+<ParamField query="mode" type="string" required>
+  Detection mode
+</ParamField>
+
+<ParamField query="confidence" type="string">
+  Confidence filter for recommended mode
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl "http://localhost:3000/api/duplicates/all-groups?mode=email"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "groups": [
+    {
+      "id": "group_1",
+      "contactIds": [1, 42]
+    },
+    {
+      "id": "group_2",
+      "contactIds": [5, 67, 89]
+    }
+  ],
+  "totalGroups": 45
+}
+```
+</ResponseExample>
+
+---
+
+## Merge Contacts
+
+Merge multiple contacts into one.
+
+<ParamField body="contactIds" type="array" required>
+  Array of contact IDs to merge
+</ParamField>
+
+<ParamField body="primaryContactId" type="number" required>
+  ID of the contact to keep as primary
+</ParamField>
+
+<RequestExample>
+```bash cURL
+curl -X POST "http://localhost:3000/api/duplicates/merge" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contactIds": [1, 42, 89],
+    "primaryContactId": 1
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('/api/duplicates/merge', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    contactIds: [1, 42, 89],
+    primaryContactId: 1
+  })
+});
+const result = await response.json();
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "mergedContact": {
+    "id": 1,
+    "displayName": "John Smith",
+    "company": "Acme Inc",
+    "primaryEmail": "john@acme.com",
+    "primaryPhone": "(555) 123-4567"
+  },
+  "deletedContactIds": [42, 89]
+}
+```
+</ResponseExample>
+
+---
+
+## Detection Modes
+
+### Email Mode
+
+Finds contacts with matching email addresses.
+
+- **Matching**: Case-insensitive exact match
+- **Groups**: Contacts sharing any email address
+
+### Phone Mode
+
+Finds contacts with matching phone numbers.
+
+- **Matching**: E.164 normalized comparison
+- **Groups**: Contacts sharing any phone number
+
+### Address Mode
+
+Finds contacts with matching street addresses.
+
+- **Matching**: Normalized address components
+- **Compared fields**: street, city, postalCode
+
+### Social Mode
+
+Finds contacts with matching social profiles.
+
+- **Matching**: Platform + username combination
+- **Groups**: Contacts sharing any social profile
+
+### Recommended Mode
+
+AI-powered multi-signal matching with confidence scoring.
+
+- **Signals**: Name similarity, email patterns, phone patterns, company
+- **Confidence**: `very_high`, `high`, `medium`
+
+---
+
+## Confidence Levels
+
+For recommended mode, confidence indicates match strength:
+
+| Level | Description | Signals |
+|-------|-------------|---------|
+| `very_high` | Almost certainly duplicates | Multiple strong matches |
+| `high` | Likely duplicates | Two signal matches |
+| `medium` | Possibly duplicates | Single signal or weak matches |
+
+---
+
+## Merge Process
+
+When contacts are merged:
+
+<Steps>
+  <Step title="Primary Selection">
+    The primary contact's basic info (name, company, title) is preserved.
+  </Step>
+
+  <Step title="Data Combination">
+    All emails, phones, addresses, and other data from merged contacts are combined.
+  </Step>
+
+  <Step title="Deduplication">
+    Duplicate emails and phones are removed from the combined data.
+  </Step>
+
+  <Step title="Deletion">
+    Non-primary contacts are permanently deleted.
+  </Step>
+
+  <Step title="Index Update">
+    Search indexes are updated automatically.
+  </Step>
+</Steps>
+
+<Warning>
+Merging cannot be undone. The non-primary contacts are permanently deleted.
+</Warning>
+
+---
+
+## Response Schemas
+
+### Duplicate Group
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique group identifier |
+| `contacts` | array | Contacts in the group |
+| `matchedValue` | string | The value that matched (email, phone, etc.) |
+| `confidence` | string | Confidence level (recommended mode only) |
+
+### Merge Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `mergedContact` | object | The resulting merged contact |
+| `deletedContactIds` | array | IDs of deleted contacts |
+
+---
+
+## Bulk Merge
+
+To merge all duplicates in a mode:
+
+```javascript
+// 1. Get all groups
+const groups = await fetch('/api/duplicates/all-groups?mode=email')
+  .then(r => r.json());
+
+// 2. Merge each group (first contact as primary)
+for (const group of groups.groups) {
+  await fetch('/api/duplicates/merge', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contactIds: group.contactIds,
+      primaryContactId: group.contactIds[0]
+    })
+  });
+}
+```
+
+<Note>
+The UI provides a "Merge All" button that handles this process with progress tracking.
+</Note>

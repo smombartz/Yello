@@ -1,0 +1,440 @@
+---
+title: Database Schema
+description: SQLite database schema reference for Ello
+---
+
+# Database Schema
+
+Ello uses SQLite with FTS5 for full-text search. This document describes the complete database schema.
+
+## Overview
+
+The database uses a normalized structure with the main `contacts` table and related tables for multi-value fields:
+
+```
+contacts (1) ──────┬──── (N) contact_emails
+                   ├──── (N) contact_phones
+                   ├──── (N) contact_addresses
+                   ├──── (N) contact_social_profiles
+                   ├──── (N) contact_categories
+                   ├──── (N) contact_instant_messages
+                   ├──── (N) contact_urls
+                   └──── (N) contact_related_people
+```
+
+## Main Tables
+
+### contacts
+
+The primary contact record.
+
+```sql
+CREATE TABLE contacts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    first_name TEXT,
+    last_name TEXT,
+    display_name TEXT NOT NULL,
+    company TEXT,
+    title TEXT,
+    notes TEXT,
+    birthday TEXT,
+    photo_hash TEXT,
+    raw_vcard TEXT,
+    archived_at TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_contacts_display_name ON contacts(display_name);
+CREATE INDEX idx_contacts_archived_at ON contacts(archived_at);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER | Primary key, auto-increment |
+| `first_name` | TEXT | First name from vCard N field |
+| `last_name` | TEXT | Last name from vCard N field |
+| `display_name` | TEXT | Formatted name (required) |
+| `company` | TEXT | Organization name |
+| `title` | TEXT | Job title |
+| `notes` | TEXT | Free-form notes |
+| `birthday` | TEXT | Birthday (YYYY-MM-DD) |
+| `photo_hash` | TEXT | MD5 hash for photo filename |
+| `raw_vcard` | TEXT | Original vCard data |
+| `archived_at` | TEXT | Archive timestamp (null = active) |
+| `created_at` | TEXT | Creation timestamp |
+| `updated_at` | TEXT | Last update timestamp |
+
+---
+
+### contact_emails
+
+Email addresses for contacts.
+
+```sql
+CREATE TABLE contact_emails (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    type TEXT,
+    is_primary INTEGER DEFAULT 0
+);
+
+CREATE INDEX idx_contact_emails_contact_id ON contact_emails(contact_id);
+CREATE INDEX idx_contact_emails_email ON contact_emails(email);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER | Primary key |
+| `contact_id` | INTEGER | Foreign key to contacts |
+| `email` | TEXT | Email address |
+| `type` | TEXT | Type label (work, home, other) |
+| `is_primary` | INTEGER | Primary email flag (0/1) |
+
+---
+
+### contact_phones
+
+Phone numbers for contacts.
+
+```sql
+CREATE TABLE contact_phones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    phone TEXT NOT NULL,
+    phone_display TEXT NOT NULL,
+    type TEXT,
+    is_primary INTEGER DEFAULT 0,
+    country_code TEXT
+);
+
+CREATE INDEX idx_contact_phones_contact_id ON contact_phones(contact_id);
+CREATE INDEX idx_contact_phones_phone ON contact_phones(phone);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER | Primary key |
+| `contact_id` | INTEGER | Foreign key to contacts |
+| `phone` | TEXT | E.164 normalized number |
+| `phone_display` | TEXT | Formatted for display |
+| `type` | TEXT | Type label (mobile, work, home) |
+| `is_primary` | INTEGER | Primary phone flag (0/1) |
+| `country_code` | TEXT | Country code (US, GB, etc.) |
+
+---
+
+### contact_addresses
+
+Street addresses for contacts.
+
+```sql
+CREATE TABLE contact_addresses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    street TEXT,
+    city TEXT,
+    state TEXT,
+    postal_code TEXT,
+    country TEXT,
+    type TEXT
+);
+
+CREATE INDEX idx_contact_addresses_contact_id ON contact_addresses(contact_id);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER | Primary key |
+| `contact_id` | INTEGER | Foreign key to contacts |
+| `street` | TEXT | Street address |
+| `city` | TEXT | City |
+| `state` | TEXT | State/province |
+| `postal_code` | TEXT | Postal/ZIP code |
+| `country` | TEXT | Country |
+| `type` | TEXT | Type label (work, home) |
+
+---
+
+### contact_social_profiles
+
+Social media profiles for contacts.
+
+```sql
+CREATE TABLE contact_social_profiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    platform TEXT NOT NULL,
+    username TEXT,
+    url TEXT
+);
+
+CREATE INDEX idx_contact_social_profiles_contact_id ON contact_social_profiles(contact_id);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER | Primary key |
+| `contact_id` | INTEGER | Foreign key to contacts |
+| `platform` | TEXT | Platform name (twitter, linkedin) |
+| `username` | TEXT | Username/handle |
+| `url` | TEXT | Profile URL |
+
+---
+
+### contact_categories
+
+Category memberships for contacts.
+
+```sql
+CREATE TABLE contact_categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    category TEXT NOT NULL
+);
+
+CREATE INDEX idx_contact_categories_contact_id ON contact_categories(contact_id);
+CREATE INDEX idx_contact_categories_category ON contact_categories(category);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER | Primary key |
+| `contact_id` | INTEGER | Foreign key to contacts |
+| `category` | TEXT | Category name |
+
+---
+
+### contact_instant_messages
+
+Instant message handles for contacts.
+
+```sql
+CREATE TABLE contact_instant_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    service TEXT NOT NULL,
+    handle TEXT NOT NULL,
+    type TEXT
+);
+
+CREATE INDEX idx_contact_instant_messages_contact_id ON contact_instant_messages(contact_id);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER | Primary key |
+| `contact_id` | INTEGER | Foreign key to contacts |
+| `service` | TEXT | Service name (jabber, skype) |
+| `handle` | TEXT | IM handle |
+| `type` | TEXT | Type label |
+
+---
+
+### contact_urls
+
+Website URLs for contacts.
+
+```sql
+CREATE TABLE contact_urls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    url TEXT NOT NULL,
+    label TEXT
+);
+
+CREATE INDEX idx_contact_urls_contact_id ON contact_urls(contact_id);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER | Primary key |
+| `contact_id` | INTEGER | Foreign key to contacts |
+| `url` | TEXT | Website URL |
+| `label` | TEXT | URL label |
+
+---
+
+### contact_related_people
+
+Related people for contacts.
+
+```sql
+CREATE TABLE contact_related_people (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    relationship TEXT
+);
+
+CREATE INDEX idx_contact_related_people_contact_id ON contact_related_people(contact_id);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER | Primary key |
+| `contact_id` | INTEGER | Foreign key to contacts |
+| `name` | TEXT | Related person's name |
+| `relationship` | TEXT | Relationship type (spouse, child) |
+
+---
+
+## Full-Text Search Tables
+
+### contacts_fts
+
+Full-text search index for contacts.
+
+```sql
+CREATE VIRTUAL TABLE contacts_fts USING fts5(
+    display_name,
+    company,
+    content='contacts',
+    content_rowid='id',
+    tokenize='porter unicode61',
+    prefix='2 3'
+);
+```
+
+#### FTS Triggers
+
+```sql
+-- Insert trigger
+CREATE TRIGGER contacts_ai AFTER INSERT ON contacts BEGIN
+    INSERT INTO contacts_fts(rowid, display_name, company)
+    VALUES (new.id, new.display_name, new.company);
+END;
+
+-- Delete trigger
+CREATE TRIGGER contacts_ad AFTER DELETE ON contacts BEGIN
+    INSERT INTO contacts_fts(contacts_fts, rowid, display_name, company)
+    VALUES('delete', old.id, old.display_name, old.company);
+END;
+
+-- Update trigger
+CREATE TRIGGER contacts_au AFTER UPDATE ON contacts BEGIN
+    INSERT INTO contacts_fts(contacts_fts, rowid, display_name, company)
+    VALUES('delete', old.id, old.display_name, old.company);
+    INSERT INTO contacts_fts(rowid, display_name, company)
+    VALUES (new.id, new.display_name, new.company);
+END;
+```
+
+---
+
+### emails_fts
+
+Full-text search index for email addresses.
+
+```sql
+CREATE VIRTUAL TABLE emails_fts USING fts5(
+    email,
+    content='contact_emails',
+    content_rowid='id'
+);
+```
+
+#### FTS Triggers
+
+```sql
+CREATE TRIGGER emails_ai AFTER INSERT ON contact_emails BEGIN
+    INSERT INTO emails_fts(rowid, email) VALUES (new.id, new.email);
+END;
+
+CREATE TRIGGER emails_ad AFTER DELETE ON contact_emails BEGIN
+    INSERT INTO emails_fts(emails_fts, rowid, email)
+    VALUES('delete', old.id, old.email);
+END;
+```
+
+---
+
+### contacts_unified_fts
+
+Unified full-text search across multiple fields.
+
+```sql
+CREATE VIRTUAL TABLE contacts_unified_fts USING fts5(
+    searchable_text,
+    content='',
+    tokenize='porter unicode61',
+    prefix='2 3'
+);
+```
+
+This table contains concatenated searchable text from display_name, company, emails, and phones.
+
+---
+
+## Database Settings
+
+### WAL Mode
+
+```sql
+PRAGMA journal_mode = WAL;
+```
+
+Write-Ahead Logging enables concurrent reads during writes.
+
+### Foreign Keys
+
+```sql
+PRAGMA foreign_keys = ON;
+```
+
+Enables foreign key constraint enforcement.
+
+---
+
+## Common Queries
+
+### Search Contacts
+
+```sql
+SELECT c.id, c.display_name, c.company, c.photo_hash,
+       (SELECT email FROM contact_emails
+        WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
+       (SELECT phone_display FROM contact_phones
+        WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone
+FROM contacts c
+JOIN contacts_fts ON contacts_fts.rowid = c.id
+WHERE contacts_fts MATCH 'john*'
+  AND c.archived_at IS NULL
+ORDER BY bm25(contacts_fts)
+LIMIT 50 OFFSET 0;
+```
+
+### Get Contact with Relations
+
+```sql
+SELECT * FROM contacts WHERE id = ?;
+SELECT * FROM contact_emails WHERE contact_id = ?;
+SELECT * FROM contact_phones WHERE contact_id = ?;
+SELECT * FROM contact_addresses WHERE contact_id = ?;
+SELECT * FROM contact_social_profiles WHERE contact_id = ?;
+SELECT * FROM contact_categories WHERE contact_id = ?;
+SELECT * FROM contact_instant_messages WHERE contact_id = ?;
+SELECT * FROM contact_urls WHERE contact_id = ?;
+SELECT * FROM contact_related_people WHERE contact_id = ?;
+```
+
+### Find Duplicates by Email
+
+```sql
+SELECT e1.contact_id, e2.contact_id, e1.email
+FROM contact_emails e1
+JOIN contact_emails e2 ON e1.email = e2.email AND e1.contact_id < e2.contact_id
+JOIN contacts c1 ON e1.contact_id = c1.id AND c1.archived_at IS NULL
+JOIN contacts c2 ON e2.contact_id = c2.id AND c2.archived_at IS NULL;
+```
+
+---
+
+## Migrations
+
+Schema changes are handled in `backend/src/services/database.ts`. The database schema is created on first run and updated as needed.
+
+<Note>
+Always backup the database before making schema changes in production.
+</Note>
