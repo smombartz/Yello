@@ -165,6 +165,21 @@ export function getDatabase(): DatabaseType {
     CREATE INDEX IF NOT EXISTS idx_contact_instant_messages_contact_id ON contact_instant_messages(contact_id);
     CREATE INDEX IF NOT EXISTS idx_contact_urls_contact_id ON contact_urls(contact_id);
     CREATE INDEX IF NOT EXISTS idx_contact_related_people_contact_id ON contact_related_people(contact_id);
+
+    CREATE TABLE IF NOT EXISTS user_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      name TEXT,
+      email TEXT,
+      phone TEXT,
+      avatar_url TEXT,
+      website TEXT,
+      linkedin_url TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Insert default row if not exists
+    INSERT OR IGNORE INTO user_settings (id) VALUES (1);
   `);
 
   // Migration: Add archived_at column if it doesn't exist
