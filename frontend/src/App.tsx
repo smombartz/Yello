@@ -7,8 +7,9 @@ import { DeduplicationView } from './components/DeduplicationView';
 import { CleanupView } from './components/CleanupView';
 import { ArchivedView } from './components/ArchivedView';
 import { GroupsView } from './components/GroupsView';
+import { SettingsView } from './components/SettingsView';
 
-type AppView = 'contacts' | 'deduplication' | 'cleanup' | 'archived' | 'groups';
+type AppView = 'contacts' | 'deduplication' | 'cleanup' | 'archived' | 'groups' | 'settings';
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('contacts');
@@ -30,7 +31,7 @@ function App() {
       if (e.key === 'Escape') {
         if (showImportModal) {
           setShowImportModal(false);
-        } else if (currentView === 'deduplication' || currentView === 'cleanup' || currentView === 'archived' || currentView === 'groups') {
+        } else if (currentView === 'deduplication' || currentView === 'cleanup' || currentView === 'archived' || currentView === 'groups' || currentView === 'settings') {
           setCurrentView('contacts');
         }
       }
@@ -55,6 +56,10 @@ function App() {
     setCurrentView('groups');
   };
 
+  const handleSettingsClick = () => {
+    setCurrentView('settings');
+  };
+
   const handleBackToContacts = () => {
     setCurrentView('contacts');
   };
@@ -67,11 +72,31 @@ function App() {
           onCleanupClick={handleCleanupClick}
           onArchivedClick={handleArchivedClick}
           onGroupsClick={handleGroupsClick}
+          onSettingsClick={handleSettingsClick}
           onBackToContacts={handleBackToContacts}
           currentView="groups"
         />
         <main className="main-content">
           <GroupsView onBack={handleBackToContacts} />
+        </main>
+      </div>
+    );
+  }
+
+  if (currentView === 'settings') {
+    return (
+      <div className="app-layout settings-layout">
+        <Sidebar
+          onDeduplicateClick={handleDeduplicateClick}
+          onCleanupClick={handleCleanupClick}
+          onArchivedClick={handleArchivedClick}
+          onGroupsClick={handleGroupsClick}
+          onSettingsClick={handleSettingsClick}
+          onBackToContacts={handleBackToContacts}
+          currentView="settings"
+        />
+        <main className="main-content">
+          <SettingsView onBack={handleBackToContacts} />
         </main>
       </div>
     );
@@ -85,6 +110,7 @@ function App() {
           onCleanupClick={handleCleanupClick}
           onArchivedClick={handleArchivedClick}
           onGroupsClick={handleGroupsClick}
+          onSettingsClick={handleSettingsClick}
           onBackToContacts={handleBackToContacts}
           currentView="archived"
         />
@@ -103,6 +129,7 @@ function App() {
           onCleanupClick={handleCleanupClick}
           onArchivedClick={handleArchivedClick}
           onGroupsClick={handleGroupsClick}
+          onSettingsClick={handleSettingsClick}
           onBackToContacts={handleBackToContacts}
           currentView="cleanup"
         />
@@ -121,6 +148,7 @@ function App() {
           onCleanupClick={handleCleanupClick}
           onArchivedClick={handleArchivedClick}
           onGroupsClick={handleGroupsClick}
+          onSettingsClick={handleSettingsClick}
           onBackToContacts={handleBackToContacts}
           currentView="deduplication"
         />
@@ -139,6 +167,7 @@ function App() {
           onCleanupClick={handleCleanupClick}
           onArchivedClick={handleArchivedClick}
           onGroupsClick={handleGroupsClick}
+          onSettingsClick={handleSettingsClick}
           currentView="contacts"
         />
         <main className="main-content">

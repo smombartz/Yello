@@ -19,11 +19,12 @@ interface SidebarProps {
   onCleanupClick?: () => void;
   onArchivedClick?: () => void;
   onGroupsClick?: () => void;
+  onSettingsClick?: () => void;
   onBackToContacts?: () => void;
-  currentView?: 'contacts' | 'deduplication' | 'cleanup' | 'archived' | 'groups';
+  currentView?: 'contacts' | 'deduplication' | 'cleanup' | 'archived' | 'groups' | 'settings';
 }
 
-export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, onGroupsClick, onBackToContacts, currentView = 'contacts' }: SidebarProps) {
+export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, onGroupsClick, onSettingsClick, onBackToContacts, currentView = 'contacts' }: SidebarProps) {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
@@ -42,7 +43,7 @@ export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, o
 
         <div className="nav-spacer" />
 
-        <NavItem icon="settings" label="Settings" />
+        <NavItem icon="settings" label="Settings" active={currentView === 'settings'} onClick={onSettingsClick} />
       </nav>
 
       <div className="sidebar-user">
