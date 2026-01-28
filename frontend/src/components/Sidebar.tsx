@@ -1,3 +1,5 @@
+import { useUserSettings } from '../api/settingsHooks';
+
 interface NavItemProps {
   icon: string;
   label: string;
@@ -25,6 +27,17 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, onGroupsClick, onSettingsClick, onBackToContacts, currentView = 'contacts' }: SidebarProps) {
+  const { data: userSettings } = useUserSettings();
+
+  const displayName = userSettings?.name || 'User';
+  const displayEmail = userSettings?.email || 'Set up your profile';
+  const initials = displayName
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'U';
+
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
@@ -47,10 +60,16 @@ export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, o
       </nav>
 
       <div className="sidebar-user">
-        <div className="sidebar-user-avatar">JD</div>
+        <div className="sidebar-user-avatar">
+          {userSettings?.avatarUrl ? (
+            <img src={userSettings.avatarUrl} alt={displayName} />
+          ) : (
+            initials
+          )}
+        </div>
         <div className="sidebar-user-info">
-          <div className="sidebar-user-name">John Doe</div>
-          <div className="sidebar-user-email">john@example.com</div>
+          <div className="sidebar-user-name">{displayName}</div>
+          <div className="sidebar-user-email">{displayEmail}</div>
         </div>
       </div>
     </aside>
