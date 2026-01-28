@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40">
+  <defs>
+    <linearGradient id="accent-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <!-- Logomark: speech bubble / chat icon -->
+  <rect x="2" y="8" width="24" height="20" rx="4" fill="url(#accent-dark)"/>
+  <polygon points="8,28 12,34 16,28" fill="url(#accent-dark)"/>
+  <circle cx="9" cy="18" r="2" fill="white"/>
+  <circle cx="14" cy="18" r="2" fill="white"/>
+  <circle cx="19" cy="18" r="2" fill="white"/>
+  <!-- Wordmark -->
+  <text x="34" y="27" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="22" font-weight="600" fill="#1a1a2e" letter-spacing="-0.5">ello</text>
+</svg>
