@@ -27,3 +27,18 @@ export function useUpdateUserSettings() {
 export function exportAllContacts(): void {
   window.open('/api/contacts/export/vcf', '_blank');
 }
+
+export function useDeleteAllContacts() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      fetchApi<{ deletedCount: number }>('/api/contacts/all', {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['contactCount'] });
+    },
+  });
+}
