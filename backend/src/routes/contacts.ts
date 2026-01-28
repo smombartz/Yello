@@ -891,4 +891,28 @@ export default async function contactsRoutes(
     reply.header('Content-Disposition', 'attachment; filename="contacts.vcf"');
     return vcfContent;
   });
+
+  // DELETE /api/contacts/all - Delete all contacts (danger zone)
+  fastify.delete('/all', {
+    schema: {
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            deletedCount: { type: 'number' }
+          }
+        }
+      }
+    }
+  }, async (_request, _reply) => {
+    const db = getDatabase();
+
+    const countResult = db.prepare('SELECT COUNT(*) as count FROM contacts').get() as { count: number };
+    const count = countResult.count;
+
+    db.prepare('DELETE FROM contacts').run();
+    db.prepare('DELETE FROM contacts_unified_fts').run();
+
+    return { deletedCount: count };
+  });
 }
