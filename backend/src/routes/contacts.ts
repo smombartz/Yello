@@ -876,4 +876,19 @@ export default async function contactsRoutes(
       return reply.status(400).send({ error: message });
     }
   });
+
+  // GET /api/contacts/export/vcf - Export all contacts as VCF
+  fastify.get('/export/vcf', async (_request, reply) => {
+    const db = getDatabase();
+
+    const contacts = db.prepare(`
+      SELECT raw_vcard FROM contacts WHERE raw_vcard IS NOT NULL
+    `).all() as Array<{ raw_vcard: string }>;
+
+    const vcfContent = contacts.map(c => c.raw_vcard).join('\n');
+
+    reply.header('Content-Type', 'text/vcard');
+    reply.header('Content-Disposition', 'attachment; filename="contacts.vcf"');
+    return vcfContent;
+  });
 }
