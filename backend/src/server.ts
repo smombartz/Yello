@@ -13,6 +13,7 @@ import duplicatesRoutes from './routes/duplicates.js';
 import cleanupRoutes from './routes/cleanup.js';
 import archiveRoutes from './routes/archive.js';
 import settingsRoutes from './routes/settings.js';
+import mapRoutes from './routes/map.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -66,6 +67,7 @@ await app.register(duplicatesRoutes, { prefix: '/api/duplicates' });
 await app.register(cleanupRoutes, { prefix: '/api/cleanup' });
 await app.register(archiveRoutes, { prefix: '/api/archive' });
 await app.register(settingsRoutes, { prefix: '/api/settings' });
+await app.register(mapRoutes, { prefix: '/api/map' });
 
 const port = parseInt(process.env.PORT || '3000');
 app.listen({ port, host: '0.0.0.0' }).then(() => {

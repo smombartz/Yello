@@ -7,9 +7,10 @@ import { DeduplicationView } from './components/DeduplicationView';
 import { CleanupView } from './components/CleanupView';
 import { ArchivedView } from './components/ArchivedView';
 import { GroupsView } from './components/GroupsView';
+import { MapView } from './components/MapView';
 import { SettingsView } from './components/SettingsView';
 
-type AppView = 'contacts' | 'deduplication' | 'cleanup' | 'archived' | 'groups' | 'settings';
+type AppView = 'contacts' | 'deduplication' | 'cleanup' | 'archived' | 'groups' | 'map' | 'settings';
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('contacts');
@@ -31,7 +32,7 @@ function App() {
       if (e.key === 'Escape') {
         if (showImportModal) {
           setShowImportModal(false);
-        } else if (currentView === 'deduplication' || currentView === 'cleanup' || currentView === 'archived' || currentView === 'groups' || currentView === 'settings') {
+        } else if (currentView === 'deduplication' || currentView === 'cleanup' || currentView === 'archived' || currentView === 'groups' || currentView === 'map' || currentView === 'settings') {
           setCurrentView('contacts');
         }
       }
@@ -56,6 +57,10 @@ function App() {
     setCurrentView('groups');
   };
 
+  const handleMapClick = () => {
+    setCurrentView('map');
+  };
+
   const handleSettingsClick = () => {
     setCurrentView('settings');
   };
@@ -63,6 +68,26 @@ function App() {
   const handleBackToContacts = () => {
     setCurrentView('contacts');
   };
+
+  if (currentView === 'map') {
+    return (
+      <div className="app-layout map-layout">
+        <Sidebar
+          onDeduplicateClick={handleDeduplicateClick}
+          onCleanupClick={handleCleanupClick}
+          onArchivedClick={handleArchivedClick}
+          onGroupsClick={handleGroupsClick}
+          onMapClick={handleMapClick}
+          onSettingsClick={handleSettingsClick}
+          onBackToContacts={handleBackToContacts}
+          currentView="map"
+        />
+        <main className="main-content">
+          <MapView onBack={handleBackToContacts} />
+        </main>
+      </div>
+    );
+  }
 
   if (currentView === 'groups') {
     return (
@@ -72,6 +97,7 @@ function App() {
           onCleanupClick={handleCleanupClick}
           onArchivedClick={handleArchivedClick}
           onGroupsClick={handleGroupsClick}
+          onMapClick={handleMapClick}
           onSettingsClick={handleSettingsClick}
           onBackToContacts={handleBackToContacts}
           currentView="groups"
@@ -91,6 +117,7 @@ function App() {
           onCleanupClick={handleCleanupClick}
           onArchivedClick={handleArchivedClick}
           onGroupsClick={handleGroupsClick}
+          onMapClick={handleMapClick}
           onSettingsClick={handleSettingsClick}
           onBackToContacts={handleBackToContacts}
           currentView="settings"
@@ -110,6 +137,7 @@ function App() {
           onCleanupClick={handleCleanupClick}
           onArchivedClick={handleArchivedClick}
           onGroupsClick={handleGroupsClick}
+          onMapClick={handleMapClick}
           onSettingsClick={handleSettingsClick}
           onBackToContacts={handleBackToContacts}
           currentView="archived"
@@ -129,6 +157,7 @@ function App() {
           onCleanupClick={handleCleanupClick}
           onArchivedClick={handleArchivedClick}
           onGroupsClick={handleGroupsClick}
+          onMapClick={handleMapClick}
           onSettingsClick={handleSettingsClick}
           onBackToContacts={handleBackToContacts}
           currentView="cleanup"
@@ -148,6 +177,7 @@ function App() {
           onCleanupClick={handleCleanupClick}
           onArchivedClick={handleArchivedClick}
           onGroupsClick={handleGroupsClick}
+          onMapClick={handleMapClick}
           onSettingsClick={handleSettingsClick}
           onBackToContacts={handleBackToContacts}
           currentView="deduplication"
@@ -167,6 +197,7 @@ function App() {
           onCleanupClick={handleCleanupClick}
           onArchivedClick={handleArchivedClick}
           onGroupsClick={handleGroupsClick}
+          onMapClick={handleMapClick}
           onSettingsClick={handleSettingsClick}
           currentView="contacts"
         />

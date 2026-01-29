@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { getDatabase } from '../services/database.js';
 import { getPhotoUrl } from '../services/photoProcessor.js';
 import { detectMergeConflicts, mergeContactsWithResolutions } from '../services/mergeService.js';
+import { geocodeAddress, isValidCoordinate } from '../services/geocoding.js';
 import {
   ContactListQuerySchema,
   ContactListQuery,
@@ -564,15 +565,37 @@ export default async function contactsRoutes(
       }
     }
 
-    // Update addresses (delete all and re-insert)
+    // Update addresses (delete all and re-insert, then geocode in background)
     if (updates.addresses !== undefined) {
       db.prepare('DELETE FROM contact_addresses WHERE contact_id = ?').run(id);
       const insertAddress = db.prepare(`
         INSERT INTO contact_addresses (contact_id, street, city, state, postal_code, country, type)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
+      const updateGeocode = db.prepare(`
+        UPDATE contact_addresses
+        SET latitude = ?, longitude = ?, geocoded_at = datetime('now')
+        WHERE id = ?
+      `);
+
       for (const addr of updates.addresses) {
-        insertAddress.run(id, addr.street, addr.city, addr.state, addr.postalCode, addr.country, addr.type);
+        const result = insertAddress.run(id, addr.street, addr.city, addr.state, addr.postalCode, addr.country, addr.type);
+        const addressId = result.lastInsertRowid;
+
+        // Geocode in background (don't await to keep response fast)
+        geocodeAddress({
+          street: addr.street,
+          city: addr.city,
+          state: addr.state,
+          postalCode: addr.postalCode,
+          country: addr.country
+        }).then(coords => {
+          if (coords && isValidCoordinate(coords.latitude, coords.longitude)) {
+            updateGeocode.run(coords.latitude, coords.longitude, addressId);
+          }
+        }).catch(err => {
+          console.error('Background geocoding error:', err);
+        });
       }
     }
 

@@ -21,12 +21,13 @@ interface SidebarProps {
   onCleanupClick?: () => void;
   onArchivedClick?: () => void;
   onGroupsClick?: () => void;
+  onMapClick?: () => void;
   onSettingsClick?: () => void;
   onBackToContacts?: () => void;
-  currentView?: 'contacts' | 'deduplication' | 'cleanup' | 'archived' | 'groups' | 'settings';
+  currentView?: 'contacts' | 'deduplication' | 'cleanup' | 'archived' | 'groups' | 'map' | 'settings';
 }
 
-export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, onGroupsClick, onSettingsClick, onBackToContacts, currentView = 'contacts' }: SidebarProps) {
+export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, onGroupsClick, onMapClick, onSettingsClick, onBackToContacts, currentView = 'contacts' }: SidebarProps) {
   const { data: userSettings } = useUserSettings();
 
   const displayName = userSettings?.name || 'User';
@@ -49,6 +50,7 @@ export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, o
         <NavItem icon="dashboard" label="Dashboard" />
         <NavItem icon="contacts" label="All Contacts" active={currentView === 'contacts'} onClick={onBackToContacts} />
         <NavItem icon="star" label="Favorites" />
+        <NavItem icon="map" label="Map" active={currentView === 'map'} onClick={onMapClick} />
         <NavItem icon="group" label="Groups" active={currentView === 'groups'} onClick={onGroupsClick} />
         <NavItem icon="archive" label="Archived" active={currentView === 'archived'} onClick={onArchivedClick} />
         <NavItem icon="merge" label="Merge" active={currentView === 'deduplication'} onClick={onDeduplicateClick} />

@@ -248,6 +248,9 @@ export function getDatabase(): DatabaseType {
     console.error('Failed to setup unified FTS:', e);
   }
 
+  // Run geocoding migration
+  runGeocodingMigration(db);
+
   return db;
 }
 
@@ -566,4 +569,24 @@ function migratePhoneFormats(database: DatabaseType): void {
 
   migrateAll();
   console.log(`Phone migration complete: ${updated} updated, ${failed} could not be parsed`);
+}
+
+/**
+ * Run geocoding-related migrations
+ */
+export function runGeocodingMigration(database: DatabaseType): void {
+  // Check if latitude column exists in contact_addresses
+  const addressTableInfo = database.prepare("PRAGMA table_info(contact_addresses)").all() as Array<{ name: string }>;
+  const hasLatitude = addressTableInfo.some(col => col.name === 'latitude');
+
+  if (!hasLatitude) {
+    console.log('Running geocoding migration: adding latitude, longitude, geocoded_at columns...');
+    database.exec(`
+      ALTER TABLE contact_addresses ADD COLUMN latitude REAL DEFAULT NULL;
+      ALTER TABLE contact_addresses ADD COLUMN longitude REAL DEFAULT NULL;
+      ALTER TABLE contact_addresses ADD COLUMN geocoded_at TEXT DEFAULT NULL;
+      CREATE INDEX IF NOT EXISTS idx_contact_addresses_geocoded ON contact_addresses(latitude, longitude) WHERE latitude IS NOT NULL;
+    `);
+    console.log('Geocoding migration complete');
+  }
 }
