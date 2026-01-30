@@ -47,7 +47,9 @@ export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, o
 
   const displayName = user?.name || 'User';
   const displayEmail = user?.email || 'Not signed in';
-  const avatarUrl = user?.avatarUrl;
+  // Use primary profile image if available, fall back to legacy avatarUrl
+  const primaryImage = user?.profileImages?.find(img => img.isPrimary);
+  const avatarUrl = primaryImage?.url || user?.avatarUrl;
   const initials = displayName
     .split(' ')
     .map(n => n[0])
