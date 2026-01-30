@@ -6,6 +6,8 @@ import {
   upsertProfileImage,
   setPrimaryImage,
   getProfileImageUrl,
+  getGravatarHash,
+  getGravatarUrl,
 } from '../profileImageService.js';
 import fs from 'fs/promises';
 
@@ -91,5 +93,25 @@ describe('profileImageService', () => {
   it('should return null URL for null hash', () => {
     const url = getProfileImageUrl(null);
     expect(url).toBeNull();
+  });
+});
+
+describe('gravatar functions', () => {
+  it('should generate correct SHA256 hash for email', () => {
+    // Known test case from Gravatar docs
+    const hash = getGravatarHash('  MyEmail@Example.COM  ');
+    // Should normalize to 'myemail@example.com' then hash
+    expect(hash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it('should generate consistent hash for same email', () => {
+    const hash1 = getGravatarHash('test@example.com');
+    const hash2 = getGravatarHash('TEST@EXAMPLE.COM');
+    expect(hash1).toBe(hash2);
+  });
+
+  it('should generate correct Gravatar URL', () => {
+    const url = getGravatarUrl('test@example.com');
+    expect(url).toMatch(/^https:\/\/gravatar\.com\/avatar\/[a-f0-9]{64}\?d=404$/);
   });
 });

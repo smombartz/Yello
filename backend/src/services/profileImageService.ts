@@ -1,4 +1,5 @@
 import { getDatabase } from './database.js';
+import crypto from 'crypto';
 
 export interface ProfileImageRow {
   id: number;
@@ -108,4 +109,14 @@ export function getProfileImageUrl(localHash: string | null, size: 'thumbnail' |
   if (!localHash) return null;
   const prefix = localHash.substring(0, 2);
   return `/photos/${size}/${prefix}/${localHash}.jpg`;
+}
+
+export function getGravatarHash(email: string): string {
+  const normalized = email.trim().toLowerCase();
+  return crypto.createHash('sha256').update(normalized).digest('hex');
+}
+
+export function getGravatarUrl(email: string): string {
+  const hash = getGravatarHash(email);
+  return `https://gravatar.com/avatar/${hash}?d=404`;
 }
