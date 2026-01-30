@@ -1,0 +1,95 @@
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { getDatabase, closeDatabase } from '../database.js';
+import {
+  getProfileImages,
+  getPrimaryProfileImage,
+  upsertProfileImage,
+  setPrimaryImage,
+  getProfileImageUrl,
+} from '../profileImageService.js';
+import fs from 'fs/promises';
+
+const TEST_DB_PATH = './test-data/profile-images-test.db';
+const TEST_PHOTOS_PATH = './test-data/profile-photos';
+
+describe('profileImageService', () => {
+  let userId: number;
+
+  beforeAll(async () => {
+    process.env.DATABASE_PATH = TEST_DB_PATH;
+    process.env.PHOTOS_PATH = TEST_PHOTOS_PATH;
+    await fs.mkdir('./test-data', { recursive: true });
+
+    const db = getDatabase();
+    // Create test user
+    const result = db.prepare(`
+      INSERT INTO users (google_id, email, name, avatar_url)
+      VALUES ('test-google-id', 'test@example.com', 'Test User', NULL)
+    `).run();
+    userId = Number(result.lastInsertRowid);
+  });
+
+  afterAll(async () => {
+    closeDatabase();
+    await fs.rm('./test-data', { recursive: true, force: true });
+  });
+
+  beforeEach(() => {
+    const db = getDatabase();
+    db.prepare('DELETE FROM profile_images').run();
+  });
+
+  it('should return empty array when no images exist', () => {
+    const images = getProfileImages(userId);
+    expect(images).toEqual([]);
+  });
+
+  it('should upsert a profile image', () => {
+    const image = upsertProfileImage(userId, 'google', 'https://example.com/photo.jpg', 'abc123');
+    expect(image.userId).toBe(userId);
+    expect(image.source).toBe('google');
+    expect(image.originalUrl).toBe('https://example.com/photo.jpg');
+    expect(image.localHash).toBe('abc123');
+  });
+
+  it('should update existing image on upsert with same source', () => {
+    upsertProfileImage(userId, 'google', 'https://old.com/photo.jpg', 'old123');
+    const updated = upsertProfileImage(userId, 'google', 'https://new.com/photo.jpg', 'new456');
+
+    const images = getProfileImages(userId);
+    expect(images).toHaveLength(1);
+    expect(images[0].originalUrl).toBe('https://new.com/photo.jpg');
+    expect(images[0].localHash).toBe('new456');
+  });
+
+  it('should set first image as primary by default', () => {
+    upsertProfileImage(userId, 'google', 'https://example.com/photo.jpg', 'abc123');
+    const primary = getPrimaryProfileImage(userId);
+    expect(primary).not.toBeNull();
+    expect(primary!.isPrimary).toBe(true);
+  });
+
+  it('should allow changing primary image', () => {
+    upsertProfileImage(userId, 'google', 'https://google.com/photo.jpg', 'google123');
+    const gravatar = upsertProfileImage(userId, 'gravatar', 'https://gravatar.com/photo.jpg', 'gravatar456');
+
+    setPrimaryImage(userId, gravatar.id);
+
+    const images = getProfileImages(userId);
+    const googleImage = images.find(i => i.source === 'google');
+    const gravatarImage = images.find(i => i.source === 'gravatar');
+
+    expect(googleImage!.isPrimary).toBe(false);
+    expect(gravatarImage!.isPrimary).toBe(true);
+  });
+
+  it('should generate correct URL from local hash', () => {
+    const url = getProfileImageUrl('abc123def456');
+    expect(url).toBe('/photos/medium/ab/abc123def456.jpg');
+  });
+
+  it('should return null URL for null hash', () => {
+    const url = getProfileImageUrl(null);
+    expect(url).toBeNull();
+  });
+});
