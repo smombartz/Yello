@@ -291,6 +291,40 @@ export function getDatabase(): DatabaseType {
   // Run geocoding migration
   runGeocodingMigration(db);
 
+  // Migration: Populate profile_images from existing avatar_url
+  const profileImagesMigrationNeeded = (() => {
+    const usersWithAvatars = db.prepare(`
+      SELECT COUNT(*) as count FROM users WHERE avatar_url IS NOT NULL
+    `).get() as { count: number };
+
+    const existingProfileImages = db.prepare(`
+      SELECT COUNT(*) as count FROM profile_images WHERE source = 'google'
+    `).get() as { count: number };
+
+    return usersWithAvatars.count > 0 && existingProfileImages.count === 0;
+  })();
+
+  if (profileImagesMigrationNeeded) {
+    console.log('Migrating existing avatar_url to profile_images table...');
+
+    const users = db.prepare(`
+      SELECT id, email, avatar_url FROM users WHERE avatar_url IS NOT NULL
+    `).all() as Array<{ id: number; email: string; avatar_url: string }>;
+
+    for (const user of users) {
+      try {
+        db.prepare(`
+          INSERT INTO profile_images (user_id, source, original_url, is_primary)
+          VALUES (?, 'google', ?, 1)
+        `).run(user.id, user.avatar_url);
+      } catch (e) {
+        // Ignore duplicate key errors
+      }
+    }
+
+    console.log(`Migrated ${users.length} existing avatars to profile_images`);
+  }
+
   return db;
 }
 
