@@ -53,8 +53,8 @@ await app.register(fastifyStatic, {
 
 // Serve frontend static files in production
 if (process.env.NODE_ENV === 'production') {
-  // In Docker, frontend is copied to /app/public (see Dockerfile)
-  const frontendPath = path.join(__dirname, '../public');
+  // In Docker, frontend is copied to /app/frontend/dist (see Dockerfile)
+  const frontendPath = path.join(__dirname, '../frontend/dist');
   await app.register(fastifyStatic, {
     root: frontendPath,
     prefix: '/',
