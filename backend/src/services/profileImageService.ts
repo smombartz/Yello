@@ -184,3 +184,26 @@ export async function downloadAndProcessImage(
     return null;
   }
 }
+
+export async function fetchAndStoreGoogleAvatar(
+  userId: number,
+  googlePictureUrl: string | null,
+  userEmail: string
+): Promise<ProfileImage | null> {
+  if (!googlePictureUrl) {
+    return null;
+  }
+
+  try {
+    const localHash = await downloadAndProcessImage(googlePictureUrl, `google-${userEmail}`);
+
+    if (!localHash) {
+      return null;
+    }
+
+    return upsertProfileImage(userId, 'google', googlePictureUrl, localHash);
+  } catch (error) {
+    console.error('Error fetching Google avatar:', error);
+    return null;
+  }
+}
