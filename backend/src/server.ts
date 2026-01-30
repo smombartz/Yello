@@ -53,11 +53,12 @@ await app.register(fastifyStatic, {
 
 // Serve frontend static files in production
 if (process.env.NODE_ENV === 'production') {
-  const frontendPath = path.join(__dirname, '../../frontend/dist');
+  // In Docker, frontend is copied to /app/public (see Dockerfile)
+  const frontendPath = path.join(__dirname, '../public');
   await app.register(fastifyStatic, {
     root: frontendPath,
     prefix: '/',
-    decorateReply: false
+    decorateReply: true  // Enable sendFile for SPA fallback
   });
 
   // SPA fallback - serve index.html for non-API routes
