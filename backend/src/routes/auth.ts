@@ -13,7 +13,7 @@ const GOOGLE_CONFIGURATION = {
 };
 import { getDatabase } from '../services/database.js';
 import { AuthMeResponseSchema, AuthErrorSchema } from '../schemas/auth.js';
-import { fetchAndStoreGoogleAvatar, fetchAndStoreGravatar, getProfileImages, getProfileImageUrl } from '../services/profileImageService.js';
+import { fetchAndStoreGoogleAvatar, fetchAndStoreGravatar, getProfileImages, getProfileImageUrl, enrichUsersFromGoogleContacts } from '../services/profileImageService.js';
 
 // Google userinfo response type
 interface GoogleUserInfo {
@@ -202,6 +202,12 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
             // Fetch Gravatar as additional source
             await fetchAndStoreGravatar(user.id, userInfo.email);
+
+            // Enrich other users from this user's Google contacts
+            const enrichedCount = await enrichUsersFromGoogleContacts(accessToken);
+            if (enrichedCount > 0) {
+              fastify.log.info(`Enriched ${enrichedCount} users from Google contacts`);
+            }
           } catch (error) {
             fastify.log.error(error, 'Error fetching profile images');
           }
