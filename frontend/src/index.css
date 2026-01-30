@@ -3,8 +3,8 @@
   --pico-font-size: 16px;
 
   /* Stitch color palette */
-  --stitch-primary: #1313ec;
-  --stitch-primary-light: rgba(19, 19, 236, 0.1);
+  --stitch-primary: #5F27E3;
+  --stitch-primary-light: rgba(95, 39, 227, 0.1);
   --stitch-background: #f6f6f8;
   --stitch-text-main: #111118;
   --stitch-text-secondary: #616189;
@@ -84,6 +84,11 @@ body {
 .sidebar-logo .material-symbols-outlined {
   color: var(--stitch-primary);
   font-size: 1.5rem;
+}
+
+.sidebar-logo-img {
+  height: 28px;
+  width: auto;
 }
 
 .sidebar-nav {

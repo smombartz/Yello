@@ -7,7 +7,7 @@ export function LoginPage() {
     <div className="login-page">
       <div className="login-container">
         <div className="login-header">
-          <h1>Ello Contacts</h1>
+          <h1>Yellow</h1>
           <p>Manage and organize your contacts with ease</p>
         </div>
 
@@ -56,7 +56,7 @@ export function LoginPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #7c3aed 0%, #5F27E3 100%);
           padding: 20px;
         }
 

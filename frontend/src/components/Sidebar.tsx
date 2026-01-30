@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import logoSvg from '../assets/logo.svg';
 
 interface NavItemProps {
   icon: string;
@@ -67,8 +68,7 @@ export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, o
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <span className="material-symbols-outlined">3p</span>
-        <span>ello CRM</span>
+        <img src={logoSvg} alt="Yellow" className="sidebar-logo-img" />
       </div>
 
       <nav className="sidebar-nav">
