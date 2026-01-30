@@ -150,7 +150,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     // Register Google OAuth2 plugin
     await fastify.register(oauthPlugin, {
       name: 'googleOAuth2',
-      scope: ['profile', 'email'],
+      scope: ['profile', 'email', 'https://www.googleapis.com/auth/contacts.other.readonly'],
       credentials: {
         client: {
           id: googleClientId,
