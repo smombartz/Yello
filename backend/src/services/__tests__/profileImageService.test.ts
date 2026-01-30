@@ -8,6 +8,7 @@ import {
   getProfileImageUrl,
   getGravatarHash,
   getGravatarUrl,
+  downloadAndProcessImage,
 } from '../profileImageService.js';
 import fs from 'fs/promises';
 
@@ -114,4 +115,14 @@ describe('gravatar functions', () => {
     const url = getGravatarUrl('test@example.com');
     expect(url).toMatch(/^https:\/\/gravatar\.com\/avatar\/[a-f0-9]{64}\?d=404$/);
   });
+});
+
+describe('downloadAndProcessImage', () => {
+  it('should return null for non-existent URL', async () => {
+    const hash = await downloadAndProcessImage('https://httpbin.org/status/404', 'test-user');
+    expect(hash).toBeNull();
+  });
+
+  // Note: We can't easily test successful download without mocking
+  // The function will be integration tested via OAuth flow
 });

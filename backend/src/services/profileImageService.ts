@@ -1,5 +1,8 @@
 import { getDatabase } from './database.js';
 import crypto from 'crypto';
+import sharp from 'sharp';
+import fs from 'fs/promises';
+import path from 'path';
 
 export interface ProfileImageRow {
   id: number;
@@ -119,4 +122,65 @@ export function getGravatarHash(email: string): string {
 export function getGravatarUrl(email: string): string {
   const hash = getGravatarHash(email);
   return `https://gravatar.com/avatar/${hash}?d=404`;
+}
+
+const SIZES = [
+  { name: 'thumbnail', width: 48, height: 48, quality: 80 },
+  { name: 'small', width: 96, height: 96, quality: 82 },
+  { name: 'medium', width: 200, height: 200, quality: 85 },
+  { name: 'large', width: 400, height: 400, quality: 88 },
+] as const;
+
+function getPhotosPath(): string {
+  return process.env.PHOTOS_PATH || './data/photos';
+}
+
+export async function downloadAndProcessImage(
+  imageUrl: string,
+  identifier: string
+): Promise<string | null> {
+  try {
+    // Fetch the image
+    const response = await fetch(imageUrl, {
+      headers: {
+        'User-Agent': 'ElloCRM/1.0',
+      },
+    });
+
+    if (!response.ok) {
+      console.log(`Failed to fetch image from ${imageUrl}: ${response.status}`);
+      return null;
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    // Generate hash based on identifier (user email or id)
+    const hash = crypto.createHash('md5').update(identifier).digest('hex');
+    const prefix = hash.substring(0, 2);
+    const photosPath = getPhotosPath();
+
+    // Process and save all sizes
+    for (const size of SIZES) {
+      const dirPath = path.join(photosPath, size.name, prefix);
+      await fs.mkdir(dirPath, { recursive: true });
+
+      await sharp(buffer)
+        .rotate()
+        .resize(size.width, size.height, {
+          fit: 'cover',
+          position: 'attention',
+        })
+        .jpeg({
+          quality: size.quality,
+          mozjpeg: true,
+          progressive: true,
+        })
+        .toFile(path.join(dirPath, `${hash}.jpg`));
+    }
+
+    return hash;
+  } catch (error) {
+    console.error(`Error downloading/processing image from ${imageUrl}:`, error);
+    return null;
+  }
 }
