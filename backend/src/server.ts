@@ -39,26 +39,33 @@ await app.register(fastifyMultipart, {
   limits: { fileSize: 100 * 1024 * 1024 }
 });
 
-// Serve photos from the photos directory
+// Setup photos path
 const photosPathEnv = process.env.PHOTOS_PATH || './data/photos';
 const photosPath = path.isAbsolute(photosPathEnv) ? photosPathEnv : path.resolve(__dirname, '..', photosPathEnv);
 if (!fs.existsSync(photosPath)) {
   fs.mkdirSync(photosPath, { recursive: true });
 }
-await app.register(fastifyStatic, {
-  root: photosPath,
-  prefix: '/photos/',
-  decorateReply: false
-});
 
-// Serve frontend static files in production
+// Serve static files
 if (process.env.NODE_ENV === 'production') {
   // In Docker, frontend is copied to /app/frontend/dist (see Dockerfile)
   const frontendPath = path.join(__dirname, '../frontend/dist');
+
+  // Log for debugging
+  console.log('Frontend path:', frontendPath);
+  console.log('Frontend exists:', fs.existsSync(frontendPath));
+
+  // Register frontend FIRST with decorateReply enabled (needed for sendFile)
   await app.register(fastifyStatic, {
     root: frontendPath,
     prefix: '/',
-    decorateReply: true  // Enable sendFile for SPA fallback
+  });
+
+  // Register photos SECOND with decorateReply disabled (to avoid conflict)
+  await app.register(fastifyStatic, {
+    root: photosPath,
+    prefix: '/photos/',
+    decorateReply: false
   });
 
   // SPA fallback - serve index.html for non-API routes
@@ -67,6 +74,12 @@ if (process.env.NODE_ENV === 'production') {
       return reply.sendFile('index.html');
     }
     return reply.code(404).send({ error: 'Not Found' });
+  });
+} else {
+  // In development, only serve photos (frontend runs on vite dev server)
+  await app.register(fastifyStatic, {
+    root: photosPath,
+    prefix: '/photos/',
   });
 }
 
