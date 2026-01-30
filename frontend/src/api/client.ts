@@ -3,6 +3,7 @@ const API_BASE = import.meta.env.PROD ? '' : 'http://localhost:3000';
 export async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
+    credentials: 'include', // Include cookies for auth
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,
@@ -22,6 +23,7 @@ export async function uploadFile(endpoint: string, file: File): Promise<unknown>
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     method: 'POST',
+    credentials: 'include', // Include cookies for auth
     body: formData,
   });
 
@@ -30,4 +32,9 @@ export async function uploadFile(endpoint: string, file: File): Promise<unknown>
   }
 
   return response.json();
+}
+
+// Get the auth login URL
+export function getGoogleLoginUrl(): string {
+  return `${API_BASE}/api/auth/google`;
 }

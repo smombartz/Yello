@@ -7,3 +7,9 @@ backend/data/*
 backend/data/contacts.db-shm
 backend/data/contacts.db
 backend/data/contacts.db-wal
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+backend/.env
