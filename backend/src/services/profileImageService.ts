@@ -207,3 +207,23 @@ export async function fetchAndStoreGoogleAvatar(
     return null;
   }
 }
+
+export async function fetchAndStoreGravatar(
+  userId: number,
+  email: string
+): Promise<ProfileImage | null> {
+  try {
+    const gravatarUrl = getGravatarUrl(email);
+    const localHash = await downloadAndProcessImage(gravatarUrl, `gravatar-${email}`);
+
+    if (!localHash) {
+      // No Gravatar exists for this email (404)
+      return null;
+    }
+
+    return upsertProfileImage(userId, 'gravatar', gravatarUrl, localHash);
+  } catch (error) {
+    console.error('Error fetching Gravatar:', error);
+    return null;
+  }
+}
