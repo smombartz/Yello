@@ -13,7 +13,7 @@ const GOOGLE_CONFIGURATION = {
 };
 import { getDatabase } from '../services/database.js';
 import { AuthMeResponseSchema, AuthErrorSchema } from '../schemas/auth.js';
-import { fetchAndStoreGoogleAvatar, fetchAndStoreGravatar } from '../services/profileImageService.js';
+import { fetchAndStoreGoogleAvatar, fetchAndStoreGravatar, getProfileImages, getProfileImageUrl } from '../services/profileImageService.js';
 
 // Google userinfo response type
 interface GoogleUserInfo {
@@ -253,6 +253,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
       return { user: null, isAuthenticated: false };
     }
 
+    // Get profile images
+    const profileImages = getProfileImages(user.id);
+
     return {
       user: {
         id: user.id,
@@ -260,6 +263,12 @@ export default async function authRoutes(fastify: FastifyInstance) {
         email: user.email,
         name: user.name,
         avatarUrl: user.avatar_url,
+        profileImages: profileImages.map(img => ({
+          id: img.id,
+          source: img.source,
+          url: getProfileImageUrl(img.localHash),
+          isPrimary: img.isPrimary,
+        })),
         createdAt: user.created_at,
         updatedAt: user.updated_at,
       },
