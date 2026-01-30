@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import sharp from 'sharp';
 import fs from 'fs/promises';
 import path from 'path';
+import { fetchGoogleContactsPhotos } from './googlePeopleService.js';
 
 export interface ProfileImageRow {
   id: number;
@@ -225,5 +226,46 @@ export async function fetchAndStoreGravatar(
   } catch (error) {
     console.error('Error fetching Gravatar:', error);
     return null;
+  }
+}
+
+export async function enrichUsersFromGoogleContacts(accessToken: string): Promise<number> {
+  const db = getDatabase();
+  let enrichedCount = 0;
+
+  try {
+    // Fetch contacts with photos
+    const contacts = await fetchGoogleContactsPhotos(accessToken);
+
+    if (contacts.length === 0) {
+      return 0;
+    }
+
+    // Find matching users in our database
+    for (const contact of contacts) {
+      const user = db.prepare('SELECT id, email FROM users WHERE email = ?').get(contact.email) as { id: number; email: string } | undefined;
+
+      if (user && contact.photoUrl) {
+        // Check if we already have a google_contacts image for this user
+        const existing = db.prepare(
+          'SELECT id FROM profile_images WHERE user_id = ? AND source = ?'
+        ).get(user.id, 'google_contacts') as { id: number } | undefined;
+
+        if (!existing) {
+          // Download and store the contact photo
+          const localHash = await downloadAndProcessImage(contact.photoUrl, `google-contacts-${user.email}`);
+
+          if (localHash) {
+            upsertProfileImage(user.id, 'google_contacts', contact.photoUrl, localHash);
+            enrichedCount++;
+          }
+        }
+      }
+    }
+
+    return enrichedCount;
+  } catch (error) {
+    console.error('Error enriching users from Google contacts:', error);
+    return 0;
   }
 }
