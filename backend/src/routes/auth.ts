@@ -13,6 +13,7 @@ const GOOGLE_CONFIGURATION = {
 };
 import { getDatabase } from '../services/database.js';
 import { AuthMeResponseSchema, AuthErrorSchema } from '../schemas/auth.js';
+import { fetchAndStoreGoogleAvatar, fetchAndStoreGravatar } from '../services/profileImageService.js';
 
 // Google userinfo response type
 interface GoogleUserInfo {
@@ -192,6 +193,19 @@ export default async function authRoutes(fastify: FastifyInstance) {
           userInfo.name || null,
           userInfo.picture || null
         );
+
+        // Fetch and store profile images in background (don't block the response)
+        (async () => {
+          try {
+            // Fetch Google avatar
+            await fetchAndStoreGoogleAvatar(user.id, userInfo.picture || null, userInfo.email);
+
+            // Fetch Gravatar as additional source
+            await fetchAndStoreGravatar(user.id, userInfo.email);
+          } catch (error) {
+            fastify.log.error(error, 'Error fetching profile images');
+          }
+        })();
 
         // Create session
         const sessionId = createSession(user.id);
