@@ -1,4 +1,5 @@
 import { useAuth } from '../contexts/AuthContext';
+import logoSvg from '../assets/logo.svg';
 
 export function LoginPage() {
   const { login, isLoading } = useAuth();
@@ -7,7 +8,7 @@ export function LoginPage() {
     <div className="login-page">
       <div className="login-container">
         <div className="login-header">
-          <h1>Yellow</h1>
+          <img src={logoSvg} alt="Yellow" className="login-logo" />
           <p>Manage and organize your contacts with ease</p>
         </div>
 
@@ -56,7 +57,7 @@ export function LoginPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #7c3aed 0%, #5F27E3 100%);
+          background: linear-gradient(46deg, #7C3AED 7.03%, #273DE3 94.08%);
           padding: 20px;
         }
 
@@ -74,11 +75,10 @@ export function LoginPage() {
           margin-bottom: 32px;
         }
 
-        .login-header h1 {
-          font-size: 28px;
-          font-weight: 700;
-          color: #1a202c;
-          margin: 0 0 8px 0;
+        .login-logo {
+          height: 40px;
+          width: auto;
+          margin-bottom: 8px;
         }
 
         .login-header p {
