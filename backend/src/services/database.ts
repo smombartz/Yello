@@ -203,6 +203,23 @@ export function getDatabase(): DatabaseType {
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+
+    -- Profile images table for multi-source avatar support
+    CREATE TABLE IF NOT EXISTS profile_images (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      source TEXT NOT NULL CHECK (source IN ('user_uploaded', 'google', 'google_contacts', 'gravatar')),
+      original_url TEXT,
+      local_hash TEXT,
+      is_primary INTEGER DEFAULT 0,
+      fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_profile_images_user_id ON profile_images(user_id);
+    CREATE INDEX IF NOT EXISTS idx_profile_images_source ON profile_images(source);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_profile_images_user_source ON profile_images(user_id, source);
   `);
 
   // Migration: Add archived_at column if it doesn't exist
