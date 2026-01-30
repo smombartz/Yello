@@ -2,12 +2,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi } from './client';
 
 // Types
+export interface ProfileImage {
+  id: number;
+  source: 'user_uploaded' | 'google' | 'google_contacts' | 'gravatar';
+  url: string | null;
+  isPrimary: boolean;
+}
+
 export interface User {
   id: number;
   googleId: string;
   email: string;
   name: string | null;
   avatarUrl: string | null;
+  profileImages: ProfileImage[];
   createdAt: string;
   updatedAt: string;
 }
