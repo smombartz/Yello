@@ -17,6 +17,7 @@ import archiveRoutes from './routes/archive.js';
 import settingsRoutes from './routes/settings.js';
 import mapRoutes from './routes/map.js';
 import authRoutes from './routes/auth.js';
+import profileImagesRoutes from './routes/profileImages.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -93,6 +94,7 @@ await app.register(archiveRoutes, { prefix: '/api/archive' });
 await app.register(settingsRoutes, { prefix: '/api/settings' });
 await app.register(mapRoutes, { prefix: '/api/map' });
 await app.register(authRoutes, { prefix: '/api/auth' });
+await app.register(profileImagesRoutes, { prefix: '/api/profile-images' });
 
 const port = parseInt(process.env.PORT || '3000');
 app.listen({ port, host: '0.0.0.0' }).then(() => {
