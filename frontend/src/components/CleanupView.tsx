@@ -3,7 +3,10 @@ import { CleanupModeSelector } from './CleanupModeSelector';
 import { ThresholdSelector } from './ThresholdSelector';
 import { CleanupFilters } from './CleanupFilters';
 import { CleanupContactList } from './CleanupContactList';
+import { SocialLinksCleanup } from './SocialLinksCleanup';
+import { InvalidLinksCleanup } from './InvalidLinksCleanup';
 import { useCleanupSummary, useCleanupContacts, useDeleteContacts, fetchAllCleanupContactIds } from '../api/cleanupHooks';
+import { useSocialLinksSummary } from '../api/socialLinksHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
 import type {
   CleanupMode,
@@ -34,19 +37,27 @@ export function CleanupView({ onBack: _onBack }: CleanupViewProps) {
   const [isSelectingAll, setIsSelectingAll] = useState(false);
 
   const { data: summary, isLoading: isSummaryLoading } = useCleanupSummary(threshold);
+  const { data: socialLinksSummary } = useSocialLinksSummary();
 
   const typesArray = selectedTypes.size > 0
     ? Array.from(selectedTypes) as (EmptyContactType[] | ProblematicContactType[])
     : undefined;
 
+  // Only fetch cleanup contacts when not in social-links mode
+  const shouldFetchContacts = selectedMode !== 'social-links' && selectedMode !== 'invalid-links';
   const {
     data: contactsData,
     isLoading: isContactsLoading,
     isFetching,
-  } = useCleanupContacts(selectedMode, currentPage, PAGE_SIZE, {
-    types: typesArray,
-    threshold,
-  });
+  } = useCleanupContacts(
+    shouldFetchContacts ? selectedMode : 'empty', // fallback mode when disabled
+    currentPage,
+    PAGE_SIZE,
+    {
+      types: typesArray,
+      threshold,
+    }
+  );
 
   const deleteMutation = useDeleteContacts();
   const archiveMutation = useArchiveContacts();
@@ -197,61 +208,70 @@ export function CleanupView({ onBack: _onBack }: CleanupViewProps) {
           selectedMode={selectedMode}
           onModeChange={handleModeChange}
           summary={summary}
+          socialLinksSummary={socialLinksSummary}
           isLoading={isSummaryLoading}
         />
 
-        <div className="cleanup-controls">
-          {selectedMode === 'problematic' && (
-            <ThresholdSelector
-              threshold={threshold}
-              onThresholdChange={handleThresholdChange}
-              disabled={isContactsLoading}
-            />
-          )}
+        {selectedMode !== 'social-links' && selectedMode !== 'invalid-links' && (
+          <>
+            <div className="cleanup-controls">
+              {selectedMode === 'problematic' && (
+                <ThresholdSelector
+                  threshold={threshold}
+                  onThresholdChange={handleThresholdChange}
+                  disabled={isContactsLoading}
+                />
+              )}
 
-          <CleanupFilters
-            mode={selectedMode}
-            selectedTypes={selectedTypes}
-            onToggleType={handleToggleType}
-            summary={summary}
-          />
-        </div>
-
-        {!isContactsLoading && (
-          <div className="cleanup-stats-row">
-            <div className="cleanup-stats">
-              {total} contact{total !== 1 ? 's' : ''} found
+              <CleanupFilters
+                mode={selectedMode}
+                selectedTypes={selectedTypes}
+                onToggleType={handleToggleType}
+                summary={summary}
+              />
             </div>
-            {selectedIds.size > 0 && (
-              <div className="cleanup-action-buttons">
-                <button
-                  className="archive-selected-button"
-                  onClick={() => setShowArchiveConfirm(true)}
-                  disabled={archiveMutation.isPending}
-                >
-                  <span className="material-symbols-outlined">archive</span>
-                  {archiveMutation.isPending
-                    ? 'Archiving...'
-                    : `Archive Selected (${selectedIds.size})`}
-                </button>
-                <button
-                  className="delete-selected-button"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  disabled={deleteMutation.isPending}
-                >
-                  <span className="material-symbols-outlined">delete</span>
-                  {deleteMutation.isPending
-                    ? 'Deleting...'
-                    : `Delete Selected (${selectedIds.size})`}
-                </button>
+
+            {!isContactsLoading && (
+              <div className="cleanup-stats-row">
+                <div className="cleanup-stats">
+                  {total} contact{total !== 1 ? 's' : ''} found
+                </div>
+                {selectedIds.size > 0 && (
+                  <div className="cleanup-action-buttons">
+                    <button
+                      className="archive-selected-button"
+                      onClick={() => setShowArchiveConfirm(true)}
+                      disabled={archiveMutation.isPending}
+                    >
+                      <span className="material-symbols-outlined">archive</span>
+                      {archiveMutation.isPending
+                        ? 'Archiving...'
+                        : `Archive Selected (${selectedIds.size})`}
+                    </button>
+                    <button
+                      className="delete-selected-button"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <span className="material-symbols-outlined">delete</span>
+                      {deleteMutation.isPending
+                        ? 'Deleting...'
+                        : `Delete Selected (${selectedIds.size})`}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
 
       <div className="cleanup-content">
-        {isContactsLoading ? (
+        {selectedMode === 'social-links' ? (
+          <SocialLinksCleanup />
+        ) : selectedMode === 'invalid-links' ? (
+          <InvalidLinksCleanup />
+        ) : isContactsLoading ? (
           <div className="cleanup-loading">
             <span className="material-symbols-outlined spinning">sync</span>
             <p>Finding contacts...</p>

@@ -1,24 +1,35 @@
-import type { CleanupMode, CleanupSummary } from '../api/types';
+import type { CleanupMode, CleanupSummary, SocialLinksSummary } from '../api/types';
 
 interface CleanupModeSelectorProps {
   selectedMode: CleanupMode;
   onModeChange: (mode: CleanupMode) => void;
   summary: CleanupSummary | undefined;
+  socialLinksSummary?: SocialLinksSummary;
   isLoading: boolean;
 }
 
 const MODE_CONFIG: { mode: CleanupMode; label: string; icon: string }[] = [
   { mode: 'empty', label: 'Empty Contacts', icon: 'person_off' },
   { mode: 'problematic', label: 'Problematic Emails', icon: 'warning' },
+  { mode: 'social-links', label: 'Social Links', icon: 'share' },
+  { mode: 'invalid-links', label: 'Invalid Links', icon: 'link_off' },
 ];
 
 export function CleanupModeSelector({
   selectedMode,
   onModeChange,
   summary,
+  socialLinksSummary,
   isLoading
 }: CleanupModeSelectorProps) {
-  const getCount = (mode: CleanupMode): number => {
+  const getCount = (mode: CleanupMode): number | null => {
+    if (mode === 'social-links') {
+      if (!socialLinksSummary) return 0;
+      return socialLinksSummary.crossContact + socialLinksSummary.withinContact;
+    }
+    if (mode === 'invalid-links') {
+      return null; // No count for invalid links - it's pattern-based
+    }
     if (!summary) return 0;
     return mode === 'empty' ? summary.empty.total : summary.problematic.total;
   };
@@ -38,7 +49,7 @@ export function CleanupModeSelector({
           >
             <span className="material-symbols-outlined">{icon}</span>
             <span className="cleanup-mode-label">{label}</span>
-            <span className="cleanup-mode-count">{count}</span>
+            {count !== null && <span className="cleanup-mode-count">{count}</span>}
           </button>
         );
       })}
