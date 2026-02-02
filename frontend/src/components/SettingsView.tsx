@@ -3,6 +3,9 @@ import {
   useUserSettings,
   useUpdateUserSettings,
   useDeleteAllContacts,
+  useFetchContactPhotosStream,
+  useImportLinkedInStream,
+  parseLinkedInCsv,
   exportAllContacts
 } from '../api/settingsHooks';
 
@@ -20,6 +23,16 @@ export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
   const { data: settings, isLoading } = useUserSettings();
   const updateMutation = useUpdateUserSettings();
   const deleteMutation = useDeleteAllContacts();
+  const { isStreaming, progress, startFetching, cancel: cancelFetching } = useFetchContactPhotosStream();
+  const {
+    isImporting: isImportingLinkedIn,
+    progress: linkedInProgress,
+    importResult: linkedInResult,
+    error: linkedInError,
+    startImport: startLinkedInImport,
+    cancel: cancelLinkedInImport,
+    reset: resetLinkedInImport
+  } = useImportLinkedInStream();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -32,6 +45,8 @@ export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [linkedInExpanded, setLinkedInExpanded] = useState(false);
+  const [linkedInFile, setLinkedInFile] = useState<File | null>(null);
 
   // Sync form with loaded settings
   useEffect(() => {
@@ -90,6 +105,48 @@ export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
     exportAllContacts();
     showToast('Export started - check your downloads', 'success');
   }, [showToast]);
+
+  const handleLinkedInFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setLinkedInFile(file);
+    // Reset previous results when a new file is selected
+    resetLinkedInImport();
+  }, [resetLinkedInImport]);
+
+  const handleLinkedInImport = useCallback(async () => {
+    if (!linkedInFile) return;
+
+    try {
+      const content = await linkedInFile.text();
+      const contacts = parseLinkedInCsv(content);
+
+      if (contacts.length === 0) {
+        showToast('No valid contacts found in CSV file', 'error');
+        return;
+      }
+
+      startLinkedInImport(contacts);
+    } catch {
+      showToast('Failed to read CSV file', 'error');
+    }
+  }, [linkedInFile, startLinkedInImport, showToast]);
+
+  const handleFetchPhotos = useCallback(() => {
+    startFetching(
+      (result) => {
+        if (result.downloaded > 0) {
+          showToast(`Downloaded ${result.downloaded} photo${result.downloaded !== 1 ? 's' : ''} for your contacts`, 'success');
+        } else if (result.matched > 0) {
+          showToast('Photos found but failed to download. Please try again.', 'error');
+        } else {
+          showToast('No new photos found for contacts', 'success');
+        }
+      },
+      (error) => {
+        showToast(error, 'error');
+      }
+    );
+  }, [startFetching, showToast]);
 
   const handleDeleteAll = useCallback(() => {
     if (deleteConfirmText !== 'DELETE') return;
@@ -218,6 +275,165 @@ export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
               Export All Contacts (VCF)
             </button>
           </div>
+        </section>
+
+        {/* Fetch Contact Photos Section */}
+        <section className="settings-section">
+          <div className="settings-section-header">
+            <span className="material-symbols-outlined">photo_library</span>
+            <h2>Fetch Contact Photos</h2>
+          </div>
+          <div className="settings-section-content">
+            <p className="settings-description">
+              Download profile photos for your contacts from Google Contacts and Gravatar.
+              Only contacts with email addresses and no existing photo will be updated.
+            </p>
+            {isStreaming && progress && (
+              <div className="photo-fetch-progress">
+                <div className="progress-bar-container">
+                  <div
+                    className="progress-bar-fill"
+                    style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                  />
+                </div>
+                <div className="progress-text">
+                  Processing {progress.current} of {progress.total} contacts...
+                </div>
+                <div className="progress-stats">
+                  <span className="stat downloaded">Downloaded: {progress.downloaded}</span>
+                  <span className="stat skipped">Skipped: {progress.skipped}</span>
+                  <span className="stat failed">Failed: {progress.failed}</span>
+                </div>
+              </div>
+            )}
+            <button
+              className="export-button"
+              onClick={isStreaming ? cancelFetching : handleFetchPhotos}
+              disabled={false}
+            >
+              <span className={`material-symbols-outlined${isStreaming ? ' spinning' : ''}`}>
+                {isStreaming ? 'sync' : 'cloud_download'}
+              </span>
+              {isStreaming ? 'Cancel' : 'Fetch Contact Photos'}
+            </button>
+          </div>
+        </section>
+
+        {/* Import LinkedIn Contacts Section */}
+        <section className={`settings-section collapsible-card${linkedInExpanded ? ' expanded' : ''}`}>
+          <button
+            className="collapsible-header"
+            onClick={() => setLinkedInExpanded(!linkedInExpanded)}
+          >
+            <div className="settings-section-header">
+              <span className="material-symbols-outlined">upload</span>
+              <h2>Import LinkedIn Contacts</h2>
+            </div>
+            <span className={`material-symbols-outlined expand-icon${linkedInExpanded ? ' rotated' : ''}`}>
+              expand_more
+            </span>
+          </button>
+
+          {linkedInExpanded && (
+            <div className="collapsible-content">
+              <p className="settings-description">
+                Import your LinkedIn connections from a CSV export.
+                To export: LinkedIn → Settings → Data Privacy → Get a copy of your data → Connections
+              </p>
+
+              <div className="linkedin-import-controls">
+                <div className="file-input-row">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleLinkedInFileChange}
+                    id="linkedin-csv-input"
+                    className="file-input"
+                  />
+                  <label htmlFor="linkedin-csv-input" className="file-input-label">
+                    <span className="material-symbols-outlined">description</span>
+                    {linkedInFile ? linkedInFile.name : 'Choose CSV file'}
+                  </label>
+                </div>
+
+                <button
+                  className="export-button"
+                  onClick={isImportingLinkedIn ? cancelLinkedInImport : handleLinkedInImport}
+                  disabled={!linkedInFile && !isImportingLinkedIn}
+                >
+                  <span className={`material-symbols-outlined${isImportingLinkedIn ? ' spinning' : ''}`}>
+                    {isImportingLinkedIn ? 'sync' : 'upload'}
+                  </span>
+                  {isImportingLinkedIn ? 'Cancel' : 'Import Contacts'}
+                </button>
+              </div>
+
+              {/* Progress/Status Display */}
+              {(isImportingLinkedIn || linkedInResult || linkedInError) && (
+                <div className="linkedin-import-status">
+                  {isImportingLinkedIn && linkedInProgress && (
+                    <>
+                      <div className="progress-bar-container">
+                        <div
+                          className="progress-bar-fill"
+                          style={{ width: `${(linkedInProgress.current / linkedInProgress.total) * 100}%` }}
+                        />
+                      </div>
+                      <div className="progress-text">
+                        Processing {linkedInProgress.current} of {linkedInProgress.total} contacts...
+                      </div>
+                    </>
+                  )}
+
+                  {linkedInResult && (
+                    <div className="import-complete">
+                      <div className="import-complete-header">
+                        <span className="material-symbols-outlined success-icon">check_circle</span>
+                        <span>Import complete</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {linkedInError && (
+                    <div className="import-error">
+                      <span className="material-symbols-outlined">error</span>
+                      <span>{linkedInError}</span>
+                    </div>
+                  )}
+
+                  {/* Stats - show during import and after completion */}
+                  {(linkedInProgress || linkedInResult) && (
+                    <div className="import-stats">
+                      <div className="stat created">
+                        <span className="stat-value">
+                          {linkedInResult?.created ?? linkedInProgress?.created ?? 0}
+                        </span>
+                        <span className="stat-label">Created</span>
+                      </div>
+                      <div className="stat updated">
+                        <span className="stat-value">
+                          {linkedInResult?.updated ?? linkedInProgress?.updated ?? 0}
+                        </span>
+                        <span className="stat-label">Updated</span>
+                      </div>
+                      <div className="stat skipped">
+                        <span className="stat-value">
+                          {linkedInResult?.skipped ?? linkedInProgress?.skipped ?? 0}
+                        </span>
+                        <span className="stat-label">Skipped</span>
+                      </div>
+                      {linkedInResult?.failed !== undefined && linkedInResult.failed > 0 && (
+                        <div className="stat failed">
+                          <span className="stat-value">{linkedInResult.failed}</span>
+                          <span className="stat-label">Failed</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         {/* Danger Zone Section */}

@@ -32,7 +32,7 @@ export function InvalidLinksCleanup() {
     if (searchedPatterns.length === 0) return;
 
     removeMutation.mutate(searchedPatterns, {
-      onSuccess: (data) => {
+      onSuccess: () => {
         setMatches([]);
         setHasSearched(false);
         setInputValue('');

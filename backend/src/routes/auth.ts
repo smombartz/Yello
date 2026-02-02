@@ -48,28 +48,64 @@ function generateSessionId(): string {
   return randomBytes(32).toString('hex');
 }
 
+// Token data for storing OAuth tokens
+interface TokenData {
+  accessToken: string;
+  refreshToken?: string;
+  expiresIn?: number;
+}
+
 // Create or update user from Google profile
-function upsertUser(googleId: string, email: string, name: string | null, avatarUrl: string | null): UserRow {
+function upsertUser(
+  googleId: string,
+  email: string,
+  name: string | null,
+  avatarUrl: string | null,
+  tokenData?: TokenData
+): UserRow {
   const db = getDatabase();
+
+  // Calculate token expiration time
+  const tokenExpiresAt = tokenData?.expiresIn
+    ? new Date(Date.now() + tokenData.expiresIn * 1000).toISOString()
+    : null;
 
   // Check if user exists
   const existing = db.prepare('SELECT * FROM users WHERE google_id = ?').get(googleId) as UserRow | undefined;
 
   if (existing) {
-    // Update existing user
-    db.prepare(`
-      UPDATE users
-      SET email = ?, name = ?, avatar_url = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE google_id = ?
-    `).run(email, name, avatarUrl, googleId);
+    // Update existing user with tokens if provided
+    if (tokenData) {
+      db.prepare(`
+        UPDATE users
+        SET email = ?, name = ?, avatar_url = ?,
+            access_token = ?, refresh_token = COALESCE(?, refresh_token), token_expires_at = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE google_id = ?
+      `).run(email, name, avatarUrl, tokenData.accessToken, tokenData.refreshToken || null, tokenExpiresAt, googleId);
+    } else {
+      db.prepare(`
+        UPDATE users
+        SET email = ?, name = ?, avatar_url = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE google_id = ?
+      `).run(email, name, avatarUrl, googleId);
+    }
 
     return db.prepare('SELECT * FROM users WHERE google_id = ?').get(googleId) as UserRow;
   } else {
-    // Create new user
+    // Create new user with tokens
     const result = db.prepare(`
-      INSERT INTO users (google_id, email, name, avatar_url)
-      VALUES (?, ?, ?, ?)
-    `).run(googleId, email, name, avatarUrl);
+      INSERT INTO users (google_id, email, name, avatar_url, access_token, refresh_token, token_expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      googleId,
+      email,
+      name,
+      avatarUrl,
+      tokenData?.accessToken || null,
+      tokenData?.refreshToken || null,
+      tokenExpiresAt
+    );
 
     return db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid) as UserRow;
   }
@@ -171,7 +207,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
       try {
         // Exchange authorization code for access token
         const tokenResponse = await fastify.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
-        const accessToken = tokenResponse.token.access_token;
+        const accessToken = tokenResponse.token.access_token as string;
+        const refreshToken = tokenResponse.token.refresh_token as string | undefined;
+        const expiresIn = tokenResponse.token.expires_in as number | undefined;
 
         // Fetch user profile from Google
         const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -186,12 +224,13 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
         const userInfo = await userInfoResponse.json() as GoogleUserInfo;
 
-        // Create or update user in database
+        // Create or update user in database with tokens
         const user = upsertUser(
           userInfo.id,
           userInfo.email,
           userInfo.name || null,
-          userInfo.picture || null
+          userInfo.picture || null,
+          { accessToken, refreshToken, expiresIn }
         );
 
         // Fetch and store profile images in background (don't block the response)

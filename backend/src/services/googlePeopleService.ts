@@ -40,11 +40,16 @@ export async function fetchGoogleContactsPhotos(accessToken: string): Promise<Go
       }
 
       const data = (await response.json()) as OtherContactsResponse;
+      console.log(`[GooglePeople] API response otherContacts count: ${data.otherContacts?.length || 0}`);
 
       if (data.otherContacts) {
         for (const contact of data.otherContacts) {
           const email = contact.emailAddresses?.[0]?.value;
           const photo = contact.photos?.find(p => p.metadata?.primary)?.url || contact.photos?.[0]?.url;
+
+          if (email) {
+            console.log(`[GooglePeople] Found: ${email} -> ${photo ? 'has photo' : 'no photo'}`);
+          }
 
           if (email && photo) {
             contacts.push({ email: email.toLowerCase(), photoUrl: photo });
@@ -55,9 +60,10 @@ export async function fetchGoogleContactsPhotos(accessToken: string): Promise<Go
       pageToken = data.nextPageToken;
     } while (pageToken);
 
+    console.log(`[GooglePeople] Total contacts with photos returned: ${contacts.length}`);
     return contacts;
   } catch (error) {
-    console.error('Error fetching Google contacts:', error);
+    console.error('[GooglePeople] Error fetching Google contacts:', error);
     return [];
   }
 }

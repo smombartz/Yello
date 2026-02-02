@@ -97,6 +97,7 @@ export function useMergeContacts() {
       queryClient.invalidateQueries({ queryKey: ['duplicates'] });
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       queryClient.invalidateQueries({ queryKey: ['contactCount'] });
+      queryClient.invalidateQueries({ queryKey: ['socialLinks'] });
     },
   });
 }

@@ -291,6 +291,20 @@ export function getDatabase(): DatabaseType {
   // Run geocoding migration
   runGeocodingMigration(db);
 
+  // Migration: Add token columns to users table for Google OAuth
+  const usersTableInfo = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+  const hasAccessToken = usersTableInfo.some(col => col.name === 'access_token');
+
+  if (!hasAccessToken) {
+    console.log('Adding token columns to users table...');
+    db.exec(`
+      ALTER TABLE users ADD COLUMN access_token TEXT;
+      ALTER TABLE users ADD COLUMN refresh_token TEXT;
+      ALTER TABLE users ADD COLUMN token_expires_at DATETIME;
+    `);
+    console.log('Token columns added successfully');
+  }
+
   // Migration: Populate profile_images from existing avatar_url
   const profileImagesMigrationNeeded = (() => {
     const usersWithAvatars = db.prepare(`

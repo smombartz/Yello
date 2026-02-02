@@ -378,6 +378,18 @@ export interface SocialLinksFixAllResponse {
   deleted: number;
 }
 
+// Lightweight group for bulk operations (no full contact details)
+export interface SocialLinksCrossContactGroupLight {
+  id: string;
+  contactIds: number[];
+  primaryContactId: number;
+}
+
+export interface SocialLinksCrossContactAllGroupsResponse {
+  groups: SocialLinksCrossContactGroupLight[];
+  totalGroups: number;
+}
+
 // Invalid Links Cleanup types
 export interface InvalidLinkMatch {
   contactId: number;
