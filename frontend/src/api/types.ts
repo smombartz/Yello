@@ -171,7 +171,7 @@ export interface MergeResponse {
 }
 
 // Cleanup types
-export type CleanupMode = 'empty' | 'problematic';
+export type CleanupMode = 'empty' | 'problematic' | 'social-links' | 'invalid-links';
 
 export type EmptyContactType = 'truly_empty' | 'name_only';
 
@@ -335,4 +335,66 @@ export interface UpdateUserSettingsRequest {
   avatarUrl?: string | null;
   website?: string | null;
   linkedinUrl?: string | null;
+}
+
+// Social Links Cleanup types
+export type SocialLinksMode = 'cross-contact' | 'within-contact';
+
+export interface SocialLinksSummary {
+  crossContact: number;
+  withinContact: number;
+}
+
+export interface SocialLinksCrossContactResponse {
+  groups: DuplicateGroup[];
+  totalGroups: number;
+  limit: number;
+  offset: number;
+}
+
+export interface SocialUrlIssue {
+  id: number;
+  url: string;
+  platform: string;
+  username: string;
+}
+
+export interface WithinContactIssue {
+  contactId: number;
+  displayName: string;
+  photoUrl: string | null;
+  socialUrls: SocialUrlIssue[];
+}
+
+export interface SocialLinksWithinContactResponse {
+  contacts: WithinContactIssue[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface SocialLinksFixAllResponse {
+  migrated: number;
+  deleted: number;
+}
+
+// Invalid Links Cleanup types
+export interface InvalidLinkMatch {
+  contactId: number;
+  contactName: string;
+  source: 'social_profiles' | 'urls';
+  platform: string | null;
+  value: string;
+  recordId: number;
+}
+
+export interface InvalidLinksSearchResponse {
+  matches: InvalidLinkMatch[];
+  totalCount: number;
+}
+
+export interface InvalidLinksRemoveResponse {
+  deletedCount: number;
+  deletedFromSocialProfiles: number;
+  deletedFromUrls: number;
 }
