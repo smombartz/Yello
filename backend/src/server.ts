@@ -18,6 +18,8 @@ import settingsRoutes from './routes/settings.js';
 import mapRoutes from './routes/map.js';
 import authRoutes from './routes/auth.js';
 import profileImagesRoutes from './routes/profileImages.js';
+import socialLinksCleanupRoutes from './routes/socialLinksCleanup.js';
+import invalidLinksCleanupRoutes from './routes/invalidLinksCleanup.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -90,6 +92,8 @@ await app.register(contactRoutes, { prefix: '/api/contacts' });
 await app.register(importRoutes, { prefix: '/api' });
 await app.register(duplicatesRoutes, { prefix: '/api/duplicates' });
 await app.register(cleanupRoutes, { prefix: '/api/cleanup' });
+await app.register(socialLinksCleanupRoutes, { prefix: '/api/cleanup/social-links' });
+await app.register(invalidLinksCleanupRoutes, { prefix: '/api/cleanup/invalid-links' });
 await app.register(archiveRoutes, { prefix: '/api/archive' });
 await app.register(settingsRoutes, { prefix: '/api/settings' });
 await app.register(mapRoutes, { prefix: '/api/map' });
