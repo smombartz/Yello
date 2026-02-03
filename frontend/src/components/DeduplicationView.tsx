@@ -8,7 +8,7 @@ import { useArchiveContacts } from '../api/archiveHooks';
 import type { ConfidenceLevel, DeduplicationMode, DuplicateGroup } from '../api/types';
 
 interface DeduplicationViewProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 interface UndoState {

@@ -1,17 +1,35 @@
 import { useState, useRef, useEffect } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import logoSvg from '../assets/logo.svg';
+
+interface NavItemLinkProps {
+  to: string;
+  icon: string;
+  label: string;
+}
+
+function NavItemLink({ to, icon, label }: NavItemLinkProps) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+    >
+      <span className="material-symbols-outlined">{icon}</span>
+      <span>{label}</span>
+    </NavLink>
+  );
+}
 
 interface NavItemProps {
   icon: string;
   label: string;
-  active?: boolean;
   onClick?: () => void;
 }
 
-function NavItem({ icon, label, active, onClick }: NavItemProps) {
+function NavItem({ icon, label, onClick }: NavItemProps) {
   return (
-    <div className={`nav-item ${active ? 'active' : ''}`} onClick={onClick}>
+    <div className="nav-item" onClick={onClick}>
       <span className="material-symbols-outlined">{icon}</span>
       <span>{label}</span>
     </div>
@@ -19,18 +37,12 @@ function NavItem({ icon, label, active, onClick }: NavItemProps) {
 }
 
 interface SidebarProps {
-  onDeduplicateClick?: () => void;
-  onCleanupClick?: () => void;
-  onArchivedClick?: () => void;
-  onGroupsClick?: () => void;
-  onMapClick?: () => void;
-  onSettingsClick?: () => void;
-  onBackToContacts?: () => void;
-  currentView?: 'contacts' | 'deduplication' | 'cleanup' | 'archived' | 'groups' | 'map' | 'settings';
+  currentView?: 'contacts' | 'merge' | 'cleanup' | 'archived' | 'groups' | 'map' | 'settings';
 }
 
-export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, onGroupsClick, onMapClick, onSettingsClick, onBackToContacts, currentView = 'contacts' }: SidebarProps) {
+export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
   const { user, logout, isLoggingOut } = useAuth();
+  const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -59,7 +71,7 @@ export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, o
 
   const handleSettingsClick = () => {
     setShowUserMenu(false);
-    onSettingsClick?.();
+    navigate('/settings');
   };
 
   const handleLogout = () => {
@@ -75,13 +87,13 @@ export function Sidebar({ onDeduplicateClick, onCleanupClick, onArchivedClick, o
 
       <nav className="sidebar-nav">
         <NavItem icon="dashboard" label="Dashboard" />
-        <NavItem icon="contacts" label="All Contacts" active={currentView === 'contacts'} onClick={onBackToContacts} />
+        <NavItemLink to="/contacts" icon="contacts" label="All Contacts" />
         <NavItem icon="star" label="Favorites" />
-        <NavItem icon="map" label="Map" active={currentView === 'map'} onClick={onMapClick} />
-        <NavItem icon="group" label="Groups" active={currentView === 'groups'} onClick={onGroupsClick} />
-        <NavItem icon="archive" label="Archived" active={currentView === 'archived'} onClick={onArchivedClick} />
-        <NavItem icon="merge" label="Merge" active={currentView === 'deduplication'} onClick={onDeduplicateClick} />
-        <NavItem icon="cleaning_services" label="Cleanup" active={currentView === 'cleanup'} onClick={onCleanupClick} />
+        <NavItemLink to="/map" icon="map" label="Map" />
+        <NavItemLink to="/groups" icon="group" label="Groups" />
+        <NavItemLink to="/archived" icon="archive" label="Archived" />
+        <NavItemLink to="/merge" icon="merge" label="Merge" />
+        <NavItemLink to="/cleanup" icon="cleaning_services" label="Cleanup" />
 
         <div className="nav-spacer" />
       </nav>

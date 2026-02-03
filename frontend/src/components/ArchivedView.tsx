@@ -8,7 +8,7 @@ import {
 } from '../api/archiveHooks';
 
 interface ArchivedViewProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 interface ToastState {

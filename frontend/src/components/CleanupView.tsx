@@ -15,7 +15,7 @@ import type {
 } from '../api/types';
 
 interface CleanupViewProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 interface ToastState {

@@ -3,7 +3,7 @@ import { useGroups } from '../api/hooks';
 import { ContactList } from './ContactList';
 
 interface GroupsViewProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 export function GroupsView({ onBack: _onBack }: GroupsViewProps) {

@@ -10,7 +10,7 @@ import {
 } from '../api/settingsHooks';
 
 interface SettingsViewProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 interface ToastState {

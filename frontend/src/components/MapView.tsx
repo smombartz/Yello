@@ -22,7 +22,7 @@ L.Icon.Default.mergeOptions({
 });
 
 interface MapViewProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 // Create a custom avatar marker icon

@@ -113,6 +113,11 @@ body {
   transition: background-color 0.15s, color 0.15s;
 }
 
+a.nav-item {
+  text-decoration: none;
+  color: inherit;
+}
+
 .nav-item:hover {
   background-color: var(--stitch-background);
   color: var(--stitch-text-main);
