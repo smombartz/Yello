@@ -3,6 +3,11 @@ import type { DeduplicationMode, ConfidenceLevel } from '../schemas/duplicates.j
 import type { ContactDetail, DuplicateGroup, ContactSocialProfile } from '../types/index.js';
 import { getPhotoUrl } from './photoProcessor.js';
 import { namesMatch } from './nameMatchingService.js';
+import {
+  countCrossContactDuplicates,
+  findCrossContactDuplicates,
+  findAllCrossContactGroups
+} from './socialLinksCleanupService.js';
 
 interface DuplicateMatch {
   matchValue: string;
@@ -54,21 +59,6 @@ function findAddressDuplicates(limit: number, offset: number): DuplicateMatch[] 
   `).all(limit, offset) as DuplicateMatch[];
 }
 
-function findSocialDuplicates(limit: number, offset: number): DuplicateMatch[] {
-  const db = getDatabase();
-  return db.prepare(`
-    SELECT
-      s.platform || ':' || s.username as matchValue,
-      GROUP_CONCAT(DISTINCT s.contact_id) as contactIds
-    FROM contact_social_profiles s
-    JOIN contacts c ON s.contact_id = c.id
-    WHERE c.archived_at IS NULL
-    GROUP BY s.platform, s.username
-    HAVING COUNT(DISTINCT s.contact_id) > 1
-    ORDER BY COUNT(DISTINCT s.contact_id) DESC
-    LIMIT ? OFFSET ?
-  `).all(limit, offset) as DuplicateMatch[];
-}
 
 function countEmailDuplicateGroups(): number {
   const db = getDatabase();
@@ -116,20 +106,6 @@ function countAddressDuplicateGroups(): number {
   return result.count;
 }
 
-function countSocialDuplicateGroups(): number {
-  const db = getDatabase();
-  const result = db.prepare(`
-    SELECT COUNT(*) as count FROM (
-      SELECT 1
-      FROM contact_social_profiles s
-      JOIN contacts c ON s.contact_id = c.id
-      WHERE c.archived_at IS NULL
-      GROUP BY s.platform, s.username
-      HAVING COUNT(DISTINCT s.contact_id) > 1
-    )
-  `).get() as { count: number };
-  return result.count;
-}
 
 // ============================================================
 // Recommended Duplicates Algorithm
@@ -610,14 +586,14 @@ export function getDuplicateSummary(): {
   email: number;
   phone: number;
   address: number;
-  social: number;
+  socialLinks: number;
   recommended: { veryHigh: number; high: number; medium: number; total: number };
 } {
   return {
     email: countEmailDuplicateGroups(),
     phone: countPhoneDuplicateGroups(),
     address: countAddressDuplicateGroups(),
-    social: countSocialDuplicateGroups(),
+    socialLinks: countCrossContactDuplicates(),
     recommended: countRecommendedDuplicateGroups()
   };
 }
@@ -781,7 +757,18 @@ export function getAllDuplicateGroupIds(
     return { groups: lightGroups, totalGroups: lightGroups.length };
   }
 
-  // For simple modes (email, phone, address, social), fetch all matches without pagination
+  // Handle social-links mode separately (uses different data structure)
+  if (mode === 'social-links') {
+    const result = findAllCrossContactGroups();
+    const lightGroups: DuplicateGroupLight[] = result.groups.map(g => ({
+      id: g.id,
+      contactIds: g.contactIds,
+      primaryContactId: g.primaryContactId
+    }));
+    return { groups: lightGroups, totalGroups: result.totalGroups };
+  }
+
+  // For simple modes (email, phone, address), fetch all matches without pagination
   let allMatches: DuplicateMatch[];
 
   switch (mode) {
@@ -793,9 +780,6 @@ export function getAllDuplicateGroupIds(
       break;
     case 'address':
       allMatches = findAddressDuplicatesAll();
-      break;
-    case 'social':
-      allMatches = findSocialDuplicatesAll();
       break;
   }
 
@@ -854,20 +838,6 @@ function findAddressDuplicatesAll(): DuplicateMatch[] {
   `).all() as DuplicateMatch[];
 }
 
-function findSocialDuplicatesAll(): DuplicateMatch[] {
-  const db = getDatabase();
-  return db.prepare(`
-    SELECT
-      s.platform || ':' || s.username as matchValue,
-      GROUP_CONCAT(DISTINCT s.contact_id) as contactIds
-    FROM contact_social_profiles s
-    JOIN contacts c ON s.contact_id = c.id
-    WHERE c.archived_at IS NULL
-    GROUP BY s.platform, s.username
-    HAVING COUNT(DISTINCT s.contact_id) > 1
-    ORDER BY COUNT(DISTINCT s.contact_id) DESC
-  `).all() as DuplicateMatch[];
-}
 
 export function findDuplicates(
   mode: DeduplicationMode,
@@ -878,6 +848,17 @@ export function findDuplicates(
   // Handle recommended mode separately
   if (mode === 'recommended') {
     return getRecommendedDuplicates(confidenceLevels, limit, offset);
+  }
+
+  // Handle social-links mode separately (uses different service)
+  if (mode === 'social-links') {
+    const result = findCrossContactDuplicates(limit, offset);
+    // Update matchingField to 'social-links' instead of 'social'
+    const groups = result.groups.map(g => ({
+      ...g,
+      matchingField: 'social-links' as const
+    }));
+    return { groups, totalGroups: result.totalGroups };
   }
 
   let matches: DuplicateMatch[];
@@ -895,10 +876,6 @@ export function findDuplicates(
     case 'address':
       matches = findAddressDuplicates(limit, offset);
       totalGroups = countAddressDuplicateGroups();
-      break;
-    case 'social':
-      matches = findSocialDuplicates(limit, offset);
-      totalGroups = countSocialDuplicateGroups();
       break;
   }
 

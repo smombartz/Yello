@@ -1961,6 +1961,18 @@ a.nav-item {
   height: 100%;
 }
 
+.social-links-description {
+  padding: 1rem 1.5rem;
+  background-color: var(--stitch-card-bg);
+  border-bottom: 1px solid var(--stitch-border);
+  color: var(--stitch-text-secondary);
+  font-size: 0.875rem;
+}
+
+.social-links-description p {
+  margin: 0;
+}
+
 .social-links-tabs {
   display: flex;
   gap: 0.5rem;

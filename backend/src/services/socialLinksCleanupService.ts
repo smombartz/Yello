@@ -260,7 +260,7 @@ export function findCrossContactDuplicates(
     return {
       id: `social-${offset + index}-${group.platform}-${group.username}`,
       matchingValue: `${group.platform}:${group.username}`,
-      matchingField: 'social' as const,
+      matchingField: 'social-links' as const,
       contacts: contactDetails,
     };
   });

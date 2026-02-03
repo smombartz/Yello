@@ -108,8 +108,8 @@ export function DuplicateContactCard({
           </div>
         ))}
 
-        {/* Social mode: show all social profiles */}
-        {matchingField === 'social' && contact.socialProfiles.map((social, idx) => (
+        {/* Social Links mode: show all social profiles */}
+        {matchingField === 'social-links' && contact.socialProfiles.map((social, idx) => (
           <div
             key={idx}
             className={`duplicate-card-field ${isMatchingSocialSingle(social, matchingValue) ? 'matching' : ''}`}
@@ -175,7 +175,7 @@ export function DuplicateContactCard({
         {((matchingField === 'email' && contact.emails.length === 0) ||
           (matchingField === 'phone' && contact.phones.length === 0) ||
           (matchingField === 'address' && contact.addresses.length === 0) ||
-          (matchingField === 'social' && contact.socialProfiles.length === 0)) && (
+          (matchingField === 'social-links' && contact.socialProfiles.length === 0)) && (
           <div className="duplicate-card-field empty">
             <span className="value">No {matchingField} info</span>
           </div>

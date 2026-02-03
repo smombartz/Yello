@@ -12,7 +12,7 @@ const MODE_LABELS: Record<DeduplicationMode, string> = {
   email: 'Email',
   phone: 'Phone',
   address: 'Address',
-  social: 'Social',
+  'social-links': 'Social Links',
 };
 
 const MODE_ICONS: Record<DeduplicationMode, string> = {
@@ -20,10 +20,10 @@ const MODE_ICONS: Record<DeduplicationMode, string> = {
   email: 'mail',
   phone: 'phone',
   address: 'location_on',
-  social: 'share',
+  'social-links': 'share',
 };
 
-const MODES: DeduplicationMode[] = ['recommended', 'email', 'phone', 'address', 'social'];
+const MODES: DeduplicationMode[] = ['recommended', 'email', 'phone', 'address', 'social-links'];
 
 export function ModeSelector({ selectedMode, onModeChange, summary, isLoading }: ModeSelectorProps) {
   return (
@@ -31,7 +31,9 @@ export function ModeSelector({ selectedMode, onModeChange, summary, isLoading }:
       {MODES.map((mode) => {
         const count = mode === 'recommended'
           ? (summary?.recommended?.total ?? 0)
-          : (summary?.[mode] ?? 0);
+          : mode === 'social-links'
+            ? (summary?.socialLinks ?? 0)
+            : (summary?.[mode] ?? 0);
         const isActive = mode === selectedMode;
 
         return (

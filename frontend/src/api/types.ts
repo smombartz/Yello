@@ -110,7 +110,7 @@ export interface ImportResult {
 }
 
 // Deduplication types
-export type DeduplicationMode = 'email' | 'phone' | 'address' | 'social' | 'recommended';
+export type DeduplicationMode = 'email' | 'phone' | 'address' | 'social-links' | 'recommended';
 
 export type ConfidenceLevel = 'very_high' | 'high' | 'medium';
 
@@ -134,7 +134,7 @@ export interface DuplicateSummary {
   email: number;
   phone: number;
   address: number;
-  social: number;
+  socialLinks: number;
   recommended: {
     veryHigh: number;
     high: number;
@@ -338,18 +338,9 @@ export interface UpdateUserSettingsRequest {
 }
 
 // Social Links Cleanup types
-export type SocialLinksMode = 'cross-contact' | 'within-contact';
-
 export interface SocialLinksSummary {
   crossContact: number;
   withinContact: number;
-}
-
-export interface SocialLinksCrossContactResponse {
-  groups: DuplicateGroup[];
-  totalGroups: number;
-  limit: number;
-  offset: number;
 }
 
 export interface SocialUrlIssue {
@@ -376,18 +367,6 @@ export interface SocialLinksWithinContactResponse {
 export interface SocialLinksFixAllResponse {
   migrated: number;
   deleted: number;
-}
-
-// Lightweight group for bulk operations (no full contact details)
-export interface SocialLinksCrossContactGroupLight {
-  id: string;
-  contactIds: number[];
-  primaryContactId: number;
-}
-
-export interface SocialLinksCrossContactAllGroupsResponse {
-  groups: SocialLinksCrossContactGroupLight[];
-  totalGroups: number;
 }
 
 // Invalid Links Cleanup types

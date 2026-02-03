@@ -20,7 +20,7 @@ function formatMatchingValue(value: string, field: string, matchedCriteria?: str
     const parts = [street, city, postalCode].filter(Boolean);
     return parts.join(', ') || 'Same address';
   }
-  if (field === 'social') {
+  if (field === 'social-links') {
     const [platform, username] = value.split(':');
     return `${platform}: @${username}`;
   }

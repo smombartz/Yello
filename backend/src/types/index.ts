@@ -102,7 +102,7 @@ export interface ContactDetail extends Contact {
 }
 
 // Deduplication types
-export type DeduplicationMode = 'email' | 'phone' | 'address' | 'social' | 'recommended';
+export type DeduplicationMode = 'email' | 'phone' | 'address' | 'social-links' | 'recommended';
 
 export type ConfidenceLevel = 'very_high' | 'high' | 'medium';
 
@@ -126,7 +126,7 @@ export interface DuplicateSummary {
   email: number;
   phone: number;
   address: number;
-  social: number;
+  socialLinks: number;
   recommended: {
     veryHigh: number;
     high: number;

@@ -5,7 +5,7 @@ export const DeduplicationModeSchema = Type.Union([
   Type.Literal('email'),
   Type.Literal('phone'),
   Type.Literal('address'),
-  Type.Literal('social'),
+  Type.Literal('social-links'),
   Type.Literal('recommended')
 ]);
 
@@ -48,7 +48,7 @@ export const DuplicateSummarySchema = Type.Object({
   email: Type.Number(),
   phone: Type.Number(),
   address: Type.Number(),
-  social: Type.Number(),
+  socialLinks: Type.Number(),
   recommended: Type.Object({
     veryHigh: Type.Number(),
     high: Type.Number(),
