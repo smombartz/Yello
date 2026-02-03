@@ -45,7 +45,11 @@ export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [profileExpanded, setProfileExpanded] = useState(true);
+  const [exportExpanded, setExportExpanded] = useState(false);
+  const [photosExpanded, setPhotosExpanded] = useState(false);
   const [linkedInExpanded, setLinkedInExpanded] = useState(false);
+  const [dangerExpanded, setDangerExpanded] = useState(false);
   const [linkedInFile, setLinkedInFile] = useState<File | null>(null);
 
   // Sync form with loaded settings
@@ -182,141 +186,170 @@ export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
 
       <div className="settings-content">
         {/* Profile Section */}
-        <section className="settings-section">
-          <div className="settings-section-header">
-            <span className="material-symbols-outlined">person</span>
-            <h2>Profile</h2>
-          </div>
-          <div className="settings-section-content">
-            <div className="settings-form">
-              <div className="form-group">
-                <label htmlFor="name">Name</label>
-                <input
-                  id="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="Your name"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="email">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="your@email.com"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="phone">Phone</label>
-                <input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder="+1 234 567 8900"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="website">Website</label>
-                <input
-                  id="website"
-                  type="url"
-                  value={formData.website}
-                  onChange={(e) => handleInputChange('website', e.target.value)}
-                  placeholder="https://yourwebsite.com"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="linkedin">LinkedIn</label>
-                <input
-                  id="linkedin"
-                  type="url"
-                  value={formData.linkedinUrl}
-                  onChange={(e) => handleInputChange('linkedinUrl', e.target.value)}
-                  placeholder="https://linkedin.com/in/username"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="avatar">Avatar URL</label>
-                <input
-                  id="avatar"
-                  type="url"
-                  value={formData.avatarUrl}
-                  onChange={(e) => handleInputChange('avatarUrl', e.target.value)}
-                  placeholder="https://example.com/avatar.jpg"
-                />
-              </div>
-              <button
-                className="save-button"
-                onClick={handleSaveProfile}
-                disabled={updateMutation.isPending}
-              >
-                {updateMutation.isPending ? 'Saving...' : 'Save Profile'}
-              </button>
+        <section className={`settings-section collapsible-card${profileExpanded ? ' expanded' : ''}`}>
+          <button
+            className="collapsible-header"
+            onClick={() => setProfileExpanded(!profileExpanded)}
+          >
+            <div className="settings-section-header">
+              <span className="material-symbols-outlined">person</span>
+              <h2>Profile</h2>
             </div>
-          </div>
+            <span className={`material-symbols-outlined expand-icon${profileExpanded ? ' rotated' : ''}`}>
+              expand_more
+            </span>
+          </button>
+          {profileExpanded && (
+            <div className="collapsible-content">
+              <div className="settings-form">
+                <div className="form-group">
+                  <label htmlFor="name">Name</label>
+                  <input
+                    id="name"
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    placeholder="Your name"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="email">Email</label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    placeholder="your@email.com"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="phone">Phone</label>
+                  <input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    placeholder="+1 234 567 8900"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="website">Website</label>
+                  <input
+                    id="website"
+                    type="url"
+                    value={formData.website}
+                    onChange={(e) => handleInputChange('website', e.target.value)}
+                    placeholder="https://yourwebsite.com"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="linkedin">LinkedIn</label>
+                  <input
+                    id="linkedin"
+                    type="url"
+                    value={formData.linkedinUrl}
+                    onChange={(e) => handleInputChange('linkedinUrl', e.target.value)}
+                    placeholder="https://linkedin.com/in/username"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="avatar">Avatar URL</label>
+                  <input
+                    id="avatar"
+                    type="url"
+                    value={formData.avatarUrl}
+                    onChange={(e) => handleInputChange('avatarUrl', e.target.value)}
+                    placeholder="https://example.com/avatar.jpg"
+                  />
+                </div>
+                <button
+                  className="primary-button"
+                  onClick={handleSaveProfile}
+                  disabled={updateMutation.isPending}
+                >
+                  {updateMutation.isPending ? 'Saving...' : 'Save Profile'}
+                </button>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Export Section */}
-        <section className="settings-section">
-          <div className="settings-section-header">
-            <span className="material-symbols-outlined">download</span>
-            <h2>Export Data</h2>
-          </div>
-          <div className="settings-section-content">
-            <p className="settings-description">
-              Download all your contacts as a VCF file that can be imported into other applications.
-            </p>
-            <button className="export-button" onClick={handleExport}>
+        <section className={`settings-section collapsible-card${exportExpanded ? ' expanded' : ''}`}>
+          <button
+            className="collapsible-header"
+            onClick={() => setExportExpanded(!exportExpanded)}
+          >
+            <div className="settings-section-header">
               <span className="material-symbols-outlined">download</span>
-              Export All Contacts (VCF)
-            </button>
-          </div>
+              <h2>Export Data</h2>
+            </div>
+            <span className={`material-symbols-outlined expand-icon${exportExpanded ? ' rotated' : ''}`}>
+              expand_more
+            </span>
+          </button>
+          {exportExpanded && (
+            <div className="collapsible-content">
+              <p className="settings-description">
+                Download all your contacts as a VCF file that can be imported into other applications.
+              </p>
+              <button className="secondary-button" onClick={handleExport}>
+                <span className="material-symbols-outlined">download</span>
+                Export All Contacts (VCF)
+              </button>
+            </div>
+          )}
         </section>
 
         {/* Fetch Contact Photos Section */}
-        <section className="settings-section">
-          <div className="settings-section-header">
-            <span className="material-symbols-outlined">photo_library</span>
-            <h2>Fetch Contact Photos</h2>
-          </div>
-          <div className="settings-section-content">
-            <p className="settings-description">
-              Download profile photos for your contacts from Google Contacts and Gravatar.
-              Only contacts with email addresses and no existing photo will be updated.
-            </p>
-            {isStreaming && progress && (
-              <div className="photo-fetch-progress">
-                <div className="progress-bar-container">
-                  <div
-                    className="progress-bar-fill"
-                    style={{ width: `${(progress.current / progress.total) * 100}%` }}
-                  />
+        <section className={`settings-section collapsible-card${photosExpanded ? ' expanded' : ''}`}>
+          <button
+            className="collapsible-header"
+            onClick={() => setPhotosExpanded(!photosExpanded)}
+          >
+            <div className="settings-section-header">
+              <span className="material-symbols-outlined">photo_library</span>
+              <h2>Fetch Contact Photos</h2>
+            </div>
+            <span className={`material-symbols-outlined expand-icon${photosExpanded ? ' rotated' : ''}`}>
+              expand_more
+            </span>
+          </button>
+          {photosExpanded && (
+            <div className="collapsible-content">
+              <p className="settings-description">
+                Download profile photos for your contacts from Google Contacts and Gravatar.
+                Only contacts with email addresses and no existing photo will be updated.
+              </p>
+              {isStreaming && progress && (
+                <div className="photo-fetch-progress">
+                  <div className="progress-bar-container">
+                    <div
+                      className="progress-bar-fill"
+                      style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                    />
+                  </div>
+                  <div className="progress-text">
+                    Processing {progress.current} of {progress.total} contacts...
+                  </div>
+                  <div className="progress-stats">
+                    <span className="stat downloaded">Downloaded: {progress.downloaded}</span>
+                    <span className="stat skipped">Skipped: {progress.skipped}</span>
+                    <span className="stat failed">Failed: {progress.failed}</span>
+                  </div>
                 </div>
-                <div className="progress-text">
-                  Processing {progress.current} of {progress.total} contacts...
-                </div>
-                <div className="progress-stats">
-                  <span className="stat downloaded">Downloaded: {progress.downloaded}</span>
-                  <span className="stat skipped">Skipped: {progress.skipped}</span>
-                  <span className="stat failed">Failed: {progress.failed}</span>
-                </div>
-              </div>
-            )}
-            <button
-              className="export-button"
-              onClick={isStreaming ? cancelFetching : handleFetchPhotos}
-              disabled={false}
-            >
-              <span className={`material-symbols-outlined${isStreaming ? ' spinning' : ''}`}>
-                {isStreaming ? 'sync' : 'cloud_download'}
-              </span>
-              {isStreaming ? 'Cancel' : 'Fetch Contact Photos'}
-            </button>
-          </div>
+              )}
+              <button
+                className="secondary-button"
+                onClick={isStreaming ? cancelFetching : handleFetchPhotos}
+              >
+                <span className={`material-symbols-outlined${isStreaming ? ' spinning' : ''}`}>
+                  {isStreaming ? 'sync' : 'cloud_download'}
+                </span>
+                {isStreaming ? 'Cancel' : 'Fetch Contact Photos'}
+              </button>
+            </div>
+          )}
         </section>
 
         {/* Import LinkedIn Contacts Section */}
@@ -357,7 +390,7 @@ export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
                 </div>
 
                 <button
-                  className="export-button"
+                  className="secondary-button"
                   onClick={isImportingLinkedIn ? cancelLinkedInImport : handleLinkedInImport}
                   disabled={!linkedInFile && !isImportingLinkedIn}
                 >
@@ -437,25 +470,35 @@ export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
         </section>
 
         {/* Danger Zone Section */}
-        <section className="settings-section danger-zone">
-          <div className="settings-section-header">
-            <span className="material-symbols-outlined">warning</span>
-            <h2>Danger Zone</h2>
-          </div>
-          <div className="settings-section-content">
-            <div className="danger-item">
-              <div className="danger-info">
-                <h3>Delete All Contacts</h3>
-                <p>Permanently delete all contacts from the database. This action cannot be undone.</p>
-              </div>
-              <button
-                className="danger-button"
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                Delete All Contacts
-              </button>
+        <section className={`settings-section danger-zone collapsible-card${dangerExpanded ? ' expanded' : ''}`}>
+          <button
+            className="collapsible-header"
+            onClick={() => setDangerExpanded(!dangerExpanded)}
+          >
+            <div className="settings-section-header">
+              <span className="material-symbols-outlined">warning</span>
+              <h2>Danger Zone</h2>
             </div>
-          </div>
+            <span className={`material-symbols-outlined expand-icon${dangerExpanded ? ' rotated' : ''}`}>
+              expand_more
+            </span>
+          </button>
+          {dangerExpanded && (
+            <div className="collapsible-content">
+              <div className="danger-item">
+                <div className="danger-info">
+                  <h3>Delete All Contacts</h3>
+                  <p>Permanently delete all contacts from the database. This action cannot be undone.</p>
+                </div>
+                <button
+                  className="danger-button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  Delete All Contacts
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       </div>
 
