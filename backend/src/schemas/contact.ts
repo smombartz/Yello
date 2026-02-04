@@ -223,3 +223,23 @@ export const UpdateContactBodySchema = Type.Object({
 });
 
 export type UpdateContactBody = Static<typeof UpdateContactBodySchema>;
+
+export const CreateContactBodySchema = Type.Object({
+  firstName: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  lastName: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  displayName: Type.String({ minLength: 1 }),
+  company: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  title: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  notes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  birthday: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  emails: Type.Optional(Type.Array(UpdateContactEmailSchema)),
+  phones: Type.Optional(Type.Array(UpdateContactPhoneSchema)),
+  addresses: Type.Optional(Type.Array(UpdateContactAddressSchema)),
+  socialProfiles: Type.Optional(Type.Array(UpdateContactSocialProfileSchema)),
+  categories: Type.Optional(Type.Array(UpdateContactCategorySchema)),
+  instantMessages: Type.Optional(Type.Array(UpdateContactInstantMessageSchema)),
+  urls: Type.Optional(Type.Array(UpdateContactUrlSchema)),
+  relatedPeople: Type.Optional(Type.Array(UpdateContactRelatedPersonSchema))
+});
+
+export type CreateContactBody = Static<typeof CreateContactBodySchema>;

@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { getDatabase } from '../services/database.js';
+import { getDatabase, rebuildContactSearch } from '../services/database.js';
 import { getPhotoUrl } from '../services/photoProcessor.js';
 import { detectMergeConflicts, mergeContactsWithResolutions } from '../services/mergeService.js';
 import { geocodeAddress, isValidCoordinate } from '../services/geocoding.js';
@@ -17,7 +17,9 @@ import {
   ContactNotFoundSchema,
   GroupsResponseSchema,
   UpdateContactBodySchema,
-  UpdateContactBody
+  UpdateContactBody,
+  CreateContactBodySchema,
+  CreateContactBody
 } from '../schemas/contact.js';
 
 interface ContactRow {
@@ -314,6 +316,284 @@ export default async function contactsRoutes(
       total,
       page,
       totalPages
+    };
+  });
+
+  // POST /api/contacts - Create a new contact
+  fastify.post<{ Body: CreateContactBody }>('/', {
+    schema: {
+      body: CreateContactBodySchema,
+      response: {
+        201: ContactDetailSchema,
+        400: ContactNotFoundSchema
+      }
+    }
+  }, async (request, reply) => {
+    const data = request.body;
+    const db = getDatabase();
+
+    // Insert main contact
+    const insertContact = db.prepare(`
+      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `);
+
+    const result = insertContact.run(
+      data.firstName || null,
+      data.lastName || null,
+      data.displayName,
+      data.company || null,
+      data.title || null,
+      data.notes || null,
+      data.birthday || null
+    );
+
+    const contactId = result.lastInsertRowid as number;
+
+    // Insert emails
+    if (data.emails && data.emails.length > 0) {
+      const insertEmail = db.prepare(`
+        INSERT INTO contact_emails (contact_id, email, type, is_primary)
+        VALUES (?, ?, ?, ?)
+      `);
+      for (const email of data.emails) {
+        insertEmail.run(contactId, email.email, email.type, email.isPrimary ? 1 : 0);
+      }
+    }
+
+    // Insert phones
+    if (data.phones && data.phones.length > 0) {
+      const insertPhone = db.prepare(`
+        INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, is_primary)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      for (const phone of data.phones) {
+        insertPhone.run(contactId, phone.phone, phone.phoneDisplay, phone.countryCode, phone.type, phone.isPrimary ? 1 : 0);
+      }
+    }
+
+    // Insert addresses
+    if (data.addresses && data.addresses.length > 0) {
+      const insertAddress = db.prepare(`
+        INSERT INTO contact_addresses (contact_id, street, city, state, postal_code, country, type)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      const updateGeocode = db.prepare(`
+        UPDATE contact_addresses
+        SET latitude = ?, longitude = ?, geocoded_at = datetime('now')
+        WHERE id = ?
+      `);
+
+      for (const addr of data.addresses) {
+        const addrResult = insertAddress.run(contactId, addr.street, addr.city, addr.state, addr.postalCode, addr.country, addr.type);
+        const addressId = addrResult.lastInsertRowid;
+
+        // Geocode in background
+        geocodeAddress({
+          street: addr.street,
+          city: addr.city,
+          state: addr.state,
+          postalCode: addr.postalCode,
+          country: addr.country
+        }).then(coords => {
+          if (coords && isValidCoordinate(coords.latitude, coords.longitude)) {
+            updateGeocode.run(coords.latitude, coords.longitude, addressId);
+          }
+        }).catch(err => {
+          console.error('Background geocoding error:', err);
+        });
+      }
+    }
+
+    // Insert social profiles
+    if (data.socialProfiles && data.socialProfiles.length > 0) {
+      const insertSocial = db.prepare(`
+        INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url, type)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      for (const profile of data.socialProfiles) {
+        insertSocial.run(contactId, profile.platform, profile.username, profile.profileUrl, profile.type);
+      }
+    }
+
+    // Insert categories
+    if (data.categories && data.categories.length > 0) {
+      const insertCategory = db.prepare(`
+        INSERT INTO contact_categories (contact_id, category)
+        VALUES (?, ?)
+      `);
+      for (const cat of data.categories) {
+        insertCategory.run(contactId, cat.category);
+      }
+    }
+
+    // Insert instant messages
+    if (data.instantMessages && data.instantMessages.length > 0) {
+      const insertIM = db.prepare(`
+        INSERT INTO contact_instant_messages (contact_id, service, handle, type)
+        VALUES (?, ?, ?, ?)
+      `);
+      for (const im of data.instantMessages) {
+        insertIM.run(contactId, im.service, im.handle, im.type);
+      }
+    }
+
+    // Insert URLs
+    if (data.urls && data.urls.length > 0) {
+      const insertUrl = db.prepare(`
+        INSERT INTO contact_urls (contact_id, url, label, type)
+        VALUES (?, ?, ?, ?)
+      `);
+      for (const url of data.urls) {
+        insertUrl.run(contactId, url.url, url.label, url.type);
+      }
+    }
+
+    // Insert related people
+    if (data.relatedPeople && data.relatedPeople.length > 0) {
+      const insertRelated = db.prepare(`
+        INSERT INTO contact_related_people (contact_id, name, relationship)
+        VALUES (?, ?, ?)
+      `);
+      for (const person of data.relatedPeople) {
+        insertRelated.run(contactId, person.name, person.relationship);
+      }
+    }
+
+    // Update FTS5 index for search
+    rebuildContactSearch(db, contactId);
+
+    // Fetch and return the created contact
+    const contact = db.prepare(`
+      SELECT
+        id, first_name, last_name, display_name, company, title, notes, birthday,
+        photo_hash, raw_vcard, created_at, updated_at
+      FROM contacts
+      WHERE id = ?
+    `).get(contactId) as ContactRow;
+
+    const emails = db.prepare(`
+      SELECT id, contact_id, email, type, is_primary
+      FROM contact_emails
+      WHERE contact_id = ?
+    `).all(contactId) as EmailRow[];
+
+    const phones = db.prepare(`
+      SELECT id, contact_id, phone, phone_display, country_code, type, is_primary
+      FROM contact_phones
+      WHERE contact_id = ?
+    `).all(contactId) as PhoneRow[];
+
+    const addresses = db.prepare(`
+      SELECT id, contact_id, street, city, state, postal_code, country, type
+      FROM contact_addresses
+      WHERE contact_id = ?
+    `).all(contactId) as AddressRow[];
+
+    const socialProfiles = db.prepare(`
+      SELECT id, contact_id, platform, username, profile_url, type
+      FROM contact_social_profiles
+      WHERE contact_id = ?
+    `).all(contactId) as SocialProfileRow[];
+
+    const categories = db.prepare(`
+      SELECT id, contact_id, category
+      FROM contact_categories
+      WHERE contact_id = ?
+    `).all(contactId) as CategoryRow[];
+
+    const instantMessages = db.prepare(`
+      SELECT id, contact_id, service, handle, type
+      FROM contact_instant_messages
+      WHERE contact_id = ?
+    `).all(contactId) as InstantMessageRow[];
+
+    const urls = db.prepare(`
+      SELECT id, contact_id, url, label, type
+      FROM contact_urls
+      WHERE contact_id = ?
+    `).all(contactId) as UrlRow[];
+
+    const relatedPeople = db.prepare(`
+      SELECT id, contact_id, name, relationship
+      FROM contact_related_people
+      WHERE contact_id = ?
+    `).all(contactId) as RelatedPersonRow[];
+
+    reply.status(201);
+    return {
+      id: contact.id,
+      firstName: contact.first_name,
+      lastName: contact.last_name,
+      displayName: contact.display_name,
+      company: contact.company,
+      title: contact.title,
+      notes: contact.notes,
+      birthday: contact.birthday,
+      photoHash: contact.photo_hash,
+      rawVcard: contact.raw_vcard,
+      createdAt: contact.created_at,
+      updatedAt: contact.updated_at,
+      emails: emails.map(e => ({
+        id: e.id,
+        contactId: e.contact_id,
+        email: e.email,
+        type: e.type,
+        isPrimary: e.is_primary === 1
+      })),
+      phones: phones.map(p => ({
+        id: p.id,
+        contactId: p.contact_id,
+        phone: p.phone,
+        phoneDisplay: p.phone_display,
+        countryCode: p.country_code,
+        type: p.type,
+        isPrimary: p.is_primary === 1
+      })),
+      addresses: addresses.map(a => ({
+        id: a.id,
+        contactId: a.contact_id,
+        street: a.street,
+        city: a.city,
+        state: a.state,
+        postalCode: a.postal_code,
+        country: a.country,
+        type: a.type
+      })),
+      socialProfiles: socialProfiles.map(s => ({
+        id: s.id,
+        contactId: s.contact_id,
+        platform: s.platform,
+        username: s.username,
+        profileUrl: s.profile_url,
+        type: s.type
+      })),
+      categories: categories.map(c => ({
+        id: c.id,
+        contactId: c.contact_id,
+        category: c.category
+      })),
+      instantMessages: instantMessages.map(im => ({
+        id: im.id,
+        contactId: im.contact_id,
+        service: im.service,
+        handle: im.handle,
+        type: im.type
+      })),
+      urls: urls.map(u => ({
+        id: u.id,
+        contactId: u.contact_id,
+        url: u.url,
+        label: u.label,
+        type: u.type
+      })),
+      relatedPeople: relatedPeople.map(rp => ({
+        id: rp.id,
+        contactId: rp.contact_id,
+        name: rp.name,
+        relationship: rp.relationship
+      })),
+      photoUrl: getPhotoUrl(contact.photo_hash, 'medium')
     };
   });
 

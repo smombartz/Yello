@@ -1,10 +1,13 @@
+import { useNavigate } from 'react-router-dom';
+
 interface TopHeaderProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
-  onImportClick: () => void;
 }
 
-export function TopHeader({ searchQuery, onSearchChange, onImportClick }: TopHeaderProps) {
+export function TopHeader({ searchQuery, onSearchChange }: TopHeaderProps) {
+  const navigate = useNavigate();
+
   return (
     <header className="top-header">
       <div className="page-header">
@@ -25,7 +28,7 @@ export function TopHeader({ searchQuery, onSearchChange, onImportClick }: TopHea
           <span className="material-symbols-outlined">notifications</span>
         </button>
 
-        <button className="primary-button" onClick={onImportClick}>
+        <button className="primary-button" onClick={() => navigate('/contacts/new')}>
           <span className="material-symbols-outlined">add</span>
           <span>Add Contact</span>
         </button>

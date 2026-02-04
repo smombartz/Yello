@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { ContactsPage } from './components/ContactsPage';
+import { ContactDetailPage } from './components/ContactDetailPage';
+import { AddContactPage } from './components/AddContactPage';
 import { DeduplicationView } from './components/DeduplicationView';
 import { CleanupView } from './components/CleanupView';
 import { ArchivedView } from './components/ArchivedView';
@@ -123,6 +125,8 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
+        <Route path="contacts/new" element={<AddContactPage />} />
+        <Route path="contacts/:id" element={<ContactDetailPage />} />
         <Route path="contacts" element={<ContactsPage />} />
         <Route path="merge" element={<DeduplicationView />} />
         <Route path="cleanup" element={<CleanupView />} />

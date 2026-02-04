@@ -1,10 +1,11 @@
-import type { CleanupMode, CleanupSummary, SocialLinksSummary } from '../api/types';
+import type { CleanupMode, CleanupSummary, SocialLinksSummary, AddressCleanupSummary } from '../api/types';
 
 interface CleanupModeSelectorProps {
   selectedMode: CleanupMode;
   onModeChange: (mode: CleanupMode) => void;
   summary: CleanupSummary | undefined;
   socialLinksSummary?: SocialLinksSummary;
+  addressCleanupSummary?: AddressCleanupSummary;
   isLoading: boolean;
 }
 
@@ -13,6 +14,7 @@ const MODE_CONFIG: { mode: CleanupMode; label: string; icon: string }[] = [
   { mode: 'problematic', label: 'Problematic Emails', icon: 'warning' },
   { mode: 'social-links', label: 'Social Links', icon: 'share' },
   { mode: 'invalid-links', label: 'Invalid Links', icon: 'link_off' },
+  { mode: 'addresses', label: 'Addresses', icon: 'location_on' },
 ];
 
 export function CleanupModeSelector({
@@ -20,6 +22,7 @@ export function CleanupModeSelector({
   onModeChange,
   summary,
   socialLinksSummary,
+  addressCleanupSummary,
   isLoading
 }: CleanupModeSelectorProps) {
   const getCount = (mode: CleanupMode): number | null => {
@@ -29,6 +32,9 @@ export function CleanupModeSelector({
     }
     if (mode === 'invalid-links') {
       return null; // No count for invalid links - it's pattern-based
+    }
+    if (mode === 'addresses') {
+      return addressCleanupSummary?.totalContacts ?? 0;
     }
     if (!summary) return 0;
     return mode === 'empty' ? summary.empty.total : summary.problematic.total;

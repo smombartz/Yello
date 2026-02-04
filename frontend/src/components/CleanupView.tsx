@@ -5,8 +5,10 @@ import { CleanupFilters } from './CleanupFilters';
 import { CleanupContactList } from './CleanupContactList';
 import { SocialLinksCleanup } from './SocialLinksCleanup';
 import { InvalidLinksCleanup } from './InvalidLinksCleanup';
+import { AddressCleanup } from './AddressCleanup';
 import { useCleanupSummary, useCleanupContacts, useDeleteContacts, fetchAllCleanupContactIds } from '../api/cleanupHooks';
 import { useSocialLinksSummary } from '../api/socialLinksHooks';
+import { useAddressCleanupSummary } from '../api/addressCleanupHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
 import type {
   CleanupMode,
@@ -38,13 +40,14 @@ export function CleanupView({ onBack: _onBack }: CleanupViewProps) {
 
   const { data: summary, isLoading: isSummaryLoading } = useCleanupSummary(threshold);
   const { data: socialLinksSummary } = useSocialLinksSummary();
+  const { data: addressCleanupSummary } = useAddressCleanupSummary();
 
   const typesArray = selectedTypes.size > 0
     ? Array.from(selectedTypes) as (EmptyContactType[] | ProblematicContactType[])
     : undefined;
 
-  // Only fetch cleanup contacts when not in social-links mode
-  const shouldFetchContacts = selectedMode !== 'social-links' && selectedMode !== 'invalid-links';
+  // Only fetch cleanup contacts when not in social-links, invalid-links, or addresses mode
+  const shouldFetchContacts = selectedMode !== 'social-links' && selectedMode !== 'invalid-links' && selectedMode !== 'addresses';
   const {
     data: contactsData,
     isLoading: isContactsLoading,
@@ -209,10 +212,11 @@ export function CleanupView({ onBack: _onBack }: CleanupViewProps) {
           onModeChange={handleModeChange}
           summary={summary}
           socialLinksSummary={socialLinksSummary}
+          addressCleanupSummary={addressCleanupSummary}
           isLoading={isSummaryLoading}
         />
 
-        {selectedMode !== 'social-links' && selectedMode !== 'invalid-links' && (
+        {selectedMode !== 'social-links' && selectedMode !== 'invalid-links' && selectedMode !== 'addresses' && (
           <>
             <div className="cleanup-controls">
               {selectedMode === 'problematic' && (
@@ -271,6 +275,8 @@ export function CleanupView({ onBack: _onBack }: CleanupViewProps) {
           <SocialLinksCleanup />
         ) : selectedMode === 'invalid-links' ? (
           <InvalidLinksCleanup />
+        ) : selectedMode === 'addresses' ? (
+          <AddressCleanup />
         ) : isContactsLoading ? (
           <div className="cleanup-loading">
             <span className="material-symbols-outlined spinning">sync</span>

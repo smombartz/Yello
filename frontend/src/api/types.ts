@@ -171,7 +171,7 @@ export interface MergeResponse {
 }
 
 // Cleanup types
-export type CleanupMode = 'empty' | 'problematic' | 'social-links' | 'invalid-links';
+export type CleanupMode = 'empty' | 'problematic' | 'social-links' | 'invalid-links' | 'addresses';
 
 export type EmptyContactType = 'truly_empty' | 'name_only';
 
@@ -318,6 +318,24 @@ export interface UpdateContactRequest {
   relatedPeople?: UpdateContactRelatedPerson[];
 }
 
+export interface CreateContactRequest {
+  firstName?: string | null;
+  lastName?: string | null;
+  displayName: string;
+  company?: string | null;
+  title?: string | null;
+  notes?: string | null;
+  birthday?: string | null;
+  emails?: UpdateContactEmail[];
+  phones?: UpdateContactPhone[];
+  addresses?: UpdateContactAddress[];
+  socialProfiles?: UpdateContactSocialProfile[];
+  categories?: UpdateContactCategory[];
+  instantMessages?: UpdateContactInstantMessage[];
+  urls?: UpdateContactUrl[];
+  relatedPeople?: UpdateContactRelatedPerson[];
+}
+
 // Settings types
 export interface UserSettings {
   name: string | null;
@@ -388,4 +406,177 @@ export interface InvalidLinksRemoveResponse {
   deletedCount: number;
   deletedFromSocialProfiles: number;
   deletedFromUrls: number;
+}
+
+// Address Cleanup types (legacy combined view)
+export interface AddressCleanupSummary {
+  noStreetCount: number;
+  duplicateCount: number;
+  totalContacts: number;
+}
+
+export interface AddressWithIssues {
+  id: number;
+  contactId: number;
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
+  type: string | null;
+  isRecommended: boolean;
+  issues: ('no_street' | 'duplicate')[];
+}
+
+export interface AddressGroup {
+  fingerprint: string;
+  addresses: AddressWithIssues[];
+}
+
+export interface AddressCleanupContact {
+  id: number;
+  displayName: string;
+  company: string | null;
+  photoHash: string | null;
+  photoUrl: string | null;
+  addressGroups: AddressGroup[];
+}
+
+export interface AddressCleanupResponse {
+  contacts: AddressCleanupContact[];
+  total: number;
+}
+
+export interface AddressFix {
+  contactId: number;
+  keepAddressIds: number[];
+  removeAddressIds: number[];
+}
+
+export interface AddressFixResponse {
+  fixed: number;
+  removed: number;
+}
+
+export interface AddressCleanupBulkContact {
+  id: number;
+  keepAddressIds: number[];
+  removeAddressIds: number[];
+}
+
+export interface AddressCleanupBulkResponse {
+  contacts: AddressCleanupBulkContact[];
+  total: number;
+}
+
+// Address Normalize types (junk address removal)
+export type JunkIssueType = 'no_street' | 'empty' | 'placeholder';
+
+export interface JunkAddress {
+  id: number;
+  contactId: number;
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
+  type: string | null;
+  issue: JunkIssueType;
+}
+
+export interface NormalizeContact {
+  id: number;
+  displayName: string;
+  company: string | null;
+  photoUrl: string | null;
+  junkAddresses: JunkAddress[];
+}
+
+export interface NormalizeSummary {
+  junkCount: number;
+  totalContacts: number;
+}
+
+export interface NormalizeResponse {
+  contacts: NormalizeContact[];
+  total: number;
+}
+
+export interface NormalizeFixResponse {
+  removed: number;
+}
+
+export interface NormalizeAllIdsResponse {
+  addressIds: number[];
+  total: number;
+}
+
+// Address Duplicates types (within-contact duplicate merging)
+export interface DuplicatesSummary {
+  duplicateCount: number;
+  totalContacts: number;
+}
+
+export interface DuplicatesContact {
+  id: number;
+  displayName: string;
+  company: string | null;
+  photoHash: string | null;
+  photoUrl: string | null;
+  addressGroups: AddressGroup[];
+}
+
+export interface DuplicatesResponse {
+  contacts: DuplicatesContact[];
+  total: number;
+}
+
+// Address Geocoding types
+export type GeocodingStatus = 'pending' | 'failed' | 'geocoded';
+
+export type GeocodingFilter = 'all' | 'pending' | 'failed' | 'geocoded';
+
+export interface GeocodingSummary {
+  pending: number;
+  failed: number;
+  geocoded: number;
+  total: number;
+}
+
+export interface GeocodingAddress {
+  id: number;
+  contactId: number;
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
+  type: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  geocodedAt: string | null;
+  status: GeocodingStatus;
+}
+
+export interface GeocodingContact {
+  id: number;
+  displayName: string;
+  company: string | null;
+  photoUrl: string | null;
+  addresses: GeocodingAddress[];
+}
+
+export interface GeocodingResponse {
+  contacts: GeocodingContact[];
+  total: number;
+}
+
+export interface GeocodingBatchResult {
+  processed: number;
+  successful: number;
+  failed: number;
+}
+
+export interface GeocodingUpdateResponse {
+  address: GeocodingAddress;
 }

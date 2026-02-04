@@ -7,6 +7,7 @@ import type {
   ImportResult,
   GroupsResponse,
   UpdateContactRequest,
+  CreateContactRequest,
   MergePreviewResponse,
   MergeRequest,
   MergeResponse
@@ -94,6 +95,24 @@ export function useUpdateContact() {
       queryClient.setQueryData(['contact', updatedContact.id], updatedContact);
       // Invalidate contact list since display name or other visible fields may have changed
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+    },
+  });
+}
+
+export function useCreateContact() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateContactRequest) =>
+      fetchApi<ContactDetail>('/api/contacts', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (newContact) => {
+      queryClient.setQueryData(['contact', newContact.id], newContact);
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['contactCount'] });
       queryClient.invalidateQueries({ queryKey: ['groups'] });
     },
   });

@@ -1,6 +1,6 @@
 /**
- * Geocoding service using OpenStreetMap Nominatim API
- * Rate limited to 1 request per second per Nominatim usage policy
+ * Geocoding service using HERE.com Geocoding API
+ * 250,000 free requests/month, no rate limiting needed
  */
 
 interface GeocodingResult {
@@ -8,48 +8,22 @@ interface GeocodingResult {
   longitude: number;
 }
 
-interface NominatimResponse {
-  lat: string;
-  lon: string;
-  display_name: string;
+interface HereGeocodingResponse {
+  items: Array<{
+    position: {
+      lat: number;
+      lng: number;
+    };
+  }>;
 }
 
-// Queue for rate limiting - Nominatim requires max 1 req/sec
-// Using 2 seconds to be safe and avoid 503 errors
-let lastRequestTime = 0;
-const MIN_REQUEST_INTERVAL = 2000; // 2 seconds to avoid 503 errors
-const MAX_RETRIES = 2;
-const RETRY_DELAY = 5000; // 5 seconds before retry on 503
+const HERE_API_KEY = process.env.HERE_API_KEY || '';
 
 /**
- * Wait for rate limit
+ * Check if HERE API is configured
  */
-async function waitForRateLimit(): Promise<void> {
-  const now = Date.now();
-  const timeSinceLastRequest = now - lastRequestTime;
-
-  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
-    const waitTime = MIN_REQUEST_INTERVAL - timeSinceLastRequest;
-    await new Promise(resolve => setTimeout(resolve, waitTime));
-  }
-
-  lastRequestTime = Date.now();
-}
-
-/**
- * Fetch with retry on 503
- */
-async function fetchWithRetry(url: string, options: RequestInit, retries = MAX_RETRIES): Promise<Response> {
-  const response = await fetch(url, options);
-
-  if (response.status === 503 && retries > 0) {
-    console.log(`Nominatim 503 - waiting ${RETRY_DELAY/1000}s before retry (${retries} retries left)`);
-    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-    lastRequestTime = Date.now(); // Reset rate limit timer
-    return fetchWithRetry(url, options, retries - 1);
-  }
-
-  return response;
+export function isGeocodingConfigured(): boolean {
+  return HERE_API_KEY.length > 0;
 }
 
 /**
@@ -74,7 +48,7 @@ function buildAddressQuery(address: {
 }
 
 /**
- * Geocode an address using Nominatim
+ * Geocode an address using HERE.com API
  * Returns latitude/longitude or null if geocoding fails
  */
 export async function geocodeAddress(address: {
@@ -84,6 +58,11 @@ export async function geocodeAddress(address: {
   postalCode?: string | null;
   country?: string | null;
 }): Promise<GeocodingResult | null> {
+  if (!isGeocodingConfigured()) {
+    console.error('HERE API key not configured. Set HERE_API_KEY environment variable.');
+    return null;
+  }
+
   const query = buildAddressQuery(address);
 
   if (!query.trim()) {
@@ -91,33 +70,28 @@ export async function geocodeAddress(address: {
   }
 
   try {
-    await waitForRateLimit();
-
     const params = new URLSearchParams({
       q: query,
-      format: 'json',
-      limit: '1',
-      addressdetails: '0'
+      apiKey: HERE_API_KEY
     });
 
-    const response = await fetchWithRetry(
-      `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+    const response = await fetch(
+      `https://geocode.search.hereapi.com/v1/geocode?${params.toString()}`,
       {
         headers: {
-          'User-Agent': 'ElloCRM/1.0 (contact management app)',
           'Accept': 'application/json'
         }
       }
     );
 
     if (!response.ok) {
-      console.error(`Nominatim API error: ${response.status} ${response.statusText}`);
+      console.error(`HERE API error: ${response.status} ${response.statusText}`);
       return null;
     }
 
-    const results = await response.json() as NominatimResponse[];
+    const results = await response.json() as HereGeocodingResponse;
 
-    if (results.length === 0) {
+    if (!results.items || results.items.length === 0) {
       // Try a less specific search (just city + country)
       if (address.city || address.country) {
         const fallbackQuery = [address.city, address.state, address.country]
@@ -125,31 +99,26 @@ export async function geocodeAddress(address: {
           .join(', ');
 
         if (fallbackQuery !== query) {
-          await waitForRateLimit();
-
           const fallbackParams = new URLSearchParams({
             q: fallbackQuery,
-            format: 'json',
-            limit: '1',
-            addressdetails: '0'
+            apiKey: HERE_API_KEY
           });
 
-          const fallbackResponse = await fetchWithRetry(
-            `https://nominatim.openstreetmap.org/search?${fallbackParams.toString()}`,
+          const fallbackResponse = await fetch(
+            `https://geocode.search.hereapi.com/v1/geocode?${fallbackParams.toString()}`,
             {
               headers: {
-                'User-Agent': 'ElloCRM/1.0 (contact management app)',
                 'Accept': 'application/json'
               }
             }
           );
 
           if (fallbackResponse.ok) {
-            const fallbackResults = await fallbackResponse.json() as NominatimResponse[];
-            if (fallbackResults.length > 0) {
+            const fallbackResults = await fallbackResponse.json() as HereGeocodingResponse;
+            if (fallbackResults.items && fallbackResults.items.length > 0) {
               return {
-                latitude: parseFloat(fallbackResults[0].lat),
-                longitude: parseFloat(fallbackResults[0].lon)
+                latitude: fallbackResults.items[0].position.lat,
+                longitude: fallbackResults.items[0].position.lng
               };
             }
           }
@@ -160,8 +129,8 @@ export async function geocodeAddress(address: {
     }
 
     return {
-      latitude: parseFloat(results[0].lat),
-      longitude: parseFloat(results[0].lon)
+      latitude: results.items[0].position.lat,
+      longitude: results.items[0].position.lng
     };
   } catch (error) {
     console.error('Geocoding error:', error);
