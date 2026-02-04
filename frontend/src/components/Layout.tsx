@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
+import { BottomTabBar } from './BottomTabBar';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 type AppView = 'contacts' | 'merge' | 'cleanup' | 'archived' | 'groups' | 'map' | 'settings';
 
@@ -24,13 +26,24 @@ const viewToLayoutClass: Record<AppView, string> = {
   settings: 'app-layout settings-layout',
 };
 
+// Routes that are not accessible on mobile
+const DESKTOP_ONLY_ROUTES = ['/merge', '/cleanup', '/archived'];
+
 export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [modalOpen, setModalOpen] = useState(false);
 
   const currentView = pathToView[location.pathname] || 'contacts';
   const layoutClass = viewToLayoutClass[currentView];
+
+  // Redirect mobile users away from desktop-only routes
+  useEffect(() => {
+    if (isMobile && DESKTOP_ONLY_ROUTES.includes(location.pathname)) {
+      navigate('/contacts', { replace: true });
+    }
+  }, [isMobile, location.pathname, navigate]);
 
   // Listen for modal state changes from child components
   useEffect(() => {
@@ -58,10 +71,11 @@ export function Layout() {
 
   return (
     <div className={layoutClass}>
-      <Sidebar currentView={currentView} />
+      {!isMobile && <Sidebar currentView={currentView} />}
       <main className="main-content">
-        <Outlet context={{ setModalOpen: handleSetModalOpen }} />
+        <Outlet context={{ setModalOpen: handleSetModalOpen, isMobile }} />
       </main>
+      {isMobile && <BottomTabBar />}
     </div>
   );
 }

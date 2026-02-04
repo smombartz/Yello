@@ -4504,3 +4504,1596 @@ a.nav-item {
 .success-message .material-symbols-outlined {
   font-size: 20px;
 }
+
+/* ============================================================
+   Address Cleanup
+   ============================================================ */
+
+.address-cleanup {
+  padding: 0;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.address-cleanup-description {
+  padding: 0 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.address-cleanup-description p {
+  color: var(--stitch-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.address-cleanup-loading,
+.address-cleanup-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+  color: var(--stitch-text-secondary);
+}
+
+.address-cleanup-loading .material-symbols-outlined,
+.address-cleanup-empty .material-symbols-outlined {
+  font-size: 3rem;
+}
+
+.address-cleanup-empty .material-symbols-outlined {
+  color: #4ade80;
+}
+
+.address-cleanup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--stitch-border);
+}
+
+.address-cleanup-stats {
+  font-size: 14px;
+  color: var(--stitch-text-secondary);
+}
+
+.address-cleanup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+/* Address Cleanup Card */
+.address-cleanup-card {
+  background: var(--stitch-card-bg);
+  border: 1px solid var(--stitch-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.address-cleanup-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--stitch-border);
+  background: var(--stitch-background);
+}
+
+.address-cleanup-contact-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.address-cleanup-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.address-cleanup-avatar.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--stitch-border);
+  color: var(--stitch-text-secondary);
+}
+
+.address-cleanup-avatar.placeholder .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.address-cleanup-contact-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.address-cleanup-contact-name {
+  font-weight: 500;
+  color: var(--stitch-text-main);
+}
+
+.address-cleanup-contact-company {
+  font-size: 13px;
+  color: var(--stitch-text-secondary);
+}
+
+.address-cleanup-badge {
+  font-size: 12px;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.address-cleanup-groups {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.address-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.address-group-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 13px;
+  color: var(--stitch-text-secondary);
+}
+
+.address-group-label .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.address-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.address-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--stitch-border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.address-option:hover:not(.to-remove) {
+  border-color: var(--stitch-primary);
+  background: var(--stitch-primary-light);
+}
+
+.address-option.selected {
+  border-color: var(--stitch-primary);
+  background: var(--stitch-primary-light);
+}
+
+.address-option.to-remove {
+  background: #fef2f2;
+  border-color: #fecaca;
+  cursor: default;
+}
+
+.address-radio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 2px;
+}
+
+.address-radio .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--stitch-text-secondary);
+}
+
+.address-option.selected .address-radio .material-symbols-outlined {
+  color: var(--stitch-primary);
+}
+
+.address-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.address-text {
+  font-size: 14px;
+  color: var(--stitch-text-main);
+  line-height: 1.4;
+}
+
+.address-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.address-type {
+  font-size: 12px;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  background: var(--stitch-background);
+  color: var(--stitch-text-secondary);
+  text-transform: capitalize;
+}
+
+.address-issue {
+  font-size: 11px;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.address-issue.issue-no-street {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.address-issue.issue-duplicate {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.address-recommended {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 11px;
+  color: #059669;
+  font-weight: 500;
+}
+
+.address-recommended .material-symbols-outlined {
+  font-size: 14px;
+}
+
+.address-cleanup-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--stitch-border);
+  background: var(--stitch-background);
+}
+
+.address-skip-button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--stitch-border);
+  background: var(--stitch-card-bg);
+  color: var(--stitch-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.address-skip-button:hover:not(:disabled) {
+  border-color: var(--stitch-text-secondary);
+}
+
+.address-skip-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.address-apply-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: var(--stitch-primary);
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.address-apply-button:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.address-apply-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.address-apply-button .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Fix All Confirmation Dialog */
+.address-cleanup .fix-all-details,
+.normalize-view .fix-all-details,
+.duplicates-view .fix-all-details {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+  color: var(--stitch-text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.address-cleanup .fix-all-details li,
+.normalize-view .fix-all-details li,
+.duplicates-view .fix-all-details li {
+  margin-bottom: 0.5rem;
+}
+
+/* ============================================================
+   Address Sub-tabs (Normalize | Duplicates)
+   ============================================================ */
+
+.address-subtabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0 1.5rem 1rem;
+  border-bottom: 1px solid var(--stitch-border);
+}
+
+.address-subtab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--stitch-border);
+  background: var(--stitch-card-bg);
+  color: var(--stitch-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.address-subtab:hover {
+  border-color: var(--stitch-primary);
+  color: var(--stitch-text-main);
+}
+
+.address-subtab.active {
+  border-color: var(--stitch-primary);
+  background: var(--stitch-primary-light);
+  color: var(--stitch-primary);
+}
+
+.address-subtab .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.subtab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  background: var(--stitch-primary);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.address-subtab.active .subtab-badge {
+  background: var(--stitch-primary);
+}
+
+.address-subtab-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ============================================================
+   Address Normalize View
+   ============================================================ */
+
+.normalize-view {
+  display: flex;
+  flex-direction: column;
+}
+
+.normalize-loading,
+.normalize-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+  color: var(--stitch-text-secondary);
+}
+
+.normalize-loading .material-symbols-outlined,
+.normalize-empty .material-symbols-outlined {
+  font-size: 3rem;
+}
+
+.normalize-empty .material-symbols-outlined {
+  color: #4ade80;
+}
+
+.normalize-description {
+  padding: 1rem 1.5rem 0;
+}
+
+.normalize-description p {
+  color: var(--stitch-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.normalize-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--stitch-border);
+}
+
+.normalize-stats {
+  font-size: 14px;
+  color: var(--stitch-text-secondary);
+}
+
+.normalize-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+/* Normalize Card */
+.normalize-card {
+  background: var(--stitch-card-bg);
+  border: 1px solid var(--stitch-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.normalize-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--stitch-border);
+  background: var(--stitch-background);
+}
+
+.normalize-contact-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.normalize-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.normalize-avatar.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--stitch-border);
+  color: var(--stitch-text-secondary);
+}
+
+.normalize-avatar.placeholder .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.normalize-contact-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.normalize-contact-name {
+  font-weight: 500;
+  color: var(--stitch-text-main);
+}
+
+.normalize-contact-company {
+  font-size: 13px;
+  color: var(--stitch-text-secondary);
+}
+
+.normalize-badge {
+  font-size: 12px;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.normalize-addresses {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.normalize-address-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.normalize-address-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.normalize-address-text {
+  font-size: 14px;
+  color: var(--stitch-text-main);
+  line-height: 1.4;
+}
+
+.normalize-address-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.normalize-address-type {
+  font-size: 12px;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--stitch-text-secondary);
+  text-transform: capitalize;
+}
+
+.normalize-address-issue {
+  font-size: 11px;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.normalize-address-issue.issue-no-street {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.normalize-address-issue.issue-empty {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.normalize-address-issue.issue-placeholder {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.normalize-remove-single {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #dc2626;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.normalize-remove-single:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.normalize-remove-single:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.normalize-remove-single .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.normalize-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--stitch-border);
+  background: var(--stitch-background);
+}
+
+.normalize-skip-button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--stitch-border);
+  background: var(--stitch-card-bg);
+  color: var(--stitch-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.normalize-skip-button:hover:not(:disabled) {
+  border-color: var(--stitch-text-secondary);
+}
+
+.normalize-skip-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.normalize-remove-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: #dc2626;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.normalize-remove-button:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.normalize-remove-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.normalize-remove-button .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* ============================================================
+   Address Duplicates View
+   ============================================================ */
+
+.duplicates-view {
+  display: flex;
+  flex-direction: column;
+}
+
+.duplicates-loading,
+.duplicates-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+  color: var(--stitch-text-secondary);
+}
+
+.duplicates-loading .material-symbols-outlined,
+.duplicates-empty .material-symbols-outlined {
+  font-size: 3rem;
+}
+
+.duplicates-empty .material-symbols-outlined {
+  color: #4ade80;
+}
+
+.duplicates-description {
+  padding: 1rem 1.5rem 0;
+}
+
+.duplicates-description p {
+  color: var(--stitch-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.duplicates-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--stitch-border);
+}
+
+.duplicates-stats {
+  font-size: 14px;
+  color: var(--stitch-text-secondary);
+}
+
+.duplicates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+/* Add Contact Page */
+.add-contact-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.add-contact-content .expanded-section {
+  background: var(--stitch-card-bg);
+  border-radius: 0.75rem;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.add-contact-content .edit-name-fields {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 0.5rem;
+  border: none;
+  background-color: transparent;
+  color: var(--stitch-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s;
+  margin-right: 0.5rem;
+}
+
+.back-button:hover {
+  background-color: var(--stitch-background);
+}
+
+.back-button .material-symbols-outlined {
+  font-size: 1.5rem;
+}
+
+.secondary-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--stitch-border);
+  background-color: var(--stitch-card-bg);
+  color: var(--stitch-text-main);
+  font-weight: 500;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.secondary-button:hover {
+  background-color: var(--stitch-background);
+  border-color: var(--stitch-text-secondary);
+}
+
+.top-header .page-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.top-header .page-header h1 {
+  margin: 0;
+}
+
+/* Contact Detail Page */
+.contact-detail-content {
+  background-color: var(--stitch-card-bg);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.contact-detail-identity {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--stitch-border);
+}
+
+.contact-detail-name-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.contact-detail-name {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--stitch-text-main);
+}
+
+.contact-detail-company {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--stitch-text-secondary);
+}
+
+.contact-detail-content .expanded-content {
+  padding: 0;
+}
+
+.contact-detail-content .expanded-top-row {
+  padding-top: 0;
+}
+
+/* ============================================================
+   Address Geocoding View
+   ============================================================ */
+
+.geocoding-view {
+  display: flex;
+  flex-direction: column;
+}
+
+.geocoding-loading,
+.geocoding-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+  color: var(--stitch-text-secondary);
+}
+
+.geocoding-loading .material-symbols-outlined,
+.geocoding-empty .material-symbols-outlined {
+  font-size: 3rem;
+}
+
+.geocoding-empty .material-symbols-outlined {
+  color: var(--stitch-text-secondary);
+}
+
+.geocoding-description {
+  padding: 1rem 1.5rem 0;
+}
+
+.geocoding-description p {
+  color: var(--stitch-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.geocoding-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 14px;
+}
+
+.geocoding-summary-item {
+  font-weight: 500;
+}
+
+.geocoding-summary-item.pending {
+  color: var(--stitch-text-secondary);
+}
+
+.geocoding-summary-item.failed {
+  color: #dc2626;
+}
+
+.geocoding-summary-item.geocoded {
+  color: #16a34a;
+}
+
+.geocoding-summary-separator {
+  color: var(--stitch-border);
+}
+
+.geocoding-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--stitch-border);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.geocoding-filters {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.geocoding-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 6px;
+  border: 1px solid var(--stitch-border);
+  background: var(--stitch-card-bg);
+  color: var(--stitch-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.geocoding-filter-btn:hover {
+  border-color: var(--stitch-text-secondary);
+}
+
+.geocoding-filter-btn.active {
+  background: var(--stitch-primary);
+  border-color: var(--stitch-primary);
+  color: white;
+}
+
+.geocoding-filter-btn .filter-count {
+  font-size: 11px;
+  padding: 0.125rem 0.375rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.geocoding-filter-btn.active .filter-count {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.geocoding-bulk-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: var(--stitch-primary);
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.geocoding-bulk-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.geocoding-bulk-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.geocoding-bulk-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.geocoding-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+/* Geocoding Card */
+.geocoding-card {
+  background: var(--stitch-card-bg);
+  border: 1px solid var(--stitch-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.geocoding-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--stitch-border);
+  background: var(--stitch-background);
+}
+
+.geocoding-contact-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.geocoding-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.geocoding-avatar.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--stitch-border);
+  color: var(--stitch-text-secondary);
+}
+
+.geocoding-avatar.placeholder .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.geocoding-contact-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.geocoding-contact-name {
+  font-weight: 500;
+  color: var(--stitch-text-main);
+}
+
+.geocoding-contact-company {
+  font-size: 13px;
+  color: var(--stitch-text-secondary);
+}
+
+.geocoding-badge {
+  font-size: 12px;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: var(--stitch-background);
+  color: var(--stitch-text-secondary);
+  border: 1px solid var(--stitch-border);
+}
+
+.geocoding-addresses {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.geocoding-address-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--stitch-border);
+  background: var(--stitch-card-bg);
+}
+
+.geocoding-address-item.status-pending {
+  background: #fafafa;
+  border-color: var(--stitch-border);
+}
+
+.geocoding-address-item.status-failed {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.geocoding-address-item.status-geocoded {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.geocoding-address-item.editing {
+  padding: 1rem;
+  background: var(--stitch-background);
+}
+
+.geocoding-address-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.geocoding-address-text {
+  font-size: 14px;
+  color: var(--stitch-text-main);
+  line-height: 1.4;
+}
+
+.geocoding-address-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.geocoding-address-type {
+  font-size: 12px;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--stitch-text-secondary);
+  text-transform: capitalize;
+}
+
+.geocoding-status-badge {
+  font-size: 11px;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.geocoding-status-badge.pending {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.geocoding-status-badge.failed {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.geocoding-status-badge.geocoded {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.geocoding-coordinates {
+  font-size: 12px;
+  color: var(--stitch-text-secondary);
+  font-family: monospace;
+}
+
+.geocoding-error {
+  font-size: 12px;
+  color: #dc2626;
+}
+
+.geocoding-address-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.geocoding-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--stitch-border);
+  background: var(--stitch-card-bg);
+  color: var(--stitch-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.geocoding-action-btn:hover:not(:disabled) {
+  border-color: var(--stitch-primary);
+  color: var(--stitch-primary);
+}
+
+.geocoding-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.geocoding-action-btn .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.geocoding-action-btn .btn-text {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .geocoding-action-btn .btn-text {
+    display: inline;
+  }
+}
+
+/* Geocoding Edit Form */
+.geocoding-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.geocoding-edit-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.geocoding-edit-fields input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--stitch-border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--stitch-card-bg);
+}
+
+.geocoding-edit-fields input:focus {
+  outline: none;
+  border-color: var(--stitch-primary);
+}
+
+.geocoding-edit-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.geocoding-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.geocoding-edit-actions button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--stitch-border);
+  background: var(--stitch-card-bg);
+  color: var(--stitch-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.geocoding-edit-actions button:hover:not(:disabled) {
+  border-color: var(--stitch-text-secondary);
+}
+
+.geocoding-edit-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.geocoding-edit-actions button.primary {
+  background: var(--stitch-primary);
+  border-color: var(--stitch-primary);
+  color: white;
+}
+
+.geocoding-edit-actions button.primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+/* Geocoding Progress Modal */
+.geocoding-progress-modal {
+  max-width: 400px;
+  width: 90%;
+}
+
+.geocoding-progress-modal h3 {
+  margin: 0 0 1.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.geocoding-progress-bar {
+  height: 8px;
+  background: var(--stitch-border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.geocoding-progress-fill {
+  height: 100%;
+  background: var(--stitch-primary);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.geocoding-progress-count {
+  text-align: center;
+  font-size: 14px;
+  color: var(--stitch-text-secondary);
+  margin-bottom: 1rem;
+}
+
+.geocoding-progress-stats {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.geocoding-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 14px;
+}
+
+.geocoding-stat .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.geocoding-stat.success {
+  color: #16a34a;
+}
+
+.geocoding-stat.error {
+  color: #dc2626;
+}
+
+.geocoding-progress-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.geocoding-progress-actions button {
+  padding: 0.5rem 1.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--stitch-border);
+  background: var(--stitch-card-bg);
+  color: var(--stitch-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.geocoding-progress-actions button:hover {
+  border-color: var(--stitch-text-secondary);
+}
+
+/* ============================================================
+   Mobile Responsive Styles (≤768px)
+   ============================================================ */
+
+/* Hide sidebar on mobile */
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+
+  .app-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .main-content {
+    flex: 1;
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Adjust page content for mobile */
+  .page-content {
+    padding: 1rem;
+  }
+
+  /* Hide desktop header elements that mobile header replaces */
+  .top-header {
+    display: none;
+  }
+}
+
+/* Mobile Header */
+.mobile-header {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    padding: 0 0.5rem;
+    padding-top: env(safe-area-inset-top);
+    background: var(--stitch-card-bg);
+    border-bottom: 1px solid var(--stitch-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .mobile-header-left,
+  .mobile-header-right {
+    display: flex;
+    align-items: center;
+    min-width: 48px;
+  }
+
+  .mobile-header-right {
+    justify-content: flex-end;
+  }
+
+  .mobile-header-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    text-align: center;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-header-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: transparent;
+    color: var(--stitch-text-main);
+    cursor: pointer;
+    border-radius: 50%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-header-btn:active {
+    background: var(--stitch-background);
+  }
+
+  .mobile-header-btn .material-symbols-outlined {
+    font-size: 24px;
+  }
+}
+
+/* Bottom Tab Bar */
+.bottom-tab-bar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .bottom-tab-bar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(56px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--stitch-card-bg);
+    border-top: 1px solid var(--stitch-border);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+  }
+
+  .tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    height: 56px;
+    padding: 6px 0;
+    text-decoration: none;
+    color: var(--stitch-text-secondary);
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.15s ease;
+  }
+
+  .tab-item .material-symbols-outlined {
+    font-size: 24px;
+  }
+
+  .tab-label {
+    font-size: 10px;
+    margin-top: 2px;
+    font-weight: 500;
+  }
+
+  .tab-item.active {
+    color: var(--stitch-primary);
+  }
+
+  .tab-add-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    margin-top: -12px;
+    border: none;
+    border-radius: 50%;
+    background: var(--stitch-primary);
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(95, 39, 227, 0.3);
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .tab-add-button:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 8px rgba(95, 39, 227, 0.3);
+  }
+
+  .tab-add-button .material-symbols-outlined {
+    font-size: 28px;
+  }
+}
+
+/* Mobile touch optimizations */
+@media (max-width: 768px) {
+  /* Larger touch targets */
+  .contact-row {
+    min-height: 56px;
+    padding: 12px 16px;
+  }
+
+  /* Prevent text selection on tap */
+  .tab-item,
+  .tab-add-button,
+  .mobile-header-btn {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Smooth scrolling */
+  .main-content,
+  .contact-list-container {
+    overscroll-behavior: contain;
+  }
+}
+
+/* Mobile search */
+@media (max-width: 768px) {
+  .search-container {
+    display: none;
+  }
+
+  .search-container.mobile-search-open {
+    display: block;
+    position: fixed;
+    top: calc(56px + env(safe-area-inset-top));
+    left: 0;
+    right: 0;
+    padding: 0.75rem 1rem;
+    background: var(--stitch-card-bg);
+    border-bottom: 1px solid var(--stitch-border);
+    z-index: 99;
+  }
+
+  .search-container.mobile-search-open input {
+    width: 100%;
+  }
+}

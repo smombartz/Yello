@@ -1,12 +1,20 @@
 import { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { useGroups } from '../api/hooks';
 import { ContactList } from './ContactList';
+import { MobileHeader } from './MobileHeader';
+
+interface OutletContext {
+  setModalOpen: (open: boolean) => void;
+  isMobile: boolean;
+}
 
 interface GroupsViewProps {
   onBack?: () => void;
 }
 
 export function GroupsView({ onBack: _onBack }: GroupsViewProps) {
+  const { isMobile } = useOutletContext<OutletContext>();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { data, isLoading, error } = useGroups();
 
@@ -22,13 +30,17 @@ export function GroupsView({ onBack: _onBack }: GroupsViewProps) {
   if (selectedCategory) {
     return (
       <div className="groups-view groups-filtered">
-        <div className="groups-header">
-          <button className="back-button" onClick={handleBackToGroups}>
-            <span className="material-symbols-outlined">arrow_back</span>
-            Back to Groups
-          </button>
-          <h1>{selectedCategory}</h1>
-        </div>
+        {isMobile ? (
+          <MobileHeader title={selectedCategory} showBack />
+        ) : (
+          <div className="groups-header">
+            <button className="back-button" onClick={handleBackToGroups}>
+              <span className="material-symbols-outlined">arrow_back</span>
+              Back to Groups
+            </button>
+            <h1>{selectedCategory}</h1>
+          </div>
+        )}
         <div className="groups-content">
           <ContactList categoryFilter={selectedCategory} />
         </div>
@@ -39,12 +51,16 @@ export function GroupsView({ onBack: _onBack }: GroupsViewProps) {
   // Show the groups list
   return (
     <div className="groups-view">
-      <div className="groups-header">
-        <h1>Groups</h1>
-        {data?.groups && (
-          <span className="groups-count-badge">{data.groups.length} groups</span>
-        )}
-      </div>
+      {isMobile ? (
+        <MobileHeader title="Groups" />
+      ) : (
+        <div className="groups-header">
+          <h1>Groups</h1>
+          {data?.groups && (
+            <span className="groups-count-badge">{data.groups.length} groups</span>
+          )}
+        </div>
+      )}
 
       <div className="groups-content">
         {isLoading ? (

@@ -1,54 +1,30 @@
-import { useState, useEffect } from 'react';
-import { TopHeader } from './TopHeader';
+import { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { ContactList } from './ContactList';
-import { ImportModal } from './ImportModal';
-import { useLayoutModal } from './Layout';
+import { MobileHeader } from './MobileHeader';
+
+interface OutletContext {
+  setModalOpen: (open: boolean) => void;
+  isMobile: boolean;
+}
 
 export function ContactsPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [showImportModal, setShowImportModal] = useState(false);
-  const { setModalOpen } = useLayoutModal();
+  const { isMobile } = useOutletContext<OutletContext>();
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Notify Layout about modal state
-  useEffect(() => {
-    setModalOpen(showImportModal);
-  }, [showImportModal, setModalOpen]);
-
-  // Handle Escape key for modal
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showImportModal) {
-        e.stopPropagation();
-        setShowImportModal(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [showImportModal]);
+  const handleSearchToggle = () => {
+    setMobileSearchOpen(!mobileSearchOpen);
+  };
 
   return (
     <>
-      <TopHeader
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onImportClick={() => setShowImportModal(true)}
-      />
-      <div className="page-content">
-        <ContactList search={debouncedSearch} />
-      </div>
-
-      {showImportModal && (
-        <ImportModal onClose={() => setShowImportModal(false)} />
+      {isMobile && (
+        <MobileHeader
+          title="All Contacts"
+          onSearch={handleSearchToggle}
+        />
       )}
+      <ContactList mobileSearchOpen={mobileSearchOpen} />
     </>
   );
 }

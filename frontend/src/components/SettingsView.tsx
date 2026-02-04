@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import {
   useUserSettings,
   useUpdateUserSettings,
@@ -8,6 +9,12 @@ import {
   parseLinkedInCsv,
   exportAllContacts
 } from '../api/settingsHooks';
+import { MobileHeader } from './MobileHeader';
+
+interface OutletContext {
+  setModalOpen: (open: boolean) => void;
+  isMobile: boolean;
+}
 
 interface SettingsViewProps {
   onBack?: () => void;
@@ -20,6 +27,7 @@ interface ToastState {
 }
 
 export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
+  const { isMobile } = useOutletContext<OutletContext>();
   const { data: settings, isLoading } = useUserSettings();
   const updateMutation = useUpdateUserSettings();
   const deleteMutation = useDeleteAllContacts();
@@ -180,9 +188,13 @@ export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
 
   return (
     <div className="settings-view">
-      <div className="settings-header">
-        <h1>Settings</h1>
-      </div>
+      {isMobile ? (
+        <MobileHeader title="Settings" />
+      ) : (
+        <div className="settings-header">
+          <h1>Settings</h1>
+        </div>
+      )}
 
       <div className="settings-content">
         {/* Profile Section */}

@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import { useOutletContext } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -7,6 +8,12 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import 'leaflet.markercluster';
 import { useMapMarkers, useMapStats, useGeocode } from '../api/mapHooks';
 import type { MapMarker } from '../api/mapHooks';
+import { MobileHeader } from './MobileHeader';
+
+interface OutletContext {
+  setModalOpen: (open: boolean) => void;
+  isMobile: boolean;
+}
 
 // Fix for default marker icons in Leaflet with Vite
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -112,8 +119,10 @@ function MarkerClusterGroup({ markers }: { markers: MapMarker[] }) {
 }
 
 export function MapView({ onBack: _onBack }: MapViewProps) {
+  const { isMobile } = useOutletContext<OutletContext>();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const mapRef = useRef<L.Map | null>(null);
 
   const { data: mapData, isLoading, error } = useMapMarkers(debouncedSearch || undefined);
   const { data: statsData } = useMapStats();
@@ -133,18 +142,34 @@ export function MapView({ onBack: _onBack }: MapViewProps) {
     geocodeMutation.mutate(25); // Smaller batches to avoid Nominatim rate limits
   };
 
+  const handleRecenter = () => {
+    if (mapRef.current && markers.length > 0) {
+      const bounds = L.latLngBounds(markers.map(m => [m.latitude, m.longitude]));
+      mapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+    } else if (mapRef.current) {
+      mapRef.current.setView(defaultCenter, defaultZoom);
+    }
+  };
+
   // Default center (US)
   const defaultCenter: [number, number] = [39.8283, -98.5795];
   const defaultZoom = 4;
 
   return (
     <div className="map-view">
-      <div className="map-header">
-        <h1>
-          <span className="material-symbols-outlined">map</span>
-          Contacts Map
-        </h1>
-        <div className="map-header-stats">
+      {isMobile && (
+        <MobileHeader
+          title="Map"
+          onRecenter={handleRecenter}
+        />
+      )}
+      {!isMobile && (
+        <div className="map-header">
+          <h1>
+            <span className="material-symbols-outlined">map</span>
+            Contacts Map
+          </h1>
+          <div className="map-header-stats">
           {mapData && (
             <span className="map-stat">
               {mapData.geocodedCount} of {mapData.totalContacts} contacts on map
@@ -166,6 +191,7 @@ export function MapView({ onBack: _onBack }: MapViewProps) {
           )}
         </div>
       </div>
+      )}
 
       <div className="map-search-bar">
         <span className="material-symbols-outlined search-icon">search</span>
@@ -218,6 +244,7 @@ export function MapView({ onBack: _onBack }: MapViewProps) {
             center={defaultCenter}
             zoom={defaultZoom}
             className="leaflet-map"
+            ref={mapRef}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
