@@ -30,7 +30,7 @@ export function GroupsView({ onBack: _onBack }: GroupsViewProps) {
           <h1>{selectedCategory}</h1>
         </div>
         <div className="groups-content">
-          <ContactList search="" categoryFilter={selectedCategory} />
+          <ContactList categoryFilter={selectedCategory} />
         </div>
       </div>
     );
