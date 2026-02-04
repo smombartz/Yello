@@ -10,7 +10,7 @@ import { ViewToggle } from './ViewToggle';
 import type { MergeConflict, ContactDetail } from '../api/types';
 
 interface ContactListProps {
-  mobileSearchOpen?: boolean;
+  search?: string;
   categoryFilter?: string;
 }
 
@@ -23,14 +23,13 @@ const COLLAPSED_HEIGHT = 92;   // 80 + 12 (0.75rem gap)
 const EXPANDED_HEIGHT = 462;   // 450 + 12 (0.75rem gap)
 const PAGE_SIZE = 100;
 
-export function ContactList({ mobileSearchOpen = false, categoryFilter }: ContactListProps) {
+export function ContactList({ search = '', categoryFilter }: ContactListProps) {
   const navigate = useNavigate();
   const parentRef = useRef<HTMLDivElement>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
     return (localStorage.getItem('contactViewMode') as 'list' | 'grid') || 'list';
   });
-  const [search, setSearch] = useState('');
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -273,16 +272,6 @@ export function ContactList({ mobileSearchOpen = false, categoryFilter }: Contac
 
   return (
     <div className="contact-list">
-      <div className={`search-container ${mobileSearchOpen ? 'mobile-search-open' : ''}`}>
-        <span className="material-symbols-outlined">search</span>
-        <input
-          type="text"
-          placeholder="Search contacts..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
       <div className="contact-list-header">
         <div className="contact-count">
           {data.total.toLocaleString()} contact{data.total !== 1 ? 's' : ''}

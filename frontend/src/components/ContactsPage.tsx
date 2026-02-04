@@ -11,6 +11,7 @@ interface OutletContext {
 export function ContactsPage() {
   const { isMobile } = useOutletContext<OutletContext>();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [search, setSearch] = useState('');
 
   const handleSearchToggle = () => {
     setMobileSearchOpen(!mobileSearchOpen);
@@ -24,7 +25,16 @@ export function ContactsPage() {
           onSearch={handleSearchToggle}
         />
       )}
-      <ContactList mobileSearchOpen={mobileSearchOpen} />
+      <div className={`search-container ${mobileSearchOpen ? 'mobile-search-open' : ''}`}>
+        <span className="material-symbols-outlined">search</span>
+        <input
+          type="text"
+          placeholder="Search contacts..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+      <ContactList search={search} />
     </>
   );
 }
