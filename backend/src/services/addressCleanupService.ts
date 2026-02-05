@@ -54,7 +54,7 @@ export interface AddressFixResult {
 }
 
 // Normalize types
-export type JunkIssueType = 'no_street' | 'empty' | 'placeholder';
+export type JunkIssueType = 'no_street' | 'empty' | 'placeholder' | 'missing_street';
 
 export interface JunkAddress extends AddressRecord {
   issue: JunkIssueType;
@@ -219,6 +219,18 @@ function isPlaceholderOnlyAddress(address: AddressRecord): boolean {
 }
 
 /**
+ * Check if an address is missing street but has other populated fields
+ */
+function isMissingStreet(address: AddressRecord): boolean {
+  // Street is null/empty
+  if (address.street && address.street.trim() !== '') return false;
+
+  // But has at least one other populated field
+  const otherFields = [address.city, address.state, address.postalCode, address.country];
+  return otherFields.some(f => f && f.trim() !== '');
+}
+
+/**
  * Detect what kind of junk issue an address has, if any
  */
 function detectJunkIssue(address: AddressRecord): JunkIssueType | null {
@@ -230,6 +242,9 @@ function detectJunkIssue(address: AddressRecord): JunkIssueType | null {
   }
   if (isPlaceholderOnlyAddress(address)) {
     return 'placeholder';
+  }
+  if (isMissingStreet(address)) {
+    return 'missing_street';
   }
   return null;
 }
@@ -405,40 +420,15 @@ export function findAddressIssues(
  * Get summary of address cleanup issues
  */
 export function getAddressCleanupSummary(): AddressCleanupSummary {
-  const addressesByContact = getAddressesByContact();
-
-  let noStreetCount = 0;
-  let duplicateCount = 0;
-  const contactsWithIssues = new Set<number>();
-
-  for (const [contactId, addresses] of addressesByContact) {
-    const fingerprints = new Map<string, number>();
-
-    for (const addr of addresses) {
-      // Check for "no street" artifact
-      if (hasNoStreetArtifact(addr)) {
-        noStreetCount++;
-        contactsWithIssues.add(contactId);
-      }
-
-      // Track fingerprints for duplicate detection
-      const fp = createFingerprint(addr);
-      fingerprints.set(fp, (fingerprints.get(fp) || 0) + 1);
-    }
-
-    // Count duplicates (addresses that share a fingerprint)
-    for (const count of fingerprints.values()) {
-      if (count > 1) {
-        duplicateCount += count - 1; // Only count the extras
-        contactsWithIssues.add(contactId);
-      }
-    }
-  }
+  // Aggregate counts from all sub-tabs
+  const normalizeSummary = getNormalizeSummary();
+  const duplicatesSummary = getDuplicatesSummary();
+  const geocodingSummary = getGeocodingSummary();
 
   return {
-    noStreetCount,
-    duplicateCount,
-    totalContacts: contactsWithIssues.size
+    noStreetCount: normalizeSummary.junkCount,
+    duplicateCount: duplicatesSummary.duplicateCount,
+    totalContacts: normalizeSummary.junkCount + duplicatesSummary.duplicateCount + geocodingSummary.pending
   };
 }
 
@@ -599,8 +589,13 @@ export function findJunkAddresses(
       const contact = db.prepare(`
         SELECT id, display_name as displayName, company, photo_hash as photoHash
         FROM contacts
-        WHERE id = ?
-      `).get(contactId) as { id: number; displayName: string; company: string | null; photoHash: string | null };
+        WHERE id = ? AND archived_at IS NULL
+      `).get(contactId) as { id: number; displayName: string; company: string | null; photoHash: string | null } | undefined;
+
+      // Skip if contact not found or archived
+      if (!contact) {
+        continue;
+      }
 
       contactsWithJunk.push({
         id: contact.id,

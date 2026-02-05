@@ -470,7 +470,7 @@ export interface AddressCleanupBulkResponse {
 }
 
 // Address Normalize types (junk address removal)
-export type JunkIssueType = 'no_street' | 'empty' | 'placeholder';
+export type JunkIssueType = 'no_street' | 'empty' | 'placeholder' | 'missing_street';
 
 export interface JunkAddress {
   id: number;

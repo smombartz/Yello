@@ -117,7 +117,7 @@ export const JunkAddressSchema = Type.Object({
   postalCode: Type.Union([Type.String(), Type.Null()]),
   country: Type.Union([Type.String(), Type.Null()]),
   type: Type.Union([Type.String(), Type.Null()]),
-  issue: Type.Union([Type.Literal('no_street'), Type.Literal('empty'), Type.Literal('placeholder')])
+  issue: Type.Union([Type.Literal('no_street'), Type.Literal('empty'), Type.Literal('placeholder'), Type.Literal('missing_street')])
 });
 
 export const NormalizeContactSchema = Type.Object({

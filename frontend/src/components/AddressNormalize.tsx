@@ -40,6 +40,8 @@ function getIssueLabel(issue: JunkIssueType): { text: string; className: string 
       return { text: 'Empty', className: 'issue-empty' };
     case 'placeholder':
       return { text: 'Placeholder', className: 'issue-placeholder' };
+    case 'missing_street':
+      return { text: 'Missing street', className: 'issue-missing-street' };
   }
 }
 
@@ -234,8 +236,8 @@ export function AddressNormalize() {
     <div className="normalize-view">
       <div className="normalize-description">
         <p>
-          This cleanup finds addresses with "No street" artifacts, empty addresses, and placeholder values.
-          These entries will be removed from your contacts.
+          This cleanup finds addresses with "No street" artifacts, empty addresses, placeholder values,
+          and addresses missing a street (only city/state/country). These entries will be removed from your contacts.
         </p>
       </div>
 
@@ -301,6 +303,7 @@ export function AddressNormalize() {
               <li>Addresses with "No street" artifacts</li>
               <li>Empty addresses</li>
               <li>Addresses with only placeholder values</li>
+              <li>Addresses missing street (only city/state/country)</li>
             </ul>
             <div className="confirm-actions">
               <button className="cancel-button" onClick={() => setShowFixAllConfirm(false)}>
