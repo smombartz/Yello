@@ -1089,7 +1089,7 @@ a.nav-item {
 
 .confirm-dialog {
   max-width: 400px;
-  text-align: center;
+  text-align: left;
 }
 
 .confirm-dialog h3 {
@@ -1111,8 +1111,7 @@ a.nav-item {
 
 .confirm-actions {
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  justify-content: space-between;
 }
 
 .cancel-button {
