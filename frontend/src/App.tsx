@@ -9,6 +9,7 @@ import { ArchivedView } from './components/ArchivedView';
 import { GroupsView } from './components/GroupsView';
 import { MapView } from './components/MapView';
 import { SettingsView } from './components/SettingsView';
+import { UserProfilePage } from './components/UserProfilePage';
 import { LoginPage } from './components/LoginPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
@@ -134,6 +135,7 @@ function AppRoutes() {
         <Route path="groups" element={<GroupsView />} />
         <Route path="map" element={<MapView />} />
         <Route path="settings" element={<SettingsView />} />
+        <Route path="profile" element={<UserProfilePage />} />
       </Route>
 
       {/* Catch-all redirect to home */}

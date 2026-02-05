@@ -580,3 +580,98 @@ export interface GeocodingBatchResult {
 export interface GeocodingUpdateResponse {
   address: GeocodingAddress;
 }
+
+// User Profile types
+export interface ProfileVisibility {
+  avatar: boolean;
+  firstName: boolean;
+  lastName: boolean;
+  tagline: boolean;
+  company: boolean;
+  title: boolean;
+  emails: Record<string, boolean>;
+  phones: Record<string, boolean>;
+  addresses: Record<string, boolean>;
+  website: boolean;
+  linkedin: boolean;
+  instagram: boolean;
+  whatsapp: boolean;
+  otherSocialLinks: Record<string, boolean>;
+  birthday: boolean;
+}
+
+export interface ProfileEmail {
+  email: string;
+  type: string | null;
+  isPrimary: boolean;
+}
+
+export interface ProfilePhone {
+  phone: string;
+  phoneDisplay: string;
+  countryCode: string | null;
+  type: string | null;
+  isPrimary: boolean;
+}
+
+export interface ProfileAddress {
+  id?: string;
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
+  type: string | null;
+}
+
+export interface ProfileSocialLink {
+  id?: string;
+  platform: string;
+  username: string;
+  profileUrl: string | null;
+}
+
+export interface UserProfile {
+  isPublic: boolean;
+  publicUrl: string | null;
+  publicSlug: string | null;
+  avatarUrl: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  tagline: string | null;
+  company: string | null;
+  title: string | null;
+  emails: ProfileEmail[];
+  phones: ProfilePhone[];
+  addresses: ProfileAddress[];
+  website: string | null;
+  linkedin: string | null;
+  instagram: string | null;
+  whatsapp: string | null;
+  otherSocialLinks: ProfileSocialLink[];
+  birthday: string | null;
+  notes: string | null;
+  visibility: ProfileVisibility;
+}
+
+export interface UpdateUserProfileRequest {
+  isPublic?: boolean;
+  publicSlug?: string | null;
+  avatarUrl?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  tagline?: string | null;
+  company?: string | null;
+  title?: string | null;
+  emails?: ProfileEmail[];
+  phones?: ProfilePhone[];
+  addresses?: ProfileAddress[];
+  website?: string | null;
+  linkedin?: string | null;
+  instagram?: string | null;
+  whatsapp?: string | null;
+  otherSocialLinks?: ProfileSocialLink[];
+  birthday?: string | null;
+  notes?: string | null;
+  visibility?: ProfileVisibility;
+}

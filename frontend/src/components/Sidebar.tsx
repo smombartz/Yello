@@ -69,6 +69,11 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
     .toUpperCase()
     .slice(0, 2) || 'U';
 
+  const handleProfileClick = () => {
+    setShowUserMenu(false);
+    navigate('/profile');
+  };
+
   const handleSettingsClick = () => {
     setShowUserMenu(false);
     navigate('/settings');
@@ -121,6 +126,13 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
 
         {showUserMenu && (
           <div className="sidebar-user-menu">
+            <div
+              className="sidebar-user-menu-item"
+              onClick={handleProfileClick}
+            >
+              <span className="material-symbols-outlined">person</span>
+              <span>Profile</span>
+            </div>
             <div
               className={`sidebar-user-menu-item ${currentView === 'settings' ? 'active' : ''}`}
               onClick={handleSettingsClick}

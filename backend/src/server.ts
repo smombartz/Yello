@@ -18,6 +18,7 @@ import settingsRoutes from './routes/settings.js';
 import mapRoutes from './routes/map.js';
 import authRoutes from './routes/auth.js';
 import profileImagesRoutes from './routes/profileImages.js';
+import profileRoutes from './routes/profile.js';
 import socialLinksCleanupRoutes from './routes/socialLinksCleanup.js';
 import invalidLinksCleanupRoutes from './routes/invalidLinksCleanup.js';
 import addressCleanupRoutes from './routes/addressCleanup.js';
@@ -101,6 +102,7 @@ await app.register(settingsRoutes, { prefix: '/api/settings' });
 await app.register(mapRoutes, { prefix: '/api/map' });
 await app.register(authRoutes, { prefix: '/api/auth' });
 await app.register(profileImagesRoutes, { prefix: '/api/profile-images' });
+await app.register(profileRoutes, { prefix: '/api/profile' });
 
 const port = parseInt(process.env.PORT || '3000');
 app.listen({ port, host: '0.0.0.0' }).then(() => {
