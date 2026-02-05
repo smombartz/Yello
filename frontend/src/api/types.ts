@@ -428,9 +428,12 @@ export interface AddressWithIssues {
   issues: ('no_street' | 'duplicate')[];
 }
 
+export type DuplicateAddressConfidence = 'exact' | 'high' | 'medium';
+
 export interface AddressGroup {
   fingerprint: string;
   addresses: AddressWithIssues[];
+  confidence?: DuplicateAddressConfidence;
 }
 
 export interface AddressCleanupContact {

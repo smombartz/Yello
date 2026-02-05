@@ -14,7 +14,7 @@ export function AddressCleanup() {
   const { data: geocodingSummary } = useGeocodingSummary();
 
   const normalizeCount = normalizeSummary?.junkCount ?? 0;
-  const duplicatesCount = duplicatesSummary?.duplicateCount ?? 0;
+  const duplicatesCount = duplicatesSummary?.totalContacts ?? 0;
   const pendingGeocodingCount = geocodingSummary?.pending ?? 0;
 
   return (

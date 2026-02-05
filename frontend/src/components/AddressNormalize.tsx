@@ -6,6 +6,7 @@ import {
   fetchAllJunkAddressIds
 } from '../api/addressCleanupHooks';
 import type { JunkIssueType, NormalizeContact } from '../api/types';
+import { formatAddress } from '../lib/addressUtils';
 
 interface ToastState {
   message: string;
@@ -13,24 +14,6 @@ interface ToastState {
 }
 
 const PAGE_SIZE = 20;
-
-function formatAddress(address: {
-  street: string | null;
-  city: string | null;
-  state: string | null;
-  postalCode: string | null;
-  country: string | null;
-}): string {
-  const parts = [
-    address.street,
-    address.city,
-    address.state,
-    address.postalCode,
-    address.country
-  ].filter(Boolean);
-
-  return parts.join(', ') || '(Empty address)';
-}
 
 function getIssueLabel(issue: JunkIssueType): { text: string; className: string } {
   switch (issue) {

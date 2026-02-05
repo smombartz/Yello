@@ -37,6 +37,8 @@ import {
   NormalizeAllIdsResponseSchema,
   DuplicatesSummaryResponseSchema,
   DuplicatesResponseSchema,
+  DuplicatesQuerySchema,
+  DuplicatesQuery,
   GeocodingSummaryResponseSchema,
   GeocodingResponseSchema,
   GeocodingQuerySchema,
@@ -188,27 +190,34 @@ export default async function addressCleanupRoutes(
   });
 
   // GET /api/cleanup/addresses/duplicates
-  fastify.get<{ Querystring: AddressCleanupQuery }>('/duplicates', {
+  fastify.get<{ Querystring: DuplicatesQuery }>('/duplicates', {
     schema: {
-      querystring: AddressCleanupQuerySchema,
+      querystring: DuplicatesQuerySchema,
       response: {
         200: DuplicatesResponseSchema
       }
     }
   }, async (request, _reply) => {
-    const { limit = 50, offset = 0 } = request.query;
-    return findDuplicateAddresses(limit, offset);
+    const { limit = 50, offset = 0, confidence } = request.query;
+    return findDuplicateAddresses(limit, offset, confidence);
   });
 
   // GET /api/cleanup/addresses/duplicates/all - get all contacts for bulk fix
-  fastify.get('/duplicates/all', {
+  fastify.get<{ Querystring: { confidence?: 'all' | 'exact' | 'high' | 'medium' } }>('/duplicates/all', {
     schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          confidence: { type: 'string', enum: ['all', 'exact', 'high', 'medium'] }
+        }
+      },
       response: {
         200: AddressCleanupBulkResponseSchema
       }
     }
-  }, async (_request, _reply) => {
-    return getAllDuplicateContacts();
+  }, async (request, _reply) => {
+    const { confidence } = request.query;
+    return getAllDuplicateContacts(confidence);
   });
 
   // POST /api/cleanup/addresses/duplicates/fix - same as /fix

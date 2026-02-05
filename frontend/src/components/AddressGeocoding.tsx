@@ -9,6 +9,7 @@ import {
   useUpdateAndGeocode
 } from '../api/addressCleanupHooks';
 import type { GeocodingFilter, GeocodingContact, GeocodingAddress } from '../api/types';
+import { formatAddress } from '../lib/addressUtils';
 
 interface ToastState {
   message: string;
@@ -24,18 +25,6 @@ interface BulkProgress {
 
 const PAGE_SIZE = 20;
 const BATCH_SIZE = 25;
-
-function formatAddress(address: GeocodingAddress): string {
-  const parts = [
-    address.street,
-    address.city,
-    address.state,
-    address.postalCode,
-    address.country
-  ].filter(Boolean);
-
-  return parts.join(', ') || '(Empty address)';
-}
 
 function formatCoordinates(lat: number | null, lng: number | null): string {
   if (lat === null || lng === null) return '';

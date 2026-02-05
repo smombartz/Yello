@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import type { AddressCleanupContact, AddressWithIssues, AddressFix } from '../api/types';
+import type { AddressCleanupContact, AddressFix, DuplicateAddressConfidence } from '../api/types';
+import { formatAddress } from '../lib/addressUtils';
 
 interface AddressCleanupCardProps {
   contact: AddressCleanupContact;
@@ -8,24 +9,24 @@ interface AddressCleanupCardProps {
   isApplying: boolean;
 }
 
-function formatAddress(address: AddressWithIssues): string {
-  const parts = [
-    address.street,
-    address.city,
-    address.state,
-    address.postalCode,
-    address.country
-  ].filter(Boolean);
-
-  return parts.join(', ') || '(Empty address)';
-}
-
 function getIssueLabel(issue: 'no_street' | 'duplicate'): { text: string; className: string } {
   switch (issue) {
     case 'no_street':
       return { text: 'No street', className: 'issue-no-street' };
     case 'duplicate':
       return { text: 'Duplicate', className: 'issue-duplicate' };
+  }
+}
+
+function getConfidenceLabel(confidence: DuplicateAddressConfidence | undefined): { text: string; className: string } | null {
+  if (!confidence || confidence === 'exact') return null;
+  switch (confidence) {
+    case 'high':
+      return { text: 'High confidence', className: 'confidence-high' };
+    case 'medium':
+      return { text: 'Medium confidence', className: 'confidence-medium' };
+    default:
+      return null;
   }
 }
 
@@ -121,12 +122,19 @@ export function AddressCleanupCard({
       </div>
 
       <div className="address-cleanup-groups">
-        {contact.addressGroups.map((group) => (
+        {contact.addressGroups.map((group) => {
+          const confidenceInfo = getConfidenceLabel(group.confidence);
+          return (
           <div key={group.fingerprint} className="address-group">
             {group.addresses.length > 1 && (
               <div className="address-group-label">
                 <span className="material-symbols-outlined">content_copy</span>
                 Duplicate addresses - select one to keep:
+                {confidenceInfo && (
+                  <span className={`confidence-badge ${confidenceInfo.className}`}>
+                    {confidenceInfo.text}
+                  </span>
+                )}
               </div>
             )}
             {group.addresses.length === 1 && group.addresses[0].issues.includes('no_street') && (
@@ -178,7 +186,8 @@ export function AddressCleanupCard({
               })}
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
 
       <div className="address-cleanup-actions">

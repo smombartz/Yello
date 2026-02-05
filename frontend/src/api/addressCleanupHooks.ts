@@ -136,9 +136,12 @@ export function useDuplicatesSummary() {
   });
 }
 
+export type DuplicatesConfidenceFilter = 'all' | 'exact' | 'high' | 'medium';
+
 export function useDuplicatesContacts(
   page: number = 1,
-  pageSize: number = 50
+  pageSize: number = 50,
+  confidence?: DuplicatesConfidenceFilter
 ) {
   const offset = (page - 1) * pageSize;
 
@@ -147,8 +150,12 @@ export function useDuplicatesContacts(
     offset: offset.toString(),
   });
 
+  if (confidence && confidence !== 'all') {
+    params.set('confidence', confidence);
+  }
+
   return useQuery({
-    queryKey: ['addressCleanup', 'duplicates', 'contacts', page, pageSize],
+    queryKey: ['addressCleanup', 'duplicates', 'contacts', page, pageSize, confidence],
     queryFn: () => fetchApi<DuplicatesResponse>(`/api/cleanup/addresses/duplicates?${params}`),
   });
 }
@@ -169,8 +176,16 @@ export function useFixDuplicateAddresses() {
   });
 }
 
-export async function fetchAllDuplicateContacts(): Promise<AddressCleanupBulkResponse['contacts']> {
-  const response = await fetchApi<AddressCleanupBulkResponse>('/api/cleanup/addresses/duplicates/all');
+export async function fetchAllDuplicateContacts(
+  confidence?: DuplicatesConfidenceFilter
+): Promise<AddressCleanupBulkResponse['contacts']> {
+  const params = new URLSearchParams();
+  if (confidence && confidence !== 'all') {
+    params.set('confidence', confidence);
+  }
+  const query = params.toString();
+  const url = query ? `/api/cleanup/addresses/duplicates/all?${query}` : '/api/cleanup/addresses/duplicates/all';
+  const response = await fetchApi<AddressCleanupBulkResponse>(url);
   return response.contacts;
 }
 

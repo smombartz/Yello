@@ -48,9 +48,18 @@ export const AddressRecordSchema = Type.Object({
   issues: Type.Array(Type.Union([Type.Literal('no_street'), Type.Literal('duplicate')]))
 });
 
+export const DuplicateConfidenceSchema = Type.Union([
+  Type.Literal('exact'),
+  Type.Literal('high'),
+  Type.Literal('medium')
+]);
+
+export type DuplicateConfidenceType = Static<typeof DuplicateConfidenceSchema>;
+
 export const AddressGroupSchema = Type.Object({
   fingerprint: Type.String(),
-  addresses: Type.Array(AddressRecordSchema)
+  addresses: Type.Array(AddressRecordSchema),
+  confidence: Type.Optional(DuplicateConfidenceSchema)
 });
 
 export const AddressCleanupContactSchema = Type.Object({
@@ -157,6 +166,23 @@ export type NormalizeAllIdsResponse = Static<typeof NormalizeAllIdsResponseSchem
 // ============================================================
 // Duplicates Schemas (Within-Contact Duplicate Merging)
 // ============================================================
+
+export const DuplicatesConfidenceFilterSchema = Type.Union([
+  Type.Literal('all'),
+  Type.Literal('exact'),
+  Type.Literal('high'),
+  Type.Literal('medium')
+]);
+
+export type DuplicatesConfidenceFilterType = Static<typeof DuplicatesConfidenceFilterSchema>;
+
+export const DuplicatesQuerySchema = Type.Object({
+  limit: Type.Optional(Type.Number({ default: 50 })),
+  offset: Type.Optional(Type.Number({ default: 0 })),
+  confidence: Type.Optional(DuplicatesConfidenceFilterSchema)
+});
+
+export type DuplicatesQuery = Static<typeof DuplicatesQuerySchema>;
 
 export const DuplicatesSummaryResponseSchema = Type.Object({
   duplicateCount: Type.Number(),

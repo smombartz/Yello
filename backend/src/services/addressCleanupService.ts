@@ -1,6 +1,9 @@
 import { getDatabase } from './database.js';
 import { getPhotoUrl } from './photoProcessor.js';
 import { geocodeAddress, isGeocodingConfigured } from './geocoding.js';
+import { validatePostalCode } from './addressFormats.js';
+import { getCountryCode } from './countryMapping.js';
+import { detectStreetNumberPosition, validateStreetNumberPosition } from './addressFormatter.js';
 
 // ============================================================
 // Types
@@ -22,9 +25,12 @@ export interface AddressWithIssues extends AddressRecord {
   issues: ('no_street' | 'duplicate')[];
 }
 
+export type DuplicateConfidence = 'exact' | 'high' | 'medium';
+
 export interface AddressGroup {
   fingerprint: string;
   addresses: AddressWithIssues[];
+  confidence?: DuplicateConfidence;
 }
 
 export interface AddressCleanupContact {
@@ -127,27 +133,28 @@ function extractWords(text: string): string[] {
 
 /**
  * Create a fingerprint for an address
- * Fingerprint = sorted set of (numbers + significant words)
+ * Fingerprint = sorted set of (numbers + significant words) from CORE fields only
+ *
+ * Core fields: street, city, country (NOT postal code or state)
+ * This allows addresses with/without postal code to be grouped together as duplicates
  */
 export function createFingerprint(address: AddressRecord): string {
-  const parts: string[] = [];
-
-  // Combine all address fields
-  const fullText = [
+  // Use only core fields: street, city, country (not postal code or state)
+  // Postal code and state are often omitted or vary - street + city + country
+  // is sufficient to identify duplicates
+  const coreText = [
     address.street,
     address.city,
-    address.state,
-    address.postalCode,
     address.country
   ].filter(Boolean).join(' ');
 
-  if (!fullText.trim()) {
+  if (!coreText.trim()) {
     return '';
   }
 
-  // Extract numbers and words
-  const numbers = extractNumbers(fullText);
-  const words = extractWords(fullText);
+  // Extract numbers and words from core fields only
+  const numbers = extractNumbers(coreText);
+  const words = extractWords(coreText);
 
   // Combine and dedupe
   const allParts = [...new Set([...numbers, ...words])];
@@ -156,6 +163,51 @@ export function createFingerprint(address: AddressRecord): string {
   allParts.sort();
 
   return allParts.join('|');
+}
+
+/**
+ * Check if two fingerprints are likely duplicates and return confidence level
+ * Returns null if not duplicates, or confidence level if they match
+ */
+function getDuplicateConfidence(fp1: string, fp2: string): DuplicateConfidence | null {
+  if (!fp1 || !fp2) return null;
+  if (fp1 === fp2) return 'exact';
+
+  const parts1 = new Set(fp1.split('|'));
+  const parts2 = new Set(fp2.split('|'));
+
+  // Determine smaller/larger
+  const [smaller, larger] = parts1.size <= parts2.size
+    ? [parts1, parts2] : [parts2, parts1];
+
+  // Must have at least 2 tokens to be meaningful
+  if (smaller.size < 2) return null;
+
+  // Check subset relationship
+  let matchCount = 0;
+  for (const token of smaller) {
+    if (larger.has(token)) matchCount++;
+  }
+
+  // Must have at least one number in common (if smaller has numbers)
+  const smallerNumbers = [...smaller].filter(t => /^\d+$/.test(t));
+  if (smallerNumbers.length > 0) {
+    const hasSharedNumber = smallerNumbers.some(n => larger.has(n));
+    if (!hasSharedNumber) return null;
+  }
+
+  // Calculate overlap ratio
+  const overlapRatio = matchCount / smaller.size;
+
+  if (overlapRatio >= 1.0) {
+    // Full subset - high confidence
+    return 'high';
+  } else if (overlapRatio >= 0.5) {
+    // Partial overlap - medium confidence
+    return 'medium';
+  }
+
+  return null;
 }
 
 /**
@@ -178,6 +230,15 @@ function hasNoStreetArtifact(address: AddressRecord): boolean {
   ];
 
   return noStreetPatterns.some(pattern => pattern.test(street));
+}
+
+/**
+ * Check if an address street starts with a unit designator (e.g., "Apt A 812 Main St")
+ * This is incorrect format - unit designators should come after the main address
+ */
+function startsWithUnitDesignator(street: string): boolean {
+  const unitPrefixes = /^(apt\.?|apartment|unit|suite|ste\.?|flat|#)\s/i;
+  return unitPrefixes.test(street.trim());
 }
 
 /**
@@ -278,11 +339,42 @@ function scoreAddress(address: AddressRecord): number {
   // Street length (more detail = better)
   if (address.street) {
     score += Math.min(address.street.length, 50) / 10;
+
+    // Penalize unit-first format (e.g., "Apt A 812 Main St")
+    // Unit designators should come after the main address
+    if (startsWithUnitDesignator(address.street)) {
+      score -= 5;
+    }
   }
 
   // Penalize "no street" artifacts
   if (hasNoStreetArtifact(address)) {
     score -= 20;
+  }
+
+  // Validate postal code format against country conventions
+  if (address.postalCode && address.country) {
+    const countryCode = getCountryCode(address.country);
+    if (countryCode) {
+      const validation = validatePostalCode(countryCode, address.postalCode);
+      if (!validation.valid) {
+        score -= 5; // Penalize invalid postal code format
+      }
+    }
+  }
+
+  // Check street number position against country conventions
+  if (address.street && address.country) {
+    const positionValidation = validateStreetNumberPosition({
+      street: address.street,
+      city: address.city,
+      state: address.state,
+      postalCode: address.postalCode,
+      country: address.country
+    });
+    if (!positionValidation.isValid && positionValidation.detectedPosition !== null) {
+      score -= 3; // Penalize wrong street number position for country
+    }
   }
 
   return score;
@@ -664,36 +756,27 @@ export function getAllJunkAddressIds(): number[] {
  * Get summary of duplicate addresses for duplicates tab
  */
 export function getDuplicatesSummary(): DuplicatesSummary {
-  const addressesByContact = getAddressesByContact();
+  // Use the same logic as findDuplicateAddresses to get accurate counts
+  const result = findDuplicateAddresses(Number.MAX_SAFE_INTEGER, 0);
 
   let duplicateCount = 0;
-  const contactsWithDuplicates = new Set<number>();
-
-  for (const [contactId, addresses] of addressesByContact) {
-    const fingerprints = new Map<string, number>();
-
-    for (const addr of addresses) {
-      // Skip junk addresses - they're handled in normalize tab
-      if (detectJunkIssue(addr)) continue;
-
-      const fp = createFingerprint(addr);
-      if (fp) { // Only count non-empty fingerprints
-        fingerprints.set(fp, (fingerprints.get(fp) || 0) + 1);
-      }
-    }
-
-    for (const count of fingerprints.values()) {
-      if (count > 1) {
-        duplicateCount += count - 1;
-        contactsWithDuplicates.add(contactId);
-      }
+  for (const contact of result.contacts) {
+    for (const group of contact.addressGroups) {
+      // Count all addresses except the recommended one (which we keep)
+      duplicateCount += group.addresses.length - 1;
     }
   }
 
   return {
     duplicateCount,
-    totalContacts: contactsWithDuplicates.size
+    totalContacts: result.total
   };
+}
+
+// Extended type for addresses with fingerprint tracking
+interface AddressWithFingerprint extends AddressWithIssues {
+  fingerprint: string;
+  confidence?: DuplicateConfidence;
 }
 
 /**
@@ -701,7 +784,8 @@ export function getDuplicatesSummary(): DuplicatesSummary {
  */
 export function findDuplicateAddresses(
   limit: number,
-  offset: number
+  offset: number,
+  confidenceFilter?: 'all' | 'exact' | 'high' | 'medium'
 ): { contacts: DuplicatesContact[]; total: number } {
   const db = getDatabase();
   const addressesByContact = getAddressesByContact();
@@ -710,9 +794,9 @@ export function findDuplicateAddresses(
 
   for (const [contactId, addresses] of addressesByContact) {
     const addressGroups: AddressGroup[] = [];
-    const fingerprints = new Map<string, AddressWithIssues[]>();
+    const fingerprints = new Map<string, AddressWithFingerprint[]>();
 
-    // Group non-junk addresses by fingerprint
+    // PASS 1: Group non-junk addresses by exact fingerprint match
     for (const addr of addresses) {
       // Skip junk addresses
       if (detectJunkIssue(addr)) continue;
@@ -720,26 +804,107 @@ export function findDuplicateAddresses(
       const fp = createFingerprint(addr);
       if (!fp) continue; // Skip empty fingerprints
 
-      const addrWithIssues: AddressWithIssues = {
+      const addrWithFp: AddressWithFingerprint = {
         ...addr,
         isRecommended: false,
-        issues: []
+        issues: [],
+        fingerprint: fp
       };
 
       if (!fingerprints.has(fp)) {
         fingerprints.set(fp, []);
       }
-      fingerprints.get(fp)!.push(addrWithIssues);
+      fingerprints.get(fp)!.push(addrWithFp);
     }
 
-    // Check for duplicates within fingerprint groups
+    // Mark exact duplicates (groups with >1 address)
+    for (const [, addrs] of fingerprints) {
+      if (addrs.length > 1) {
+        for (const addr of addrs) {
+          addr.issues.push('duplicate');
+          addr.confidence = 'exact';
+        }
+      }
+    }
+
+    // PASS 2: Subset matching for ungrouped addresses
+    const ungrouped: AddressWithFingerprint[] = [];
+    for (const [fp, addrs] of fingerprints) {
+      if (addrs.length === 1) {
+        ungrouped.push(addrs[0]);
+      }
+    }
+
+    // Check ungrouped against existing groups (groups with >1 address)
+    for (const addr of ungrouped) {
+      for (const [groupFp, groupAddrs] of fingerprints) {
+        if (groupAddrs.length > 1) {
+          const conf = getDuplicateConfidence(addr.fingerprint, groupFp);
+          if (conf && conf !== 'exact') {
+            addr.issues.push('duplicate');
+            addr.confidence = conf;
+            groupAddrs.push(addr);
+            fingerprints.delete(addr.fingerprint);
+            break;
+          }
+        }
+      }
+    }
+
+    // Refresh ungrouped list after joining existing groups
+    const stillUngrouped: AddressWithFingerprint[] = [];
+    for (const [fp, addrs] of fingerprints) {
+      if (addrs.length === 1) {
+        stillUngrouped.push(addrs[0]);
+      }
+    }
+
+    // Check ungrouped against each other
+    for (let i = 0; i < stillUngrouped.length; i++) {
+      for (let j = i + 1; j < stillUngrouped.length; j++) {
+        const a = stillUngrouped[i];
+        const b = stillUngrouped[j];
+
+        // Skip if either is already grouped
+        if (!fingerprints.has(a.fingerprint) || !fingerprints.has(b.fingerprint)) continue;
+        if (fingerprints.get(a.fingerprint)!.length > 1 || fingerprints.get(b.fingerprint)!.length > 1) continue;
+
+        const conf = getDuplicateConfidence(a.fingerprint, b.fingerprint);
+        if (conf) {
+          // Create new group using the larger fingerprint
+          const largerFp = a.fingerprint.length >= b.fingerprint.length ? a.fingerprint : b.fingerprint;
+          const smallerFp = largerFp === a.fingerprint ? b.fingerprint : a.fingerprint;
+
+          // Mark both as duplicates with confidence
+          a.issues.push('duplicate');
+          a.confidence = conf;
+          b.issues.push('duplicate');
+          b.confidence = conf;
+
+          // Add both to the group with the larger fingerprint
+          const group = fingerprints.get(largerFp)!;
+          const smallerGroup = fingerprints.get(smallerFp)!;
+
+          for (const addr of smallerGroup) {
+            if (!group.includes(addr)) {
+              group.push(addr);
+            }
+          }
+
+          // Remove the smaller fingerprint group
+          fingerprints.delete(smallerFp);
+        }
+      }
+    }
+
+    // Build address groups from fingerprints with duplicates
     let hasDuplicates = false;
     for (const [fp, addrs] of fingerprints) {
       if (addrs.length > 1) {
-        // Mark as duplicates
-        for (const addr of addrs) {
-          addr.issues.push('duplicate');
-        }
+        // Determine the overall group confidence
+        const hasExact = addrs.some(a => a.confidence === 'exact' || a.confidence === undefined);
+        const hasMedium = addrs.some(a => a.confidence === 'medium');
+        const groupConfidence: DuplicateConfidence = hasExact ? 'exact' : (hasMedium ? 'medium' : 'high');
 
         // Find the best address to recommend
         const sorted = [...addrs].sort((a, b) => scoreAddress(b) - scoreAddress(a));
@@ -747,7 +912,8 @@ export function findDuplicateAddresses(
 
         addressGroups.push({
           fingerprint: fp,
-          addresses: addrs
+          addresses: addrs,
+          confidence: groupConfidence
         });
         hasDuplicates = true;
       }
@@ -771,8 +937,17 @@ export function findDuplicateAddresses(
   // Sort by display name
   contactsWithDuplicates.sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-  const total = contactsWithDuplicates.length;
-  const paginated = contactsWithDuplicates.slice(offset, offset + limit);
+  // Apply confidence filter if specified
+  let filteredContacts = contactsWithDuplicates;
+  if (confidenceFilter && confidenceFilter !== 'all') {
+    filteredContacts = contactsWithDuplicates.map(contact => ({
+      ...contact,
+      addressGroups: contact.addressGroups.filter(g => g.confidence === confidenceFilter)
+    })).filter(contact => contact.addressGroups.length > 0);
+  }
+
+  const total = filteredContacts.length;
+  const paginated = filteredContacts.slice(offset, offset + limit);
 
   return { contacts: paginated, total };
 }
@@ -780,7 +955,9 @@ export function findDuplicateAddresses(
 /**
  * Get all contacts with duplicate addresses for bulk operations
  */
-export function getAllDuplicateContacts(): {
+export function getAllDuplicateContacts(
+  confidenceFilter?: 'all' | 'exact' | 'high' | 'medium'
+): {
   contacts: Array<{
     id: number;
     keepAddressIds: number[];
@@ -788,7 +965,8 @@ export function getAllDuplicateContacts(): {
   }>;
   total: number;
 } {
-  const addressesByContact = getAddressesByContact();
+  // Use findDuplicateAddresses to leverage the two-pass algorithm
+  const result = findDuplicateAddresses(Number.MAX_SAFE_INTEGER, 0, confidenceFilter);
 
   const results: Array<{
     id: number;
@@ -796,48 +974,24 @@ export function getAllDuplicateContacts(): {
     removeAddressIds: number[];
   }> = [];
 
-  for (const [contactId, addresses] of addressesByContact) {
-    const fingerprints = new Map<string, AddressRecord[]>();
+  for (const contact of result.contacts) {
     const keepIds: number[] = [];
     const removeIds: number[] = [];
-    let hasDuplicates = false;
 
-    // Group non-junk addresses by fingerprint
-    for (const addr of addresses) {
-      // Skip junk addresses
-      if (detectJunkIssue(addr)) continue;
-
-      const fp = createFingerprint(addr);
-      if (!fp) continue;
-
-      if (!fingerprints.has(fp)) {
-        fingerprints.set(fp, []);
-      }
-      fingerprints.get(fp)!.push(addr);
-    }
-
-    // Process each fingerprint group
-    for (const [, addrs] of fingerprints) {
-      if (addrs.length === 1) {
-        keepIds.push(addrs[0].id);
-      } else {
-        // Multiple addresses with same fingerprint - duplicates
-        hasDuplicates = true;
-
-        // Sort by score and keep the best one
-        const sorted = [...addrs].sort((a, b) => scoreAddress(b) - scoreAddress(a));
-        keepIds.push(sorted[0].id);
-
-        // Remove the rest
-        for (let i = 1; i < sorted.length; i++) {
-          removeIds.push(sorted[i].id);
+    for (const group of contact.addressGroups) {
+      // The recommended address is the one to keep
+      for (const addr of group.addresses) {
+        if (addr.isRecommended) {
+          keepIds.push(addr.id);
+        } else {
+          removeIds.push(addr.id);
         }
       }
     }
 
-    if (hasDuplicates) {
+    if (removeIds.length > 0) {
       results.push({
-        id: contactId,
+        id: contact.id,
         keepAddressIds: keepIds,
         removeAddressIds: removeIds
       });

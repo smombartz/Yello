@@ -4,7 +4,8 @@ import { AddressCleanupCard } from './AddressCleanupCard';
 import {
   useDuplicatesContacts,
   useFixDuplicateAddresses,
-  fetchAllDuplicateContacts
+  fetchAllDuplicateContacts,
+  type DuplicatesConfidenceFilter
 } from '../api/addressCleanupHooks';
 import type { AddressFix, AddressCleanupContact } from '../api/types';
 
@@ -21,12 +22,13 @@ export function AddressDuplicates() {
   const [showFixAllConfirm, setShowFixAllConfirm] = useState(false);
   const [skippedIds, setSkippedIds] = useState<Set<number>>(new Set());
   const [isFixingAll, setIsFixingAll] = useState(false);
+  const [confidenceFilter, setConfidenceFilter] = useState<DuplicatesConfidenceFilter>('all');
 
   const {
     data,
     isLoading,
     isFetching,
-  } = useDuplicatesContacts(currentPage, PAGE_SIZE);
+  } = useDuplicatesContacts(currentPage, PAGE_SIZE, confidenceFilter);
 
   const fixMutation = useFixDuplicateAddresses();
 
@@ -68,8 +70,8 @@ export function AddressDuplicates() {
     setShowFixAllConfirm(false);
 
     try {
-      // Fetch all contacts with duplicates
-      const allContacts = await fetchAllDuplicateContacts();
+      // Fetch all contacts with duplicates (respecting current filter)
+      const allContacts = await fetchAllDuplicateContacts(confidenceFilter);
 
       // Convert to fixes
       const fixes: AddressFix[] = allContacts.map(c => ({
@@ -93,7 +95,7 @@ export function AddressDuplicates() {
       setIsFixingAll(false);
       showToast('Failed to fix addresses');
     }
-  }, [fixMutation, showToast]);
+  }, [fixMutation, showToast, confidenceFilter]);
 
   // Transform DuplicatesContact to AddressCleanupContact for the card
   const transformedContacts: AddressCleanupContact[] = (data?.contacts ?? []).map(c => ({
@@ -115,14 +117,7 @@ export function AddressDuplicates() {
     );
   }
 
-  if (total === 0 && !isFetching) {
-    return (
-      <div className="duplicates-empty">
-        <span className="material-symbols-outlined">check_circle</span>
-        <p>No duplicate addresses found</p>
-      </div>
-    );
-  }
+  const isEmpty = total === 0 && !isFetching;
 
   return (
     <div className="duplicates-view">
@@ -137,16 +132,41 @@ export function AddressDuplicates() {
         <div className="duplicates-stats">
           {total} contact{total !== 1 ? 's' : ''} with duplicate addresses
         </div>
-        <button
-          className="fix-all-button"
-          onClick={() => setShowFixAllConfirm(true)}
-          disabled={fixMutation.isPending || isFixingAll}
-        >
-          <span className="material-symbols-outlined">auto_fix_high</span>
-          {isFixingAll ? 'Fixing...' : `Fix All Contacts (${total})`}
-        </button>
+        <div className="duplicates-actions">
+          <div className="confidence-filter">
+            <label htmlFor="confidence-filter">Show:</label>
+            <select
+              id="confidence-filter"
+              value={confidenceFilter}
+              onChange={(e) => {
+                setConfidenceFilter(e.target.value as DuplicatesConfidenceFilter);
+                setCurrentPage(1);
+                setSkippedIds(new Set());
+              }}
+            >
+              <option value="all">All duplicates</option>
+              <option value="exact">Exact matches only</option>
+              <option value="high">High confidence</option>
+              <option value="medium">Medium confidence</option>
+            </select>
+          </div>
+          <button
+            className="fix-all-button"
+            onClick={() => setShowFixAllConfirm(true)}
+            disabled={fixMutation.isPending || isFixingAll || isEmpty}
+          >
+            <span className="material-symbols-outlined">auto_fix_high</span>
+            {isFixingAll ? 'Fixing...' : `Fix All Contacts (${total})`}
+          </button>
+        </div>
       </div>
 
+      {isEmpty ? (
+        <div className="duplicates-empty">
+          <span className="material-symbols-outlined">check_circle</span>
+          <p>No duplicate addresses found{confidenceFilter !== 'all' ? ` for "${confidenceFilter}" confidence` : ''}</p>
+        </div>
+      ) : (
       <div className="duplicates-list">
         {contacts.map((contact) => (
           <AddressCleanupCard
@@ -158,8 +178,9 @@ export function AddressDuplicates() {
           />
         ))}
       </div>
+      )}
 
-      {totalPages > 1 && (
+      {!isEmpty && totalPages > 1 && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

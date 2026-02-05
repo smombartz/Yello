@@ -3,6 +3,7 @@ import { getDatabase, rebuildContactSearch } from '../services/database.js';
 import { getPhotoUrl } from '../services/photoProcessor.js';
 import { detectMergeConflicts, mergeContactsWithResolutions } from '../services/mergeService.js';
 import { geocodeAddress, isValidCoordinate } from '../services/geocoding.js';
+import { generateVcard, type ContactForVcard } from '../services/vcardGenerator.js';
 import {
   ContactListQuerySchema,
   ContactListQuery,
@@ -1181,14 +1182,112 @@ export default async function contactsRoutes(
   });
 
   // GET /api/contacts/export/vcf - Export all contacts as VCF
-  fastify.get('/export/vcf', async (_request, reply) => {
+  // Query params:
+  //   regenerate=true - Regenerate vCards from DB fields with country-formatted addresses
+  fastify.get<{
+    Querystring: { regenerate?: string }
+  }>('/export/vcf', async (request, reply) => {
     const db = getDatabase();
+    const regenerate = request.query.regenerate === 'true';
 
-    const contacts = db.prepare(`
-      SELECT raw_vcard FROM contacts WHERE raw_vcard IS NOT NULL
-    `).all() as Array<{ raw_vcard: string }>;
+    let vcfContent: string;
 
-    const vcfContent = contacts.map(c => c.raw_vcard).join('\n');
+    if (regenerate) {
+      // Regenerate vCards from database fields
+      const contacts = db.prepare(`
+        SELECT
+          id, first_name, last_name, display_name, company, title, notes, birthday
+        FROM contacts
+        WHERE archived_at IS NULL
+      `).all() as Array<{
+        id: number;
+        first_name: string | null;
+        last_name: string | null;
+        display_name: string;
+        company: string | null;
+        title: string | null;
+        notes: string | null;
+        birthday: string | null;
+      }>;
+
+      const vcards: string[] = [];
+
+      for (const contact of contacts) {
+        // Fetch related data
+        const emails = db.prepare(`
+          SELECT email, type, is_primary FROM contact_emails WHERE contact_id = ?
+        `).all(contact.id) as Array<{ email: string; type: string | null; is_primary: number }>;
+
+        const phones = db.prepare(`
+          SELECT phone, phone_display, type, is_primary FROM contact_phones WHERE contact_id = ?
+        `).all(contact.id) as Array<{ phone: string; phone_display: string; type: string | null; is_primary: number }>;
+
+        const addresses = db.prepare(`
+          SELECT street, city, state, postal_code, country, type FROM contact_addresses WHERE contact_id = ?
+        `).all(contact.id) as Array<{
+          street: string | null;
+          city: string | null;
+          state: string | null;
+          postal_code: string | null;
+          country: string | null;
+          type: string | null;
+        }>;
+
+        const socialProfiles = db.prepare(`
+          SELECT platform, username, profile_url FROM contact_social_profiles WHERE contact_id = ?
+        `).all(contact.id) as Array<{ platform: string; username: string | null; profile_url: string | null }>;
+
+        const categories = db.prepare(`
+          SELECT name FROM contact_categories WHERE contact_id = ?
+        `).all(contact.id) as Array<{ name: string }>;
+
+        const contactForVcard: ContactForVcard = {
+          firstName: contact.first_name,
+          lastName: contact.last_name,
+          displayName: contact.display_name,
+          company: contact.company,
+          title: contact.title,
+          notes: contact.notes,
+          birthday: contact.birthday,
+          emails: emails.map(e => ({
+            email: e.email,
+            type: e.type,
+            isPrimary: e.is_primary === 1
+          })),
+          phones: phones.map(p => ({
+            phone: p.phone,
+            phoneDisplay: p.phone_display,
+            type: p.type,
+            isPrimary: p.is_primary === 1
+          })),
+          addresses: addresses.map(a => ({
+            street: a.street,
+            city: a.city,
+            state: a.state,
+            postalCode: a.postal_code,
+            country: a.country,
+            type: a.type
+          })),
+          socialProfiles: socialProfiles.map(s => ({
+            platform: s.platform,
+            username: s.username,
+            profileUrl: s.profile_url
+          })),
+          categories: categories.map(c => c.name)
+        };
+
+        vcards.push(generateVcard(contactForVcard));
+      }
+
+      vcfContent = vcards.join('\r\n');
+    } else {
+      // Return original raw_vcard data (existing behavior)
+      const contacts = db.prepare(`
+        SELECT raw_vcard FROM contacts WHERE raw_vcard IS NOT NULL AND archived_at IS NULL
+      `).all() as Array<{ raw_vcard: string }>;
+
+      vcfContent = contacts.map(c => c.raw_vcard).join('\n');
+    }
 
     reply.header('Content-Type', 'text/vcard');
     reply.header('Content-Disposition', 'attachment; filename="contacts.vcf"');

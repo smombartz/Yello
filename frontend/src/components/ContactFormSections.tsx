@@ -1,5 +1,6 @@
 import type { ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson } from '../api/types';
 import { getCountryFlag, getCountryName } from '../lib/phoneUtils';
+import { formatAddress } from '../lib/addressUtils';
 
 // Editable input component for simple text fields
 export function EditableField({
@@ -431,8 +432,8 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange }: {
       <h4 className="section-header">Locations</h4>
       <div className="section-content">
         {addresses.map((addr, i) => {
-          const parts = [addr.street, addr.city, addr.state, addr.postalCode, addr.country].filter(Boolean);
-          if (!parts.length) return null;
+          const formatted = formatAddress(addr);
+          if (formatted === '(Empty address)') return null;
 
           const icon = addr.type?.toLowerCase() === 'home' ? 'home' :
                        addr.type?.toLowerCase() === 'work' ? 'business' : 'location_on';
@@ -441,7 +442,7 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange }: {
             <div key={i} className="expanded-item">
               <span className="material-symbols-outlined">{icon}</span>
               <div className="expanded-item-content">
-                <span className="address-text">{parts.join(', ')}</span>
+                <span className="address-text">{formatted}</span>
                 {addr.type && <span className="item-type">{addr.type}</span>}
               </div>
             </div>
