@@ -336,25 +336,6 @@ export interface CreateContactRequest {
   relatedPeople?: UpdateContactRelatedPerson[];
 }
 
-// Settings types
-export interface UserSettings {
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  avatarUrl: string | null;
-  website: string | null;
-  linkedinUrl: string | null;
-}
-
-export interface UpdateUserSettingsRequest {
-  name?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  avatarUrl?: string | null;
-  website?: string | null;
-  linkedinUrl?: string | null;
-}
-
 // Social Links Cleanup types
 export interface SocialLinksSummary {
   crossContact: number;

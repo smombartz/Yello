@@ -1,8 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
-  useUserSettings,
-  useUpdateUserSettings,
   useDeleteAllContacts,
   useFetchContactPhotosStream,
   useImportLinkedInStream,
@@ -28,8 +26,6 @@ interface ToastState {
 
 export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
   const { isMobile } = useOutletContext<OutletContext>();
-  const { data: settings, isLoading } = useUserSettings();
-  const updateMutation = useUpdateUserSettings();
   const deleteMutation = useDeleteAllContacts();
   const { isStreaming, progress, startFetching, cancel: cancelFetching } = useFetchContactPhotosStream();
   const {
@@ -42,37 +38,14 @@ export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
     reset: resetLinkedInImport
   } = useImportLinkedInStream();
 
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    avatarUrl: '',
-    website: '',
-    linkedinUrl: '',
-  });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [toast, setToast] = useState<ToastState | null>(null);
-  const [profileExpanded, setProfileExpanded] = useState(true);
   const [exportExpanded, setExportExpanded] = useState(false);
   const [photosExpanded, setPhotosExpanded] = useState(false);
   const [linkedInExpanded, setLinkedInExpanded] = useState(false);
   const [dangerExpanded, setDangerExpanded] = useState(false);
   const [linkedInFile, setLinkedInFile] = useState<File | null>(null);
-
-  // Sync form with loaded settings
-  useEffect(() => {
-    if (settings) {
-      setFormData({
-        name: settings.name ?? '',
-        email: settings.email ?? '',
-        phone: settings.phone ?? '',
-        avatarUrl: settings.avatarUrl ?? '',
-        website: settings.website ?? '',
-        linkedinUrl: settings.linkedinUrl ?? '',
-      });
-    }
-  }, [settings]);
 
   // Cleanup toast timeout on unmount
   useEffect(() => {
@@ -90,28 +63,6 @@ export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
     const timeout = setTimeout(() => setToast(null), 5000);
     setToast({ message, type, timeout });
   }, [toast]);
-
-  const handleInputChange = useCallback((field: keyof typeof formData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  }, []);
-
-  const handleSaveProfile = useCallback(() => {
-    updateMutation.mutate({
-      name: formData.name || null,
-      email: formData.email || null,
-      phone: formData.phone || null,
-      avatarUrl: formData.avatarUrl || null,
-      website: formData.website || null,
-      linkedinUrl: formData.linkedinUrl || null,
-    }, {
-      onSuccess: () => {
-        showToast('Profile saved successfully', 'success');
-      },
-      onError: () => {
-        showToast('Failed to save profile', 'error');
-      }
-    });
-  }, [formData, updateMutation, showToast]);
 
   const handleExport = useCallback(() => {
     exportAllContacts();
@@ -175,17 +126,6 @@ export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
     });
   }, [deleteConfirmText, deleteMutation, showToast]);
 
-  if (isLoading) {
-    return (
-      <div className="settings-view">
-        <div className="settings-loading">
-          <span className="material-symbols-outlined spinning">sync</span>
-          <p>Loading settings...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="settings-view">
       {isMobile ? (
@@ -197,95 +137,6 @@ export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
       )}
 
       <div className="settings-content">
-        {/* Profile Section */}
-        <section className={`settings-section collapsible-card${profileExpanded ? ' expanded' : ''}`}>
-          <button
-            className="collapsible-header"
-            onClick={() => setProfileExpanded(!profileExpanded)}
-          >
-            <div className="settings-section-header">
-              <span className="material-symbols-outlined">person</span>
-              <h2>Profile</h2>
-            </div>
-            <span className={`material-symbols-outlined expand-icon${profileExpanded ? ' rotated' : ''}`}>
-              expand_more
-            </span>
-          </button>
-          {profileExpanded && (
-            <div className="collapsible-content">
-              <div className="settings-form">
-                <div className="form-group">
-                  <label htmlFor="name">Name</label>
-                  <input
-                    id="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    placeholder="Your name"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="email">Email</label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    placeholder="your@email.com"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="phone">Phone</label>
-                  <input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    placeholder="+1 234 567 8900"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="website">Website</label>
-                  <input
-                    id="website"
-                    type="url"
-                    value={formData.website}
-                    onChange={(e) => handleInputChange('website', e.target.value)}
-                    placeholder="https://yourwebsite.com"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="linkedin">LinkedIn</label>
-                  <input
-                    id="linkedin"
-                    type="url"
-                    value={formData.linkedinUrl}
-                    onChange={(e) => handleInputChange('linkedinUrl', e.target.value)}
-                    placeholder="https://linkedin.com/in/username"
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="avatar">Avatar URL</label>
-                  <input
-                    id="avatar"
-                    type="url"
-                    value={formData.avatarUrl}
-                    onChange={(e) => handleInputChange('avatarUrl', e.target.value)}
-                    placeholder="https://example.com/avatar.jpg"
-                  />
-                </div>
-                <button
-                  className="primary-button"
-                  onClick={handleSaveProfile}
-                  disabled={updateMutation.isPending}
-                >
-                  {updateMutation.isPending ? 'Saving...' : 'Save Profile'}
-                </button>
-              </div>
-            </div>
-          )}
-        </section>
-
         {/* Export Section */}
         <section className={`settings-section collapsible-card${exportExpanded ? ' expanded' : ''}`}>
           <button
