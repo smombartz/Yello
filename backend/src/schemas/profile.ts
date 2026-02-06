@@ -64,14 +64,27 @@ export const ProfileSocialLinkSchema = Type.Object({
 
 export type ProfileSocialLink = Static<typeof ProfileSocialLinkSchema>;
 
+// Linked contact info (when profile is linked to a contact)
+export const LinkedContactSchema = Type.Object({
+  id: Type.Number(),
+  displayName: Type.String(),
+  photoUrl: Type.Union([Type.String(), Type.Null()]),
+});
+
+export type LinkedContact = Static<typeof LinkedContactSchema>;
+
 // Full user profile response
 export const UserProfileSchema = Type.Object({
+  // Linked contact (if profile is linked to a contact)
+  linkedContactId: Type.Union([Type.Number(), Type.Null()]),
+  linkedContact: Type.Union([LinkedContactSchema, Type.Null()]),
+
   // Public card settings
   isPublic: Type.Boolean({ default: false }),
   publicUrl: Type.Union([Type.String(), Type.Null()]),
   publicSlug: Type.Union([Type.String(), Type.Null()]),
 
-  // Basic info
+  // Basic info (from linked contact or profile_* tables)
   avatarUrl: Type.Union([Type.String(), Type.Null()]),
   firstName: Type.Union([Type.String(), Type.Null()]),
   lastName: Type.Union([Type.String(), Type.Null()]),
@@ -102,6 +115,24 @@ export const UserProfileSchema = Type.Object({
 export type UserProfile = Static<typeof UserProfileSchema>;
 
 // Update request
-export const UpdateUserProfileSchema = Type.Partial(Type.Omit(UserProfileSchema, ['publicUrl']));
+export const UpdateUserProfileSchema = Type.Partial(Type.Omit(UserProfileSchema, ['publicUrl', 'linkedContact']));
 
 export type UpdateUserProfile = Static<typeof UpdateUserProfileSchema>;
+
+// Contact search result for linking
+export const ContactSearchResultSchema = Type.Object({
+  id: Type.Number(),
+  displayName: Type.String(),
+  photoUrl: Type.Union([Type.String(), Type.Null()]),
+  primaryEmail: Type.Union([Type.String(), Type.Null()]),
+  primaryPhone: Type.Union([Type.String(), Type.Null()]),
+});
+
+export type ContactSearchResult = Static<typeof ContactSearchResultSchema>;
+
+// Link profile to contact request
+export const LinkProfileToContactSchema = Type.Object({
+  contactId: Type.Number(),
+});
+
+export type LinkProfileToContact = Static<typeof LinkProfileToContactSchema>;

@@ -615,7 +615,18 @@ export interface ProfileSocialLink {
   profileUrl: string | null;
 }
 
+// Linked contact info (when profile is linked to a contact)
+export interface LinkedContact {
+  id: number;
+  displayName: string;
+  photoUrl: string | null;
+}
+
 export interface UserProfile {
+  // Linked contact (if profile is linked to a contact)
+  linkedContactId: number | null;
+  linkedContact: LinkedContact | null;
+
   isPublic: boolean;
   publicUrl: string | null;
   publicSlug: string | null;
@@ -636,6 +647,15 @@ export interface UserProfile {
   birthday: string | null;
   notes: string | null;
   visibility: ProfileVisibility;
+}
+
+// Contact search result for linking
+export interface ContactSearchResult {
+  id: number;
+  displayName: string;
+  photoUrl: string | null;
+  primaryEmail: string | null;
+  primaryPhone: string | null;
 }
 
 export interface UpdateUserProfileRequest {

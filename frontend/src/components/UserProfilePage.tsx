@@ -1,6 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { useUserProfile, useUpdateUserProfile } from '../api/profileHooks';
+import {
+  useUserProfile,
+  useUpdateUserProfile,
+  useSearchContactsForLinking,
+  useLinkProfileToContact,
+  useUnlinkProfile,
+  useCreateProfileContact,
+} from '../api/profileHooks';
 import { useAuth } from '../contexts/AuthContext';
 import type {
   UpdateUserProfileRequest,
@@ -9,6 +16,7 @@ import type {
   ProfileAddress,
   ProfileSocialLink,
   ProfileVisibility,
+  ContactSearchResult,
 } from '../api/types';
 import { Avatar } from './Avatar';
 import { MobileHeader } from './MobileHeader';
@@ -236,17 +244,214 @@ function PublicCardPreview({ form, isPublic }: { form: FormState; isPublic: bool
   );
 }
 
+// Contact search autocomplete component
+function ContactSearchAutocomplete({
+  onSelect,
+  onCancel,
+}: {
+  onSelect: (contact: ContactSearchResult) => void;
+  onCancel: () => void;
+}) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { data: searchResults, isLoading } = useSearchContactsForLinking(searchQuery);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  return (
+    <div className="contact-search-autocomplete">
+      <div className="search-input-wrapper">
+        <span className="material-symbols-outlined">search</span>
+        <input
+          ref={inputRef}
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search your contacts..."
+          className="search-input"
+        />
+        <button type="button" onClick={onCancel} className="cancel-btn">
+          <span className="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div className="search-results">
+        {isLoading && searchQuery && (
+          <div className="search-loading">Searching...</div>
+        )}
+        {searchResults && searchResults.length > 0 && (
+          <ul className="results-list">
+            {searchResults.map((contact) => (
+              <li key={contact.id}>
+                <button
+                  type="button"
+                  className="result-item"
+                  onClick={() => onSelect(contact)}
+                >
+                  <Avatar photoUrl={contact.photoUrl} name={contact.displayName} size={40} />
+                  <div className="result-info">
+                    <strong>{contact.displayName}</strong>
+                    <span className="result-detail">
+                      {contact.primaryEmail || contact.primaryPhone || ''}
+                    </span>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {searchResults && searchResults.length === 0 && searchQuery.length > 0 && (
+          <div className="no-results">No contacts found</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Unlinked state - shows connect/create options
+function UnlinkedProfileState({
+  onConnect,
+  onCreate,
+  userName,
+}: {
+  onConnect: () => void;
+  onCreate: (name: string) => void;
+  userName: string | null;
+}) {
+  const [showCreateInput, setShowCreateInput] = useState(false);
+  const [newName, setNewName] = useState(userName || '');
+
+  const handleCreate = () => {
+    if (newName.trim()) {
+      onCreate(newName.trim());
+    }
+  };
+
+  return (
+    <div className="unlinked-profile-state">
+      <div className="setup-icon">
+        <span className="material-symbols-outlined">person_add</span>
+      </div>
+      <h2>Set Up Your Profile</h2>
+      <p>Link your profile to a contact card to share your information publicly.</p>
+
+      <div className="setup-options">
+        <button type="button" className="setup-option" onClick={onConnect}>
+          <div className="option-icon">
+            <span className="material-symbols-outlined">link</span>
+          </div>
+          <div className="option-content">
+            <strong>Connect to Existing Contact</strong>
+            <span>Search and link to a contact in your address book</span>
+          </div>
+        </button>
+
+        {!showCreateInput ? (
+          <button type="button" className="setup-option" onClick={() => setShowCreateInput(true)}>
+            <div className="option-icon">
+              <span className="material-symbols-outlined">add_circle</span>
+            </div>
+            <div className="option-content">
+              <strong>Create New Profile</strong>
+              <span>Create a new contact card linked to your profile</span>
+            </div>
+          </button>
+        ) : (
+          <div className="create-input-wrapper">
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Enter your name"
+              className="create-name-input"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreate();
+                if (e.key === 'Escape') setShowCreateInput(false);
+              }}
+            />
+            <div className="create-actions">
+              <button type="button" className="secondary-button" onClick={() => setShowCreateInput(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={handleCreate}
+                disabled={!newName.trim()}
+              >
+                Create Profile
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Linked profile header card
+function LinkedProfileHeader({
+  linkedContact,
+  onUnlink,
+}: {
+  linkedContact: { id: number; displayName: string; photoUrl: string | null };
+  onUnlink: () => void;
+}) {
+  const [showConfirmUnlink, setShowConfirmUnlink] = useState(false);
+
+  return (
+    <div className="linked-profile-header">
+      <div className="header-content">
+        <Avatar photoUrl={linkedContact.photoUrl} name={linkedContact.displayName} size={56} />
+        <div className="header-info">
+          <h3>{linkedContact.displayName}</h3>
+          <p>Linked Contact</p>
+        </div>
+      </div>
+      {!showConfirmUnlink ? (
+        <button
+          type="button"
+          className="unlink-btn"
+          onClick={() => setShowConfirmUnlink(true)}
+        >
+          <span className="material-symbols-outlined">link_off</span>
+          Unlink
+        </button>
+      ) : (
+        <div className="unlink-confirm">
+          <p>Unlink this contact?</p>
+          <div className="confirm-actions">
+            <button type="button" className="secondary-button" onClick={() => setShowConfirmUnlink(false)}>
+              Cancel
+            </button>
+            <button type="button" className="danger-button" onClick={onUnlink}>
+              Unlink
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function UserProfilePage() {
   const { isMobile } = useOutletContext<OutletContext>();
   const { user } = useAuth();
   const { data: profile, isLoading } = useUserProfile();
   const updateProfileMutation = useUpdateUserProfile();
+  const linkMutation = useLinkProfileToContact();
+  const unlinkMutation = useUnlinkProfile();
+  const createMutation = useCreateProfileContact();
 
   const [form, setForm] = useState<FormState>(getInitialFormState());
   const [hasChanges, setHasChanges] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConnectSearch, setShowConnectSearch] = useState(false);
 
   // Load profile data into form
   useEffect(() => {
@@ -254,13 +459,13 @@ export function UserProfilePage() {
       setForm({
         isPublic: profile.isPublic,
         publicSlug: profile.publicSlug,
-        avatarUrl: profile.avatarUrl || user?.avatarUrl || null,
-        firstName: profile.firstName || user?.name?.split(' ')[0] || null,
-        lastName: profile.lastName || user?.name?.split(' ').slice(1).join(' ') || null,
+        avatarUrl: profile.avatarUrl,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
         tagline: profile.tagline,
         company: profile.company,
         title: profile.title,
-        emails: profile.emails.length > 0 ? profile.emails : (user?.email ? [{ email: user.email, type: 'personal', isPrimary: true }] : []),
+        emails: profile.emails,
         phones: profile.phones,
         addresses: profile.addresses,
         website: profile.website,
@@ -274,7 +479,7 @@ export function UserProfilePage() {
       });
       setHasChanges(false);
     }
-  }, [profile, user]);
+  }, [profile]);
 
   // Update form state helper
   const updateForm = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -301,7 +506,6 @@ export function UserProfilePage() {
     const updateData: UpdateUserProfileRequest = {
       isPublic: form.isPublic,
       publicSlug: form.publicSlug,
-      avatarUrl: form.avatarUrl,
       firstName: form.firstName,
       lastName: form.lastName,
       tagline: form.tagline,
@@ -342,6 +546,34 @@ export function UserProfilePage() {
       } catch {
         setError('Failed to copy URL');
       }
+    }
+  };
+
+  // Link to contact handler
+  const handleLinkContact = async (contact: ContactSearchResult) => {
+    try {
+      await linkMutation.mutateAsync(contact.id);
+      setShowConnectSearch(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to link contact');
+    }
+  };
+
+  // Create new profile contact handler
+  const handleCreateProfileContact = async (displayName: string) => {
+    try {
+      await createMutation.mutateAsync(displayName);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create profile');
+    }
+  };
+
+  // Unlink handler
+  const handleUnlink = async () => {
+    try {
+      await unlinkMutation.mutateAsync();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to unlink contact');
     }
   };
 
@@ -409,6 +641,62 @@ export function UserProfilePage() {
     );
   }
 
+  // Show connect search overlay
+  if (showConnectSearch) {
+    return (
+      <>
+        {isMobile ? (
+          <MobileHeader title="Connect to Contact" />
+        ) : (
+          <header className="top-header">
+            <div className="page-header">
+              <h1>Connect to Contact</h1>
+            </div>
+          </header>
+        )}
+        <div className="page-content">
+          <ContactSearchAutocomplete
+            onSelect={handleLinkContact}
+            onCancel={() => setShowConnectSearch(false)}
+          />
+        </div>
+        <style>{profileStyles}</style>
+      </>
+    );
+  }
+
+  // Show unlinked state if no linked contact
+  if (!profile?.linkedContactId) {
+    return (
+      <>
+        {isMobile ? (
+          <MobileHeader title="Profile" />
+        ) : (
+          <header className="top-header">
+            <div className="page-header">
+              <h1>Profile</h1>
+            </div>
+          </header>
+        )}
+        <div className="page-content">
+          {error && (
+            <div className="edit-error">
+              <span className="material-symbols-outlined">error</span>
+              {error}
+            </div>
+          )}
+          <UnlinkedProfileState
+            onConnect={() => setShowConnectSearch(true)}
+            onCreate={handleCreateProfileContact}
+            userName={user?.name || null}
+          />
+        </div>
+        <style>{profileStyles}</style>
+      </>
+    );
+  }
+
+  // Linked state - show full profile editor
   return (
     <>
       {isMobile ? (
@@ -460,6 +748,14 @@ export function UserProfilePage() {
               </div>
             )}
 
+            {/* Linked contact header */}
+            {profile.linkedContact && (
+              <LinkedProfileHeader
+                linkedContact={profile.linkedContact}
+                onUnlink={handleUnlink}
+              />
+            )}
+
             {/* Public card controls */}
             <div className="profile-section public-card-controls">
               <div className="public-toggle-row">
@@ -503,26 +799,6 @@ export function UserProfilePage() {
             {/* Basic info section */}
             <div className="profile-section">
               <h3 className="section-title">Basic Information</h3>
-
-              {/* Avatar */}
-              <div className="profile-field-row">
-                <div className="profile-field with-visibility">
-                  <label>Photo</label>
-                  <div className="avatar-field">
-                    <Avatar photoUrl={form.avatarUrl} name={form.firstName || 'User'} size={64} />
-                    <EditableField
-                      value={form.avatarUrl || ''}
-                      onChange={(v) => updateForm('avatarUrl', v || null)}
-                      placeholder="Avatar URL"
-                    />
-                  </div>
-                </div>
-                <VisibilityToggle
-                  visible={form.visibility.avatar}
-                  onChange={(v) => updateVisibility('avatar', v)}
-                  disabled={!form.isPublic}
-                />
-              </div>
 
               {/* First Name */}
               <div className="profile-field-row">
@@ -937,592 +1213,908 @@ export function UserProfilePage() {
         </div>
       </div>
 
-      <style>{`
-        .profile-loading {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 100%;
-          gap: 16px;
-          color: var(--stitch-text-secondary);
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid var(--stitch-border);
-          border-top-color: var(--stitch-primary);
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-
-        .profile-page-layout {
-          display: grid;
-          grid-template-columns: 1fr 400px;
-          gap: 32px;
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 24px;
-        }
-
-        @media (max-width: 1024px) {
-          .profile-page-layout {
-            grid-template-columns: 1fr;
-          }
-
-          .profile-preview-panel {
-            order: -1;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .profile-page-layout {
-            padding: 16px;
-          }
-        }
-
-        .profile-edit-panel {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .profile-section {
-          background: var(--stitch-card-bg);
-          border: 1px solid var(--stitch-border);
-          border-radius: 12px;
-          padding: 20px;
-        }
-
-        .section-title {
-          font-size: 16px;
-          font-weight: 600;
-          margin: 0 0 16px 0;
-          color: var(--stitch-text-main);
-        }
-
-        .public-card-controls {
-          background: linear-gradient(135deg, #667eea15, #764ba215);
-          border-color: #667eea30;
-        }
-
-        .public-toggle-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-        }
-
-        .public-toggle-label {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .public-toggle-label .material-symbols-outlined {
-          font-size: 28px;
-          color: var(--stitch-primary);
-        }
-
-        .public-toggle-label strong {
-          display: block;
-          font-size: 15px;
-        }
-
-        .public-toggle-label p {
-          margin: 2px 0 0 0;
-          font-size: 13px;
-          color: var(--stitch-text-secondary);
-        }
-
-        .toggle-switch {
-          position: relative;
-          display: inline-block;
-          width: 52px;
-          height: 28px;
-        }
-
-        .toggle-switch input {
-          opacity: 0;
-          width: 0;
-          height: 0;
-        }
-
-        .toggle-slider {
-          position: absolute;
-          cursor: pointer;
-          inset: 0;
-          background-color: var(--stitch-border);
-          transition: 0.3s;
-          border-radius: 28px;
-        }
-
-        .toggle-slider::before {
-          position: absolute;
-          content: "";
-          height: 22px;
-          width: 22px;
-          left: 3px;
-          bottom: 3px;
-          background-color: white;
-          transition: 0.3s;
-          border-radius: 50%;
-        }
-
-        .toggle-switch input:checked + .toggle-slider {
-          background-color: var(--stitch-primary);
-        }
-
-        .toggle-switch input:checked + .toggle-slider::before {
-          transform: translateX(24px);
-        }
-
-        .public-url-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-top: 16px;
-          padding-top: 16px;
-          border-top: 1px solid var(--stitch-border);
-        }
-
-        .public-url-display {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 8px 12px;
-          background: var(--stitch-card-bg);
-          border-radius: 8px;
-          overflow: hidden;
-        }
-
-        .public-url-display code {
-          font-size: 13px;
-          color: var(--stitch-text-secondary);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .copy-url-btn {
-          padding: 8px;
-          background: var(--stitch-card-bg);
-          border: 1px solid var(--stitch-border);
-          border-radius: 8px;
-          cursor: pointer;
-          color: var(--stitch-text-secondary);
-          transition: all 0.2s;
-        }
-
-        .copy-url-btn:hover {
-          background: var(--stitch-primary);
-          color: white;
-          border-color: var(--stitch-primary);
-        }
-
-        .profile-field-row {
-          display: flex;
-          align-items: flex-start;
-          gap: 8px;
-          margin-bottom: 12px;
-        }
-
-        .profile-field-row.address-row {
-          align-items: flex-start;
-        }
-
-        .profile-field-row.notes-row {
-          display: block;
-        }
-
-        .profile-field {
-          flex: 1;
-        }
-
-        .profile-field.with-visibility {
-          flex: 1;
-        }
-
-        .profile-field.full-width {
-          width: 100%;
-        }
-
-        .profile-field label {
-          display: block;
-          font-size: 13px;
-          font-weight: 500;
-          color: var(--stitch-text-secondary);
-          margin-bottom: 4px;
-        }
-
-        .profile-array-field {
-          margin-bottom: 16px;
-        }
-
-        .profile-array-field > label {
-          display: block;
-          font-size: 13px;
-          font-weight: 500;
-          color: var(--stitch-text-secondary);
-          margin-bottom: 8px;
-        }
-
-        .visibility-toggle {
-          flex-shrink: 0;
-          width: 36px;
-          height: 36px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: none;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
-          margin-top: 20px;
-        }
-
-        .visibility-toggle.visible {
-          background: #667eea20;
-          color: var(--stitch-primary);
-        }
-
-        .visibility-toggle.hidden {
-          background: var(--stitch-border);
-          color: var(--stitch-text-secondary);
-        }
-
-        .visibility-toggle.disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .visibility-toggle:hover:not(.disabled) {
-          transform: scale(1.05);
-        }
-
-        .avatar-field {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .avatar-field .edit-input {
-          flex: 1;
-        }
-
-        .birthday-field {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .birthday-preview {
-          font-size: 13px;
-          color: var(--stitch-text-secondary);
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .zodiac-icon-small {
-          width: 20px;
-          height: 20px;
-        }
-
-        .private-badge {
-          display: inline-block;
-          margin-left: 8px;
-          padding: 2px 6px;
-          font-size: 10px;
-          font-weight: 600;
-          text-transform: uppercase;
-          background: var(--stitch-border);
-          border-radius: 4px;
-          color: var(--stitch-text-secondary);
-        }
-
-        .notes-textarea {
-          width: 100%;
-          padding: 12px;
-          border: 1px solid var(--stitch-border);
-          border-radius: 8px;
-          font-size: 14px;
-          resize: vertical;
-          font-family: inherit;
-        }
-
-        .address-fields {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .address-row-inner {
-          display: flex;
-          gap: 8px;
-        }
-
-        .address-row-inner .edit-input {
-          flex: 1;
-        }
-
-        /* Preview panel */
-        .profile-preview-panel {
-          position: sticky;
-          top: 24px;
-          height: fit-content;
-        }
-
-        .preview-panel-header {
-          margin-bottom: 16px;
-        }
-
-        .preview-panel-header h3 {
-          margin: 0;
-          font-size: 16px;
-          font-weight: 600;
-        }
-
-        .preview-panel-header p {
-          margin: 4px 0 0 0;
-          font-size: 13px;
-          color: var(--stitch-text-secondary);
-        }
-
-        .public-card-preview {
-          background: var(--stitch-card-bg);
-          border: 1px solid var(--stitch-border);
-          border-radius: 16px;
-          overflow: hidden;
-        }
-
-        .public-card-preview.disabled {
-          background: var(--stitch-border);
-        }
-
-        .preview-disabled-message {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 48px 24px;
-          text-align: center;
-          color: var(--stitch-text-secondary);
-        }
-
-        .preview-disabled-message .material-symbols-outlined {
-          font-size: 48px;
-          margin-bottom: 16px;
-          opacity: 0.5;
-        }
-
-        .preview-disabled-message p {
-          margin: 4px 0;
-          font-size: 14px;
-        }
-
-        .preview-card {
-          padding: 24px;
-        }
-
-        .preview-avatar {
-          display: flex;
-          justify-content: center;
-          margin-bottom: 16px;
-        }
-
-        .preview-header {
-          text-align: center;
-          margin-bottom: 20px;
-        }
-
-        .preview-name {
-          margin: 0;
-          font-size: 24px;
-          font-weight: 600;
-        }
-
-        .preview-tagline {
-          margin: 4px 0 0 0;
-          font-size: 14px;
-          color: var(--stitch-primary);
-          font-style: italic;
-        }
-
-        .preview-title,
-        .preview-company {
-          margin: 4px 0 0 0;
-          font-size: 14px;
-          color: var(--stitch-text-secondary);
-        }
-
-        .preview-contact-info {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          margin-bottom: 16px;
-        }
-
-        .preview-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 14px;
-        }
-
-        .preview-item .material-symbols-outlined {
-          font-size: 18px;
-          color: var(--stitch-text-secondary);
-        }
-
-        .preview-social {
-          display: flex;
-          justify-content: center;
-          gap: 12px;
-          padding-top: 16px;
-          border-top: 1px solid var(--stitch-border);
-        }
-
-        .preview-social-link {
-          width: 40px;
-          height: 40px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: var(--stitch-border);
-          border-radius: 50%;
-          color: var(--stitch-text-secondary);
-          transition: all 0.2s;
-        }
-
-        .preview-social-link:hover {
-          background: var(--stitch-primary);
-          color: white;
-        }
-
-        .preview-birthday {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          margin-top: 16px;
-          padding-top: 16px;
-          border-top: 1px solid var(--stitch-border);
-          font-size: 14px;
-          color: var(--stitch-text-secondary);
-        }
-
-        /* Save success indicator */
-        .save-success {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          color: #10b981;
-          font-size: 14px;
-        }
-
-        /* Mobile save bar */
-        .mobile-save-bar {
-          position: fixed;
-          bottom: 60px;
-          left: 0;
-          right: 0;
-          padding: 16px;
-          background: var(--stitch-card-bg);
-          border-top: 1px solid var(--stitch-border);
-          z-index: 100;
-        }
-
-        .mobile-save-bar .full-width {
-          width: 100%;
-        }
-
-        /* Inherit styles from ContactFormSections */
-        .edit-input {
-          width: 100%;
-          padding: 8px 12px;
-          border: 1px solid var(--stitch-border);
-          border-radius: 6px;
-          font-size: 14px;
-        }
-
-        .editable-array-item {
-          display: flex;
-          align-items: flex-start;
-          gap: 8px;
-          flex: 1;
-          padding: 8px;
-          background: rgba(0, 0, 0, 0.02);
-          border-radius: 8px;
-        }
-
-        .editable-array-item .material-symbols-outlined {
-          margin-top: 8px;
-          color: var(--stitch-text-secondary);
-        }
-
-        .edit-field-group {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .remove-item-btn {
-          padding: 4px;
-          border: none;
-          background: none;
-          cursor: pointer;
-          color: var(--stitch-text-secondary);
-          opacity: 0.6;
-          transition: opacity 0.2s;
-        }
-
-        .remove-item-btn:hover {
-          opacity: 1;
-          color: #ef4444;
-        }
-
-        .add-item-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 12px;
-          border: 1px dashed var(--stitch-border);
-          background: transparent;
-          border-radius: 6px;
-          cursor: pointer;
-          color: var(--stitch-text-secondary);
-          font-size: 14px;
-          transition: all 0.2s;
-        }
-
-        .add-item-btn:hover {
-          border-color: var(--stitch-primary);
-          color: var(--stitch-primary);
-        }
-
-        .edit-error {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 12px 16px;
-          background: #fee2e2;
-          border-radius: 8px;
-          color: #dc2626;
-          font-size: 14px;
-        }
-
-        .spinning {
-          animation: spin 1s linear infinite;
-        }
-      `}</style>
+      <style>{profileStyles}</style>
     </>
   );
 }
+
+const profileStyles = `
+  .profile-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 16px;
+    color: var(--stitch-text-secondary);
+  }
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--stitch-border);
+    border-top-color: var(--stitch-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Unlinked state styles */
+  .unlinked-profile-state {
+    max-width: 500px;
+    margin: 48px auto;
+    text-align: center;
+    padding: 24px;
+  }
+
+  .setup-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea20, #764ba220);
+    border-radius: 50%;
+  }
+
+  .setup-icon .material-symbols-outlined {
+    font-size: 40px;
+    color: var(--stitch-primary);
+  }
+
+  .unlinked-profile-state h2 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+  }
+
+  .unlinked-profile-state > p {
+    color: var(--stitch-text-secondary);
+    margin: 0 0 32px 0;
+  }
+
+  .setup-options {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .setup-option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: var(--stitch-card-bg);
+    border: 1px solid var(--stitch-border);
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+  }
+
+  .setup-option:hover {
+    border-color: var(--stitch-primary);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  }
+
+  .option-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--stitch-border);
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+
+  .option-icon .material-symbols-outlined {
+    font-size: 24px;
+    color: var(--stitch-primary);
+  }
+
+  .option-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .option-content strong {
+    font-size: 16px;
+  }
+
+  .option-content span {
+    font-size: 14px;
+    color: var(--stitch-text-secondary);
+  }
+
+  .create-input-wrapper {
+    padding: 20px;
+    background: var(--stitch-card-bg);
+    border: 1px solid var(--stitch-primary);
+    border-radius: 12px;
+  }
+
+  .create-name-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--stitch-border);
+    border-radius: 8px;
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+
+  .create-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+
+  /* Linked profile header */
+  .linked-profile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #667eea10, #764ba210);
+    border: 1px solid #667eea30;
+    border-radius: 12px;
+    margin-bottom: 24px;
+  }
+
+  .header-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .header-info h3 {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  .header-info p {
+    margin: 4px 0 0 0;
+    font-size: 13px;
+    color: var(--stitch-text-secondary);
+  }
+
+  .unlink-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--stitch-border);
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--stitch-text-secondary);
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .unlink-btn:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+
+  .unlink-confirm {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .unlink-confirm p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--stitch-text-secondary);
+  }
+
+  .confirm-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .danger-button {
+    padding: 8px 16px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .danger-button:hover {
+    background: #dc2626;
+  }
+
+  /* Contact search autocomplete */
+  .contact-search-autocomplete {
+    max-width: 600px;
+    margin: 24px auto;
+    background: var(--stitch-card-bg);
+    border: 1px solid var(--stitch-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .search-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid var(--stitch-border);
+  }
+
+  .search-input-wrapper .material-symbols-outlined {
+    color: var(--stitch-text-secondary);
+  }
+
+  .search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    outline: none;
+  }
+
+  .cancel-btn {
+    padding: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--stitch-text-secondary);
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+
+  .cancel-btn:hover {
+    background: var(--stitch-border);
+  }
+
+  .search-results {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .search-loading,
+  .no-results {
+    padding: 24px;
+    text-align: center;
+    color: var(--stitch-text-secondary);
+  }
+
+  .results-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .result-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s;
+  }
+
+  .result-item:hover {
+    background: var(--stitch-border);
+  }
+
+  .result-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .result-info strong {
+    font-size: 15px;
+  }
+
+  .result-detail {
+    font-size: 13px;
+    color: var(--stitch-text-secondary);
+  }
+
+  /* Profile page layout */
+  .profile-page-layout {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  @media (max-width: 1024px) {
+    .profile-page-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .profile-preview-panel {
+      order: -1;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .profile-page-layout {
+      padding: 16px;
+    }
+  }
+
+  .profile-edit-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .profile-section {
+    background: var(--stitch-card-bg);
+    border: 1px solid var(--stitch-border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+    color: var(--stitch-text-main);
+  }
+
+  .public-card-controls {
+    background: linear-gradient(135deg, #667eea15, #764ba215);
+    border-color: #667eea30;
+  }
+
+  .public-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .public-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .public-toggle-label .material-symbols-outlined {
+    font-size: 28px;
+    color: var(--stitch-primary);
+  }
+
+  .public-toggle-label strong {
+    display: block;
+    font-size: 15px;
+  }
+
+  .public-toggle-label p {
+    margin: 2px 0 0 0;
+    font-size: 13px;
+    color: var(--stitch-text-secondary);
+  }
+
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: var(--stitch-border);
+    transition: 0.3s;
+    border-radius: 28px;
+  }
+
+  .toggle-slider::before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+  }
+
+  .toggle-switch input:checked + .toggle-slider {
+    background-color: var(--stitch-primary);
+  }
+
+  .toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(24px);
+  }
+
+  .public-url-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--stitch-border);
+  }
+
+  .public-url-display {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--stitch-card-bg);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .public-url-display code {
+    font-size: 13px;
+    color: var(--stitch-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .copy-url-btn {
+    padding: 8px;
+    background: var(--stitch-card-bg);
+    border: 1px solid var(--stitch-border);
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--stitch-text-secondary);
+    transition: all 0.2s;
+  }
+
+  .copy-url-btn:hover {
+    background: var(--stitch-primary);
+    color: white;
+    border-color: var(--stitch-primary);
+  }
+
+  .profile-field-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .profile-field-row.address-row {
+    align-items: flex-start;
+  }
+
+  .profile-field-row.notes-row {
+    display: block;
+  }
+
+  .profile-field {
+    flex: 1;
+  }
+
+  .profile-field.with-visibility {
+    flex: 1;
+  }
+
+  .profile-field.full-width {
+    width: 100%;
+  }
+
+  .profile-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--stitch-text-secondary);
+    margin-bottom: 4px;
+  }
+
+  .profile-array-field {
+    margin-bottom: 16px;
+  }
+
+  .profile-array-field > label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--stitch-text-secondary);
+    margin-bottom: 8px;
+  }
+
+  .visibility-toggle {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 20px;
+  }
+
+  .visibility-toggle.visible {
+    background: #667eea20;
+    color: var(--stitch-primary);
+  }
+
+  .visibility-toggle.hidden {
+    background: var(--stitch-border);
+    color: var(--stitch-text-secondary);
+  }
+
+  .visibility-toggle.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .visibility-toggle:hover:not(.disabled) {
+    transform: scale(1.05);
+  }
+
+  .birthday-field {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .birthday-preview {
+    font-size: 13px;
+    color: var(--stitch-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .zodiac-icon-small {
+    width: 20px;
+    height: 20px;
+  }
+
+  .private-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: var(--stitch-border);
+    border-radius: 4px;
+    color: var(--stitch-text-secondary);
+  }
+
+  .notes-textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--stitch-border);
+    border-radius: 8px;
+    font-size: 14px;
+    resize: vertical;
+    font-family: inherit;
+  }
+
+  .address-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .address-row-inner {
+    display: flex;
+    gap: 8px;
+  }
+
+  .address-row-inner .edit-input {
+    flex: 1;
+  }
+
+  /* Preview panel */
+  .profile-preview-panel {
+    position: sticky;
+    top: 24px;
+    height: fit-content;
+  }
+
+  .preview-panel-header {
+    margin-bottom: 16px;
+  }
+
+  .preview-panel-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .preview-panel-header p {
+    margin: 4px 0 0 0;
+    font-size: 13px;
+    color: var(--stitch-text-secondary);
+  }
+
+  .public-card-preview {
+    background: var(--stitch-card-bg);
+    border: 1px solid var(--stitch-border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .public-card-preview.disabled {
+    background: var(--stitch-border);
+  }
+
+  .preview-disabled-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--stitch-text-secondary);
+  }
+
+  .preview-disabled-message .material-symbols-outlined {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .preview-disabled-message p {
+    margin: 4px 0;
+    font-size: 14px;
+  }
+
+  .preview-card {
+    padding: 24px;
+  }
+
+  .preview-avatar {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .preview-header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .preview-name {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+  }
+
+  .preview-tagline {
+    margin: 4px 0 0 0;
+    font-size: 14px;
+    color: var(--stitch-primary);
+    font-style: italic;
+  }
+
+  .preview-title,
+  .preview-company {
+    margin: 4px 0 0 0;
+    font-size: 14px;
+    color: var(--stitch-text-secondary);
+  }
+
+  .preview-contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .preview-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  .preview-item .material-symbols-outlined {
+    font-size: 18px;
+    color: var(--stitch-text-secondary);
+  }
+
+  .preview-social {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--stitch-border);
+  }
+
+  .preview-social-link {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--stitch-border);
+    border-radius: 50%;
+    color: var(--stitch-text-secondary);
+    transition: all 0.2s;
+  }
+
+  .preview-social-link:hover {
+    background: var(--stitch-primary);
+    color: white;
+  }
+
+  .preview-birthday {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--stitch-border);
+    font-size: 14px;
+    color: var(--stitch-text-secondary);
+  }
+
+  /* Save success indicator */
+  .save-success {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #10b981;
+    font-size: 14px;
+  }
+
+  /* Mobile save bar */
+  .mobile-save-bar {
+    position: fixed;
+    bottom: 60px;
+    left: 0;
+    right: 0;
+    padding: 16px;
+    background: var(--stitch-card-bg);
+    border-top: 1px solid var(--stitch-border);
+    z-index: 100;
+  }
+
+  .mobile-save-bar .full-width {
+    width: 100%;
+  }
+
+  /* Buttons */
+  .primary-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    background: var(--stitch-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .primary-button:hover:not(:disabled) {
+    background: #5567dc;
+  }
+
+  .primary-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .secondary-button {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--stitch-border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--stitch-text-secondary);
+    transition: all 0.2s;
+  }
+
+  .secondary-button:hover {
+    background: var(--stitch-border);
+  }
+
+  /* Inherit styles from ContactFormSections */
+  .edit-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--stitch-border);
+    border-radius: 6px;
+    font-size: 14px;
+  }
+
+  .editable-array-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex: 1;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+  }
+
+  .editable-array-item .material-symbols-outlined {
+    margin-top: 8px;
+    color: var(--stitch-text-secondary);
+  }
+
+  .edit-field-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .remove-item-btn {
+    padding: 4px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--stitch-text-secondary);
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+
+  .remove-item-btn:hover {
+    opacity: 1;
+    color: #ef4444;
+  }
+
+  .add-item-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px dashed var(--stitch-border);
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--stitch-text-secondary);
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .add-item-btn:hover {
+    border-color: var(--stitch-primary);
+    color: var(--stitch-primary);
+  }
+
+  .edit-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #fee2e2;
+    border-radius: 8px;
+    color: #dc2626;
+    font-size: 14px;
+  }
+
+  .spinning {
+    animation: spin 1s linear infinite;
+  }
+`;

@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
-import { getDatabase } from '../services/database.js';
+import { getDatabase, rebuildContactSearch } from '../services/database.js';
+import { getPhotoUrl } from '../services/photoProcessor.js';
 import {
   UserProfileSchema,
   UpdateUserProfileSchema,
@@ -10,41 +11,57 @@ import {
   ProfileAddress,
   ProfileSocialLink,
   ProfileVisibility,
+  ContactSearchResultSchema,
+  ContactSearchResult,
+  LinkProfileToContactSchema,
+  LinkProfileToContact,
+  LinkedContact,
 } from '../schemas/profile.js';
 
 interface ProfileRow {
   id: number;
   user_id: number;
+  linked_contact_id: number | null;
   is_public: number;
   public_slug: string | null;
-  avatar_url: string | null;
-  first_name: string | null;
-  last_name: string | null;
   tagline: string | null;
-  company: string | null;
-  title: string | null;
-  website: string | null;
-  linkedin: string | null;
-  instagram: string | null;
-  whatsapp: string | null;
-  birthday: string | null;
   notes: string | null;
   visibility_json: string | null;
   created_at: string;
   updated_at: string;
 }
 
-interface ProfileEmailRow {
+interface ContactRow {
   id: number;
-  profile_id: number;
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string;
+  company: string | null;
+  title: string | null;
+  notes: string | null;
+  birthday: string | null;
+  photo_hash: string | null;
+}
+
+interface ContactListRow {
+  id: number;
+  display_name: string;
+  photo_hash: string | null;
+  primary_email: string | null;
+  primary_phone: string | null;
+}
+
+interface EmailRow {
+  id: number;
+  contact_id: number;
   email: string;
   type: string | null;
   is_primary: number;
 }
 
-interface ProfilePhoneRow {
+interface PhoneRow {
   id: number;
-  profile_id: number;
+  contact_id: number;
   phone: string;
   phone_display: string;
   country_code: string | null;
@@ -52,9 +69,9 @@ interface ProfilePhoneRow {
   is_primary: number;
 }
 
-interface ProfileAddressRow {
+interface AddressRow {
   id: number;
-  profile_id: number;
+  contact_id: number;
   street: string | null;
   city: string | null;
   state: string | null;
@@ -63,12 +80,19 @@ interface ProfileAddressRow {
   type: string | null;
 }
 
-interface ProfileSocialLinkRow {
+interface SocialProfileRow {
   id: number;
-  profile_id: number;
+  contact_id: number;
   platform: string;
   username: string;
   profile_url: string | null;
+}
+
+interface UrlRow {
+  id: number;
+  contact_id: number;
+  url: string;
+  label: string | null;
 }
 
 // Get user from session helper
@@ -122,75 +146,47 @@ function ensureProfileTables(db: ReturnType<typeof getDatabase>): void {
     CREATE TABLE IF NOT EXISTS user_profiles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      linked_contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
       is_public INTEGER DEFAULT 0,
       public_slug TEXT UNIQUE,
-      avatar_url TEXT,
-      first_name TEXT,
-      last_name TEXT,
       tagline TEXT,
-      company TEXT,
-      title TEXT,
-      website TEXT,
-      linkedin TEXT,
-      instagram TEXT,
-      whatsapp TEXT,
-      birthday TEXT,
       notes TEXT,
       visibility_json TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS profile_emails (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      profile_id INTEGER NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
-      email TEXT NOT NULL,
-      type TEXT,
-      is_primary INTEGER DEFAULT 0
-    );
-
-    CREATE TABLE IF NOT EXISTS profile_phones (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      profile_id INTEGER NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
-      phone TEXT NOT NULL,
-      phone_display TEXT NOT NULL,
-      country_code TEXT,
-      type TEXT,
-      is_primary INTEGER DEFAULT 0
-    );
-
-    CREATE TABLE IF NOT EXISTS profile_addresses (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      profile_id INTEGER NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
-      street TEXT,
-      city TEXT,
-      state TEXT,
-      postal_code TEXT,
-      country TEXT,
-      type TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS profile_social_links (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      profile_id INTEGER NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
-      platform TEXT NOT NULL,
-      username TEXT NOT NULL,
-      profile_url TEXT
-    );
-
     CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON user_profiles(user_id);
     CREATE INDEX IF NOT EXISTS idx_user_profiles_public_slug ON user_profiles(public_slug);
-    CREATE INDEX IF NOT EXISTS idx_profile_emails_profile_id ON profile_emails(profile_id);
-    CREATE INDEX IF NOT EXISTS idx_profile_phones_profile_id ON profile_phones(profile_id);
-    CREATE INDEX IF NOT EXISTS idx_profile_addresses_profile_id ON profile_addresses(profile_id);
-    CREATE INDEX IF NOT EXISTS idx_profile_social_links_profile_id ON profile_social_links(profile_id);
+    CREATE INDEX IF NOT EXISTS idx_user_profiles_linked_contact ON user_profiles(linked_contact_id);
   `);
+
+  // Migration: Add linked_contact_id if not exists
+  const tableInfo = db.prepare("PRAGMA table_info(user_profiles)").all() as Array<{ name: string }>;
+  const hasLinkedContactId = tableInfo.some(col => col.name === 'linked_contact_id');
+
+  if (!hasLinkedContactId) {
+    console.log('Adding linked_contact_id column to user_profiles...');
+    db.exec(`
+      ALTER TABLE user_profiles ADD COLUMN linked_contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL;
+      CREATE INDEX IF NOT EXISTS idx_user_profiles_linked_contact ON user_profiles(linked_contact_id);
+    `);
+  }
+
+  // Migration: Remove old columns that are no longer needed (profile data now comes from contact)
+  const hasFirstName = tableInfo.some(col => col.name === 'first_name');
+  if (hasFirstName) {
+    // SQLite doesn't support DROP COLUMN in older versions, so we just leave the columns
+    // They won't be used anymore since data comes from linked contact
+    console.log('Note: Legacy profile columns exist but will be ignored in favor of linked contact data');
+  }
 }
 
 // Get or create user profile
 function getOrCreateProfile(db: ReturnType<typeof getDatabase>, userId: number): ProfileRow {
   let profile = db.prepare(`
-    SELECT * FROM user_profiles WHERE user_id = ?
+    SELECT id, user_id, linked_contact_id, is_public, public_slug, tagline, notes, visibility_json, created_at, updated_at
+    FROM user_profiles WHERE user_id = ?
   `).get(userId) as ProfileRow | undefined;
 
   if (!profile) {
@@ -210,51 +206,103 @@ function getOrCreateProfile(db: ReturnType<typeof getDatabase>, userId: number):
     `).run(userId, slug, JSON.stringify(getDefaultVisibility()));
 
     profile = db.prepare(`
-      SELECT * FROM user_profiles WHERE user_id = ?
+      SELECT id, user_id, linked_contact_id, is_public, public_slug, tagline, notes, visibility_json, created_at, updated_at
+      FROM user_profiles WHERE user_id = ?
     `).get(userId) as ProfileRow;
   }
 
   return profile;
 }
 
-// Build full profile response
-function buildProfileResponse(
-  db: ReturnType<typeof getDatabase>,
-  profile: ProfileRow,
-  baseUrl: string
-): UserProfile {
-  const emails = db.prepare(`
-    SELECT * FROM profile_emails WHERE profile_id = ?
-  `).all(profile.id) as ProfileEmailRow[];
+// Get linked contact info
+function getLinkedContactInfo(db: ReturnType<typeof getDatabase>, contactId: number): LinkedContact | null {
+  const contact = db.prepare(`
+    SELECT id, display_name, photo_hash FROM contacts WHERE id = ?
+  `).get(contactId) as { id: number; display_name: string; photo_hash: string | null } | undefined;
 
-  const phones = db.prepare(`
-    SELECT * FROM profile_phones WHERE profile_id = ?
-  `).all(profile.id) as ProfilePhoneRow[];
-
-  const addresses = db.prepare(`
-    SELECT * FROM profile_addresses WHERE profile_id = ?
-  `).all(profile.id) as ProfileAddressRow[];
-
-  const socialLinks = db.prepare(`
-    SELECT * FROM profile_social_links WHERE profile_id = ?
-  `).all(profile.id) as ProfileSocialLinkRow[];
-
-  const visibility: ProfileVisibility = profile.visibility_json
-    ? JSON.parse(profile.visibility_json)
-    : getDefaultVisibility();
+  if (!contact) return null;
 
   return {
-    isPublic: profile.is_public === 1,
-    publicUrl: profile.is_public === 1 && profile.public_slug
-      ? `${baseUrl}/p/${profile.public_slug}`
-      : null,
-    publicSlug: profile.public_slug,
-    avatarUrl: profile.avatar_url,
-    firstName: profile.first_name,
-    lastName: profile.last_name,
-    tagline: profile.tagline,
-    company: profile.company,
-    title: profile.title,
+    id: contact.id,
+    displayName: contact.display_name,
+    photoUrl: getPhotoUrl(contact.photo_hash, 'thumbnail'),
+  };
+}
+
+// Get contact details for profile
+function getContactData(db: ReturnType<typeof getDatabase>, contactId: number) {
+  const contact = db.prepare(`
+    SELECT id, first_name, last_name, display_name, company, title, notes, birthday, photo_hash
+    FROM contacts WHERE id = ?
+  `).get(contactId) as ContactRow | undefined;
+
+  if (!contact) return null;
+
+  const emails = db.prepare(`
+    SELECT id, contact_id, email, type, is_primary FROM contact_emails WHERE contact_id = ?
+  `).all(contactId) as EmailRow[];
+
+  const phones = db.prepare(`
+    SELECT id, contact_id, phone, phone_display, country_code, type, is_primary FROM contact_phones WHERE contact_id = ?
+  `).all(contactId) as PhoneRow[];
+
+  const addresses = db.prepare(`
+    SELECT id, contact_id, street, city, state, postal_code, country, type FROM contact_addresses WHERE contact_id = ?
+  `).all(contactId) as AddressRow[];
+
+  const socialProfiles = db.prepare(`
+    SELECT id, contact_id, platform, username, profile_url FROM contact_social_profiles WHERE contact_id = ?
+  `).all(contactId) as SocialProfileRow[];
+
+  const urls = db.prepare(`
+    SELECT id, contact_id, url, label FROM contact_urls WHERE contact_id = ?
+  `).all(contactId) as UrlRow[];
+
+  // Extract social links from URLs and social profiles
+  let website: string | null = null;
+  let linkedin: string | null = null;
+  let instagram: string | null = null;
+  let whatsapp: string | null = null;
+  const otherSocialLinks: ProfileSocialLink[] = [];
+
+  // Check URLs for website
+  for (const url of urls) {
+    if (url.label?.toLowerCase() === 'website' || url.label?.toLowerCase() === 'homepage') {
+      website = url.url;
+    } else if (url.url.includes('linkedin.com')) {
+      linkedin = url.url;
+    } else if (url.url.includes('instagram.com')) {
+      instagram = url.url.includes('instagram.com/') ? url.url.split('instagram.com/')[1]?.split('/')[0] || null : null;
+    }
+  }
+
+  // Check social profiles
+  for (const sp of socialProfiles) {
+    const platform = sp.platform.toLowerCase();
+    if (platform === 'linkedin') {
+      linkedin = sp.profile_url || `https://linkedin.com/in/${sp.username}`;
+    } else if (platform === 'instagram') {
+      instagram = sp.username;
+    } else if (platform === 'whatsapp') {
+      whatsapp = sp.username;
+    } else {
+      otherSocialLinks.push({
+        id: String(sp.id),
+        platform: sp.platform,
+        username: sp.username,
+        profileUrl: sp.profile_url,
+      });
+    }
+  }
+
+  return {
+    firstName: contact.first_name,
+    lastName: contact.last_name,
+    displayName: contact.display_name,
+    company: contact.company,
+    title: contact.title,
+    birthday: contact.birthday,
+    avatarUrl: getPhotoUrl(contact.photo_hash, 'medium'),
     emails: emails.map((e): ProfileEmail => ({
       email: e.email,
       type: e.type,
@@ -276,17 +324,83 @@ function buildProfileResponse(
       country: a.country,
       type: a.type,
     })),
-    website: profile.website,
-    linkedin: profile.linkedin,
-    instagram: profile.instagram,
-    whatsapp: profile.whatsapp,
-    otherSocialLinks: socialLinks.map((s): ProfileSocialLink => ({
-      id: String(s.id),
-      platform: s.platform,
-      username: s.username,
-      profileUrl: s.profile_url,
-    })),
-    birthday: profile.birthday,
+    website,
+    linkedin,
+    instagram,
+    whatsapp,
+    otherSocialLinks,
+  };
+}
+
+// Build full profile response
+function buildProfileResponse(
+  db: ReturnType<typeof getDatabase>,
+  profile: ProfileRow,
+  baseUrl: string
+): UserProfile {
+  const visibility: ProfileVisibility = profile.visibility_json
+    ? JSON.parse(profile.visibility_json)
+    : getDefaultVisibility();
+
+  // If linked to a contact, get data from contact
+  if (profile.linked_contact_id) {
+    const linkedContact = getLinkedContactInfo(db, profile.linked_contact_id);
+    const contactData = getContactData(db, profile.linked_contact_id);
+
+    if (contactData && linkedContact) {
+      return {
+        linkedContactId: profile.linked_contact_id,
+        linkedContact,
+        isPublic: profile.is_public === 1,
+        publicUrl: profile.is_public === 1 && profile.public_slug
+          ? `${baseUrl}/p/${profile.public_slug}`
+          : null,
+        publicSlug: profile.public_slug,
+        avatarUrl: contactData.avatarUrl,
+        firstName: contactData.firstName,
+        lastName: contactData.lastName,
+        tagline: profile.tagline,
+        company: contactData.company,
+        title: contactData.title,
+        emails: contactData.emails,
+        phones: contactData.phones,
+        addresses: contactData.addresses,
+        website: contactData.website,
+        linkedin: contactData.linkedin,
+        instagram: contactData.instagram,
+        whatsapp: contactData.whatsapp,
+        otherSocialLinks: contactData.otherSocialLinks,
+        birthday: contactData.birthday,
+        notes: profile.notes,
+        visibility,
+      };
+    }
+  }
+
+  // Not linked - return empty profile
+  return {
+    linkedContactId: null,
+    linkedContact: null,
+    isPublic: profile.is_public === 1,
+    publicUrl: profile.is_public === 1 && profile.public_slug
+      ? `${baseUrl}/p/${profile.public_slug}`
+      : null,
+    publicSlug: profile.public_slug,
+    avatarUrl: null,
+    firstName: null,
+    lastName: null,
+    tagline: profile.tagline,
+    company: null,
+    title: null,
+    emails: [],
+    phones: [],
+    addresses: [],
+    website: null,
+    linkedin: null,
+    instagram: null,
+    whatsapp: null,
+    otherSocialLinks: [],
+    birthday: null,
     notes: profile.notes,
     visibility,
   };
@@ -318,7 +432,191 @@ export default async function profileRoutes(
     return buildProfileResponse(db, profile, baseUrl);
   });
 
-  // PUT /api/profile - Update current user's profile
+  // GET /api/profile/contacts/search - Search contacts for linking
+  fastify.get<{ Querystring: { q: string } }>('/contacts/search', {
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          q: { type: 'string', minLength: 1 }
+        },
+        required: ['q']
+      },
+      response: {
+        200: {
+          type: 'array',
+          items: ContactSearchResultSchema
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+      }
+    }
+  }, async (request: FastifyRequest<{ Querystring: { q: string } }>, reply: FastifyReply) => {
+    const userId = getUserIdFromSession(request);
+    if (!userId) {
+      return reply.status(401).send({ error: 'Not authenticated' });
+    }
+
+    const { q } = request.query;
+    const escapedSearch = q.replace(/"/g, '""');
+    const searchTerm = `"${escapedSearch}"*`;
+
+    const contacts = db.prepare(`
+      SELECT DISTINCT
+        c.id,
+        c.display_name,
+        c.photo_hash,
+        (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
+        (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone
+      FROM contacts c
+      WHERE c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
+      ORDER BY c.last_name, c.first_name, c.display_name
+      LIMIT 10
+    `).all(searchTerm) as ContactListRow[];
+
+    return contacts.map((c): ContactSearchResult => ({
+      id: c.id,
+      displayName: c.display_name,
+      photoUrl: getPhotoUrl(c.photo_hash, 'thumbnail'),
+      primaryEmail: c.primary_email,
+      primaryPhone: c.primary_phone,
+    }));
+  });
+
+  // POST /api/profile/link - Link profile to a contact
+  fastify.post<{ Body: LinkProfileToContact }>('/link', {
+    schema: {
+      body: LinkProfileToContactSchema,
+      response: {
+        200: UserProfileSchema,
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+      }
+    }
+  }, async (request: FastifyRequest<{ Body: LinkProfileToContact }>, reply: FastifyReply) => {
+    const userId = getUserIdFromSession(request);
+    if (!userId) {
+      return reply.status(401).send({ error: 'Not authenticated' });
+    }
+
+    const { contactId } = request.body;
+
+    // Verify contact exists
+    const contact = db.prepare('SELECT id FROM contacts WHERE id = ?').get(contactId);
+    if (!contact) {
+      return reply.status(404).send({ error: 'Contact not found' });
+    }
+
+    const profile = getOrCreateProfile(db, userId);
+
+    // Update profile to link to contact
+    db.prepare(`
+      UPDATE user_profiles
+      SET linked_contact_id = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(contactId, profile.id);
+
+    // Fetch updated profile
+    const updatedProfile = db.prepare(`
+      SELECT id, user_id, linked_contact_id, is_public, public_slug, tagline, notes, visibility_json, created_at, updated_at
+      FROM user_profiles WHERE id = ?
+    `).get(profile.id) as ProfileRow;
+
+    const baseUrl = `${request.protocol}://${request.hostname}`;
+    return buildProfileResponse(db, updatedProfile, baseUrl);
+  });
+
+  // POST /api/profile/unlink - Unlink profile from contact
+  fastify.post('/unlink', {
+    schema: {
+      response: {
+        200: UserProfileSchema,
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+      }
+    }
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = getUserIdFromSession(request);
+    if (!userId) {
+      return reply.status(401).send({ error: 'Not authenticated' });
+    }
+
+    const profile = getOrCreateProfile(db, userId);
+
+    // Update profile to unlink from contact
+    db.prepare(`
+      UPDATE user_profiles
+      SET linked_contact_id = NULL, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(profile.id);
+
+    // Fetch updated profile
+    const updatedProfile = db.prepare(`
+      SELECT id, user_id, linked_contact_id, is_public, public_slug, tagline, notes, visibility_json, created_at, updated_at
+      FROM user_profiles WHERE id = ?
+    `).get(profile.id) as ProfileRow;
+
+    const baseUrl = `${request.protocol}://${request.hostname}`;
+    return buildProfileResponse(db, updatedProfile, baseUrl);
+  });
+
+  // POST /api/profile/create-contact - Create a new contact and link it to profile
+  fastify.post<{ Body: { displayName: string } }>('/create-contact', {
+    schema: {
+      body: {
+        type: 'object',
+        properties: {
+          displayName: { type: 'string', minLength: 1 }
+        },
+        required: ['displayName']
+      },
+      response: {
+        200: UserProfileSchema,
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+      }
+    }
+  }, async (request: FastifyRequest<{ Body: { displayName: string } }>, reply: FastifyReply) => {
+    const userId = getUserIdFromSession(request);
+    if (!userId) {
+      return reply.status(401).send({ error: 'Not authenticated' });
+    }
+
+    const { displayName } = request.body;
+
+    // Parse display name into first/last
+    const parts = displayName.trim().split(/\s+/);
+    const firstName = parts[0] || null;
+    const lastName = parts.length > 1 ? parts.slice(1).join(' ') : null;
+
+    // Create new contact
+    const result = db.prepare(`
+      INSERT INTO contacts (first_name, last_name, display_name, created_at, updated_at)
+      VALUES (?, ?, ?, datetime('now'), datetime('now'))
+    `).run(firstName, lastName, displayName);
+
+    const contactId = result.lastInsertRowid as number;
+
+    // Update FTS index
+    rebuildContactSearch(db, contactId);
+
+    // Link profile to the new contact
+    const profile = getOrCreateProfile(db, userId);
+    db.prepare(`
+      UPDATE user_profiles
+      SET linked_contact_id = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(contactId, profile.id);
+
+    // Fetch updated profile
+    const updatedProfile = db.prepare(`
+      SELECT id, user_id, linked_contact_id, is_public, public_slug, tagline, notes, visibility_json, created_at, updated_at
+      FROM user_profiles WHERE id = ?
+    `).get(profile.id) as ProfileRow;
+
+    const baseUrl = `${request.protocol}://${request.hostname}`;
+    return buildProfileResponse(db, updatedProfile, baseUrl);
+  });
+
+  // PUT /api/profile - Update current user's profile (and linked contact)
   fastify.put<{ Body: UpdateUserProfile }>('/', {
     schema: {
       body: UpdateUserProfileSchema,
@@ -337,13 +635,13 @@ export default async function profileRoutes(
     const updates = request.body;
     const profile = getOrCreateProfile(db, userId);
 
-    // Update main profile fields
-    const fields: string[] = [];
-    const values: (string | number | null)[] = [];
+    // Update profile-specific fields (visibility, public settings, tagline, notes)
+    const profileFields: string[] = [];
+    const profileValues: (string | number | null)[] = [];
 
     if (updates.isPublic !== undefined) {
-      fields.push('is_public = ?');
-      values.push(updates.isPublic ? 1 : 0);
+      profileFields.push('is_public = ?');
+      profileValues.push(updates.isPublic ? 1 : 0);
     }
     if (updates.publicSlug !== undefined) {
       // Check slug is unique
@@ -353,120 +651,177 @@ export default async function profileRoutes(
           return reply.status(400).send({ error: 'This URL is already taken' });
         }
       }
-      fields.push('public_slug = ?');
-      values.push(updates.publicSlug);
-    }
-    if (updates.avatarUrl !== undefined) {
-      fields.push('avatar_url = ?');
-      values.push(updates.avatarUrl);
-    }
-    if (updates.firstName !== undefined) {
-      fields.push('first_name = ?');
-      values.push(updates.firstName);
-    }
-    if (updates.lastName !== undefined) {
-      fields.push('last_name = ?');
-      values.push(updates.lastName);
+      profileFields.push('public_slug = ?');
+      profileValues.push(updates.publicSlug);
     }
     if (updates.tagline !== undefined) {
-      fields.push('tagline = ?');
-      values.push(updates.tagline);
-    }
-    if (updates.company !== undefined) {
-      fields.push('company = ?');
-      values.push(updates.company);
-    }
-    if (updates.title !== undefined) {
-      fields.push('title = ?');
-      values.push(updates.title);
-    }
-    if (updates.website !== undefined) {
-      fields.push('website = ?');
-      values.push(updates.website);
-    }
-    if (updates.linkedin !== undefined) {
-      fields.push('linkedin = ?');
-      values.push(updates.linkedin);
-    }
-    if (updates.instagram !== undefined) {
-      fields.push('instagram = ?');
-      values.push(updates.instagram);
-    }
-    if (updates.whatsapp !== undefined) {
-      fields.push('whatsapp = ?');
-      values.push(updates.whatsapp);
-    }
-    if (updates.birthday !== undefined) {
-      fields.push('birthday = ?');
-      values.push(updates.birthday);
+      profileFields.push('tagline = ?');
+      profileValues.push(updates.tagline);
     }
     if (updates.notes !== undefined) {
-      fields.push('notes = ?');
-      values.push(updates.notes);
+      profileFields.push('notes = ?');
+      profileValues.push(updates.notes);
     }
     if (updates.visibility !== undefined) {
-      fields.push('visibility_json = ?');
-      values.push(JSON.stringify(updates.visibility));
+      profileFields.push('visibility_json = ?');
+      profileValues.push(JSON.stringify(updates.visibility));
     }
 
-    if (fields.length > 0) {
-      fields.push("updated_at = datetime('now')");
-      values.push(profile.id);
-      const sql = `UPDATE user_profiles SET ${fields.join(', ')} WHERE id = ?`;
-      db.prepare(sql).run(...values);
+    if (profileFields.length > 0) {
+      profileFields.push("updated_at = datetime('now')");
+      profileValues.push(profile.id);
+      const sql = `UPDATE user_profiles SET ${profileFields.join(', ')} WHERE id = ?`;
+      db.prepare(sql).run(...profileValues);
     }
 
-    // Update emails (replace all)
-    if (updates.emails !== undefined) {
-      db.prepare('DELETE FROM profile_emails WHERE profile_id = ?').run(profile.id);
-      const insertEmail = db.prepare(`
-        INSERT INTO profile_emails (profile_id, email, type, is_primary)
-        VALUES (?, ?, ?, ?)
-      `);
-      for (const email of updates.emails) {
-        insertEmail.run(profile.id, email.email, email.type, email.isPrimary ? 1 : 0);
+    // If linked to a contact, update the contact directly
+    if (profile.linked_contact_id) {
+      const contactFields: string[] = [];
+      const contactValues: (string | null)[] = [];
+
+      if (updates.firstName !== undefined) {
+        contactFields.push('first_name = ?');
+        contactValues.push(updates.firstName);
       }
-    }
-
-    // Update phones (replace all)
-    if (updates.phones !== undefined) {
-      db.prepare('DELETE FROM profile_phones WHERE profile_id = ?').run(profile.id);
-      const insertPhone = db.prepare(`
-        INSERT INTO profile_phones (profile_id, phone, phone_display, country_code, type, is_primary)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      for (const phone of updates.phones) {
-        insertPhone.run(profile.id, phone.phone, phone.phoneDisplay, phone.countryCode, phone.type, phone.isPrimary ? 1 : 0);
+      if (updates.lastName !== undefined) {
+        contactFields.push('last_name = ?');
+        contactValues.push(updates.lastName);
       }
-    }
-
-    // Update addresses (replace all)
-    if (updates.addresses !== undefined) {
-      db.prepare('DELETE FROM profile_addresses WHERE profile_id = ?').run(profile.id);
-      const insertAddress = db.prepare(`
-        INSERT INTO profile_addresses (profile_id, street, city, state, postal_code, country, type)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-      for (const addr of updates.addresses) {
-        insertAddress.run(profile.id, addr.street, addr.city, addr.state, addr.postalCode, addr.country, addr.type);
+      if (updates.company !== undefined) {
+        contactFields.push('company = ?');
+        contactValues.push(updates.company);
       }
-    }
-
-    // Update other social links (replace all)
-    if (updates.otherSocialLinks !== undefined) {
-      db.prepare('DELETE FROM profile_social_links WHERE profile_id = ?').run(profile.id);
-      const insertSocial = db.prepare(`
-        INSERT INTO profile_social_links (profile_id, platform, username, profile_url)
-        VALUES (?, ?, ?, ?)
-      `);
-      for (const link of updates.otherSocialLinks) {
-        insertSocial.run(profile.id, link.platform, link.username, link.profileUrl);
+      if (updates.title !== undefined) {
+        contactFields.push('title = ?');
+        contactValues.push(updates.title);
       }
+      if (updates.birthday !== undefined) {
+        contactFields.push('birthday = ?');
+        contactValues.push(updates.birthday);
+      }
+
+      // Update display name if first or last name changed
+      if (updates.firstName !== undefined || updates.lastName !== undefined) {
+        const currentContact = db.prepare('SELECT first_name, last_name FROM contacts WHERE id = ?').get(profile.linked_contact_id) as {
+          first_name: string | null;
+          last_name: string | null;
+        };
+        const newFirstName = updates.firstName !== undefined ? updates.firstName : currentContact.first_name;
+        const newLastName = updates.lastName !== undefined ? updates.lastName : currentContact.last_name;
+        const displayName = [newFirstName, newLastName].filter(Boolean).join(' ') || 'Unnamed';
+        contactFields.push('display_name = ?');
+        contactValues.push(displayName);
+      }
+
+      if (contactFields.length > 0) {
+        contactFields.push("updated_at = datetime('now')");
+        contactValues.push(String(profile.linked_contact_id));
+        const sql = `UPDATE contacts SET ${contactFields.join(', ')} WHERE id = ?`;
+        db.prepare(sql).run(...contactValues);
+      }
+
+      // Update emails (replace all)
+      if (updates.emails !== undefined) {
+        db.prepare('DELETE FROM contact_emails WHERE contact_id = ?').run(profile.linked_contact_id);
+        const insertEmail = db.prepare(`
+          INSERT INTO contact_emails (contact_id, email, type, is_primary)
+          VALUES (?, ?, ?, ?)
+        `);
+        for (const email of updates.emails) {
+          insertEmail.run(profile.linked_contact_id, email.email, email.type, email.isPrimary ? 1 : 0);
+        }
+      }
+
+      // Update phones (replace all)
+      if (updates.phones !== undefined) {
+        db.prepare('DELETE FROM contact_phones WHERE contact_id = ?').run(profile.linked_contact_id);
+        const insertPhone = db.prepare(`
+          INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, is_primary)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        for (const phone of updates.phones) {
+          insertPhone.run(profile.linked_contact_id, phone.phone, phone.phoneDisplay, phone.countryCode, phone.type, phone.isPrimary ? 1 : 0);
+        }
+      }
+
+      // Update addresses (replace all)
+      if (updates.addresses !== undefined) {
+        db.prepare('DELETE FROM contact_addresses WHERE contact_id = ?').run(profile.linked_contact_id);
+        const insertAddress = db.prepare(`
+          INSERT INTO contact_addresses (contact_id, street, city, state, postal_code, country, type)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        for (const addr of updates.addresses) {
+          insertAddress.run(profile.linked_contact_id, addr.street, addr.city, addr.state, addr.postalCode, addr.country, addr.type);
+        }
+      }
+
+      // Update social profiles for linkedin, instagram, whatsapp
+      if (updates.linkedin !== undefined || updates.instagram !== undefined || updates.whatsapp !== undefined) {
+        // Remove existing linkedin, instagram, whatsapp
+        db.prepare(`
+          DELETE FROM contact_social_profiles
+          WHERE contact_id = ? AND LOWER(platform) IN ('linkedin', 'instagram', 'whatsapp')
+        `).run(profile.linked_contact_id);
+
+        const insertSocial = db.prepare(`
+          INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url)
+          VALUES (?, ?, ?, ?)
+        `);
+
+        if (updates.linkedin) {
+          const username = updates.linkedin.includes('linkedin.com/in/')
+            ? updates.linkedin.split('linkedin.com/in/')[1]?.split('/')[0] || updates.linkedin
+            : updates.linkedin;
+          insertSocial.run(profile.linked_contact_id, 'LinkedIn', username, updates.linkedin);
+        }
+        if (updates.instagram) {
+          insertSocial.run(profile.linked_contact_id, 'Instagram', updates.instagram, `https://instagram.com/${updates.instagram}`);
+        }
+        if (updates.whatsapp) {
+          insertSocial.run(profile.linked_contact_id, 'WhatsApp', updates.whatsapp, null);
+        }
+      }
+
+      // Update other social links
+      if (updates.otherSocialLinks !== undefined) {
+        // Remove non-standard social profiles
+        db.prepare(`
+          DELETE FROM contact_social_profiles
+          WHERE contact_id = ? AND LOWER(platform) NOT IN ('linkedin', 'instagram', 'whatsapp')
+        `).run(profile.linked_contact_id);
+
+        const insertSocial = db.prepare(`
+          INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url)
+          VALUES (?, ?, ?, ?)
+        `);
+        for (const link of updates.otherSocialLinks) {
+          insertSocial.run(profile.linked_contact_id, link.platform, link.username, link.profileUrl);
+        }
+      }
+
+      // Update website URL
+      if (updates.website !== undefined) {
+        db.prepare(`
+          DELETE FROM contact_urls WHERE contact_id = ? AND (LOWER(label) = 'website' OR LOWER(label) = 'homepage')
+        `).run(profile.linked_contact_id);
+
+        if (updates.website) {
+          db.prepare(`
+            INSERT INTO contact_urls (contact_id, url, label, type)
+            VALUES (?, ?, 'Website', 'website')
+          `).run(profile.linked_contact_id, updates.website);
+        }
+      }
+
+      // Rebuild contact search index
+      rebuildContactSearch(db, profile.linked_contact_id);
     }
 
     // Fetch updated profile
     const updatedProfile = db.prepare(`
-      SELECT * FROM user_profiles WHERE id = ?
+      SELECT id, user_id, linked_contact_id, is_public, public_slug, tagline, notes, visibility_json, created_at, updated_at
+      FROM user_profiles WHERE id = ?
     `).get(profile.id) as ProfileRow;
 
     const baseUrl = `${request.protocol}://${request.hostname}`;
@@ -492,7 +847,8 @@ export default async function profileRoutes(
     const { slug } = request.params;
 
     const profile = db.prepare(`
-      SELECT * FROM user_profiles WHERE public_slug = ? AND is_public = 1
+      SELECT id, user_id, linked_contact_id, is_public, public_slug, tagline, notes, visibility_json, created_at, updated_at
+      FROM user_profiles WHERE public_slug = ? AND is_public = 1
     `).get(slug) as ProfileRow | undefined;
 
     if (!profile) {
@@ -504,7 +860,9 @@ export default async function profileRoutes(
 
     // Filter out non-visible fields based on visibility settings
     const visibility = fullProfile.visibility;
-    const publicProfile: Partial<UserProfile> = {
+    const publicProfile: UserProfile = {
+      linkedContactId: null, // Don't expose linked contact info publicly
+      linkedContact: null,
       isPublic: true,
       publicUrl: fullProfile.publicUrl,
       publicSlug: fullProfile.publicSlug,
