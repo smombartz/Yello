@@ -216,7 +216,7 @@ a.nav-item {
 
 .search-container input {
   width: 100%;
-  padding: 0.625rem 0.875rem 0.625rem 2.75rem;
+  padding: 0.625rem 2.25rem 0.625rem 2.75rem;
   border: 1px solid var(--stitch-border);
   border-radius: 0.5rem;
   font-size: 0.9375rem;
@@ -233,6 +233,55 @@ a.nav-item {
 
 .search-container input::placeholder {
   color: var(--stitch-text-secondary);
+}
+
+/* Search clear button */
+.search-clear-button {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  cursor: pointer;
+  color: var(--stitch-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.15s;
+}
+
+.search-clear-button:hover {
+  color: var(--stitch-text-main);
+  background: var(--stitch-background);
+}
+
+.search-clear-button .material-symbols-outlined {
+  font-size: 1.125rem;
+}
+
+/* Contacts page header */
+.contacts-page-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.contacts-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.contacts-page-header .contact-count {
+  white-space: nowrap;
+  color: var(--stitch-text-secondary);
+  font-size: 0.875rem;
 }
 
 .header-actions {
@@ -6138,6 +6187,11 @@ a.nav-item {
 
 /* Mobile search */
 @media (max-width: 768px) {
+  .contacts-page-header {
+    padding: 0;
+    margin-bottom: 0;
+  }
+
   .search-container {
     display: none;
   }
@@ -6152,6 +6206,7 @@ a.nav-item {
     background: var(--stitch-card-bg);
     border-bottom: 1px solid var(--stitch-border);
     z-index: 99;
+    max-width: none;
   }
 
   .search-container.mobile-search-open input {

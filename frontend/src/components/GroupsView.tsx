@@ -16,6 +16,9 @@ interface GroupsViewProps {
 export function GroupsView({ onBack: _onBack }: GroupsViewProps) {
   const { isMobile } = useOutletContext<OutletContext>();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [viewMode] = useState<'list' | 'grid'>(() => {
+    return (localStorage.getItem('contactViewMode') as 'list' | 'grid') || 'list';
+  });
   const { data, isLoading, error } = useGroups();
 
   const handleGroupClick = (category: string) => {
@@ -42,7 +45,10 @@ export function GroupsView({ onBack: _onBack }: GroupsViewProps) {
           </div>
         )}
         <div className="groups-content">
-          <ContactList categoryFilter={selectedCategory} />
+          <ContactList
+            categoryFilter={selectedCategory}
+            viewMode={viewMode}
+          />
         </div>
       </div>
     );

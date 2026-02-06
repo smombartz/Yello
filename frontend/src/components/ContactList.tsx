@@ -6,12 +6,13 @@ import { useDeleteContacts } from '../api/cleanupHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
 import { ContactRow } from './ContactRow';
 import { ContactGridCard } from './ContactGridCard';
-import { ViewToggle } from './ViewToggle';
 import type { MergeConflict, ContactDetail } from '../api/types';
 
 interface ContactListProps {
   search?: string;
   categoryFilter?: string;
+  viewMode: 'list' | 'grid';
+  onTotalChange?: (total: number) => void;
 }
 
 interface ToastState {
@@ -23,13 +24,10 @@ const COLLAPSED_HEIGHT = 92;   // 80 + 12 (0.75rem gap)
 const EXPANDED_HEIGHT = 462;   // 450 + 12 (0.75rem gap)
 const PAGE_SIZE = 100;
 
-export function ContactList({ search = '', categoryFilter }: ContactListProps) {
+export function ContactList({ search = '', categoryFilter, viewMode, onTotalChange }: ContactListProps) {
   const navigate = useNavigate();
   const parentRef = useRef<HTMLDivElement>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
-    return (localStorage.getItem('contactViewMode') as 'list' | 'grid') || 'list';
-  });
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -56,6 +54,13 @@ export function ContactList({ search = '', categoryFilter }: ContactListProps) {
     setSelectedIds(new Set());
   }, [search]);
 
+  // Report total count to parent
+  useEffect(() => {
+    if (onTotalChange && data?.total !== undefined) {
+      onTotalChange(data.total);
+    }
+  }, [data?.total, onTotalChange]);
+
   // Cleanup toast timeout on unmount
   useEffect(() => {
     return () => {
@@ -68,11 +73,6 @@ export function ContactList({ search = '', categoryFilter }: ContactListProps) {
   const handleToggle = useCallback((id: number) => {
     setExpandedId(prev => prev === id ? null : id);
   }, []);
-
-  const handleViewChange = (view: 'list' | 'grid') => {
-    setViewMode(view);
-    localStorage.setItem('contactViewMode', view);
-  };
 
   // Selection handlers
   const handleToggleSelect = useCallback((contactId: number) => {
@@ -272,13 +272,6 @@ export function ContactList({ search = '', categoryFilter }: ContactListProps) {
 
   return (
     <div className="contact-list">
-      <div className="contact-list-header">
-        <div className="contact-count">
-          {data.total.toLocaleString()} contact{data.total !== 1 ? 's' : ''}
-        </div>
-        <ViewToggle view={viewMode} onViewChange={handleViewChange} />
-      </div>
-
       {/* Selection toolbar */}
       <div className="contact-list-actions">
         <div className="contact-selection-actions">
