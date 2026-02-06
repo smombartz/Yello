@@ -142,43 +142,53 @@ function getDefaultVisibility(): ProfileVisibility {
 
 // Initialize tables for user profile
 function ensureProfileTables(db: ReturnType<typeof getDatabase>): void {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS user_profiles (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-      linked_contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
-      is_public INTEGER DEFAULT 0,
-      public_slug TEXT UNIQUE,
-      tagline TEXT,
-      notes TEXT,
-      visibility_json TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+  // Check if table exists first
+  const tableExists = db.prepare(`
+    SELECT name FROM sqlite_master WHERE type='table' AND name='user_profiles'
+  `).get();
 
-    CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON user_profiles(user_id);
-    CREATE INDEX IF NOT EXISTS idx_user_profiles_public_slug ON user_profiles(public_slug);
-    CREATE INDEX IF NOT EXISTS idx_user_profiles_linked_contact ON user_profiles(linked_contact_id);
-  `);
-
-  // Migration: Add linked_contact_id if not exists
-  const tableInfo = db.prepare("PRAGMA table_info(user_profiles)").all() as Array<{ name: string }>;
-  const hasLinkedContactId = tableInfo.some(col => col.name === 'linked_contact_id');
-
-  if (!hasLinkedContactId) {
-    console.log('Adding linked_contact_id column to user_profiles...');
+  if (!tableExists) {
+    // Fresh install - create table with all columns including linked_contact_id
     db.exec(`
-      ALTER TABLE user_profiles ADD COLUMN linked_contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL;
-      CREATE INDEX IF NOT EXISTS idx_user_profiles_linked_contact ON user_profiles(linked_contact_id);
-    `);
-  }
+      CREATE TABLE user_profiles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        linked_contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
+        is_public INTEGER DEFAULT 0,
+        public_slug TEXT UNIQUE,
+        tagline TEXT,
+        notes TEXT,
+        visibility_json TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
 
-  // Migration: Remove old columns that are no longer needed (profile data now comes from contact)
-  const hasFirstName = tableInfo.some(col => col.name === 'first_name');
-  if (hasFirstName) {
-    // SQLite doesn't support DROP COLUMN in older versions, so we just leave the columns
-    // They won't be used anymore since data comes from linked contact
-    console.log('Note: Legacy profile columns exist but will be ignored in favor of linked contact data');
+      CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
+      CREATE INDEX idx_user_profiles_public_slug ON user_profiles(public_slug);
+      CREATE INDEX idx_user_profiles_linked_contact ON user_profiles(linked_contact_id);
+    `);
+  } else {
+    // Table exists - check if we need to migrate
+    const tableInfo = db.prepare("PRAGMA table_info(user_profiles)").all() as Array<{ name: string }>;
+    const hasLinkedContactId = tableInfo.some(col => col.name === 'linked_contact_id');
+
+    if (!hasLinkedContactId) {
+      console.log('Adding linked_contact_id column to user_profiles...');
+      db.exec(`
+        ALTER TABLE user_profiles ADD COLUMN linked_contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL;
+      `);
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_user_profiles_linked_contact ON user_profiles(linked_contact_id);
+      `);
+    }
+
+    // Note about legacy columns
+    const hasFirstName = tableInfo.some(col => col.name === 'first_name');
+    if (hasFirstName) {
+      // SQLite doesn't support DROP COLUMN in older versions, so we just leave the columns
+      // They won't be used anymore since data comes from linked contact
+      console.log('Note: Legacy profile columns exist but will be ignored in favor of linked contact data');
+    }
   }
 }
 
