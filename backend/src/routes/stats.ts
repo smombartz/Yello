@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { getDatabase } from '../services/database.js';
+import { requireAuth } from '../middleware/auth.js';
 
 interface OverviewStats {
   totalContacts: number;
@@ -243,7 +244,10 @@ export default async function statsRoutes(
   _opts: FastifyPluginOptions
 ): Promise<void> {
   // GET /api/stats/dashboard
-  fastify.get<{ Reply: DashboardResponse }>('/dashboard', async (_request, _reply) => {
+  fastify.get<{ Reply: DashboardResponse }>(
+    '/dashboard',
+    { onRequest: [requireAuth] },
+    async (_request, _reply) => {
     const overview = getOverviewStats();
     const upcomingBirthdays = getUpcomingBirthdays();
     const recentlyAdded = getRecentlyAdded();
@@ -259,3 +263,4 @@ export default async function statsRoutes(
     };
   });
 }
+
