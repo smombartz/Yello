@@ -21,21 +21,6 @@ function NavItemLink({ to, icon, label }: NavItemLinkProps) {
   );
 }
 
-interface NavItemProps {
-  icon: string;
-  label: string;
-  onClick?: () => void;
-}
-
-function NavItem({ icon, label, onClick }: NavItemProps) {
-  return (
-    <div className="nav-item" onClick={onClick}>
-      <span className="material-symbols-outlined">{icon}</span>
-      <span>{label}</span>
-    </div>
-  );
-}
-
 interface SidebarProps {
   currentView?: 'dashboard' | 'contacts' | 'merge' | 'cleanup' | 'archived' | 'groups' | 'map' | 'settings';
 }
@@ -102,7 +87,6 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
       <nav className="sidebar-nav">
         <NavItemLink to="/dashboard" icon="dashboard" label="Dashboard" />
         <NavItemLink to="/contacts" icon="contacts" label="All Contacts" />
-        <NavItem icon="star" label="Favorites" />
         <NavItemLink to="/map" icon="map" label="Map" />
         <NavItemLink to="/groups" icon="group" label="Groups" />
 
