@@ -782,16 +782,27 @@ export function UserProfilePage() {
                     <span className="material-symbols-outlined">link</span>
                     <code>{profile.publicUrl}</code>
                   </div>
-                  <button
-                    type="button"
-                    className="copy-url-btn"
-                    onClick={handleCopyUrl}
-                    title="Copy URL"
-                  >
-                    <span className="material-symbols-outlined">
-                      {copySuccess ? 'check' : 'content_copy'}
-                    </span>
-                  </button>
+                  <div className="public-url-actions">
+                    <a
+                      href={`/p/${profile.publicSlug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="view-card-btn"
+                      title="View public card"
+                    >
+                      <span className="material-symbols-outlined">open_in_new</span>
+                    </a>
+                    <button
+                      type="button"
+                      className="copy-url-btn"
+                      onClick={handleCopyUrl}
+                      title="Copy URL"
+                    >
+                      <span className="material-symbols-outlined">
+                        {copySuccess ? 'check' : 'content_copy'}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1675,6 +1686,12 @@ const profileStyles = `
     text-overflow: ellipsis;
   }
 
+  .public-url-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .view-card-btn,
   .copy-url-btn {
     padding: 8px;
     background: var(--stitch-card-bg);
@@ -1683,8 +1700,13 @@ const profileStyles = `
     cursor: pointer;
     color: var(--stitch-text-secondary);
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
   }
 
+  .view-card-btn:hover,
   .copy-url-btn:hover {
     background: var(--stitch-primary);
     color: white;
