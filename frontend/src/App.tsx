@@ -11,6 +11,7 @@ import { MapView } from './components/MapView';
 import { SettingsView } from './components/SettingsView';
 import { UserProfilePage } from './components/UserProfilePage';
 import { LoginPage } from './components/LoginPage';
+import { PublicContactCard } from './components/PublicContactCard';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -108,6 +109,9 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
+      {/* Public contact card - no auth required */}
+      <Route path="/p/:slug" element={<PublicContactCard />} />
+
       {/* Public route - Login */}
       <Route
         path="/login"
