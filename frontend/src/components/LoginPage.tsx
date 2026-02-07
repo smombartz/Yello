@@ -82,7 +82,7 @@ export function LoginPage() {
         }
 
         .login-header p {
-          color: #718096;
+          color: var(--ds-text-secondary);
           margin: 0;
           font-size: 14px;
         }
@@ -99,18 +99,18 @@ export function LoginPage() {
           width: 100%;
           padding: 14px 24px;
           background: white;
-          border: 1px solid #e2e8f0;
+          border: 1px solid var(--ds-border-color);
           border-radius: 8px;
           font-size: 16px;
           font-weight: 500;
-          color: #374151;
+          color: var(--ds-text-primary);
           cursor: pointer;
           transition: all 0.2s ease;
         }
 
         .google-login-btn:hover:not(:disabled) {
-          background: #f7fafc;
-          border-color: #cbd5e0;
+          background: var(--ds-bg-secondary);
+          border-color: var(--ds-border-dark);
           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
@@ -124,7 +124,7 @@ export function LoginPage() {
         }
 
         .login-footer {
-          color: #a0aec0;
+          color: var(--ds-text-muted);
           font-size: 12px;
         }
 

@@ -62,13 +62,13 @@ export function ImportModal({ onClose }: ImportModalProps) {
             />
 
             {selectedFile && (
-              <p style={{ fontSize: '0.875rem', color: 'var(--pico-muted-color)' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--ds-text-secondary)' }}>
                 Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
               </p>
             )}
 
             {importMutation.error && (
-              <p style={{ color: 'var(--pico-del-color)' }}>
+              <p style={{ color: 'var(--ds-color-error)' }}>
                 Error: {importMutation.error.message}
               </p>
             )}
@@ -100,19 +100,19 @@ export function ImportModal({ onClose }: ImportModalProps) {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-              <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--pico-card-background-color)', borderRadius: '8px' }}>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--pico-primary)' }}>{result.imported}</div>
-                <div style={{ fontSize: '0.875rem', color: 'var(--pico-muted-color)' }}>Imported</div>
+              <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--ds-bg-primary)', borderRadius: '0.5rem' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--ds-color-primary)' }}>{result.imported}</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--ds-text-secondary)' }}>Imported</div>
               </div>
-              <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--pico-card-background-color)', borderRadius: '8px' }}>
+              <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--ds-bg-primary)', borderRadius: '0.5rem' }}>
                 <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{result.photosProcessed}</div>
-                <div style={{ fontSize: '0.875rem', color: 'var(--pico-muted-color)' }}>Photos</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--ds-text-secondary)' }}>Photos</div>
               </div>
             </div>
 
             {result.failed > 0 && (
               <details style={{ marginBottom: '1rem' }}>
-                <summary style={{ color: 'var(--pico-del-color)' }}>
+                <summary style={{ color: 'var(--ds-color-error)' }}>
                   {result.failed} failed to import
                 </summary>
                 <ul style={{ fontSize: '0.875rem', maxHeight: '150px', overflow: 'auto' }}>

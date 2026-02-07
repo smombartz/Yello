@@ -307,22 +307,22 @@ const dashboardStyles = `
 
   .dashboard-header {
     padding: 24px 32px;
-    border-bottom: 1px solid #e2e8f0;
-    background: #fff;
+    border-bottom: 1px solid var(--ds-border-color);
+    background: var(--ds-bg-primary);
   }
 
   .dashboard-header h1 {
     margin: 0;
     font-size: 24px;
     font-weight: 600;
-    color: #1a202c;
+    color: var(--ds-text-primary);
   }
 
   .dashboard-content {
     flex: 1;
     overflow-y: auto;
     padding: 24px 32px;
-    background: #f7fafc;
+    background: var(--ds-bg-secondary);
   }
 
   .dashboard-section {
@@ -341,16 +341,16 @@ const dashboardStyles = `
     align-items: center;
     gap: 16px;
     padding: 20px;
-    background: #fff;
+    background: var(--ds-bg-primary);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--ds-shadow-sm);
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
   }
 
   .stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--ds-shadow-md);
   }
 
   .stat-icon {
@@ -359,19 +359,19 @@ const dashboardStyles = `
     justify-content: center;
     width: 48px;
     height: 48px;
-    background: #667eea;
+    background: var(--ds-color-primary);
     border-radius: 12px;
-    color: #fff;
+    color: var(--ds-text-inverse);
   }
 
   .stat-icon .material-symbols-outlined {
     font-size: 24px;
   }
 
-  .stat-icon.countries { background: #48bb78; }
-  .stat-icon.cities { background: #ed8936; }
-  .stat-icon.photos { background: #9f7aea; }
-  .stat-icon.birthdays { background: #f56565; }
+  .stat-icon.countries { background: var(--ds-color-success); }
+  .stat-icon.cities { background: var(--ds-color-warning); }
+  .stat-icon.photos { background: var(--ds-color-purple); }
+  .stat-icon.birthdays { background: var(--ds-color-error); }
 
   .stat-info {
     flex: 1;
@@ -380,13 +380,13 @@ const dashboardStyles = `
   .stat-value {
     font-size: 28px;
     font-weight: 700;
-    color: #1a202c;
+    color: var(--ds-text-primary);
     line-height: 1.2;
   }
 
   .stat-label {
     font-size: 13px;
-    color: #718096;
+    color: var(--ds-text-secondary);
     margin-top: 2px;
   }
 
@@ -400,9 +400,9 @@ const dashboardStyles = `
 
   /* Dashboard Cards */
   .dashboard-card {
-    background: #fff;
+    background: var(--ds-bg-primary);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--ds-shadow-sm);
     overflow: hidden;
   }
 
@@ -411,19 +411,19 @@ const dashboardStyles = `
     align-items: center;
     gap: 12px;
     padding: 16px 20px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--ds-border-color);
   }
 
   .card-header .material-symbols-outlined {
     font-size: 22px;
-    color: #667eea;
+    color: var(--ds-color-primary);
   }
 
   .card-header h2 {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
-    color: #1a202c;
+    color: var(--ds-text-primary);
   }
 
   .card-content {
@@ -447,7 +447,7 @@ const dashboardStyles = `
   }
 
   .contact-item:hover {
-    background: #f7fafc;
+    background: var(--ds-bg-secondary);
   }
 
   .contact-avatar {
@@ -456,7 +456,7 @@ const dashboardStyles = `
     border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
-    background: #e2e8f0;
+    background: var(--ds-border-color);
   }
 
   .contact-avatar img {
@@ -471,8 +471,8 @@ const dashboardStyles = `
     justify-content: center;
     width: 100%;
     height: 100%;
-    background: #667eea;
-    color: #fff;
+    background: var(--ds-color-primary);
+    color: var(--ds-text-inverse);
     font-weight: 600;
     font-size: 16px;
   }
@@ -485,7 +485,7 @@ const dashboardStyles = `
   .contact-name {
     font-size: 14px;
     font-weight: 500;
-    color: #1a202c;
+    color: var(--ds-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -493,7 +493,7 @@ const dashboardStyles = `
 
   .contact-meta {
     font-size: 12px;
-    color: #718096;
+    color: var(--ds-text-secondary);
     margin-top: 2px;
   }
 
@@ -505,8 +505,8 @@ const dashboardStyles = `
   }
 
   .birthday-badge {
-    background: #fed7d7;
-    color: #c53030;
+    background: var(--ds-color-error-light);
+    color: var(--ds-color-error);
   }
 
   /* Geography List */
@@ -524,7 +524,7 @@ const dashboardStyles = `
   }
 
   .geography-item:not(:last-child) {
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--ds-border-light);
   }
 
   .geography-rank {
@@ -533,27 +533,27 @@ const dashboardStyles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #e2e8f0;
+    background: var(--ds-border-color);
     border-radius: 50%;
     font-size: 12px;
     font-weight: 600;
-    color: #4a5568;
+    color: var(--ds-text-secondary);
   }
 
   .geography-name {
     flex: 1;
     font-size: 14px;
-    color: #1a202c;
+    color: var(--ds-text-primary);
   }
 
   .geography-country {
-    color: #718096;
+    color: var(--ds-text-secondary);
   }
 
   .geography-count {
     font-size: 14px;
     font-weight: 600;
-    color: #667eea;
+    color: var(--ds-color-primary);
   }
 
   /* Empty State */
@@ -563,7 +563,7 @@ const dashboardStyles = `
     align-items: center;
     justify-content: center;
     padding: 32px 20px;
-    color: #a0aec0;
+    color: var(--ds-text-muted);
   }
 
   .empty-state .material-symbols-outlined {
@@ -585,19 +585,19 @@ const dashboardStyles = `
     align-items: center;
     justify-content: center;
     gap: 16px;
-    color: #718096;
+    color: var(--ds-text-secondary);
   }
 
   .dashboard-error .material-symbols-outlined {
     font-size: 48px;
-    color: #f56565;
+    color: var(--ds-color-error);
   }
 
   .loading-spinner {
     width: 40px;
     height: 40px;
-    border: 3px solid #e2e8f0;
-    border-top-color: #667eea;
+    border: 3px solid var(--ds-border-color);
+    border-top-color: var(--ds-color-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }

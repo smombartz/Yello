@@ -93,18 +93,21 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
         <div className="nav-spacer" />
 
         <div className="tools-menu-container">
-          <div
+          <button
+            type="button"
             className={`nav-item tools-menu-header ${isToolsRouteActive ? 'active' : ''}`}
             onClick={() => setShowToolsMenu(!showToolsMenu)}
+            aria-expanded={effectiveShowToolsMenu}
+            aria-controls="tools-submenu"
           >
             <span className="material-symbols-outlined">build_circle</span>
             <span>Tools</span>
             <span className={`material-symbols-outlined tools-chevron ${effectiveShowToolsMenu ? 'expanded' : ''}`}>
               expand_more
             </span>
-          </div>
+          </button>
           {effectiveShowToolsMenu && (
-            <div className="tools-menu-items">
+            <div id="tools-submenu" className="tools-menu-items">
               <NavLink
                 to="/archived"
                 className={({ isActive }) => `nav-item tools-menu-item ${isActive ? 'active' : ''}`}
@@ -132,9 +135,12 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
       </nav>
 
       <div className="sidebar-user-container" ref={menuRef}>
-        <div
+        <button
+          type="button"
           className={`sidebar-user ${showUserMenu ? 'active' : ''}`}
           onClick={() => setShowUserMenu(!showUserMenu)}
+          aria-expanded={showUserMenu}
+          aria-haspopup="menu"
         >
           <div className="sidebar-user-avatar">
             {avatarUrl ? (
@@ -150,31 +156,38 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
           <span className="material-symbols-outlined sidebar-user-chevron">
             {showUserMenu ? 'expand_more' : 'chevron_right'}
           </span>
-        </div>
+        </button>
 
         {showUserMenu && (
-          <div className="sidebar-user-menu">
-            <div
+          <div className="sidebar-user-menu" role="menu">
+            <button
+              type="button"
               className="sidebar-user-menu-item"
               onClick={handleProfileClick}
+              role="menuitem"
             >
               <span className="material-symbols-outlined">person</span>
               <span>Profile</span>
-            </div>
-            <div
+            </button>
+            <button
+              type="button"
               className={`sidebar-user-menu-item ${currentView === 'settings' ? 'active' : ''}`}
               onClick={handleSettingsClick}
+              role="menuitem"
             >
               <span className="material-symbols-outlined">settings</span>
               <span>Settings</span>
-            </div>
-            <div
+            </button>
+            <button
+              type="button"
               className={`sidebar-user-menu-item logout ${isLoggingOut ? 'disabled' : ''}`}
               onClick={isLoggingOut ? undefined : handleLogout}
+              disabled={isLoggingOut}
+              role="menuitem"
             >
               <span className="material-symbols-outlined">logout</span>
               <span>{isLoggingOut ? 'Signing out...' : 'Sign out'}</span>
-            </div>
+            </button>
           </div>
         )}
       </div>
@@ -187,6 +200,12 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
         .sidebar-user {
           cursor: pointer;
           transition: background-color 0.2s;
+          background: none;
+          border: none;
+          width: 100%;
+          text-align: left;
+          font: inherit;
+          color: inherit;
         }
 
         .sidebar-user:hover,
@@ -205,7 +224,7 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
           bottom: 100%;
           left: 8px;
           right: 8px;
-          background: #2d3748;
+          background: var(--ds-text-primary);
           border-radius: 8px;
           padding: 4px;
           margin-bottom: 4px;
@@ -220,9 +239,14 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
           padding: 10px 12px;
           border-radius: 6px;
           cursor: pointer;
-          color: #e2e8f0;
+          color: var(--ds-bg-tertiary);
           font-size: 14px;
           transition: background-color 0.2s;
+          background: none;
+          border: none;
+          width: 100%;
+          text-align: left;
+          font: inherit;
         }
 
         .sidebar-user-menu-item:hover {
@@ -234,7 +258,7 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
         }
 
         .sidebar-user-menu-item.logout {
-          color: #fc8181;
+          color: var(--ds-color-error);
         }
 
         .sidebar-user-menu-item.logout:hover {
@@ -263,7 +287,12 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
           flex-direction: column;
         }
 
-        .tools-menu-header {
+        button.tools-menu-header {
+          background: none;
+          border: none;
+          width: 100%;
+          text-align: left;
+          font: inherit;
           cursor: pointer;
         }
 

@@ -1238,14 +1238,14 @@ const profileStyles = `
     justify-content: center;
     height: 100%;
     gap: 16px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   .loading-spinner {
     width: 40px;
     height: 40px;
-    border: 3px solid var(--stitch-border);
-    border-top-color: var(--stitch-primary);
+    border: 3px solid var(--ds-border-color);
+    border-top-color: var(--ds-color-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -1275,7 +1275,7 @@ const profileStyles = `
 
   .setup-icon .material-symbols-outlined {
     font-size: 40px;
-    color: var(--stitch-primary);
+    color: var(--ds-color-primary);
   }
 
   .unlinked-profile-state h2 {
@@ -1284,7 +1284,7 @@ const profileStyles = `
   }
 
   .unlinked-profile-state > p {
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
     margin: 0 0 32px 0;
   }
 
@@ -1299,8 +1299,8 @@ const profileStyles = `
     align-items: center;
     gap: 16px;
     padding: 20px;
-    background: var(--stitch-card-bg);
-    border: 1px solid var(--stitch-border);
+    background: var(--ds-bg-primary);
+    border: 1px solid var(--ds-border-color);
     border-radius: 12px;
     cursor: pointer;
     text-align: left;
@@ -1308,7 +1308,7 @@ const profileStyles = `
   }
 
   .setup-option:hover {
-    border-color: var(--stitch-primary);
+    border-color: var(--ds-color-primary);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
   }
 
@@ -1318,14 +1318,14 @@ const profileStyles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--stitch-border);
+    background: var(--ds-border-color);
     border-radius: 12px;
     flex-shrink: 0;
   }
 
   .option-icon .material-symbols-outlined {
     font-size: 24px;
-    color: var(--stitch-primary);
+    color: var(--ds-color-primary);
   }
 
   .option-content {
@@ -1340,20 +1340,20 @@ const profileStyles = `
 
   .option-content span {
     font-size: 14px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   .create-input-wrapper {
     padding: 20px;
-    background: var(--stitch-card-bg);
-    border: 1px solid var(--stitch-primary);
+    background: var(--ds-bg-primary);
+    border: 1px solid var(--ds-color-primary);
     border-radius: 12px;
   }
 
   .create-name-input {
     width: 100%;
     padding: 12px 16px;
-    border: 1px solid var(--stitch-border);
+    border: 1px solid var(--ds-border-color);
     border-radius: 8px;
     font-size: 16px;
     margin-bottom: 16px;
@@ -1391,7 +1391,7 @@ const profileStyles = `
   .header-info p {
     margin: 4px 0 0 0;
     font-size: 13px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   .unlink-btn {
@@ -1400,17 +1400,17 @@ const profileStyles = `
     gap: 6px;
     padding: 8px 16px;
     background: transparent;
-    border: 1px solid var(--stitch-border);
+    border: 1px solid var(--ds-border-color);
     border-radius: 8px;
     cursor: pointer;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
     font-size: 14px;
     transition: all 0.2s;
   }
 
   .unlink-btn:hover {
-    border-color: #ef4444;
-    color: #ef4444;
+    border-color: var(--ds-color-error);
+    color: var(--ds-color-error);
   }
 
   .unlink-confirm {
@@ -1422,7 +1422,7 @@ const profileStyles = `
   .unlink-confirm p {
     margin: 0;
     font-size: 14px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   .confirm-actions {
@@ -1432,7 +1432,7 @@ const profileStyles = `
 
   .danger-button {
     padding: 8px 16px;
-    background: #ef4444;
+    background: var(--ds-color-error);
     color: white;
     border: none;
     border-radius: 6px;
@@ -1441,15 +1441,15 @@ const profileStyles = `
   }
 
   .danger-button:hover {
-    background: #dc2626;
+    background: var(--ds-color-error-hover);
   }
 
   /* Contact search autocomplete */
   .contact-search-autocomplete {
     max-width: 600px;
     margin: 24px auto;
-    background: var(--stitch-card-bg);
-    border: 1px solid var(--stitch-border);
+    background: var(--ds-bg-primary);
+    border: 1px solid var(--ds-border-color);
     border-radius: 12px;
     overflow: hidden;
   }
@@ -1459,11 +1459,11 @@ const profileStyles = `
     align-items: center;
     gap: 12px;
     padding: 16px;
-    border-bottom: 1px solid var(--stitch-border);
+    border-bottom: 1px solid var(--ds-border-color);
   }
 
   .search-input-wrapper .material-symbols-outlined {
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   .search-input {
@@ -1479,13 +1479,13 @@ const profileStyles = `
     background: transparent;
     border: none;
     cursor: pointer;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
     border-radius: 6px;
     transition: all 0.2s;
   }
 
   .cancel-btn:hover {
-    background: var(--stitch-border);
+    background: var(--ds-border-color);
   }
 
   .search-results {
@@ -1497,7 +1497,7 @@ const profileStyles = `
   .no-results {
     padding: 24px;
     text-align: center;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   .results-list {
@@ -1520,7 +1520,7 @@ const profileStyles = `
   }
 
   .result-item:hover {
-    background: var(--stitch-border);
+    background: var(--ds-border-color);
   }
 
   .result-info {
@@ -1534,7 +1534,7 @@ const profileStyles = `
 
   .result-detail {
     font-size: 13px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   /* Profile page layout */
@@ -1570,8 +1570,8 @@ const profileStyles = `
   }
 
   .profile-section {
-    background: var(--stitch-card-bg);
-    border: 1px solid var(--stitch-border);
+    background: var(--ds-bg-primary);
+    border: 1px solid var(--ds-border-color);
     border-radius: 12px;
     padding: 20px;
   }
@@ -1580,7 +1580,7 @@ const profileStyles = `
     font-size: 16px;
     font-weight: 600;
     margin: 0 0 16px 0;
-    color: var(--stitch-text-main);
+    color: var(--ds-text-primary);
   }
 
   .public-card-controls {
@@ -1603,7 +1603,7 @@ const profileStyles = `
 
   .public-toggle-label .material-symbols-outlined {
     font-size: 28px;
-    color: var(--stitch-primary);
+    color: var(--ds-color-primary);
   }
 
   .public-toggle-label strong {
@@ -1614,7 +1614,7 @@ const profileStyles = `
   .public-toggle-label p {
     margin: 2px 0 0 0;
     font-size: 13px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   .toggle-switch {
@@ -1634,7 +1634,7 @@ const profileStyles = `
     position: absolute;
     cursor: pointer;
     inset: 0;
-    background-color: var(--stitch-border);
+    background-color: var(--ds-border-color);
     transition: 0.3s;
     border-radius: 28px;
   }
@@ -1652,7 +1652,7 @@ const profileStyles = `
   }
 
   .toggle-switch input:checked + .toggle-slider {
-    background-color: var(--stitch-primary);
+    background-color: var(--ds-color-primary);
   }
 
   .toggle-switch input:checked + .toggle-slider::before {
@@ -1665,7 +1665,7 @@ const profileStyles = `
     gap: 8px;
     margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px solid var(--stitch-border);
+    border-top: 1px solid var(--ds-border-color);
   }
 
   .public-url-display {
@@ -1674,14 +1674,14 @@ const profileStyles = `
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    background: var(--stitch-card-bg);
+    background: var(--ds-bg-primary);
     border-radius: 8px;
     overflow: hidden;
   }
 
   .public-url-display code {
     font-size: 13px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1695,11 +1695,11 @@ const profileStyles = `
   .view-card-btn,
   .copy-url-btn {
     padding: 8px;
-    background: var(--stitch-card-bg);
-    border: 1px solid var(--stitch-border);
+    background: var(--ds-bg-primary);
+    border: 1px solid var(--ds-border-color);
     border-radius: 8px;
     cursor: pointer;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
     transition: all 0.2s;
     display: flex;
     align-items: center;
@@ -1709,9 +1709,9 @@ const profileStyles = `
 
   .view-card-btn:hover,
   .copy-url-btn:hover {
-    background: var(--stitch-primary);
+    background: var(--ds-color-primary);
     color: white;
-    border-color: var(--stitch-primary);
+    border-color: var(--ds-color-primary);
   }
 
   .profile-field-row {
@@ -1745,7 +1745,7 @@ const profileStyles = `
     display: block;
     font-size: 13px;
     font-weight: 500;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
     margin-bottom: 4px;
   }
 
@@ -1757,7 +1757,7 @@ const profileStyles = `
     display: block;
     font-size: 13px;
     font-weight: 500;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
     margin-bottom: 8px;
   }
 
@@ -1777,12 +1777,12 @@ const profileStyles = `
 
   .visibility-toggle.visible {
     background: #667eea20;
-    color: var(--stitch-primary);
+    color: var(--ds-color-primary);
   }
 
   .visibility-toggle.hidden {
-    background: var(--stitch-border);
-    color: var(--stitch-text-secondary);
+    background: var(--ds-border-color);
+    color: var(--ds-text-secondary);
   }
 
   .visibility-toggle.disabled {
@@ -1802,7 +1802,7 @@ const profileStyles = `
 
   .birthday-preview {
     font-size: 13px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1820,15 +1820,15 @@ const profileStyles = `
     font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
-    background: var(--stitch-border);
+    background: var(--ds-border-color);
     border-radius: 4px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   .notes-textarea {
     width: 100%;
     padding: 12px;
-    border: 1px solid var(--stitch-border);
+    border: 1px solid var(--ds-border-color);
     border-radius: 8px;
     font-size: 14px;
     resize: vertical;
@@ -1870,18 +1870,18 @@ const profileStyles = `
   .preview-panel-header p {
     margin: 4px 0 0 0;
     font-size: 13px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   .public-card-preview {
-    background: var(--stitch-card-bg);
-    border: 1px solid var(--stitch-border);
+    background: var(--ds-bg-primary);
+    border: 1px solid var(--ds-border-color);
     border-radius: 16px;
     overflow: hidden;
   }
 
   .public-card-preview.disabled {
-    background: var(--stitch-border);
+    background: var(--ds-border-color);
   }
 
   .preview-disabled-message {
@@ -1891,7 +1891,7 @@ const profileStyles = `
     justify-content: center;
     padding: 48px 24px;
     text-align: center;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   .preview-disabled-message .material-symbols-outlined {
@@ -1929,7 +1929,7 @@ const profileStyles = `
   .preview-tagline {
     margin: 4px 0 0 0;
     font-size: 14px;
-    color: var(--stitch-primary);
+    color: var(--ds-color-primary);
     font-style: italic;
   }
 
@@ -1937,7 +1937,7 @@ const profileStyles = `
   .preview-company {
     margin: 4px 0 0 0;
     font-size: 14px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   .preview-contact-info {
@@ -1956,7 +1956,7 @@ const profileStyles = `
 
   .preview-item .material-symbols-outlined {
     font-size: 18px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   .preview-social {
@@ -1964,7 +1964,7 @@ const profileStyles = `
     justify-content: center;
     gap: 12px;
     padding-top: 16px;
-    border-top: 1px solid var(--stitch-border);
+    border-top: 1px solid var(--ds-border-color);
   }
 
   .preview-social-link {
@@ -1973,14 +1973,14 @@ const profileStyles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--stitch-border);
+    background: var(--ds-border-color);
     border-radius: 50%;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
     transition: all 0.2s;
   }
 
   .preview-social-link:hover {
-    background: var(--stitch-primary);
+    background: var(--ds-color-primary);
     color: white;
   }
 
@@ -1991,9 +1991,9 @@ const profileStyles = `
     gap: 8px;
     margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px solid var(--stitch-border);
+    border-top: 1px solid var(--ds-border-color);
     font-size: 14px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   /* Save success indicator */
@@ -2001,7 +2001,7 @@ const profileStyles = `
     display: flex;
     align-items: center;
     gap: 4px;
-    color: #10b981;
+    color: var(--ds-color-success);
     font-size: 14px;
   }
 
@@ -2012,8 +2012,8 @@ const profileStyles = `
     left: 0;
     right: 0;
     padding: 16px;
-    background: var(--stitch-card-bg);
-    border-top: 1px solid var(--stitch-border);
+    background: var(--ds-bg-primary);
+    border-top: 1px solid var(--ds-border-color);
     z-index: 100;
   }
 
@@ -2027,7 +2027,7 @@ const profileStyles = `
     align-items: center;
     gap: 6px;
     padding: 10px 20px;
-    background: var(--stitch-primary);
+    background: var(--ds-color-primary);
     color: white;
     border: none;
     border-radius: 8px;
@@ -2038,7 +2038,7 @@ const profileStyles = `
   }
 
   .primary-button:hover:not(:disabled) {
-    background: #5567dc;
+    background: var(--ds-color-primary-hover);
   }
 
   .primary-button:disabled {
@@ -2049,23 +2049,23 @@ const profileStyles = `
   .secondary-button {
     padding: 8px 16px;
     background: transparent;
-    border: 1px solid var(--stitch-border);
+    border: 1px solid var(--ds-border-color);
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
     transition: all 0.2s;
   }
 
   .secondary-button:hover {
-    background: var(--stitch-border);
+    background: var(--ds-border-color);
   }
 
   /* Inherit styles from ContactFormSections */
   .edit-input {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid var(--stitch-border);
+    border: 1px solid var(--ds-border-color);
     border-radius: 6px;
     font-size: 14px;
   }
@@ -2082,7 +2082,7 @@ const profileStyles = `
 
   .editable-array-item .material-symbols-outlined {
     margin-top: 8px;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
   }
 
   .edit-field-group {
@@ -2097,14 +2097,14 @@ const profileStyles = `
     border: none;
     background: none;
     cursor: pointer;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
     opacity: 0.6;
     transition: opacity 0.2s;
   }
 
   .remove-item-btn:hover {
     opacity: 1;
-    color: #ef4444;
+    color: var(--ds-color-error);
   }
 
   .add-item-btn {
@@ -2112,18 +2112,18 @@ const profileStyles = `
     align-items: center;
     gap: 6px;
     padding: 8px 12px;
-    border: 1px dashed var(--stitch-border);
+    border: 1px dashed var(--ds-border-color);
     background: transparent;
     border-radius: 6px;
     cursor: pointer;
-    color: var(--stitch-text-secondary);
+    color: var(--ds-text-secondary);
     font-size: 14px;
     transition: all 0.2s;
   }
 
   .add-item-btn:hover {
-    border-color: var(--stitch-primary);
-    color: var(--stitch-primary);
+    border-color: var(--ds-color-primary);
+    color: var(--ds-color-primary);
   }
 
   .edit-error {
@@ -2131,9 +2131,9 @@ const profileStyles = `
     align-items: center;
     gap: 8px;
     padding: 12px 16px;
-    background: #fee2e2;
+    background: var(--ds-color-error-light);
     border-radius: 8px;
-    color: #dc2626;
+    color: var(--ds-color-error-hover);
     font-size: 14px;
   }
 

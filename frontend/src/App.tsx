@@ -33,13 +33,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
             align-items: center;
             justify-content: center;
             gap: 16px;
-            background: #f7fafc;
+            background: var(--ds-bg-secondary);
           }
           .auth-loading-spinner {
             width: 40px;
             height: 40px;
-            border: 3px solid #e2e8f0;
-            border-top-color: #667eea;
+            border: 3px solid var(--ds-border-color);
+            border-top-color: var(--ds-color-primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
           }
@@ -47,7 +47,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
             to { transform: rotate(360deg); }
           }
           .auth-loading p {
-            color: #718096;
+            color: var(--ds-text-secondary);
             margin: 0;
           }
         `}</style>
@@ -78,13 +78,13 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
             align-items: center;
             justify-content: center;
             gap: 16px;
-            background: #f7fafc;
+            background: var(--ds-bg-secondary);
           }
           .auth-loading-spinner {
             width: 40px;
             height: 40px;
-            border: 3px solid #e2e8f0;
-            border-top-color: #667eea;
+            border: 3px solid var(--ds-border-color);
+            border-top-color: var(--ds-color-primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
           }
@@ -92,7 +92,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
             to { transform: rotate(360deg); }
           }
           .auth-loading p {
-            color: #718096;
+            color: var(--ds-text-secondary);
             margin: 0;
           }
         `}</style>

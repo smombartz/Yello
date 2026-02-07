@@ -128,7 +128,7 @@ function ProfileAvatar({
         className="profile-avatar"
         style={{
           backgroundImage: showQR && qrLoaded ? `url(${qrCodeUrl})` : avatarUrl ? `url(${avatarUrl})` : undefined,
-          backgroundColor: !avatarUrl && !showQR ? stringToColor(name) : '#fff',
+          backgroundColor: !avatarUrl && !showQR ? stringToColor(name) : 'white',
         }}
       >
         {!avatarUrl && !showQR && (
@@ -491,16 +491,16 @@ const publicCardStyles = `
   }
 
   .public-card {
-    background: #ffffff;
+    background: var(--ds-bg-primary);
     border-radius: 24px;
     padding: 40px 32px;
     text-align: center;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--ds-shadow-xl);
   }
 
   .public-card-loading,
   .public-card-error {
-    background: #ffffff;
+    background: var(--ds-bg-primary);
     border-radius: 24px;
     padding: 48px 32px;
     text-align: center;
@@ -511,8 +511,8 @@ const publicCardStyles = `
   .public-card-loading .loading-spinner {
     width: 40px;
     height: 40px;
-    border: 3px solid #e5e5e5;
-    border-top-color: #667eea;
+    border: 3px solid var(--ds-border-color);
+    border-top-color: var(--ds-color-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 16px;
@@ -523,18 +523,18 @@ const publicCardStyles = `
   }
 
   .public-card-loading p {
-    color: #666;
+    color: var(--ds-text-secondary);
     margin: 0;
   }
 
   .public-card-error h1 {
     font-size: 24px;
-    color: #333;
+    color: var(--ds-text-primary);
     margin: 0 0 12px 0;
   }
 
   .public-card-error p {
-    color: #666;
+    color: var(--ds-text-secondary);
     margin: 0;
   }
 
@@ -556,10 +556,10 @@ const publicCardStyles = `
     align-items: center;
     justify-content: center;
     font-size: 48px;
-    color: #ffffff;
+    color: var(--ds-text-inverse);
     font-weight: 600;
-    border: 4px solid #ffffff;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+    border: 4px solid var(--ds-bg-primary);
+    box-shadow: var(--ds-shadow-md);
   }
 
   .avatar-initials {
@@ -573,21 +573,21 @@ const publicCardStyles = `
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: #ffffff;
-    border: 2px solid #e5e5e5;
+    background: var(--ds-bg-primary);
+    border: 2px solid var(--ds-border-color);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #667eea;
+    color: var(--ds-color-primary);
     transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--ds-shadow-sm);
   }
 
   .qr-toggle-btn:hover {
-    background: #667eea;
-    color: #ffffff;
-    border-color: #667eea;
+    background: var(--ds-color-primary);
+    color: var(--ds-text-inverse);
+    border-color: var(--ds-color-primary);
     transform: scale(1.05);
   }
 
@@ -603,21 +603,21 @@ const publicCardStyles = `
   .profile-name .first-name {
     font-size: 28px;
     font-weight: 700;
-    color: #111;
+    color: var(--ds-text-primary);
     line-height: 1.2;
   }
 
   .profile-name .last-name {
     font-size: 28px;
     font-weight: 700;
-    color: #111;
+    color: var(--ds-text-primary);
     line-height: 1.2;
   }
 
   /* Tagline */
   .profile-tagline {
     font-size: 16px;
-    color: #667eea;
+    color: var(--ds-color-primary);
     font-style: italic;
     margin: 0 0 8px 0;
     font-weight: 500;
@@ -626,7 +626,7 @@ const publicCardStyles = `
   /* Location */
   .profile-location {
     font-size: 14px;
-    color: #888;
+    color: var(--ds-text-muted);
     margin: 0 0 24px 0;
   }
 
@@ -643,21 +643,21 @@ const publicCardStyles = `
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    background: #f8f9fa;
+    background: var(--ds-bg-secondary);
     border-radius: 12px;
     text-decoration: none;
-    color: #333;
+    color: var(--ds-text-primary);
     font-size: 14px;
     transition: background 0.2s ease;
   }
 
   a.contact-item:hover {
-    background: #f0f1f3;
+    background: var(--ds-bg-tertiary);
   }
 
   .contact-item svg {
     flex-shrink: 0;
-    color: #667eea;
+    color: var(--ds-color-primary);
   }
 
   .contact-item span {
@@ -682,32 +682,32 @@ const publicCardStyles = `
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: #f0f1f3;
+    background: var(--ds-bg-tertiary);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #555;
+    color: var(--ds-text-secondary);
     transition: all 0.2s ease;
   }
 
   .social-link:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--ds-shadow-md);
   }
 
   .social-link.whatsapp:hover {
     background: #25D366;
-    color: #ffffff;
+    color: var(--ds-text-inverse);
   }
 
   .social-link.linkedin:hover {
     background: #0A66C2;
-    color: #ffffff;
+    color: var(--ds-text-inverse);
   }
 
   .social-link.instagram:hover {
     background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
-    color: #ffffff;
+    color: var(--ds-text-inverse);
   }
 
   .social-link svg {
@@ -724,7 +724,7 @@ const publicCardStyles = `
     gap: 10px;
     padding: 16px 24px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #ffffff;
+    color: var(--ds-text-inverse);
     border: none;
     border-radius: 12px;
     font-size: 16px;

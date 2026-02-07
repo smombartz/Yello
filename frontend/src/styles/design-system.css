@@ -1,0 +1,231 @@
+/**
+ * Design System
+ *
+ * Core design tokens for the contact management application.
+ * Import this file at the top of index.css.
+ *
+ * Naming convention: --ds-{category}-{name}
+ * Categories: color, text, bg, border, space, font, radius, shadow, z
+ */
+
+:root {
+  /* ============================================
+   * COLORS - Primary Brand
+   * ============================================ */
+  --ds-color-primary: #5f27e3;
+  --ds-color-primary-hover: #4a1db3;
+  --ds-color-primary-light: rgba(95, 39, 227, 0.1);
+  --ds-color-primary-dark: #3a1580;
+
+  /* ============================================
+   * COLORS - Semantic States
+   * ============================================ */
+  /* Error / Danger */
+  --ds-color-error: #dc2626;
+  --ds-color-error-hover: #b91c1c;
+  --ds-color-error-light: #fee2e2;
+  --ds-color-error-dark: #991b1b;
+
+  /* Success */
+  --ds-color-success: #16a34a;
+  --ds-color-success-hover: #15803d;
+  --ds-color-success-light: #dcfce7;
+  --ds-color-success-dark: #166534;
+
+  /* Warning */
+  --ds-color-warning: #d97706;
+  --ds-color-warning-hover: #b45309;
+  --ds-color-warning-light: #fef3c7;
+  --ds-color-warning-dark: #92400e;
+
+  /* Info */
+  --ds-color-info: #2563eb;
+  --ds-color-info-hover: #1d4ed8;
+  --ds-color-info-light: #dbeafe;
+  --ds-color-info-dark: #1e40af;
+
+  /* Purple (accent) */
+  --ds-color-purple: #9f7aea;
+  --ds-color-purple-hover: #805ad5;
+  --ds-color-purple-light: #e9d8fd;
+  --ds-color-purple-dark: #6b46c1;
+
+  /* ============================================
+   * COLORS - Text
+   * ============================================ */
+  --ds-text-primary: #1a202c;
+  --ds-text-secondary: #6b7280;
+  --ds-text-muted: #9ca3af;
+  --ds-text-disabled: #d1d5db;
+  --ds-text-inverse: #ffffff;
+  --ds-text-link: var(--ds-color-primary);
+  --ds-text-link-hover: var(--ds-color-primary-hover);
+
+  /* ============================================
+   * COLORS - Background
+   * ============================================ */
+  --ds-bg-primary: #ffffff;
+  --ds-bg-secondary: #f9fafb;
+  --ds-bg-tertiary: #f3f4f6;
+  --ds-bg-hover: rgba(0, 0, 0, 0.04);
+  --ds-bg-active: rgba(0, 0, 0, 0.08);
+  --ds-bg-selected: var(--ds-color-primary-light);
+  --ds-bg-overlay: rgba(0, 0, 0, 0.5);
+
+  /* ============================================
+   * COLORS - Border
+   * ============================================ */
+  --ds-border-color: #e5e7eb;
+  --ds-border-light: #f3f4f6;
+  --ds-border-dark: #d1d5db;
+  --ds-border-focus: var(--ds-color-primary);
+
+  /* ============================================
+   * SPACING SCALE
+   * Based on 4px increments
+   * ============================================ */
+  --ds-space-0: 0;
+  --ds-space-1: 0.25rem;   /* 4px */
+  --ds-space-2: 0.5rem;    /* 8px */
+  --ds-space-3: 0.75rem;   /* 12px */
+  --ds-space-4: 1rem;      /* 16px */
+  --ds-space-5: 1.25rem;   /* 20px */
+  --ds-space-6: 1.5rem;    /* 24px */
+  --ds-space-8: 2rem;      /* 32px */
+  --ds-space-10: 2.5rem;   /* 40px */
+  --ds-space-12: 3rem;     /* 48px */
+  --ds-space-16: 4rem;     /* 64px */
+
+  /* Semantic spacing aliases */
+  --ds-space-xs: var(--ds-space-1);
+  --ds-space-sm: var(--ds-space-2);
+  --ds-space-md: var(--ds-space-4);
+  --ds-space-lg: var(--ds-space-6);
+  --ds-space-xl: var(--ds-space-8);
+
+  /* ============================================
+   * TYPOGRAPHY - Font Sizes
+   * ============================================ */
+  --ds-font-xs: 0.75rem;   /* 12px */
+  --ds-font-sm: 0.875rem;  /* 14px */
+  --ds-font-md: 1rem;      /* 16px */
+  --ds-font-lg: 1.125rem;  /* 18px */
+  --ds-font-xl: 1.25rem;   /* 20px */
+  --ds-font-2xl: 1.5rem;   /* 24px */
+  --ds-font-3xl: 1.875rem; /* 30px */
+
+  /* Line Heights */
+  --ds-leading-tight: 1.25;
+  --ds-leading-normal: 1.5;
+  --ds-leading-relaxed: 1.75;
+
+  /* Font Weights */
+  --ds-weight-normal: 400;
+  --ds-weight-medium: 500;
+  --ds-weight-semibold: 600;
+  --ds-weight-bold: 700;
+
+  /* ============================================
+   * BORDER RADIUS
+   * ============================================ */
+  --ds-radius-none: 0;
+  --ds-radius-sm: 0.25rem;  /* 4px */
+  --ds-radius-md: 0.375rem; /* 6px */
+  --ds-radius-lg: 0.5rem;   /* 8px */
+  --ds-radius-xl: 0.75rem;  /* 12px */
+  --ds-radius-2xl: 1rem;    /* 16px */
+  --ds-radius-full: 9999px;
+
+  /* ============================================
+   * SHADOWS
+   * ============================================ */
+  --ds-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --ds-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --ds-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --ds-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --ds-shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+
+  /* Focus ring shadow */
+  --ds-shadow-focus: 0 0 0 3px var(--ds-color-primary-light);
+  --ds-shadow-focus-error: 0 0 0 3px var(--ds-color-error-light);
+
+  /* ============================================
+   * Z-INDEX SCALE
+   * ============================================ */
+  --ds-z-base: 0;
+  --ds-z-dropdown: 100;
+  --ds-z-sticky: 200;
+  --ds-z-fixed: 300;
+  --ds-z-modal-backdrop: 400;
+  --ds-z-modal: 500;
+  --ds-z-popover: 600;
+  --ds-z-tooltip: 700;
+  --ds-z-toast: 800;
+
+  /* ============================================
+   * TRANSITIONS
+   * ============================================ */
+  --ds-duration-fast: 100ms;
+  --ds-duration-normal: 200ms;
+  --ds-duration-slow: 300ms;
+  --ds-easing-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ds-easing-in: cubic-bezier(0.4, 0, 1, 1);
+  --ds-easing-out: cubic-bezier(0, 0, 0.2, 1);
+
+  /* ============================================
+   * COMPONENT TOKENS
+   * Semantic tokens for specific components
+   * ============================================ */
+
+  /* Buttons */
+  --ds-btn-padding-x: var(--ds-space-4);
+  --ds-btn-padding-y: var(--ds-space-2);
+  --ds-btn-radius: var(--ds-radius-md);
+  --ds-btn-font-size: var(--ds-font-sm);
+  --ds-btn-font-weight: var(--ds-weight-medium);
+
+  /* Inputs */
+  --ds-input-padding-x: var(--ds-space-3);
+  --ds-input-padding-y: var(--ds-space-2);
+  --ds-input-radius: var(--ds-radius-md);
+  --ds-input-border: var(--ds-border-color);
+  --ds-input-border-focus: var(--ds-color-primary);
+  --ds-input-bg: var(--ds-bg-primary);
+
+  /* Cards */
+  --ds-card-padding: var(--ds-space-4);
+  --ds-card-radius: var(--ds-radius-xl);
+  --ds-card-shadow: var(--ds-shadow-sm);
+  --ds-card-border: var(--ds-border-color);
+  --ds-card-bg: var(--ds-bg-primary);
+
+  /* Modal */
+  --ds-modal-radius: var(--ds-radius-xl);
+  --ds-modal-shadow: var(--ds-shadow-xl);
+  --ds-modal-padding: var(--ds-space-6);
+
+  /* ============================================
+   * CONFIDENCE COLORS
+   * For deduplication confidence levels
+   * ============================================ */
+  --ds-confidence-very-high: #16a34a;
+  --ds-confidence-very-high-bg: #dcfce7;
+  --ds-confidence-high: #22c55e;
+  --ds-confidence-high-bg: #dcfce7;
+  --ds-confidence-medium: #eab308;
+  --ds-confidence-medium-bg: #fef9c3;
+  --ds-confidence-low: #f97316;
+  --ds-confidence-low-bg: #ffedd5;
+  --ds-confidence-very-low: #ef4444;
+  --ds-confidence-very-low-bg: #fee2e2;
+}
+
+/* ============================================
+ * BREAKPOINTS (as CSS custom media - documented)
+ * Use these values in @media queries:
+ *
+ * Mobile:  max-width: 640px
+ * Tablet:  max-width: 768px
+ * Desktop: max-width: 1024px
+ * Wide:    max-width: 1280px
+ * ============================================ */
