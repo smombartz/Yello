@@ -9,11 +9,7 @@ interface OutletContext {
   isMobile: boolean;
 }
 
-interface GroupsViewProps {
-  onBack?: () => void;
-}
-
-export function GroupsView({ onBack: _onBack }: GroupsViewProps) {
+export function GroupsView() {
   const { isMobile } = useOutletContext<OutletContext>();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [viewMode] = useState<'list' | 'grid'>(() => {

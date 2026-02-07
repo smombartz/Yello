@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { ContactDetail, ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, UpdateContactRequest } from '../api/types';
 import { useUpdateContact } from '../api/hooks';
 import {
@@ -65,29 +65,23 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
   const [error, setError] = useState<string | null>(null);
   const updateContactMutation = useUpdateContact();
 
-  // Initialize edit form when entering edit mode
-  useEffect(() => {
-    if (isEditMode && !editForm) {
-      setEditForm({
-        firstName: contact.firstName,
-        lastName: contact.lastName,
-        company: contact.company,
-        title: contact.title,
-        notes: contact.notes,
-        birthday: contact.birthday,
-        emails: [...contact.emails],
-        phones: [...contact.phones],
-        addresses: [...contact.addresses],
-        socialProfiles: [...contact.socialProfiles],
-        categories: [...contact.categories],
-        instantMessages: [...contact.instantMessages],
-        urls: [...contact.urls],
-        relatedPeople: [...contact.relatedPeople],
-      });
-    }
-  }, [isEditMode, editForm, contact]);
-
   const handleEnterEditMode = () => {
+    setEditForm({
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      company: contact.company,
+      title: contact.title,
+      notes: contact.notes,
+      birthday: contact.birthday,
+      emails: [...contact.emails],
+      phones: [...contact.phones],
+      addresses: [...contact.addresses],
+      socialProfiles: [...contact.socialProfiles],
+      categories: [...contact.categories],
+      instantMessages: [...contact.instantMessages],
+      urls: [...contact.urls],
+      relatedPeople: [...contact.relatedPeople],
+    });
     setIsEditMode(true);
     setError(null);
   };

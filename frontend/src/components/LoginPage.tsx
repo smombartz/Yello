@@ -1,4 +1,4 @@
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import logoSvg from '../assets/logo.svg';
 
 export function LoginPage() {

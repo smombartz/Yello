@@ -16,10 +16,6 @@ import type {
   ProblematicContactType
 } from '../api/types';
 
-interface CleanupViewProps {
-  onBack?: () => void;
-}
-
 interface ToastState {
   message: string;
   timeout: ReturnType<typeof setTimeout>;
@@ -27,7 +23,7 @@ interface ToastState {
 
 const PAGE_SIZE = 50;
 
-export function CleanupView({ onBack: _onBack }: CleanupViewProps) {
+export function CleanupView() {
   const [selectedMode, setSelectedMode] = useState<CleanupMode>('empty');
   const [currentPage, setCurrentPage] = useState(1);
   const [threshold, setThreshold] = useState(3);

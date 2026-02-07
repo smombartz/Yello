@@ -7,10 +7,6 @@ import {
   exportArchivedContacts
 } from '../api/archiveHooks';
 
-interface ArchivedViewProps {
-  onBack?: () => void;
-}
-
 interface ToastState {
   message: string;
   timeout: ReturnType<typeof setTimeout>;
@@ -18,7 +14,7 @@ interface ToastState {
 
 const PAGE_SIZE = 50;
 
-export function ArchivedView({ onBack: _onBack }: ArchivedViewProps) {
+export function ArchivedView() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);

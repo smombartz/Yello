@@ -1,20 +1,7 @@
-import { createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
 import { useCurrentUser, useLogout } from '../api/authHooks';
-import type { User } from '../api/authHooks';
 import { getGoogleLoginUrl } from '../api/client';
-
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  error: Error | null;
-  login: () => void;
-  logout: () => void;
-  isLoggingOut: boolean;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext, type AuthContextType } from './authContextValue';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -44,12 +31,4 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth(): AuthContextType {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }

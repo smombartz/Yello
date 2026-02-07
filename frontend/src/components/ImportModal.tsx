@@ -25,7 +25,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
     try {
       const importResult = await importMutation.mutateAsync(selectedFile);
       setResult(importResult);
-    } catch (error) {
+    } catch {
       // Error is handled by mutation state
     }
   };

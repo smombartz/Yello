@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
   useUserProfile,
@@ -8,7 +8,7 @@ import {
   useUnlinkProfile,
   useCreateProfileContact,
 } from '../api/profileHooks';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import type {
   UpdateUserProfileRequest,
   ProfileEmail,
@@ -23,9 +23,8 @@ import { MobileHeader } from './MobileHeader';
 import {
   EditableField,
   EditableArrayItem,
-  formatBirthday,
-  getZodiacSign,
 } from './ContactFormSections';
+import { formatBirthday, getZodiacSign } from '../utils/contactFormatters';
 
 interface OutletContext {
   setModalOpen: (open: boolean) => void;
@@ -446,16 +445,18 @@ export function UserProfilePage() {
   const unlinkMutation = useUnlinkProfile();
   const createMutation = useCreateProfileContact();
 
-  const [form, setForm] = useState<FormState>(getInitialFormState());
+  const [form, setForm] = useState<FormState>(getInitialFormState);
   const [hasChanges, setHasChanges] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConnectSearch, setShowConnectSearch] = useState(false);
 
-  // Load profile data into form
+  // Sync form when profile data loads from server
+  // This is a legitimate pattern for syncing external (server) data to local form state
   useEffect(() => {
     if (profile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         isPublic: profile.isPublic,
         publicSlug: profile.publicSlug,

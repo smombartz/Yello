@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { ModeSelector } from './ModeSelector';
 import { DuplicateGroupList } from './DuplicateGroupList';
 import { ConfidenceFilter } from './ConfidenceFilter';
@@ -6,10 +6,6 @@ import { useDuplicateSummary, useDuplicatesPaginated, useMergeContacts, fetchAll
 import { useDeleteContacts } from '../api/cleanupHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
 import type { ConfidenceLevel, DeduplicationMode, DuplicateGroup } from '../api/types';
-
-interface DeduplicationViewProps {
-  onBack?: () => void;
-}
 
 interface UndoState {
   groupId: string;
@@ -19,7 +15,7 @@ interface UndoState {
 
 const ALL_CONFIDENCE_LEVELS: Set<ConfidenceLevel> = new Set(['very_high', 'high', 'medium']);
 
-export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
+export function DeduplicationView() {
   const [selectedMode, setSelectedMode] = useState<DeduplicationMode>('email');
   const [hiddenGroupIds, setHiddenGroupIds] = useState<Set<string>>(new Set());
   const [undoState, setUndoState] = useState<UndoState | null>(null);
@@ -53,19 +49,6 @@ export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
   const mergeMutation = useMergeContacts();
   const deleteMutation = useDeleteContacts();
   const archiveMutation = useArchiveContacts();
-
-  // Clear hidden groups, reset confidence filter, selection, and reset page when mode changes
-  useEffect(() => {
-    setHiddenGroupIds(new Set());
-    setConfidenceFilter(new Set(ALL_CONFIDENCE_LEVELS));
-    setCurrentPage(1);
-    setSelectedContactIds(new Set());
-  }, [selectedMode]);
-
-  // Reset page when confidence filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [confidenceFilter]);
 
   // Cleanup undo timeout on unmount
   useEffect(() => {
@@ -112,6 +95,11 @@ export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
 
   const handleModeChange = useCallback((mode: DeduplicationMode) => {
     setSelectedMode(mode);
+    // Reset state when mode changes
+    setHiddenGroupIds(new Set());
+    setConfidenceFilter(new Set(ALL_CONFIDENCE_LEVELS));
+    setCurrentPage(1);
+    setSelectedContactIds(new Set());
   }, []);
 
   const handleConfidenceToggle = useCallback((level: ConfidenceLevel) => {
@@ -124,6 +112,8 @@ export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
       }
       return newSet;
     });
+    // Reset page when filter changes
+    setCurrentPage(1);
   }, []);
 
   // Contact selection handlers
@@ -195,7 +185,10 @@ export function DeduplicationView({ onBack: _onBack }: DeduplicationViewProps) {
     setShowArchiveConfirm(false);
   }, [selectedContactIds, archiveMutation, undoState]);
 
-  const groups: DuplicateGroup[] = duplicatesData?.groups ?? [];
+  const groups = useMemo<DuplicateGroup[]>(
+    () => duplicatesData?.groups ?? [],
+    [duplicatesData?.groups]
+  );
   const totalGroups = duplicatesData?.totalGroups ?? 0;
   const totalPages = Math.ceil(totalGroups / PAGE_SIZE);
   const visibleCount = groups.filter((g) => !hiddenGroupIds.has(g.id)).length;

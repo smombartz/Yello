@@ -10,9 +10,11 @@ import { GroupsView } from './components/GroupsView';
 import { MapView } from './components/MapView';
 import { SettingsView } from './components/SettingsView';
 import { UserProfilePage } from './components/UserProfilePage';
+import { DashboardView } from './components/DashboardView';
 import { LoginPage } from './components/LoginPage';
 import { PublicContactCard } from './components/PublicContactCard';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './hooks/useAuth';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -98,9 +100,9 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If already authenticated, redirect to home
+  // If already authenticated, redirect to dashboard
   if (isAuthenticated) {
-    return <Navigate to="/contacts" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -130,6 +132,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
+        <Route path="dashboard" element={<DashboardView />} />
         <Route path="contacts/new" element={<AddContactPage />} />
         <Route path="contacts/:id" element={<ContactDetailPage />} />
         <Route path="contacts" element={<ContactsPage />} />
@@ -142,8 +145,8 @@ function AppRoutes() {
         <Route path="profile" element={<UserProfilePage />} />
       </Route>
 
-      {/* Catch-all redirect to home */}
-      <Route path="*" element={<Navigate to="/contacts" replace />} />
+      {/* Catch-all redirect to dashboard */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }

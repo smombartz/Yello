@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import logoSvg from '../assets/logo.svg';
 
 interface NavItemLinkProps {
@@ -37,14 +37,23 @@ function NavItem({ icon, label, onClick }: NavItemProps) {
 }
 
 interface SidebarProps {
-  currentView?: 'contacts' | 'merge' | 'cleanup' | 'archived' | 'groups' | 'map' | 'settings';
+  currentView?: 'dashboard' | 'contacts' | 'merge' | 'cleanup' | 'archived' | 'groups' | 'map' | 'settings';
 }
 
 export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
   const { user, logout, isLoggingOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Tools routes for auto-expand and active state
+  const toolsRoutes = ['/archived', '/merge', '/cleanup'];
+  const isToolsRouteActive = toolsRoutes.some(route => location.pathname.startsWith(route));
+
+  // Derive effective state: show menu if manually opened OR on a tools route
+  const effectiveShowToolsMenu = showToolsMenu || isToolsRouteActive;
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -91,16 +100,51 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
       </div>
 
       <nav className="sidebar-nav">
-        <NavItem icon="dashboard" label="Dashboard" />
+        <NavItemLink to="/dashboard" icon="dashboard" label="Dashboard" />
         <NavItemLink to="/contacts" icon="contacts" label="All Contacts" />
         <NavItem icon="star" label="Favorites" />
         <NavItemLink to="/map" icon="map" label="Map" />
         <NavItemLink to="/groups" icon="group" label="Groups" />
-        <NavItemLink to="/archived" icon="archive" label="Archived" />
-        <NavItemLink to="/merge" icon="merge" label="Merge" />
-        <NavItemLink to="/cleanup" icon="cleaning_services" label="Cleanup" />
 
         <div className="nav-spacer" />
+
+        <div className="tools-menu-container">
+          <div
+            className={`nav-item tools-menu-header ${isToolsRouteActive ? 'active' : ''}`}
+            onClick={() => setShowToolsMenu(!showToolsMenu)}
+          >
+            <span className="material-symbols-outlined">build_circle</span>
+            <span>Tools</span>
+            <span className={`material-symbols-outlined tools-chevron ${effectiveShowToolsMenu ? 'expanded' : ''}`}>
+              expand_more
+            </span>
+          </div>
+          {effectiveShowToolsMenu && (
+            <div className="tools-menu-items">
+              <NavLink
+                to="/archived"
+                className={({ isActive }) => `nav-item tools-menu-item ${isActive ? 'active' : ''}`}
+              >
+                <span className="material-symbols-outlined">archive</span>
+                <span>Archived</span>
+              </NavLink>
+              <NavLink
+                to="/merge"
+                className={({ isActive }) => `nav-item tools-menu-item ${isActive ? 'active' : ''}`}
+              >
+                <span className="material-symbols-outlined">merge</span>
+                <span>Merge</span>
+              </NavLink>
+              <NavLink
+                to="/cleanup"
+                className={({ isActive }) => `nav-item tools-menu-item ${isActive ? 'active' : ''}`}
+              >
+                <span className="material-symbols-outlined">cleaning_services</span>
+                <span>Cleanup</span>
+              </NavLink>
+            </div>
+          )}
+        </div>
       </nav>
 
       <div className="sidebar-user-container" ref={menuRef}>
@@ -227,6 +271,40 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
           height: 100%;
           object-fit: cover;
           border-radius: 50%;
+        }
+
+        /* Tools Menu Styles */
+        .tools-menu-container {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .tools-menu-header {
+          cursor: pointer;
+        }
+
+        .tools-menu-header .tools-chevron {
+          margin-left: auto;
+          font-size: 18px;
+          opacity: 0.7;
+          transition: transform 0.2s ease;
+        }
+
+        .tools-menu-header .tools-chevron.expanded {
+          transform: rotate(180deg);
+        }
+
+        .tools-menu-items {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .tools-menu-item {
+          padding-left: 32px !important;
+        }
+
+        .tools-menu-item .material-symbols-outlined {
+          font-size: 20px;
         }
       `}</style>
     </aside>

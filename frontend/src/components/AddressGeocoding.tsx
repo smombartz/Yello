@@ -462,10 +462,10 @@ export function AddressGeocoding() {
     setBulkProgress(null);
   }, []);
 
-  // Reset page when filter changes
-  useEffect(() => {
+  const handleFilterChange = useCallback((newFilter: GeocodingFilter) => {
+    setFilter(newFilter);
     setCurrentPage(1);
-  }, [filter]);
+  }, []);
 
   const contacts = data?.contacts ?? [];
   const total = data?.total ?? 0;
@@ -510,27 +510,27 @@ export function AddressGeocoding() {
         <div className="geocoding-filters">
           <button
             className={`geocoding-filter-btn ${filter === 'all' ? 'active' : ''}`}
-            onClick={() => setFilter('all')}
+            onClick={() => handleFilterChange('all')}
           >
             All
           </button>
           <button
             className={`geocoding-filter-btn ${filter === 'pending' ? 'active' : ''}`}
-            onClick={() => setFilter('pending')}
+            onClick={() => handleFilterChange('pending')}
           >
             Pending
             {pendingCount > 0 && <span className="filter-count">{pendingCount}</span>}
           </button>
           <button
             className={`geocoding-filter-btn ${filter === 'failed' ? 'active' : ''}`}
-            onClick={() => setFilter('failed')}
+            onClick={() => handleFilterChange('failed')}
           >
             Failed
             {failedCount > 0 && <span className="filter-count">{failedCount}</span>}
           </button>
           <button
             className={`geocoding-filter-btn ${filter === 'geocoded' ? 'active' : ''}`}
-            onClick={() => setFilter('geocoded')}
+            onClick={() => handleFilterChange('geocoded')}
           >
             Geocoded
           </button>

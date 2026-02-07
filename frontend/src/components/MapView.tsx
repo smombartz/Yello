@@ -28,9 +28,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-interface MapViewProps {
-  onBack?: () => void;
-}
 
 // Create a custom avatar marker icon
 function createAvatarIcon(photoUrl: string | null, displayName: string): L.DivIcon {
@@ -118,7 +115,7 @@ function MarkerClusterGroup({ markers }: { markers: MapMarker[] }) {
   return null;
 }
 
-export function MapView({ onBack: _onBack }: MapViewProps) {
+export function MapView() {
   const { isMobile } = useOutletContext<OutletContext>();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');

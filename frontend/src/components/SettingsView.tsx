@@ -14,17 +14,13 @@ interface OutletContext {
   isMobile: boolean;
 }
 
-interface SettingsViewProps {
-  onBack?: () => void;
-}
-
 interface ToastState {
   message: string;
   type: 'success' | 'error';
   timeout: ReturnType<typeof setTimeout>;
 }
 
-export function SettingsView({ onBack: _onBack }: SettingsViewProps) {
+export function SettingsView() {
   const { isMobile } = useOutletContext<OutletContext>();
   const deleteMutation = useDeleteAllContacts();
   const { isStreaming, progress, startFetching, cancel: cancelFetching } = useFetchContactPhotosStream();
