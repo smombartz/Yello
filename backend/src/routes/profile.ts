@@ -182,12 +182,20 @@ function ensureProfileTables(db: ReturnType<typeof getDatabase>): void {
       `);
     }
 
-    // Note about legacy columns
-    const hasFirstName = tableInfo.some(col => col.name === 'first_name');
-    if (hasFirstName) {
-      // SQLite doesn't support DROP COLUMN in older versions, so we just leave the columns
-      // They won't be used anymore since data comes from linked contact
-      console.log('Note: Legacy profile columns exist but will be ignored in favor of linked contact data');
+    // Drop legacy columns now that profiles link to contacts
+    const legacyColumns = ['first_name', 'last_name', 'company', 'title',
+                           'website', 'linkedin', 'instagram', 'whatsapp',
+                           'birthday', 'avatar_url'];
+
+    for (const col of legacyColumns) {
+      if (tableInfo.some(c => c.name === col)) {
+        try {
+          db.exec(`ALTER TABLE user_profiles DROP COLUMN ${col}`);
+          console.log(`Dropped legacy column: ${col}`);
+        } catch (e) {
+          // Column might be in use or SQLite version doesn't support DROP COLUMN
+        }
+      }
     }
   }
 }

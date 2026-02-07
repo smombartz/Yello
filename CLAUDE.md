@@ -31,6 +31,12 @@ npm run build        # Type check + Vite build
 npm run lint         # Run ESLint
 ```
 
+**Testing servers:** Always shut down dev servers after testing:
+```bash
+kill $(lsof -ti :3000) 2>/dev/null  # Stop backend
+kill $(lsof -ti :5173) 2>/dev/null  # Stop frontend
+```
+
 ## Architecture Overview
 
 This is a monorepo contact management application with separate frontend and backend packages.

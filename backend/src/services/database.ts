@@ -646,8 +646,11 @@ function migratePhoneFormats(database: DatabaseType): void {
         }
       }
 
-      if (result.countryCode || result.phoneDisplay !== phoneRecord.phone_display) {
-        updateStmt.run(result.phoneDisplay, result.countryCode, phoneRecord.id);
+      // Always update to mark as processed
+      // Use empty string for country_code when parsing fails (to distinguish from NULL = unprocessed)
+      const countryCode = result.countryCode || '';
+      updateStmt.run(result.phoneDisplay, countryCode, phoneRecord.id);
+      if (result.countryCode) {
         updated++;
       } else {
         failed++;
