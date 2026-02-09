@@ -1,4 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import type { OutletContext } from './Layout';
+import { Icon } from './Icon';
 import { CleanupModeSelector } from './CleanupModeSelector';
 import { ThresholdSelector } from './ThresholdSelector';
 import { CleanupFilters } from './CleanupFilters';
@@ -24,6 +27,7 @@ interface ToastState {
 const PAGE_SIZE = 50;
 
 export function CleanupView() {
+  const { setHeaderConfig } = useOutletContext<OutletContext>();
   const [selectedMode, setSelectedMode] = useState<CleanupMode>('empty');
   const [currentPage, setCurrentPage] = useState(1);
   const [threshold, setThreshold] = useState(3);
@@ -196,13 +200,16 @@ export function CleanupView() {
   const total = contactsData?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
+  useEffect(() => {
+    setHeaderConfig({
+      title: 'Cleanup',
+      info: shouldFetchContacts && !isContactsLoading ? <span>{total} contacts found</span> : undefined,
+    });
+  }, [setHeaderConfig, shouldFetchContacts, isContactsLoading, total]);
+
   return (
     <div className="cleanup-view">
       <div className="cleanup-header">
-        <div className="cleanup-header-top">
-          <h1>Cleanup Contacts</h1>
-        </div>
-
         <CleanupModeSelector
           selectedMode={selectedMode}
           onModeChange={handleModeChange}
@@ -243,7 +250,7 @@ export function CleanupView() {
                       onClick={() => setShowArchiveConfirm(true)}
                       disabled={archiveMutation.isPending}
                     >
-                      <span className="material-symbols-outlined">archive</span>
+                      <Icon name="box-archive" />
                       {archiveMutation.isPending
                         ? 'Archiving...'
                         : `Archive Selected (${selectedIds.size})`}
@@ -253,7 +260,7 @@ export function CleanupView() {
                       onClick={() => setShowDeleteConfirm(true)}
                       disabled={deleteMutation.isPending}
                     >
-                      <span className="material-symbols-outlined">delete</span>
+                      <Icon name="trash" />
                       {deleteMutation.isPending
                         ? 'Deleting...'
                         : `Delete Selected (${selectedIds.size})`}
@@ -275,7 +282,7 @@ export function CleanupView() {
           <AddressCleanup />
         ) : isContactsLoading ? (
           <div className="cleanup-loading">
-            <span className="material-symbols-outlined spinning">sync</span>
+            <Icon name="arrows-rotate" className="spinning" />
             <p>Finding contacts...</p>
           </div>
         ) : (
@@ -299,7 +306,7 @@ export function CleanupView() {
 
       {toast && (
         <div className="undo-toast">
-          <span className="material-symbols-outlined">check_circle</span>
+          <Icon name="circle-check" />
           <span className="message">{toast.message}</span>
           <button
             className="dismiss"
@@ -308,7 +315,7 @@ export function CleanupView() {
               setToast(null);
             }}
           >
-            <span className="material-symbols-outlined">close</span>
+            <Icon name="xmark" />
           </button>
         </div>
       )}

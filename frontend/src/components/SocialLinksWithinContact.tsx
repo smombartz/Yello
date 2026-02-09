@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Icon } from './Icon';
 import { Pagination } from './Pagination';
 import { useSocialLinksWithinContact, useFixAllSocialLinks } from '../api/socialLinksHooks';
 
@@ -9,19 +10,19 @@ interface ToastState {
 
 const PAGE_SIZE = 50;
 
-// Platform icons/colors
-const PLATFORM_ICONS: Record<string, string> = {
-  linkedin: 'work',
-  facebook: 'groups',
-  twitter: 'tag',
-  instagram: 'photo_camera',
-  youtube: 'play_circle',
-  tiktok: 'music_note',
-  pinterest: 'push_pin',
-  snapchat: 'photo_camera',
-  reddit: 'forum',
-  github: 'code',
-  threads: 'forum',
+// Platform icons - brands style for FA brand icons
+const PLATFORM_ICONS: Record<string, { name: string; style?: 'solid' | 'regular' | 'brands' }> = {
+  linkedin: { name: 'linkedin', style: 'brands' },
+  facebook: { name: 'facebook', style: 'brands' },
+  twitter: { name: 'x-twitter', style: 'brands' },
+  instagram: { name: 'instagram', style: 'brands' },
+  youtube: { name: 'youtube', style: 'brands' },
+  tiktok: { name: 'tiktok', style: 'brands' },
+  pinterest: { name: 'pinterest', style: 'brands' },
+  snapchat: { name: 'snapchat', style: 'brands' },
+  reddit: { name: 'reddit', style: 'brands' },
+  github: { name: 'github', style: 'brands' },
+  threads: { name: 'threads', style: 'brands' },
 };
 
 export function SocialLinksWithinContact() {
@@ -72,7 +73,7 @@ export function SocialLinksWithinContact() {
   if (isLoading) {
     return (
       <div className="social-links-loading">
-        <span className="material-symbols-outlined spinning">sync</span>
+        <Icon name="arrows-rotate" className="spinning" />
         <p>Finding social URLs in the wrong table...</p>
       </div>
     );
@@ -81,7 +82,7 @@ export function SocialLinksWithinContact() {
   if (total === 0) {
     return (
       <div className="social-links-empty">
-        <span className="material-symbols-outlined">check_circle</span>
+        <Icon name="circle-check" />
         <p>All social links are properly stored</p>
       </div>
     );
@@ -98,7 +99,7 @@ export function SocialLinksWithinContact() {
           onClick={() => setShowConfirm(true)}
           disabled={fixAllMutation.isPending}
         >
-          <span className="material-symbols-outlined">auto_fix_high</span>
+          <Icon name="wand-magic-sparkles" />
           {fixAllMutation.isPending ? 'Fixing...' : `Fix All (${total})`}
         </button>
       </div>
@@ -115,7 +116,7 @@ export function SocialLinksWithinContact() {
                 />
               ) : (
                 <div className="within-contact-avatar placeholder">
-                  <span className="material-symbols-outlined">person</span>
+                  <Icon name="user" />
                 </div>
               )}
               <div className="within-contact-name">{contact.displayName}</div>
@@ -123,9 +124,10 @@ export function SocialLinksWithinContact() {
             <div className="within-contact-urls">
               {contact.socialUrls.map((su) => (
                 <div key={su.id} className="social-url-chip">
-                  <span className="material-symbols-outlined">
-                    {PLATFORM_ICONS[su.platform] || 'link'}
-                  </span>
+                  <Icon
+                    name={PLATFORM_ICONS[su.platform]?.name || 'link'}
+                    style={PLATFORM_ICONS[su.platform]?.style}
+                  />
                   <span className="platform-name">{su.platform}</span>
                   <span className="username">@{su.username}</span>
                 </div>
@@ -144,7 +146,7 @@ export function SocialLinksWithinContact() {
 
       {toast && (
         <div className="undo-toast">
-          <span className="material-symbols-outlined">check_circle</span>
+          <Icon name="circle-check" />
           <span className="message">{toast.message}</span>
           <button
             className="dismiss"
@@ -153,7 +155,7 @@ export function SocialLinksWithinContact() {
               setToast(null);
             }}
           >
-            <span className="material-symbols-outlined">close</span>
+            <Icon name="xmark" />
           </button>
         </div>
       )}

@@ -1,32 +1,27 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Sidebar } from './Sidebar';
+import { NavRail } from './NavRail';
+import { PageHeader } from './PageHeader';
 import { BottomTabBar } from './BottomTabBar';
 import { useIsMobile } from '../hooks/useIsMobile';
+import type { ReactNode } from 'react';
 
-type AppView = 'contacts' | 'merge' | 'cleanup' | 'archived' | 'groups' | 'map' | 'settings';
+export interface PageHeaderConfig {
+  title: string;
+  search?: string;
+  onSearchChange?: (value: string) => void;
+  searchPlaceholder?: string;
+  info?: ReactNode;
+  actions?: ReactNode;
+  children?: ReactNode;
+}
 
-const pathToView: Record<string, AppView> = {
-  '/contacts': 'contacts',
-  '/merge': 'merge',
-  '/cleanup': 'cleanup',
-  '/archived': 'archived',
-  '/groups': 'groups',
-  '/map': 'map',
-  '/settings': 'settings',
-};
+export interface OutletContext {
+  setModalOpen: (open: boolean) => void;
+  setHeaderConfig: (config: PageHeaderConfig) => void;
+  isMobile: boolean;
+}
 
-const viewToLayoutClass: Record<AppView, string> = {
-  contacts: 'app-layout',
-  merge: 'app-layout dedup-layout',
-  cleanup: 'app-layout cleanup-layout',
-  archived: 'app-layout archived-layout',
-  groups: 'app-layout groups-layout',
-  map: 'app-layout map-layout',
-  settings: 'app-layout settings-layout',
-};
-
-// Routes that are not accessible on mobile
 const DESKTOP_ONLY_ROUTES = ['/merge', '/cleanup', '/archived'];
 
 export function Layout() {
@@ -34,9 +29,9 @@ export function Layout() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [modalOpen, setModalOpen] = useState(false);
-
-  const currentView = pathToView[location.pathname] || 'contacts';
-  const layoutClass = viewToLayoutClass[currentView];
+  const [headerConfig, setHeaderConfig] = useState<PageHeaderConfig>({ title: '' });
+  const headerConfigRef = useRef(headerConfig);
+  headerConfigRef.current = headerConfig;
 
   // Redirect mobile users away from desktop-only routes
   useEffect(() => {
@@ -54,7 +49,7 @@ export function Layout() {
     return () => window.removeEventListener('layout-modal-change', handleModalChange as EventListener);
   }, []);
 
-  // Escape key navigation - navigate to home unless a modal is open
+  // Escape key navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !modalOpen && location.pathname !== '/contacts') {
@@ -69,12 +64,20 @@ export function Layout() {
     setModalOpen(open);
   }, []);
 
+  const handleSetHeaderConfig = useCallback((config: PageHeaderConfig) => {
+    setHeaderConfig(config);
+  }, []);
+
   return (
-    <div className={layoutClass}>
-      {!isMobile && <Sidebar currentView={currentView} />}
-      <main className="main-content">
-        <Outlet context={{ setModalOpen: handleSetModalOpen, isMobile }} />
-      </main>
+    <div className="app-layout">
+      <PageHeader {...headerConfig} />
+      <div className="app-body">
+        {!isMobile && <NavRail />}
+        <main className="main-content">
+          <Outlet context={{ setModalOpen: handleSetModalOpen, setHeaderConfig: handleSetHeaderConfig, isMobile } satisfies OutletContext} />
+        </main>
+        {!isMobile && <div className="app-body-spacer" />}
+      </div>
       {isMobile && <BottomTabBar />}
     </div>
   );

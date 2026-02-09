@@ -105,21 +105,21 @@ export function getZodiacSign(dateString: string): string | null {
 
 export function getPlatformIcon(platform: string): string {
   const p = platform.toLowerCase();
-  if (p.includes('linkedin')) return 'work';
-  if (p.includes('twitter') || p.includes('x')) return 'tag';
-  if (p.includes('facebook')) return 'group';
-  if (p.includes('instagram')) return 'photo_camera';
+  if (p.includes('linkedin')) return 'briefcase';
+  if (p.includes('twitter') || p.includes('x')) return 'hashtag';
+  if (p.includes('facebook')) return 'users';
+  if (p.includes('instagram')) return 'camera';
   if (p.includes('github')) return 'code';
   return 'link';
 }
 
 export function getServiceIcon(service: string): string {
   const s = service.toLowerCase();
-  if (s.includes('aim')) return 'chat';
-  if (s.includes('facebook') || s.includes('messenger')) return 'forum';
-  if (s.includes('jabber') || s.includes('xmpp')) return 'chat_bubble';
-  if (s.includes('skype')) return 'video_call';
-  if (s.includes('icq')) return 'chat';
+  if (s.includes('aim')) return 'comment';
+  if (s.includes('facebook') || s.includes('messenger')) return 'comments';
+  if (s.includes('jabber') || s.includes('xmpp')) return 'comment-dots';
+  if (s.includes('skype')) return 'video';
+  if (s.includes('icq')) return 'comment';
   return 'message';
 }
 
@@ -127,14 +127,14 @@ export function getUrlIcon(url: string, label: string | null): string {
   const urlLower = url.toLowerCase();
   const labelLower = (label || '').toLowerCase();
 
-  if (urlLower.includes('linkedin') || labelLower.includes('linkedin')) return 'work';
-  if (urlLower.includes('whatsapp') || labelLower.includes('whatsapp')) return 'chat';
-  if (urlLower.includes('twitter') || urlLower.includes('x.com') || labelLower.includes('twitter')) return 'tag';
-  if (urlLower.includes('facebook') || labelLower.includes('facebook')) return 'group';
-  if (urlLower.includes('instagram') || labelLower.includes('instagram')) return 'photo_camera';
+  if (urlLower.includes('linkedin') || labelLower.includes('linkedin')) return 'briefcase';
+  if (urlLower.includes('whatsapp') || labelLower.includes('whatsapp')) return 'comment';
+  if (urlLower.includes('twitter') || urlLower.includes('x.com') || labelLower.includes('twitter')) return 'hashtag';
+  if (urlLower.includes('facebook') || labelLower.includes('facebook')) return 'users';
+  if (urlLower.includes('instagram') || labelLower.includes('instagram')) return 'camera';
   if (urlLower.includes('github') || labelLower.includes('github')) return 'code';
-  if (labelLower.includes('home') || labelLower.includes('homepage')) return 'home';
-  if (labelLower.includes('work') || labelLower.includes('business')) return 'business';
+  if (labelLower.includes('home') || labelLower.includes('homepage')) return 'house';
+  if (labelLower.includes('work') || labelLower.includes('business')) return 'building';
   return 'link';
 }
 
@@ -150,11 +150,11 @@ export function getDisplayLabel(url: string, label: string | null): string {
 
 export function getRelationshipIcon(relationship: string | null): string {
   const r = (relationship || '').toLowerCase();
-  if (r.includes('spouse') || r.includes('partner') || r.includes('husband') || r.includes('wife')) return 'favorite';
-  if (r.includes('child') || r.includes('son') || r.includes('daughter')) return 'child_care';
-  if (r.includes('parent') || r.includes('mother') || r.includes('father')) return 'family_restroom';
-  if (r.includes('sibling') || r.includes('brother') || r.includes('sister')) return 'group';
-  if (r.includes('friend')) return 'person';
-  if (r.includes('assistant') || r.includes('manager')) return 'badge';
-  return 'person';
+  if (r.includes('spouse') || r.includes('partner') || r.includes('husband') || r.includes('wife')) return 'heart';
+  if (r.includes('child') || r.includes('son') || r.includes('daughter')) return 'child';
+  if (r.includes('parent') || r.includes('mother') || r.includes('father')) return 'people-roof';
+  if (r.includes('sibling') || r.includes('brother') || r.includes('sister')) return 'users';
+  if (r.includes('friend')) return 'user';
+  if (r.includes('assistant') || r.includes('manager')) return 'id-badge';
+  return 'user';
 }

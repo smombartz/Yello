@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icon } from './Icon';
 import { useSearchInvalidLinks, useRemoveInvalidLinks } from '../api/invalidLinksHooks';
 import type { InvalidLinkMatch } from '../api/types';
 
@@ -82,12 +83,12 @@ export function InvalidLinksCleanup() {
           >
             {searchMutation.isPending ? (
               <>
-                <span className="material-symbols-outlined spinning">sync</span>
+                <Icon name="arrows-rotate" className="spinning" />
                 Searching...
               </>
             ) : (
               <>
-                <span className="material-symbols-outlined">search</span>
+                <Icon name="magnifying-glass" />
                 Search
               </>
             )}
@@ -108,12 +109,12 @@ export function InvalidLinksCleanup() {
               >
                 {removeMutation.isPending ? (
                   <>
-                    <span className="material-symbols-outlined spinning">sync</span>
+                    <Icon name="arrows-rotate" className="spinning" />
                     Removing...
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined">delete</span>
+                    <Icon name="trash" />
                     Remove All ({matches.length})
                   </>
                 )}
@@ -125,7 +126,7 @@ export function InvalidLinksCleanup() {
 
       {hasSearched && matches.length === 0 && (
         <div className="no-matches">
-          <span className="material-symbols-outlined">check_circle</span>
+          <Icon name="circle-check" />
           <p>No invalid links found matching the patterns.</p>
         </div>
       )}
@@ -141,12 +142,12 @@ export function InvalidLinksCleanup() {
                     <span className="match-source">
                       {item.source === 'social_profiles' ? (
                         <>
-                          <span className="material-symbols-outlined">person</span>
+                          <Icon name="user" />
                           {item.platform}
                         </>
                       ) : (
                         <>
-                          <span className="material-symbols-outlined">link</span>
+                          <Icon name="link" />
                           URL
                         </>
                       )}
@@ -162,7 +163,7 @@ export function InvalidLinksCleanup() {
 
       {removeMutation.isSuccess && (
         <div className="success-message">
-          <span className="material-symbols-outlined">check_circle</span>
+          <Icon name="circle-check" />
           Removed {removeMutation.data.deletedCount} invalid link{removeMutation.data.deletedCount !== 1 ? 's' : ''}.
         </div>
       )}

@@ -1,3 +1,5 @@
+import { Icon } from './Icon';
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
@@ -27,7 +29,7 @@ export function Pagination({
         disabled={!canGoPrevious || isLoading}
         aria-label="Previous page"
       >
-        <span className="material-symbols-outlined">chevron_left</span>
+        <Icon name="chevron-left" />
         <span>Prev</span>
       </button>
 
@@ -42,7 +44,7 @@ export function Pagination({
         aria-label="Next page"
       >
         <span>Next</span>
-        <span className="material-symbols-outlined">chevron_right</span>
+        <Icon name="chevron-right" />
       </button>
     </div>
   );

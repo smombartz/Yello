@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icon } from './Icon';
 import { AddressNormalize } from './AddressNormalize';
 import { AddressDuplicates } from './AddressDuplicates';
 import { AddressGeocoding } from './AddressGeocoding';
@@ -24,7 +25,7 @@ export function AddressCleanup() {
           className={`address-subtab ${activeTab === 'normalize' ? 'active' : ''}`}
           onClick={() => setActiveTab('normalize')}
         >
-          <span className="material-symbols-outlined">cleaning_services</span>
+          <Icon name="broom" />
           Normalize
           {normalizeCount > 0 && (
             <span className="subtab-badge">{normalizeCount}</span>
@@ -34,7 +35,7 @@ export function AddressCleanup() {
           className={`address-subtab ${activeTab === 'duplicates' ? 'active' : ''}`}
           onClick={() => setActiveTab('duplicates')}
         >
-          <span className="material-symbols-outlined">content_copy</span>
+          <Icon name="copy" />
           Duplicates
           {duplicatesCount > 0 && (
             <span className="subtab-badge">{duplicatesCount}</span>
@@ -44,7 +45,7 @@ export function AddressCleanup() {
           className={`address-subtab ${activeTab === 'geocoding' ? 'active' : ''}`}
           onClick={() => setActiveTab('geocoding')}
         >
-          <span className="material-symbols-outlined">location_on</span>
+          <Icon name="location-dot" />
           Geocoding
           {pendingGeocodingCount > 0 && (
             <span className="subtab-badge">{pendingGeocodingCount}</span>

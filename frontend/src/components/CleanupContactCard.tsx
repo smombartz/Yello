@@ -1,3 +1,4 @@
+import { Icon } from './Icon';
 import { Avatar } from './Avatar';
 import type { CleanupContact } from '../api/types';
 
@@ -51,7 +52,7 @@ export function CleanupContactCard({
 
         {contact.issueDetails && (
           <div className="cleanup-card-issue">
-            <span className="material-symbols-outlined">info</span>
+            <Icon name="circle-info" />
             <span>{contact.issueDetails}</span>
           </div>
         )}
@@ -61,7 +62,7 @@ export function CleanupContactCard({
           <div className="cleanup-card-emails">
             {contact.emails.map((email, idx) => (
               <div key={idx} className="cleanup-card-email">
-                <span className="material-symbols-outlined">mail</span>
+                <Icon name="envelope" />
                 <span className="value">{email.email}</span>
                 {email.type && <span className="type">{email.type}</span>}
               </div>
@@ -74,13 +75,13 @@ export function CleanupContactCard({
           <div className="cleanup-card-summary">
             {contact.title && (
               <div className="cleanup-card-field">
-                <span className="material-symbols-outlined">work</span>
+                <Icon name="briefcase" />
                 <span>{contact.title}</span>
               </div>
             )}
             {contact.notes && (
               <div className="cleanup-card-field">
-                <span className="material-symbols-outlined">notes</span>
+                <Icon name="sticky-note" style="regular" />
                 <span className="notes-preview">{contact.notes.slice(0, 100)}{contact.notes.length > 100 ? '...' : ''}</span>
               </div>
             )}

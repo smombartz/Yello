@@ -1,13 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import type { ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, CreateContactRequest } from '../api/types';
 import { useCreateContact } from '../api/hooks';
-import { MobileHeader } from './MobileHeader';
-
-interface OutletContext {
-  setModalOpen: (open: boolean) => void;
-  isMobile: boolean;
-}
+import { Icon } from './Icon';
+import type { OutletContext } from './Layout';
 import {
   EditableField,
   ContactInfoSection,
@@ -57,16 +53,16 @@ const initialFormState: FormState = {
 
 export function AddContactPage() {
   const navigate = useNavigate();
-  const { isMobile } = useOutletContext<OutletContext>();
+  const { setHeaderConfig } = useOutletContext<OutletContext>();
   const createContactMutation = useCreateContact();
   const [form, setForm] = useState<FormState>(initialFormState);
   const [error, setError] = useState<string | null>(null);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     navigate('/contacts');
-  };
+  }, [navigate]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     setError(null);
 
     // Build display name from first/last name or use company
@@ -139,51 +135,30 @@ export function AddContactPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create contact');
     }
-  };
+  }, [form, createContactMutation, navigate]);
+
+  useEffect(() => {
+    setHeaderConfig({
+      title: 'New Contact',
+      actions: (
+        <>
+          <button className="header-action-btn secondary" onClick={handleCancel}>Cancel</button>
+          <button className="header-action-btn" onClick={handleSave} disabled={createContactMutation.isPending}>
+            {createContactMutation.isPending ? 'Saving...' : 'Save Contact'}
+          </button>
+        </>
+      ),
+    });
+  }, [setHeaderConfig, handleCancel, handleSave, createContactMutation.isPending]);
 
   return (
     <>
-      {isMobile ? (
-        <MobileHeader title="New Contact" showBack />
-      ) : (
-        <header className="top-header">
-          <div className="page-header">
-            <button className="back-button" onClick={handleCancel}>
-              <span className="material-symbols-outlined">arrow_back</span>
-            </button>
-            <h1>New Contact</h1>
-          </div>
-          <div className="header-actions">
-            <button className="secondary-button" onClick={handleCancel}>
-              Cancel
-            </button>
-            <button
-              className="primary-button"
-              onClick={handleSave}
-              disabled={createContactMutation.isPending}
-            >
-              {createContactMutation.isPending ? (
-                <>
-                  <span className="material-symbols-outlined spinning">sync</span>
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined">save</span>
-                  <span>Save Contact</span>
-                </>
-              )}
-            </button>
-          </div>
-        </header>
-      )}
-
       <div className="page-content">
         <div className="add-contact-content">
           {/* Error message */}
           {error && (
             <div className="edit-error">
-              <span className="material-symbols-outlined">error</span>
+              <Icon name="circle-exclamation" />
               {error}
             </div>
           )}

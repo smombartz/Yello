@@ -1,3 +1,4 @@
+import { Icon } from './Icon';
 import { DuplicateGroup } from './DuplicateGroup';
 import { Pagination } from './Pagination';
 import type { DuplicateGroup as DuplicateGroupType, DeduplicationMode } from '../api/types';
@@ -35,7 +36,7 @@ export function DuplicateGroupList({
   if (visibleGroups.length === 0 && !isLoading) {
     return (
       <div className="duplicate-group-list-empty">
-        <span className="material-symbols-outlined">check_circle</span>
+        <Icon name="circle-check" />
         <p>No duplicates found for this mode</p>
       </div>
     );

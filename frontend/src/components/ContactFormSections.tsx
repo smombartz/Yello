@@ -1,6 +1,7 @@
 import type { ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, LinkedInEnrichment } from '../api/types';
 import { getCountryFlag, getCountryName } from '../lib/phoneUtils';
 import { formatAddress } from '../lib/addressUtils';
+import { Icon } from './Icon';
 import {
   formatBirthday,
   getZodiacSign,
@@ -46,7 +47,7 @@ export function EditableArrayItem({
     <div className="editable-array-item">
       {children}
       <button type="button" className="remove-item-btn" onClick={onRemove} title="Remove">
-        <span className="material-symbols-outlined">close</span>
+        <Icon name="xmark" />
       </button>
     </div>
   );
@@ -112,7 +113,7 @@ export function ContactInfoSection({ emails, phones, isEditMode, onEmailsChange,
         <div className="section-content edit-section-content">
           {phones.map((phone, i) => (
             <EditableArrayItem key={`phone-${i}`} onRemove={() => removePhone(i)}>
-              <span className="material-symbols-outlined">call</span>
+              <Icon name="phone" />
               <div className="edit-field-group">
                 <EditableField
                   value={phone.phoneDisplay}
@@ -128,13 +129,13 @@ export function ContactInfoSection({ emails, phones, isEditMode, onEmailsChange,
             </EditableArrayItem>
           ))}
           <button type="button" className="add-item-btn" onClick={addPhone}>
-            <span className="material-symbols-outlined">add</span>
+            <Icon name="plus" />
             Add Phone
           </button>
 
           {emails.map((email, i) => (
             <EditableArrayItem key={`email-${i}`} onRemove={() => removeEmail(i)}>
-              <span className="material-symbols-outlined">mail</span>
+              <Icon name="envelope" />
               <div className="edit-field-group">
                 <EditableField
                   value={email.email}
@@ -151,7 +152,7 @@ export function ContactInfoSection({ emails, phones, isEditMode, onEmailsChange,
             </EditableArrayItem>
           ))}
           <button type="button" className="add-item-btn" onClick={addEmail}>
-            <span className="material-symbols-outlined">add</span>
+            <Icon name="plus" />
             Add Email
           </button>
         </div>
@@ -168,7 +169,7 @@ export function ContactInfoSection({ emails, phones, isEditMode, onEmailsChange,
           const countryName = getCountryName(phone.countryCode);
           return (
             <div key={`phone-${i}`} className="expanded-item">
-              <span className="material-symbols-outlined">call</span>
+              <Icon name="phone" />
               <div className="expanded-item-content">
                 <a href={`tel:${phone.phone}`} className="phone-display">
                   {flag && <span className="phone-flag" title={countryName}>{flag}</span>}
@@ -181,7 +182,7 @@ export function ContactInfoSection({ emails, phones, isEditMode, onEmailsChange,
         })}
         {emails.map((email, i) => (
           <div key={`email-${i}`} className="expanded-item">
-            <span className="material-symbols-outlined">mail</span>
+            <Icon name="envelope" />
             <div className="expanded-item-content">
               <a href={`mailto:${email.email}`}>{email.email}</a>
               {email.type && <span className="item-type">{email.type}</span>}
@@ -227,7 +228,7 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange }: {
         <div className="section-content edit-section-content">
           {addresses.map((addr, i) => (
             <EditableArrayItem key={i} onRemove={() => removeAddress(i)}>
-              <span className="material-symbols-outlined">location_on</span>
+              <Icon name="location-dot" />
               <div className="edit-field-group address-fields">
                 <EditableField
                   value={addr.street || ''}
@@ -267,7 +268,7 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange }: {
             </EditableArrayItem>
           ))}
           <button type="button" className="add-item-btn" onClick={addAddress}>
-            <span className="material-symbols-outlined">add</span>
+            <Icon name="plus" />
             Add Address
           </button>
         </div>
@@ -283,12 +284,12 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange }: {
           const formatted = formatAddress(addr);
           if (formatted === '(Empty address)') return null;
 
-          const icon = addr.type?.toLowerCase() === 'home' ? 'home' :
-                       addr.type?.toLowerCase() === 'work' ? 'business' : 'location_on';
+          const icon = addr.type?.toLowerCase() === 'home' ? 'house' :
+                       addr.type?.toLowerCase() === 'work' ? 'building' : 'location-dot';
 
           return (
             <div key={i} className="expanded-item">
-              <span className="material-symbols-outlined">{icon}</span>
+              <Icon name={icon} />
               <div className="expanded-item-content">
                 <span className="address-text">{formatted}</span>
                 {addr.type && <span className="item-type">{addr.type}</span>}
@@ -335,7 +336,7 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
         <div className="section-content edit-section-content">
           {socialProfiles.map((profile, i) => (
             <EditableArrayItem key={i} onRemove={() => removeProfile(i)}>
-              <span className="material-symbols-outlined">{getPlatformIcon(profile.platform)}</span>
+              <Icon name={getPlatformIcon(profile.platform)} />
               <div className="edit-field-group">
                 <EditableField
                   value={profile.platform}
@@ -356,7 +357,7 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
             </EditableArrayItem>
           ))}
           <button type="button" className="add-item-btn" onClick={addProfile}>
-            <span className="material-symbols-outlined">add</span>
+            <Icon name="plus" />
             Add Social Profile
           </button>
         </div>
@@ -370,7 +371,7 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
       <div className="section-content">
         {socialProfiles.map((profile) => (
           <div key={profile.id} className="expanded-item">
-            <span className="material-symbols-outlined">{getPlatformIcon(profile.platform)}</span>
+            <Icon name={getPlatformIcon(profile.platform)} />
             <div className="expanded-item-content">
               {profile.profileUrl ? (
                 <a href={profile.profileUrl} target="_blank" rel="noopener noreferrer">
@@ -403,7 +404,7 @@ export function BirthdaySection({ birthday, isEditMode, onBirthdayChange }: {
         <h4 className="section-header">Birthday</h4>
         <div className="section-content edit-section-content">
           <div className="expanded-item">
-            <span className="material-symbols-outlined">cake</span>
+            <Icon name="cake-candles" />
             <div className="edit-field-group">
               <EditableField
                 value={birthday || ''}
@@ -431,7 +432,7 @@ export function BirthdaySection({ birthday, isEditMode, onBirthdayChange }: {
               title={zodiacSign.charAt(0).toUpperCase() + zodiacSign.slice(1)}
             />
           ) : (
-            <span className="material-symbols-outlined">cake</span>
+            <Icon name="cake-candles" />
           )}
           <div className="expanded-item-content">
             <span>{formatBirthday(birthday!)}</span>
@@ -484,7 +485,7 @@ export function CategoriesSection({ categories, isEditMode, onCategoriesChange }
             </EditableArrayItem>
           ))}
           <button type="button" className="add-item-btn" onClick={addCategory}>
-            <span className="material-symbols-outlined">add</span>
+            <Icon name="plus" />
             Add Category
           </button>
         </div>
@@ -542,7 +543,7 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
         <div className="section-content edit-section-content">
           {instantMessages.map((im, i) => (
             <EditableArrayItem key={i} onRemove={() => removeIM(i)}>
-              <span className="material-symbols-outlined">{getServiceIcon(im.service)}</span>
+              <Icon name={getServiceIcon(im.service)} />
               <div className="edit-field-group">
                 <EditableField
                   value={im.service}
@@ -558,7 +559,7 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
             </EditableArrayItem>
           ))}
           <button type="button" className="add-item-btn" onClick={addIM}>
-            <span className="material-symbols-outlined">add</span>
+            <Icon name="plus" />
             Add Instant Message
           </button>
         </div>
@@ -572,7 +573,7 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
       <div className="section-content">
         {instantMessages.map((im) => (
           <div key={im.id} className="expanded-item">
-            <span className="material-symbols-outlined">{getServiceIcon(im.service)}</span>
+            <Icon name={getServiceIcon(im.service)} />
             <div className="expanded-item-content">
               <span>{im.handle}</span>
               <span className="item-type">{im.service}</span>
@@ -618,7 +619,7 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange }: {
         <div className="section-content edit-section-content">
           {urls.map((u, i) => (
             <EditableArrayItem key={i} onRemove={() => removeUrl(i)}>
-              <span className="material-symbols-outlined">{getUrlIcon(u.url, u.label)}</span>
+              <Icon name={getUrlIcon(u.url, u.label)} />
               <div className="edit-field-group">
                 <EditableField
                   value={u.url}
@@ -634,7 +635,7 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange }: {
             </EditableArrayItem>
           ))}
           <button type="button" className="add-item-btn" onClick={addUrl}>
-            <span className="material-symbols-outlined">add</span>
+            <Icon name="plus" />
             Add Link
           </button>
         </div>
@@ -648,7 +649,7 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange }: {
       <div className="section-content">
         {urls.map((u) => (
           <div key={u.id} className="expanded-item">
-            <span className="material-symbols-outlined">{getUrlIcon(u.url, u.label)}</span>
+            <Icon name={getUrlIcon(u.url, u.label)} />
             <div className="expanded-item-content">
               <a href={u.url} target="_blank" rel="noopener noreferrer">
                 {getDisplayLabel(u.url, u.label)}
@@ -696,7 +697,7 @@ export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopl
         <div className="section-content edit-section-content">
           {relatedPeople.map((person, i) => (
             <EditableArrayItem key={i} onRemove={() => removePerson(i)}>
-              <span className="material-symbols-outlined">{getRelationshipIcon(person.relationship)}</span>
+              <Icon name={getRelationshipIcon(person.relationship)} />
               <div className="edit-field-group">
                 <EditableField
                   value={person.name}
@@ -712,7 +713,7 @@ export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopl
             </EditableArrayItem>
           ))}
           <button type="button" className="add-item-btn" onClick={addPerson}>
-            <span className="material-symbols-outlined">add</span>
+            <Icon name="plus" />
             Add Related Person
           </button>
         </div>
@@ -726,7 +727,7 @@ export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopl
       <div className="section-content">
         {relatedPeople.map((person) => (
           <div key={person.id} className="expanded-item">
-            <span className="material-symbols-outlined">{getRelationshipIcon(person.relationship)}</span>
+            <Icon name={getRelationshipIcon(person.relationship)} />
             <div className="expanded-item-content">
               <span>{person.name}</span>
               {person.relationship && <span className="item-type">{person.relationship}</span>}
@@ -812,7 +813,7 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
         {/* Job + Company */}
         {(enrichment.jobTitle || enrichment.companyName) && (
           <div className="expanded-item">
-            <span className="material-symbols-outlined">work</span>
+            <Icon name="briefcase" />
             <div className="expanded-item-content">
               <span>
                 {enrichment.jobTitle}
@@ -832,7 +833,7 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
         {/* Industry + Location */}
         {(enrichment.industry || enrichment.location) && (
           <div className="expanded-item">
-            <span className="material-symbols-outlined">location_on</span>
+            <Icon name="location-dot" />
             <div className="expanded-item-content">
               <span>
                 {[enrichment.location, enrichment.industry].filter(Boolean).join(' · ')}
@@ -855,7 +856,7 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
         {enrichment.skills && enrichment.skills.length > 0 && (
           <div className="linkedin-skills">
             <div className="expanded-item">
-              <span className="material-symbols-outlined">verified</span>
+              <Icon name="badge-check" />
               <div className="expanded-item-content skills-list">
                 {enrichment.skills.map((skill, i) => (
                   <span key={i} className="skill-tag">{skill}</span>
@@ -868,7 +869,7 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
         {/* Education */}
         {enrichment.education && enrichment.education.length > 0 && (
           <div className="expanded-item">
-            <span className="material-symbols-outlined">school</span>
+            <Icon name="graduation-cap" />
             <div className="expanded-item-content">
               <ul className="education-list">
                 {enrichment.education.map((edu, i) => (
@@ -882,7 +883,7 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
         {/* Followers count */}
         {enrichment.followersCount !== null && enrichment.followersCount > 0 && (
           <div className="expanded-item">
-            <span className="material-symbols-outlined">group</span>
+            <Icon name="users" />
             <div className="expanded-item-content">
               <span>{enrichment.followersCount.toLocaleString()} followers</span>
             </div>
@@ -891,7 +892,7 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
 
         {/* Enriched date footer */}
         <div className="linkedin-footer">
-          <span className="material-symbols-outlined">update</span>
+          <Icon name="clock-rotate-left" />
           <span>Enriched from LinkedIn {formatDate(enrichment.enrichedAt)}</span>
         </div>
       </div>

@@ -1,46 +1,38 @@
+import { useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { useContactDetail } from '../api/hooks';
 import { ContactRowExpanded } from './ContactRowExpanded';
 import { Avatar } from './Avatar';
-import { MobileHeader } from './MobileHeader';
-
-interface OutletContext {
-  setModalOpen: (open: boolean) => void;
-  isMobile: boolean;
-}
+import { Icon } from './Icon';
+import type { OutletContext } from './Layout';
 
 export function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isMobile } = useOutletContext<OutletContext>();
+  const { setHeaderConfig } = useOutletContext<OutletContext>();
   const contactId = id ? parseInt(id, 10) : null;
 
   const { data: contact, isLoading, error } = useContactDetail(contactId);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     navigate('/contacts');
-  };
+  }, [navigate]);
 
-  const handleEdit = () => {
-    // TODO: Navigate to edit page when implemented
-    console.log('Edit contact:', contactId);
-  };
+  useEffect(() => {
+    setHeaderConfig({
+      title: contact?.displayName || 'Contact',
+      actions: (
+        <button className="header-action-btn secondary" onClick={handleBack}>
+          <Icon name="arrow-left" />
+          Back
+        </button>
+      ),
+    });
+  }, [setHeaderConfig, contact?.displayName, handleBack]);
 
   if (isLoading) {
     return (
       <>
-        {isMobile ? (
-          <MobileHeader title="Contact" showBack />
-        ) : (
-          <header className="top-header">
-            <div className="page-header">
-              <button className="back-button" onClick={handleBack}>
-                <span className="material-symbols-outlined">arrow_back</span>
-              </button>
-              <h1>Contact</h1>
-            </div>
-          </header>
-        )}
         <div className="page-content">
           <div className="loading-state">
             <span aria-busy="true">Loading contact...</span>
@@ -53,18 +45,6 @@ export function ContactDetailPage() {
   if (error || !contact) {
     return (
       <>
-        {isMobile ? (
-          <MobileHeader title="Contact" showBack />
-        ) : (
-          <header className="top-header">
-            <div className="page-header">
-              <button className="back-button" onClick={handleBack}>
-                <span className="material-symbols-outlined">arrow_back</span>
-              </button>
-              <h1>Contact</h1>
-            </div>
-          </header>
-        )}
         <div className="page-content">
           <div className="error-state">
             {error ? `Error loading contact: ${error.message}` : 'Contact not found'}
@@ -76,23 +56,6 @@ export function ContactDetailPage() {
 
   return (
     <>
-      {isMobile ? (
-        <MobileHeader
-          title={contact.displayName}
-          showBack
-          onEdit={handleEdit}
-        />
-      ) : (
-        <header className="top-header">
-          <div className="page-header">
-            <button className="back-button" onClick={handleBack}>
-              <span className="material-symbols-outlined">arrow_back</span>
-            </button>
-            <h1>{contact.displayName}</h1>
-          </div>
-        </header>
-      )}
-
       <div className="page-content">
         <div className="contact-detail-content">
           <div className="contact-detail-identity">

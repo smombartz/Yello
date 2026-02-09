@@ -6,6 +6,7 @@ import { useDeleteContacts } from '../api/cleanupHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
 import { ContactRow } from './ContactRow';
 import { ContactGridCard } from './ContactGridCard';
+import { Icon } from './Icon';
 import type { MergeConflict, ContactDetail } from '../api/types';
 
 interface ContactListProps {
@@ -306,7 +307,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onTotalChan
                 onClick={handleMergeClick}
                 disabled={mergePreviewMutation.isPending || mergeMutation.isPending}
               >
-                <span className="material-symbols-outlined">merge</span>
+                <Icon name="code-merge" />
                 {mergePreviewMutation.isPending
                   ? 'Loading...'
                   : `Merge Selected (${selectedIds.size})`}
@@ -317,7 +318,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onTotalChan
               onClick={() => setShowArchiveConfirm(true)}
               disabled={archiveMutation.isPending}
             >
-              <span className="material-symbols-outlined">archive</span>
+              <Icon name="box-archive" />
               {archiveMutation.isPending
                 ? 'Archiving...'
                 : `Archive Selected (${selectedIds.size})`}
@@ -327,7 +328,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onTotalChan
               onClick={() => setShowDeleteConfirm(true)}
               disabled={deleteMutation.isPending}
             >
-              <span className="material-symbols-outlined">delete</span>
+              <Icon name="trash" />
               {deleteMutation.isPending
                 ? 'Deleting...'
                 : `Delete Selected (${selectedIds.size})`}
@@ -396,7 +397,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onTotalChan
       {/* Toast notification */}
       {toast && (
         <div className="undo-toast">
-          <span className="material-symbols-outlined">check_circle</span>
+          <Icon name="circle-check" />
           <span className="message">{toast.message}</span>
           <button
             className="dismiss"
@@ -405,7 +406,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onTotalChan
               setToast(null);
             }}
           >
-            <span className="material-symbols-outlined">close</span>
+            <Icon name="xmark" />
           </button>
         </div>
       )}
@@ -463,7 +464,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onTotalChan
             <div className="merge-modal-header">
               <h3>Merge {mergeContacts.length} Contacts</h3>
               <button className="close-button" onClick={handleMergeCancel}>
-                <span className="material-symbols-outlined">close</span>
+                <Icon name="xmark" />
               </button>
             </div>
 
@@ -485,7 +486,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onTotalChan
                         {contact.photoUrl ? (
                           <img src={contact.photoUrl} alt={contact.displayName} />
                         ) : (
-                          <span className="material-symbols-outlined">person</span>
+                          <Icon name="user" />
                         )}
                       </div>
                       <div className="merge-contact-info">
@@ -544,7 +545,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onTotalChan
 
               {mergeConflicts.length === 0 && (
                 <div className="merge-no-conflicts">
-                  <span className="material-symbols-outlined">check_circle</span>
+                  <Icon name="circle-check" />
                   <p>No conflicts detected. Contacts can be merged directly.</p>
                 </div>
               )}

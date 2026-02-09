@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Icon } from './Icon';
 import { Pagination } from './Pagination';
 import {
   useGeocodingSummary,
@@ -187,7 +188,7 @@ function GeocodingAddressItem({
             disabled={isRetrying}
             title="Geocode Now"
           >
-            <span className="material-symbols-outlined">location_searching</span>
+            <Icon name="location-crosshairs" />
             <span className="btn-text">Geocode Now</span>
           </button>
         )}
@@ -197,7 +198,7 @@ function GeocodingAddressItem({
             onClick={() => onEdit(address.id)}
             title="Edit"
           >
-            <span className="material-symbols-outlined">edit</span>
+            <Icon name="pen-to-square" />
             <span className="btn-text">Edit</span>
           </button>
         )}
@@ -207,7 +208,7 @@ function GeocodingAddressItem({
             onClick={() => onViewMap(address.latitude!, address.longitude!)}
             title="View Map"
           >
-            <span className="material-symbols-outlined">map</span>
+            <Icon name="map" />
             <span className="btn-text">View Map</span>
           </button>
         )}
@@ -260,7 +261,7 @@ function GeocodingCard({
             />
           ) : (
             <div className="geocoding-avatar placeholder">
-              <span className="material-symbols-outlined">person</span>
+              <Icon name="user" />
             </div>
           )}
           <div className="geocoding-contact-details">
@@ -313,11 +314,11 @@ function BulkProgressModal({ progress, onCancel }: BulkProgressModalProps) {
         </div>
         <div className="geocoding-progress-stats">
           <span className="geocoding-stat success">
-            <span className="material-symbols-outlined">check_circle</span>
+            <Icon name="circle-check" />
             {progress.successful} successful
           </span>
           <span className="geocoding-stat error">
-            <span className="material-symbols-outlined">error</span>
+            <Icon name="circle-exclamation" />
             {progress.failed} failed
           </span>
         </div>
@@ -478,7 +479,7 @@ export function AddressGeocoding() {
   if (isLoading) {
     return (
       <div className="geocoding-loading">
-        <span className="material-symbols-outlined spinning">sync</span>
+        <Icon name="arrows-rotate" className="spinning" />
         <p>Loading addresses...</p>
       </div>
     );
@@ -541,7 +542,7 @@ export function AddressGeocoding() {
             onClick={handleBulkGeocode}
             disabled={batchMutation.isPending}
           >
-            <span className="material-symbols-outlined">location_searching</span>
+            <Icon name="location-crosshairs" />
             Geocode All Pending ({pendingCount})
           </button>
         )}
@@ -549,7 +550,7 @@ export function AddressGeocoding() {
 
       {total === 0 && !isFetching ? (
         <div className="geocoding-empty">
-          <span className="material-symbols-outlined">location_off</span>
+          <Icon name="location-pin-slash" />
           <p>
             {filter === 'all' ? 'No addresses found' :
              filter === 'pending' ? 'No pending addresses' :
@@ -589,7 +590,7 @@ export function AddressGeocoding() {
 
       {toast && (
         <div className="undo-toast">
-          <span className="material-symbols-outlined">check_circle</span>
+          <Icon name="circle-check" />
           <span className="message">{toast.message}</span>
           <button
             className="dismiss"
@@ -598,7 +599,7 @@ export function AddressGeocoding() {
               setToast(null);
             }}
           >
-            <span className="material-symbols-outlined">close</span>
+            <Icon name="xmark" />
           </button>
         </div>
       )}

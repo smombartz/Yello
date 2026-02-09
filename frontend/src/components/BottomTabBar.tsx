@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { Icon } from './Icon';
 
 interface TabItemProps {
   to: string;
@@ -12,7 +13,7 @@ function TabItem({ to, icon, label }: TabItemProps) {
       to={to}
       className={({ isActive }) => `tab-item ${isActive ? 'active' : ''}`}
     >
-      <span className="material-symbols-outlined">{icon}</span>
+      <Icon name={icon} />
       <span className="tab-label">{label}</span>
     </NavLink>
   );
@@ -27,15 +28,15 @@ export function BottomTabBar() {
 
   return (
     <nav className="bottom-tab-bar">
-      <TabItem to="/contacts" icon="contacts" label="Contacts" />
+      <TabItem to="/contacts" icon="address-book" label="Contacts" />
       <TabItem to="/map" icon="map" label="Map" />
 
       <button className="tab-add-button" onClick={handleAddContact} aria-label="Add contact">
-        <span className="material-symbols-outlined">add</span>
+        <Icon name="plus" />
       </button>
 
-      <TabItem to="/groups" icon="group" label="Groups" />
-      <TabItem to="/settings" icon="settings" label="Settings" />
+      <TabItem to="/groups" icon="users" label="Groups" />
+      <TabItem to="/settings" icon="gear" label="Settings" />
     </nav>
   );
 }

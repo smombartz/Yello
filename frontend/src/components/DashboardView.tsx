@@ -1,11 +1,8 @@
+import { useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import type { OutletContext } from './Layout';
 import { useDashboardStats } from '../api/dashboardHooks';
-import { MobileHeader } from './MobileHeader';
-
-interface OutletContext {
-  setModalOpen: (open: boolean) => void;
-  isMobile: boolean;
-}
+import { Icon } from './Icon';
 
 function getPhotoUrl(photoHash: string | null): string | null {
   if (!photoHash) return null;
@@ -31,9 +28,13 @@ function formatBirthdayDays(daysUntil: number): string {
 }
 
 export function DashboardView() {
-  const { isMobile } = useOutletContext<OutletContext>();
+  const { setHeaderConfig } = useOutletContext<OutletContext>();
   const navigate = useNavigate();
   const { data, isLoading, error } = useDashboardStats();
+
+  useEffect(() => {
+    setHeaderConfig({ title: 'Dashboard' });
+  }, [setHeaderConfig]);
 
   const handleContactClick = (id: number) => {
     navigate(`/contacts/${id}`);
@@ -42,13 +43,6 @@ export function DashboardView() {
   if (isLoading) {
     return (
       <div className="dashboard-view">
-        {isMobile ? (
-          <MobileHeader title="Dashboard" />
-        ) : (
-          <div className="dashboard-header">
-            <h1>Dashboard</h1>
-          </div>
-        )}
         <div className="dashboard-loading">
           <div className="loading-spinner" />
           <p>Loading dashboard...</p>
@@ -61,15 +55,8 @@ export function DashboardView() {
   if (error || !data) {
     return (
       <div className="dashboard-view">
-        {isMobile ? (
-          <MobileHeader title="Dashboard" />
-        ) : (
-          <div className="dashboard-header">
-            <h1>Dashboard</h1>
-          </div>
-        )}
         <div className="dashboard-error">
-          <span className="material-symbols-outlined">error</span>
+          <Icon name="circle-exclamation" />
           <p>Failed to load dashboard data</p>
         </div>
         <style>{dashboardStyles}</style>
@@ -79,21 +66,13 @@ export function DashboardView() {
 
   return (
     <div className="dashboard-view">
-      {isMobile ? (
-        <MobileHeader title="Dashboard" />
-      ) : (
-        <div className="dashboard-header">
-          <h1>Dashboard</h1>
-        </div>
-      )}
-
       <div className="dashboard-content">
         {/* Overview Stats Row */}
         <section className="dashboard-section overview-section">
           <div className="stat-cards-grid">
             <div className="stat-card" onClick={() => navigate('/contacts')}>
               <div className="stat-icon">
-                <span className="material-symbols-outlined">contacts</span>
+                <Icon name="address-book" />
               </div>
               <div className="stat-info">
                 <div className="stat-value">{data.overview.totalContacts.toLocaleString()}</div>
@@ -103,7 +82,7 @@ export function DashboardView() {
 
             <div className="stat-card">
               <div className="stat-icon countries">
-                <span className="material-symbols-outlined">public</span>
+                <Icon name="globe" />
               </div>
               <div className="stat-info">
                 <div className="stat-value">{data.overview.totalCountries.toLocaleString()}</div>
@@ -113,7 +92,7 @@ export function DashboardView() {
 
             <div className="stat-card">
               <div className="stat-icon cities">
-                <span className="material-symbols-outlined">location_city</span>
+                <Icon name="city" />
               </div>
               <div className="stat-info">
                 <div className="stat-value">{data.overview.totalCities.toLocaleString()}</div>
@@ -123,7 +102,7 @@ export function DashboardView() {
 
             <div className="stat-card">
               <div className="stat-icon photos">
-                <span className="material-symbols-outlined">photo_camera</span>
+                <Icon name="camera" />
               </div>
               <div className="stat-info">
                 <div className="stat-value">{data.overview.contactsWithPhotos.toLocaleString()}</div>
@@ -133,7 +112,7 @@ export function DashboardView() {
 
             <div className="stat-card">
               <div className="stat-icon birthdays">
-                <span className="material-symbols-outlined">cake</span>
+                <Icon name="cake-candles" />
               </div>
               <div className="stat-info">
                 <div className="stat-value">{data.overview.contactsWithBirthdays.toLocaleString()}</div>
@@ -149,13 +128,13 @@ export function DashboardView() {
             {/* Upcoming Birthdays */}
             <div className="dashboard-card">
               <div className="card-header">
-                <span className="material-symbols-outlined">cake</span>
+                <Icon name="cake-candles" />
                 <h2>Upcoming Birthdays</h2>
               </div>
               <div className="card-content">
                 {data.upcomingBirthdays.length === 0 ? (
                   <div className="empty-state">
-                    <span className="material-symbols-outlined">event_busy</span>
+                    <Icon name="calendar-xmark" />
                     <p>No birthdays in the next 7 days</p>
                   </div>
                 ) : (
@@ -192,13 +171,13 @@ export function DashboardView() {
             {/* Recently Added */}
             <div className="dashboard-card">
               <div className="card-header">
-                <span className="material-symbols-outlined">person_add</span>
+                <Icon name="user-plus" />
                 <h2>Recently Added</h2>
               </div>
               <div className="card-content">
                 {data.recentlyAdded.length === 0 ? (
                   <div className="empty-state">
-                    <span className="material-symbols-outlined">group_off</span>
+                    <Icon name="user-slash" />
                     <p>No new contacts in the last 7 days</p>
                   </div>
                 ) : (
@@ -237,13 +216,13 @@ export function DashboardView() {
             {/* Top Countries */}
             <div className="dashboard-card">
               <div className="card-header">
-                <span className="material-symbols-outlined">public</span>
+                <Icon name="globe" />
                 <h2>Top Countries</h2>
               </div>
               <div className="card-content">
                 {data.geography.topCountries.length === 0 ? (
                   <div className="empty-state">
-                    <span className="material-symbols-outlined">map</span>
+                    <Icon name="map" />
                     <p>No location data available</p>
                   </div>
                 ) : (
@@ -263,13 +242,13 @@ export function DashboardView() {
             {/* Top Cities */}
             <div className="dashboard-card">
               <div className="card-header">
-                <span className="material-symbols-outlined">location_city</span>
+                <Icon name="city" />
                 <h2>Top Cities</h2>
               </div>
               <div className="card-content">
                 {data.geography.topCities.length === 0 ? (
                   <div className="empty-state">
-                    <span className="material-symbols-outlined">map</span>
+                    <Icon name="map" />
                     <p>No location data available</p>
                   </div>
                 ) : (
@@ -303,19 +282,6 @@ const dashboardStyles = `
     flex-direction: column;
     height: 100%;
     overflow: hidden;
-  }
-
-  .dashboard-header {
-    padding: 24px 32px;
-    border-bottom: 1px solid var(--ds-border-color);
-    background: var(--ds-bg-primary);
-  }
-
-  .dashboard-header h1 {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 600;
-    color: var(--ds-text-primary);
   }
 
   .dashboard-content {
@@ -364,7 +330,7 @@ const dashboardStyles = `
     color: var(--ds-text-inverse);
   }
 
-  .stat-icon .material-symbols-outlined {
+  .stat-icon i {
     font-size: 24px;
   }
 
@@ -414,7 +380,7 @@ const dashboardStyles = `
     border-bottom: 1px solid var(--ds-border-color);
   }
 
-  .card-header .material-symbols-outlined {
+  .card-header i {
     font-size: 22px;
     color: var(--ds-color-primary);
   }
@@ -566,7 +532,7 @@ const dashboardStyles = `
     color: var(--ds-text-muted);
   }
 
-  .empty-state .material-symbols-outlined {
+  .empty-state i {
     font-size: 40px;
     margin-bottom: 8px;
   }
@@ -588,7 +554,7 @@ const dashboardStyles = `
     color: var(--ds-text-secondary);
   }
 
-  .dashboard-error .material-symbols-outlined {
+  .dashboard-error i {
     font-size: 48px;
     color: var(--ds-color-error);
   }
@@ -626,7 +592,7 @@ const dashboardStyles = `
       height: 40px;
     }
 
-    .stat-icon .material-symbols-outlined {
+    .stat-icon i {
       font-size: 20px;
     }
 

@@ -1,3 +1,4 @@
+import { Icon } from './Icon';
 import { CleanupContactCard } from './CleanupContactCard';
 import { Pagination } from './Pagination';
 import type { CleanupContact, CleanupMode } from '../api/types';
@@ -40,7 +41,7 @@ export function CleanupContactList({
   if (contacts.length === 0 && !isLoading) {
     return (
       <div className="cleanup-list-empty">
-        <span className="material-symbols-outlined">check_circle</span>
+        <Icon name="circle-check" />
         <p>
           {mode === 'empty'
             ? 'No empty contacts found'
@@ -59,7 +60,7 @@ export function CleanupContactList({
             onClick={onSelectPage}
             disabled={isLoading || allOnPageSelected || isSelectingAll}
           >
-            <span className="material-symbols-outlined">check_box</span>
+            <Icon name="square-check" />
             Select Page
           </button>
           <button
@@ -67,7 +68,7 @@ export function CleanupContactList({
             onClick={onSelectAll}
             disabled={isLoading || allSelected || isSelectingAll}
           >
-            <span className="material-symbols-outlined">select_all</span>
+            <Icon name="square-check" />
             {isSelectingAll ? 'Selecting...' : `Select All (${totalContacts})`}
           </button>
           <button
@@ -75,7 +76,7 @@ export function CleanupContactList({
             onClick={onSelectNone}
             disabled={isLoading || !someSelected || isSelectingAll}
           >
-            <span className="material-symbols-outlined">deselect</span>
+            <Icon name="square" style="regular" />
             Select None
           </button>
         </div>

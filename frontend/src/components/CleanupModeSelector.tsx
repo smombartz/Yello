@@ -1,3 +1,4 @@
+import { Icon } from './Icon';
 import type { CleanupMode, CleanupSummary, SocialLinksSummary, AddressCleanupSummary } from '../api/types';
 
 interface CleanupModeSelectorProps {
@@ -9,12 +10,12 @@ interface CleanupModeSelectorProps {
   isLoading: boolean;
 }
 
-const MODE_CONFIG: { mode: CleanupMode; label: string; icon: string }[] = [
-  { mode: 'empty', label: 'Empty Contacts', icon: 'person_off' },
-  { mode: 'problematic', label: 'Problematic Emails', icon: 'warning' },
-  { mode: 'social-links', label: 'Social Links', icon: 'share' },
-  { mode: 'invalid-links', label: 'Invalid Links', icon: 'link_off' },
-  { mode: 'addresses', label: 'Addresses', icon: 'location_on' },
+const MODE_CONFIG: { mode: CleanupMode; label: string; icon: string; iconStyle?: 'solid' | 'regular' | 'brands' }[] = [
+  { mode: 'empty', label: 'Empty Contacts', icon: 'user-slash' },
+  { mode: 'problematic', label: 'Problematic Emails', icon: 'triangle-exclamation' },
+  { mode: 'social-links', label: 'Social Links', icon: 'share-nodes' },
+  { mode: 'invalid-links', label: 'Invalid Links', icon: 'link-slash' },
+  { mode: 'addresses', label: 'Addresses', icon: 'location-dot' },
 ];
 
 export function CleanupModeSelector({
@@ -42,7 +43,7 @@ export function CleanupModeSelector({
 
   return (
     <div className="cleanup-mode-selector">
-      {MODE_CONFIG.map(({ mode, label, icon }) => {
+      {MODE_CONFIG.map(({ mode, label, icon, iconStyle }) => {
         const count = getCount(mode);
         const isActive = mode === selectedMode;
 
@@ -53,7 +54,7 @@ export function CleanupModeSelector({
             onClick={() => onModeChange(mode)}
             disabled={isLoading}
           >
-            <span className="material-symbols-outlined">{icon}</span>
+            <Icon name={icon} style={iconStyle} />
             <span className="cleanup-mode-label">{label}</span>
             {count !== null && <span className="cleanup-mode-count">{count}</span>}
           </button>

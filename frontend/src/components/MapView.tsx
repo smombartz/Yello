@@ -1,19 +1,15 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import { useOutletContext } from 'react-router-dom';
 import L from 'leaflet';
+import { Icon } from './Icon';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import 'leaflet.markercluster';
 import { useMapMarkers, useMapStats, useGeocode } from '../api/mapHooks';
 import type { MapMarker } from '../api/mapHooks';
-import { MobileHeader } from './MobileHeader';
-
-interface OutletContext {
-  setModalOpen: (open: boolean) => void;
-  isMobile: boolean;
-}
+import type { OutletContext } from './Layout';
 
 // Fix for default marker icons in Leaflet with Vite
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -116,7 +112,7 @@ function MarkerClusterGroup({ markers }: { markers: MapMarker[] }) {
 }
 
 export function MapView() {
-  const { isMobile } = useOutletContext<OutletContext>();
+  const { setHeaderConfig } = useOutletContext<OutletContext>();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const mapRef = useRef<L.Map | null>(null);
@@ -135,94 +131,54 @@ export function MapView() {
 
   const markers = useMemo(() => mapData?.markers || [], [mapData]);
 
-  const handleGeocode = () => {
-    geocodeMutation.mutate(25); // Smaller batches to avoid Nominatim rate limits
-  };
-
-  const handleRecenter = () => {
-    if (mapRef.current && markers.length > 0) {
-      const bounds = L.latLngBounds(markers.map(m => [m.latitude, m.longitude]));
-      mapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
-    } else if (mapRef.current) {
-      mapRef.current.setView(defaultCenter, defaultZoom);
-    }
-  };
+  const handleGeocode = useCallback(() => {
+    geocodeMutation.mutate(25);
+  }, [geocodeMutation]);
 
   // Default center (US)
   const defaultCenter: [number, number] = [39.8283, -98.5795];
   const defaultZoom = 4;
 
+  // Configure page header
+  useEffect(() => {
+    setHeaderConfig({
+      title: 'Map',
+      search: searchQuery,
+      onSearchChange: setSearchQuery,
+      searchPlaceholder: 'Search contacts...',
+      info: mapData ? (
+        <span>{mapData.geocodedCount} of {mapData.totalContacts} on map</span>
+      ) : undefined,
+      actions: statsData && statsData.pendingAddresses > 0 ? (
+        <button
+          className="header-action-btn"
+          onClick={handleGeocode}
+          disabled={geocodeMutation.isPending}
+        >
+          <Icon name={geocodeMutation.isPending ? 'arrows-rotate' : 'location-crosshairs'} className={geocodeMutation.isPending ? 'spinning' : ''} />
+          {geocodeMutation.isPending ? 'Geocoding...' : `Geocode ${statsData.pendingAddresses}`}
+        </button>
+      ) : undefined,
+    });
+  }, [setHeaderConfig, searchQuery, mapData, statsData, geocodeMutation.isPending, handleGeocode]);
+
   return (
     <div className="map-view">
-      {isMobile && (
-        <MobileHeader
-          title="Map"
-          onRecenter={handleRecenter}
-        />
-      )}
-      {!isMobile && (
-        <div className="map-header">
-          <h1>
-            <span className="material-symbols-outlined">map</span>
-            Contacts Map
-          </h1>
-          <div className="map-header-stats">
-          {mapData && (
-            <span className="map-stat">
-              {mapData.geocodedCount} of {mapData.totalContacts} contacts on map
-            </span>
-          )}
-          {statsData && statsData.pendingAddresses > 0 && (
-            <button
-              className="geocode-button"
-              onClick={handleGeocode}
-              disabled={geocodeMutation.isPending}
-            >
-              <span className="material-symbols-outlined">
-                {geocodeMutation.isPending ? 'sync' : 'location_searching'}
-              </span>
-              {geocodeMutation.isPending
-                ? 'Geocoding...'
-                : `Geocode ${statsData.pendingAddresses} addresses`}
-            </button>
-          )}
-        </div>
-      </div>
-      )}
-
-      <div className="map-search-bar">
-        <span className="material-symbols-outlined search-icon">search</span>
-        <input
-          type="text"
-          placeholder="Search contacts..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="map-search-input"
-        />
-        {searchQuery && (
-          <button
-            className="clear-search"
-            onClick={() => setSearchQuery('')}
-          >
-            <span className="material-symbols-outlined">close</span>
-          </button>
-        )}
-      </div>
 
       <div className="map-container">
         {isLoading ? (
           <div className="map-loading">
-            <span className="material-symbols-outlined spinning">sync</span>
+            <Icon name="arrows-rotate" className="spinning" />
             <p>Loading map data...</p>
           </div>
         ) : error ? (
           <div className="map-error">
-            <span className="material-symbols-outlined">error</span>
+            <Icon name="circle-exclamation" />
             <p>Error loading map: {error.message}</p>
           </div>
         ) : markers.length === 0 ? (
           <div className="map-empty">
-            <span className="material-symbols-outlined">location_off</span>
+            <Icon name="location-pin-slash" />
             <h3>No Locations Found</h3>
             <p>
               {debouncedSearch
@@ -231,7 +187,7 @@ export function MapView() {
             </p>
             {statsData && statsData.pendingAddresses > 0 && (
               <button className="geocode-button primary" onClick={handleGeocode}>
-                <span className="material-symbols-outlined">location_searching</span>
+                <Icon name="location-crosshairs" />
                 Geocode {statsData.pendingAddresses} addresses
               </button>
             )}
@@ -254,7 +210,7 @@ export function MapView() {
 
       {geocodeMutation.isSuccess && geocodeMutation.data && (
         <div className="geocode-result">
-          <span className="material-symbols-outlined">check_circle</span>
+          <Icon name="circle-check" />
           Geocoded {geocodeMutation.data.successful} of {geocodeMutation.data.processed} addresses
           {geocodeMutation.data.remaining > 0 && ` (${geocodeMutation.data.remaining} remaining)`}
         </div>

@@ -1,4 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import type { OutletContext } from './Layout';
+import { Icon } from './Icon';
 import {
   useArchivedContacts,
   useArchivedCount,
@@ -15,6 +18,7 @@ interface ToastState {
 const PAGE_SIZE = 50;
 
 export function ArchivedView() {
+  const { setHeaderConfig } = useOutletContext<OutletContext>();
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
@@ -116,6 +120,19 @@ export function ArchivedView() {
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const archivedCount = countData?.count ?? 0;
 
+  useEffect(() => {
+    setHeaderConfig({
+      title: 'Archived',
+      info: <span>{archivedCount} contacts</span>,
+      actions: archivedCount > 0 ? (
+        <button className="header-action-btn secondary" onClick={handleExport}>
+          <Icon name="download" />
+          Export VCF
+        </button>
+      ) : undefined,
+    });
+  }, [setHeaderConfig, archivedCount, handleExport]);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, {
@@ -127,59 +144,40 @@ export function ArchivedView() {
 
   return (
     <div className="archived-view">
-      <div className="archived-header">
-        <div className="archived-header-top">
-          <h1>Archived Contacts</h1>
-          <span className="archived-count-badge">{archivedCount}</span>
-        </div>
-
+      {selectedIds.size > 0 && (
         <div className="archived-actions">
-          {archivedCount > 0 && (
-            <button
-              className="export-button"
-              onClick={handleExport}
-            >
-              <span className="material-symbols-outlined">download</span>
-              Export All VCF
-            </button>
-          )}
-
-          {selectedIds.size > 0 && (
-            <>
-              <button
-                className="restore-button"
-                onClick={() => setShowRestoreConfirm(true)}
-                disabled={unarchiveMutation.isPending}
-              >
-                <span className="material-symbols-outlined">unarchive</span>
-                {unarchiveMutation.isPending
-                  ? 'Restoring...'
-                  : `Restore Selected (${selectedIds.size})`}
-              </button>
-              <button
-                className="delete-selected-button"
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={deleteMutation.isPending}
-              >
-                <span className="material-symbols-outlined">delete_forever</span>
-                {deleteMutation.isPending
-                  ? 'Deleting...'
-                  : `Delete Permanently (${selectedIds.size})`}
-              </button>
-            </>
-          )}
+          <button
+            className="restore-button"
+            onClick={() => setShowRestoreConfirm(true)}
+            disabled={unarchiveMutation.isPending}
+          >
+            <Icon name="box-open" />
+            {unarchiveMutation.isPending
+              ? 'Restoring...'
+              : `Restore Selected (${selectedIds.size})`}
+          </button>
+          <button
+            className="delete-selected-button"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={deleteMutation.isPending}
+          >
+            <Icon name="trash-can" />
+            {deleteMutation.isPending
+              ? 'Deleting...'
+              : `Delete Permanently (${selectedIds.size})`}
+          </button>
         </div>
-      </div>
+      )}
 
       <div className="archived-content">
         {isContactsLoading ? (
           <div className="archived-loading">
-            <span className="material-symbols-outlined spinning">sync</span>
+            <Icon name="arrows-rotate" className="spinning" />
             <p>Loading archived contacts...</p>
           </div>
         ) : contacts.length === 0 ? (
           <div className="archived-empty">
-            <span className="material-symbols-outlined">inventory_2</span>
+            <Icon name="boxes-stacked" />
             <h3>No Archived Contacts</h3>
             <p>Contacts you archive will appear here.</p>
           </div>
@@ -192,7 +190,7 @@ export function ArchivedView() {
                   onClick={handleSelectPage}
                   disabled={isFetching}
                 >
-                  <span className="material-symbols-outlined">check_box</span>
+                  <Icon name="square-check" />
                   Select Page
                 </button>
                 {selectedIds.size > 0 && (
@@ -200,7 +198,7 @@ export function ArchivedView() {
                     className="cleanup-action-button"
                     onClick={handleSelectNone}
                   >
-                    <span className="material-symbols-outlined">check_box_outline_blank</span>
+                    <Icon name="square" style="regular" />
                     Select None
                   </button>
                 )}
@@ -243,7 +241,7 @@ export function ArchivedView() {
                       <div className="archived-card-emails">
                         {contact.emails.slice(0, 2).map((email, idx) => (
                           <div key={idx} className="archived-card-email">
-                            <span className="material-symbols-outlined">mail</span>
+                            <Icon name="envelope" />
                             <span className="value">{email.email}</span>
                           </div>
                         ))}
@@ -258,7 +256,7 @@ export function ArchivedView() {
                       <div className="archived-card-phones">
                         {contact.phones.slice(0, 1).map((phone, idx) => (
                           <div key={idx} className="archived-card-phone">
-                            <span className="material-symbols-outlined">phone</span>
+                            <Icon name="phone" />
                             <span className="value">{phone.phoneDisplay}</span>
                           </div>
                         ))}
@@ -276,7 +274,7 @@ export function ArchivedView() {
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1 || isFetching}
                 >
-                  <span className="material-symbols-outlined">chevron_left</span>
+                  <Icon name="chevron-left" />
                   Previous
                 </button>
                 <span className="pagination-indicator">
@@ -288,7 +286,7 @@ export function ArchivedView() {
                   disabled={currentPage === totalPages || isFetching}
                 >
                   Next
-                  <span className="material-symbols-outlined">chevron_right</span>
+                  <Icon name="chevron-right" />
                 </button>
               </div>
             )}
@@ -298,7 +296,7 @@ export function ArchivedView() {
 
       {toast && (
         <div className="undo-toast">
-          <span className="material-symbols-outlined">check_circle</span>
+          <Icon name="circle-check" />
           <span className="message">{toast.message}</span>
           <button
             className="dismiss"
@@ -307,7 +305,7 @@ export function ArchivedView() {
               setToast(null);
             }}
           >
-            <span className="material-symbols-outlined">close</span>
+            <Icon name="xmark" />
           </button>
         </div>
       )}

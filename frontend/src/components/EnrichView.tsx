@@ -1,13 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { useLinkedInEnrichmentSummary, useLinkedInEnrichment } from '../api/enrichHooks';
-import { MobileHeader } from './MobileHeader';
+import type { OutletContext } from './Layout';
 import { LoadingSpinner } from './LoadingSpinner';
-
-interface OutletContext {
-  setModalOpen: (open: boolean) => void;
-  isMobile: boolean;
-}
+import { Icon } from './Icon';
 
 interface ToastState {
   message: string;
@@ -16,7 +12,7 @@ interface ToastState {
 }
 
 export function EnrichView() {
-  const { isMobile } = useOutletContext<OutletContext>();
+  const { setHeaderConfig } = useOutletContext<OutletContext>();
   const [includeAlreadyEnriched, setIncludeAlreadyEnriched] = useState(false);
   const [limit, setLimit] = useState<number | undefined>(undefined);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -32,6 +28,10 @@ export function EnrichView() {
     cancel,
     reset,
   } = useLinkedInEnrichment();
+
+  useEffect(() => {
+    setHeaderConfig({ title: 'Enrich' });
+  }, [setHeaderConfig]);
 
   // Cleanup toast timeout on unmount
   useEffect(() => {
@@ -94,22 +94,11 @@ export function EnrichView() {
 
   return (
     <div className="enrich-view">
-      {isMobile ? (
-        <MobileHeader title="Enrich Contacts" />
-      ) : (
-        <div className="enrich-header">
-          <h1>Enrich Contacts</h1>
-          <p className="enrich-subtitle">
-            Enhance your contacts with LinkedIn profile data
-          </p>
-        </div>
-      )}
-
       <div className="enrich-content">
         {/* LinkedIn Enrichment Section */}
         <section className="enrich-section">
           <div className="section-header">
-            <span className="material-symbols-outlined section-icon">work</span>
+            <Icon name="briefcase" className="section-icon" />
             <h2>LinkedIn Profile Data</h2>
           </div>
 
@@ -120,7 +109,7 @@ export function EnrichView() {
 
           {!summary?.configured && (
             <div className="config-warning">
-              <span className="material-symbols-outlined">warning</span>
+              <Icon name="triangle-exclamation" />
               <div>
                 <strong>API Not Configured</strong>
                 <p>Set the <code>APOLLO_API_KEY</code> environment variable to enable LinkedIn enrichment.</p>
@@ -181,7 +170,7 @@ export function EnrichView() {
                 <div className="enrichment-progress">
                   <div className="progress-header">
                     <span className="progress-status">
-                      <span className="material-symbols-outlined spinning">sync</span>
+                      <Icon name="arrows-rotate" className="spinning" />
                       Enriching contacts...
                     </span>
                     <span className="progress-count">
@@ -204,11 +193,11 @@ export function EnrichView() {
 
                   <div className="progress-stats">
                     <span className="stat success">
-                      <span className="material-symbols-outlined">check_circle</span>
+                      <Icon name="circle-check" />
                       {progress.succeeded} succeeded
                     </span>
                     <span className="stat error">
-                      <span className="material-symbols-outlined">error</span>
+                      <Icon name="circle-exclamation" />
                       {progress.failed} failed
                     </span>
                   </div>
@@ -219,7 +208,7 @@ export function EnrichView() {
               {result && (
                 <div className="enrichment-result">
                   <div className="result-header">
-                    <span className="material-symbols-outlined success-icon">check_circle</span>
+                    <Icon name="circle-check" className="success-icon" />
                     <span>Enrichment Complete</span>
                   </div>
 
@@ -286,7 +275,7 @@ export function EnrichView() {
               {/* Error Display */}
               {error && (
                 <div className="enrichment-error">
-                  <span className="material-symbols-outlined">error</span>
+                  <Icon name="circle-exclamation" />
                   <span>{error}</span>
                 </div>
               )}
@@ -295,7 +284,7 @@ export function EnrichView() {
               <div className="enrichment-actions">
                 {isEnriching ? (
                   <button className="secondary-button" onClick={cancel}>
-                    <span className="material-symbols-outlined">close</span>
+                    <Icon name="xmark" />
                     Cancel
                   </button>
                 ) : (
@@ -304,7 +293,7 @@ export function EnrichView() {
                     onClick={handleStartEnrichment}
                     disabled={summary.pendingEnrichment === 0}
                   >
-                    <span className="material-symbols-outlined">rocket_launch</span>
+                    <Icon name="rocket" />
                     Start Enrichment
                     {summary.pendingEnrichment > 0 && (
                       <span className="button-badge">{summary.pendingEnrichment}</span>
@@ -319,9 +308,7 @@ export function EnrichView() {
 
       {toast && (
         <div className={`undo-toast ${toast.type === 'error' ? 'error' : ''}`}>
-          <span className="material-symbols-outlined">
-            {toast.type === 'success' ? 'check_circle' : 'error'}
-          </span>
+          <Icon name={toast.type === 'success' ? 'circle-check' : 'circle-exclamation'} />
           <span className="message">{toast.message}</span>
           <button
             className="dismiss"
@@ -330,7 +317,7 @@ export function EnrichView() {
               setToast(null);
             }}
           >
-            <span className="material-symbols-outlined">close</span>
+            <Icon name="xmark" />
           </button>
         </div>
       )}
@@ -411,7 +398,7 @@ export function EnrichView() {
           margin-bottom: 20px;
         }
 
-        .config-warning .material-symbols-outlined {
+        .config-warning i {
           color: #f59e0b;
           font-size: 24px;
         }
@@ -596,7 +583,7 @@ export function EnrichView() {
           font-size: 13px;
         }
 
-        .progress-stats .stat .material-symbols-outlined {
+        .progress-stats .stat i {
           font-size: 16px;
         }
 

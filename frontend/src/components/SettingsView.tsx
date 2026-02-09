@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { Icon } from './Icon';
 import {
   useDeleteAllContacts,
   useFetchContactPhotosStream,
@@ -7,12 +8,7 @@ import {
   parseLinkedInCsv,
   exportAllContacts
 } from '../api/settingsHooks';
-import { MobileHeader } from './MobileHeader';
-
-interface OutletContext {
-  setModalOpen: (open: boolean) => void;
-  isMobile: boolean;
-}
+import type { OutletContext } from './Layout';
 
 interface ToastState {
   message: string;
@@ -21,7 +17,7 @@ interface ToastState {
 }
 
 export function SettingsView() {
-  const { isMobile } = useOutletContext<OutletContext>();
+  const { setHeaderConfig } = useOutletContext<OutletContext>();
   const deleteMutation = useDeleteAllContacts();
   const { isStreaming, progress, startFetching, cancel: cancelFetching } = useFetchContactPhotosStream();
   const {
@@ -42,6 +38,10 @@ export function SettingsView() {
   const [linkedInExpanded, setLinkedInExpanded] = useState(false);
   const [dangerExpanded, setDangerExpanded] = useState(false);
   const [linkedInFile, setLinkedInFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    setHeaderConfig({ title: 'Tools' });
+  }, [setHeaderConfig]);
 
   // Cleanup toast timeout on unmount
   useEffect(() => {
@@ -124,14 +124,6 @@ export function SettingsView() {
 
   return (
     <div className="settings-view">
-      {isMobile ? (
-        <MobileHeader title="Settings" />
-      ) : (
-        <div className="settings-header">
-          <h1>Settings</h1>
-        </div>
-      )}
-
       <div className="settings-content">
         {/* Export Section */}
         <section className={`settings-section collapsible-card${exportExpanded ? ' expanded' : ''}`}>
@@ -140,12 +132,10 @@ export function SettingsView() {
             onClick={() => setExportExpanded(!exportExpanded)}
           >
             <div className="settings-section-header">
-              <span className="material-symbols-outlined">download</span>
+              <Icon name="download" />
               <h2>Export Data</h2>
             </div>
-            <span className={`material-symbols-outlined expand-icon${exportExpanded ? ' rotated' : ''}`}>
-              expand_more
-            </span>
+            <Icon name="chevron-down" className={`expand-icon${exportExpanded ? ' rotated' : ''}`} />
           </button>
           {exportExpanded && (
             <div className="collapsible-content">
@@ -153,7 +143,7 @@ export function SettingsView() {
                 Download all your contacts as a VCF file that can be imported into other applications.
               </p>
               <button className="secondary-button" onClick={handleExport}>
-                <span className="material-symbols-outlined">download</span>
+                <Icon name="download" />
                 Export All Contacts (VCF)
               </button>
             </div>
@@ -167,12 +157,10 @@ export function SettingsView() {
             onClick={() => setPhotosExpanded(!photosExpanded)}
           >
             <div className="settings-section-header">
-              <span className="material-symbols-outlined">photo_library</span>
+              <Icon name="images" />
               <h2>Fetch Contact Photos</h2>
             </div>
-            <span className={`material-symbols-outlined expand-icon${photosExpanded ? ' rotated' : ''}`}>
-              expand_more
-            </span>
+            <Icon name="chevron-down" className={`expand-icon${photosExpanded ? ' rotated' : ''}`} />
           </button>
           {photosExpanded && (
             <div className="collapsible-content">
@@ -202,9 +190,7 @@ export function SettingsView() {
                 className="secondary-button"
                 onClick={isStreaming ? cancelFetching : handleFetchPhotos}
               >
-                <span className={`material-symbols-outlined${isStreaming ? ' spinning' : ''}`}>
-                  {isStreaming ? 'sync' : 'cloud_download'}
-                </span>
+                <Icon name={isStreaming ? 'arrows-rotate' : 'cloud-arrow-down'} className={isStreaming ? 'spinning' : ''} />
                 {isStreaming ? 'Cancel' : 'Fetch Contact Photos'}
               </button>
             </div>
@@ -218,12 +204,10 @@ export function SettingsView() {
             onClick={() => setLinkedInExpanded(!linkedInExpanded)}
           >
             <div className="settings-section-header">
-              <span className="material-symbols-outlined">upload</span>
+              <Icon name="upload" />
               <h2>Import LinkedIn Contacts</h2>
             </div>
-            <span className={`material-symbols-outlined expand-icon${linkedInExpanded ? ' rotated' : ''}`}>
-              expand_more
-            </span>
+            <Icon name="chevron-down" className={`expand-icon${linkedInExpanded ? ' rotated' : ''}`} />
           </button>
 
           {linkedInExpanded && (
@@ -243,7 +227,7 @@ export function SettingsView() {
                     className="file-input"
                   />
                   <label htmlFor="linkedin-csv-input" className="file-input-label">
-                    <span className="material-symbols-outlined">description</span>
+                    <Icon name="file-lines" />
                     {linkedInFile ? linkedInFile.name : 'Choose CSV file'}
                   </label>
                 </div>
@@ -253,9 +237,7 @@ export function SettingsView() {
                   onClick={isImportingLinkedIn ? cancelLinkedInImport : handleLinkedInImport}
                   disabled={!linkedInFile && !isImportingLinkedIn}
                 >
-                  <span className={`material-symbols-outlined${isImportingLinkedIn ? ' spinning' : ''}`}>
-                    {isImportingLinkedIn ? 'sync' : 'upload'}
-                  </span>
+                  <Icon name={isImportingLinkedIn ? 'arrows-rotate' : 'upload'} className={isImportingLinkedIn ? 'spinning' : ''} />
                   {isImportingLinkedIn ? 'Cancel' : 'Import Contacts'}
                 </button>
               </div>
@@ -280,7 +262,7 @@ export function SettingsView() {
                   {linkedInResult && (
                     <div className="import-complete">
                       <div className="import-complete-header">
-                        <span className="material-symbols-outlined success-icon">check_circle</span>
+                        <Icon name="circle-check" className="success-icon" />
                         <span>Import complete</span>
                       </div>
                     </div>
@@ -288,7 +270,7 @@ export function SettingsView() {
 
                   {linkedInError && (
                     <div className="import-error">
-                      <span className="material-symbols-outlined">error</span>
+                      <Icon name="circle-exclamation" />
                       <span>{linkedInError}</span>
                     </div>
                   )}
@@ -335,12 +317,10 @@ export function SettingsView() {
             onClick={() => setDangerExpanded(!dangerExpanded)}
           >
             <div className="settings-section-header">
-              <span className="material-symbols-outlined">warning</span>
+              <Icon name="triangle-exclamation" />
               <h2>Danger Zone</h2>
             </div>
-            <span className={`material-symbols-outlined expand-icon${dangerExpanded ? ' rotated' : ''}`}>
-              expand_more
-            </span>
+            <Icon name="chevron-down" className={`expand-icon${dangerExpanded ? ' rotated' : ''}`} />
           </button>
           {dangerExpanded && (
             <div className="collapsible-content">
@@ -363,9 +343,7 @@ export function SettingsView() {
 
       {toast && (
         <div className={`undo-toast ${toast.type === 'error' ? 'error' : ''}`}>
-          <span className="material-symbols-outlined">
-            {toast.type === 'success' ? 'check_circle' : 'error'}
-          </span>
+          <Icon name={toast.type === 'success' ? 'circle-check' : 'circle-exclamation'} />
           <span className="message">{toast.message}</span>
           <button
             className="dismiss"
@@ -374,7 +352,7 @@ export function SettingsView() {
               setToast(null);
             }}
           >
-            <span className="material-symbols-outlined">close</span>
+            <Icon name="xmark" />
           </button>
         </div>
       )}

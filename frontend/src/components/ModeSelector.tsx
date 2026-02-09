@@ -1,3 +1,4 @@
+import { Icon } from './Icon';
 import type { DeduplicationMode, DuplicateSummary } from '../api/types';
 
 interface ModeSelectorProps {
@@ -16,11 +17,11 @@ const MODE_LABELS: Record<DeduplicationMode, string> = {
 };
 
 const MODE_ICONS: Record<DeduplicationMode, string> = {
-  recommended: 'auto_awesome',
-  email: 'mail',
+  recommended: 'wand-magic-sparkles',
+  email: 'envelope',
   phone: 'phone',
-  address: 'location_on',
-  'social-links': 'share',
+  address: 'location-dot',
+  'social-links': 'share-nodes',
 };
 
 const MODES: DeduplicationMode[] = ['recommended', 'email', 'phone', 'address', 'social-links'];
@@ -43,7 +44,7 @@ export function ModeSelector({ selectedMode, onModeChange, summary, isLoading }:
             onClick={() => onModeChange(mode)}
             disabled={isLoading}
           >
-            <span className="material-symbols-outlined">{MODE_ICONS[mode]}</span>
+            <Icon name={MODE_ICONS[mode]} />
             <span className="mode-label">{MODE_LABELS[mode]}</span>
             <span className="mode-count">{count}</span>
           </button>

@@ -1,5 +1,6 @@
 import { Avatar } from './Avatar';
 import { ContactRowExpanded } from './ContactRowExpanded';
+import { Icon } from './Icon';
 import { useContactDetail } from '../api/hooks';
 import type { ContactListItem } from '../api/types';
 import { getCountryFlag, getCountryName } from '../lib/phoneUtils';
@@ -51,13 +52,13 @@ export function ContactRow({
         <div className="contact-details">
           {contact.primaryEmail && (
             <div className="contact-detail-item">
-              <span className="material-symbols-outlined">mail</span>
+              <Icon name="envelope" />
               <span>{contact.primaryEmail}</span>
             </div>
           )}
           {contact.primaryPhone && (
             <div className="contact-detail-item">
-              <span className="material-symbols-outlined">call</span>
+              <Icon name="phone" />
               <span className="phone-display">
                 {contact.primaryPhoneCountryCode && (
                   <span className="phone-flag" title={getCountryName(contact.primaryPhoneCountryCode)}>
@@ -71,9 +72,7 @@ export function ContactRow({
         </div>
         <div className="contact-actions">
           <button className="icon-button">
-            <span className="material-symbols-outlined">
-              {isExpanded ? 'expand_less' : 'expand_more'}
-            </span>
+            <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} />
           </button>
         </div>
       </div>

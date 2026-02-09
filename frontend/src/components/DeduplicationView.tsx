@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import { Icon } from './Icon';
 import { ModeSelector } from './ModeSelector';
 import { DuplicateGroupList } from './DuplicateGroupList';
 import { ConfidenceFilter } from './ConfidenceFilter';
@@ -6,6 +8,7 @@ import { useDuplicateSummary, useDuplicatesPaginated, useMergeContacts, fetchAll
 import { useDeleteContacts } from '../api/cleanupHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
 import type { ConfidenceLevel, DeduplicationMode, DuplicateGroup } from '../api/types';
+import type { OutletContext } from './Layout';
 
 interface UndoState {
   groupId: string;
@@ -16,6 +19,7 @@ interface UndoState {
 const ALL_CONFIDENCE_LEVELS: Set<ConfidenceLevel> = new Set(['very_high', 'high', 'medium']);
 
 export function DeduplicationView() {
+  const { setHeaderConfig } = useOutletContext<OutletContext>();
   const [selectedMode, setSelectedMode] = useState<DeduplicationMode>('email');
   const [hiddenGroupIds, setHiddenGroupIds] = useState<Set<string>>(new Set());
   const [undoState, setUndoState] = useState<UndoState | null>(null);
@@ -193,6 +197,15 @@ export function DeduplicationView() {
   const totalPages = Math.ceil(totalGroups / PAGE_SIZE);
   const visibleCount = groups.filter((g) => !hiddenGroupIds.has(g.id)).length;
 
+  useEffect(() => {
+    setHeaderConfig({
+      title: 'Resolve Duplicates',
+      info: !isDuplicatesLoading ? (
+        <span>{visibleCount} of {totalGroups} duplicate groups</span>
+      ) : undefined,
+    });
+  }, [setHeaderConfig, isDuplicatesLoading, visibleCount, totalGroups]);
+
   const handleMergeAll = useCallback(async () => {
     const groupsToMerge = groups.filter((g) => !hiddenGroupIds.has(g.id));
     if (groupsToMerge.length === 0) return;
@@ -282,10 +295,6 @@ export function DeduplicationView() {
   return (
     <div className="dedup-view">
       <div className="dedup-header">
-        <div className="dedup-header-top">
-          <h1>Resolve Duplicates</h1>
-        </div>
-
         <ModeSelector
           selectedMode={selectedMode}
           onModeChange={handleModeChange}
@@ -328,7 +337,7 @@ export function DeduplicationView() {
                     onClick={() => setShowArchiveConfirm(true)}
                     disabled={archiveMutation.isPending}
                   >
-                    <span className="material-symbols-outlined">archive</span>
+                    <Icon name="box-archive" />
                     {archiveMutation.isPending
                       ? 'Archiving...'
                       : `Archive (${selectedContactIds.size})`}
@@ -338,7 +347,7 @@ export function DeduplicationView() {
                     onClick={() => setShowDeleteConfirm(true)}
                     disabled={deleteMutation.isPending}
                   >
-                    <span className="material-symbols-outlined">delete</span>
+                    <Icon name="trash" />
                     {deleteMutation.isPending
                       ? 'Deleting...'
                       : `Delete (${selectedContactIds.size})`}
@@ -353,7 +362,7 @@ export function DeduplicationView() {
                   onClick={() => setShowMergeAllConfirm(true)}
                   disabled={mergeMutation.isPending || mergeAllProgress !== null || mergeAllGlobalProgress !== null}
                 >
-                  <span className="material-symbols-outlined">merge</span>
+                  <Icon name="code-merge" />
                   {mergeAllProgress
                     ? `Merging ${mergeAllProgress.current}/${mergeAllProgress.total}...`
                     : `Merge Page (${visibleCount})`}
@@ -363,7 +372,7 @@ export function DeduplicationView() {
                   onClick={() => setShowMergeAllGlobalConfirm(true)}
                   disabled={mergeMutation.isPending || mergeAllProgress !== null || mergeAllGlobalProgress !== null}
                 >
-                  <span className="material-symbols-outlined">merge_type</span>
+                  <Icon name="code-merge" />
                   {mergeAllGlobalProgress
                     ? `Merging ${mergeAllGlobalProgress.current}/${mergeAllGlobalProgress.total}...`
                     : `Merge All (${totalGroups})`}
@@ -377,7 +386,7 @@ export function DeduplicationView() {
       <div className="dedup-content">
         {isDuplicatesLoading ? (
           <div className="dedup-loading">
-            <span className="material-symbols-outlined spinning">sync</span>
+            <Icon name="arrows-rotate" className="spinning" />
             <p>Finding duplicates...</p>
           </div>
         ) : (
@@ -400,7 +409,7 @@ export function DeduplicationView() {
 
       {undoState && (
         <div className="undo-toast">
-          <span className="material-symbols-outlined">check_circle</span>
+          <Icon name="circle-check" />
           <span className="message">{undoState.message}</span>
           <button
             className="dismiss"
@@ -409,7 +418,7 @@ export function DeduplicationView() {
               setUndoState(null);
             }}
           >
-            <span className="material-symbols-outlined">close</span>
+            <Icon name="xmark" />
           </button>
         </div>
       )}

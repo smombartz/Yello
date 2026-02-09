@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { Icon } from './Icon';
 import {
   useUserProfile,
   useUpdateUserProfile,
@@ -19,17 +20,12 @@ import type {
   ContactSearchResult,
 } from '../api/types';
 import { Avatar } from './Avatar';
-import { MobileHeader } from './MobileHeader';
+import type { OutletContext } from './Layout';
 import {
   EditableField,
   EditableArrayItem,
 } from './ContactFormSections';
 import { formatBirthday, getZodiacSign } from '../utils/contactFormatters';
-
-interface OutletContext {
-  setModalOpen: (open: boolean) => void;
-  isMobile: boolean;
-}
 
 // Default visibility settings - all fields hidden by default for privacy
 function getDefaultVisibility(): ProfileVisibility {
@@ -117,9 +113,7 @@ function VisibilityToggle({
       title={visible ? 'Visible on public card' : 'Hidden from public card'}
       disabled={disabled}
     >
-      <span className="material-symbols-outlined">
-        {visible ? 'visibility' : 'visibility_off'}
-      </span>
+      <Icon name={visible ? 'eye' : 'eye-slash'} />
     </button>
   );
 }
@@ -132,7 +126,7 @@ function PublicCardPreview({ form, isPublic }: { form: FormState; isPublic: bool
     return (
       <div className="public-card-preview disabled">
         <div className="preview-disabled-message">
-          <span className="material-symbols-outlined">visibility_off</span>
+          <Icon name="eye-slash" />
           <p>Your public contact card is currently disabled.</p>
           <p>Enable it using the toggle above to see a preview.</p>
         </div>
@@ -185,13 +179,13 @@ function PublicCardPreview({ form, isPublic }: { form: FormState; isPublic: bool
         <div className="preview-contact-info">
           {visibleEmails.map((email, i) => (
             <div key={`email-${i}`} className="preview-item">
-              <span className="material-symbols-outlined">mail</span>
+              <Icon name="envelope" />
               <span>{email.email}</span>
             </div>
           ))}
           {visiblePhones.map((phone, i) => (
             <div key={`phone-${i}`} className="preview-item">
-              <span className="material-symbols-outlined">call</span>
+              <Icon name="phone" />
               <span>{phone.phoneDisplay}</span>
             </div>
           ))}
@@ -200,7 +194,7 @@ function PublicCardPreview({ form, isPublic }: { form: FormState; isPublic: bool
             if (!parts.length) return null;
             return (
               <div key={`addr-${i}`} className="preview-item">
-                <span className="material-symbols-outlined">location_on</span>
+                <Icon name="location-dot" />
                 <span>{parts.join(', ')}</span>
               </div>
             );
@@ -211,22 +205,22 @@ function PublicCardPreview({ form, isPublic }: { form: FormState; isPublic: bool
         <div className="preview-social">
           {visibility.website && form.website && (
             <a href={form.website} target="_blank" rel="noopener noreferrer" className="preview-social-link">
-              <span className="material-symbols-outlined">language</span>
+              <Icon name="globe" />
             </a>
           )}
           {visibility.linkedin && form.linkedin && (
             <a href={form.linkedin} target="_blank" rel="noopener noreferrer" className="preview-social-link">
-              <span className="material-symbols-outlined">work</span>
+              <Icon name="linkedin" style="brands" />
             </a>
           )}
           {visibility.instagram && form.instagram && (
             <a href={`https://instagram.com/${form.instagram}`} target="_blank" rel="noopener noreferrer" className="preview-social-link">
-              <span className="material-symbols-outlined">photo_camera</span>
+              <Icon name="camera" />
             </a>
           )}
           {visibility.whatsapp && form.whatsapp && (
             <a href={`https://wa.me/${form.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="preview-social-link">
-              <span className="material-symbols-outlined">chat</span>
+              <Icon name="whatsapp" style="brands" />
             </a>
           )}
         </div>
@@ -234,7 +228,7 @@ function PublicCardPreview({ form, isPublic }: { form: FormState; isPublic: bool
         {/* Birthday */}
         {visibility.birthday && form.birthday && (
           <div className="preview-birthday">
-            <span className="material-symbols-outlined">cake</span>
+            <Icon name="cake-candles" />
             <span>{formatBirthday(form.birthday)}</span>
           </div>
         )}
@@ -262,7 +256,7 @@ function ContactSearchAutocomplete({
   return (
     <div className="contact-search-autocomplete">
       <div className="search-input-wrapper">
-        <span className="material-symbols-outlined">search</span>
+        <Icon name="magnifying-glass" />
         <input
           ref={inputRef}
           type="text"
@@ -272,7 +266,7 @@ function ContactSearchAutocomplete({
           className="search-input"
         />
         <button type="button" onClick={onCancel} className="cancel-btn">
-          <span className="material-symbols-outlined">close</span>
+          <Icon name="xmark" />
         </button>
       </div>
 
@@ -331,7 +325,7 @@ function UnlinkedProfileState({
   return (
     <div className="unlinked-profile-state">
       <div className="setup-icon">
-        <span className="material-symbols-outlined">person_add</span>
+        <Icon name="user-plus" />
       </div>
       <h2>Set Up Your Profile</h2>
       <p>Link your profile to a contact card to share your information publicly.</p>
@@ -339,7 +333,7 @@ function UnlinkedProfileState({
       <div className="setup-options">
         <button type="button" className="setup-option" onClick={onConnect}>
           <div className="option-icon">
-            <span className="material-symbols-outlined">link</span>
+            <Icon name="link" />
           </div>
           <div className="option-content">
             <strong>Connect to Existing Contact</strong>
@@ -350,7 +344,7 @@ function UnlinkedProfileState({
         {!showCreateInput ? (
           <button type="button" className="setup-option" onClick={() => setShowCreateInput(true)}>
             <div className="option-icon">
-              <span className="material-symbols-outlined">add_circle</span>
+              <Icon name="circle-plus" />
             </div>
             <div className="option-content">
               <strong>Create New Profile</strong>
@@ -416,7 +410,7 @@ function LinkedProfileHeader({
           className="unlink-btn"
           onClick={() => setShowConfirmUnlink(true)}
         >
-          <span className="material-symbols-outlined">link_off</span>
+          <Icon name="link-slash" />
           Unlink
         </button>
       ) : (
@@ -437,7 +431,7 @@ function LinkedProfileHeader({
 }
 
 export function UserProfilePage() {
-  const { isMobile } = useOutletContext<OutletContext>();
+  const { setHeaderConfig, isMobile } = useOutletContext<OutletContext>();
   const { user } = useAuth();
   const { data: profile, isLoading } = useUserProfile();
   const updateProfileMutation = useUpdateUserProfile();
@@ -447,10 +441,14 @@ export function UserProfilePage() {
 
   const [form, setForm] = useState<FormState>(getInitialFormState);
   const [hasChanges, setHasChanges] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [, setSaveSuccess] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConnectSearch, setShowConnectSearch] = useState(false);
+
+  useEffect(() => {
+    setHeaderConfig({ title: 'Profile' });
+  }, [setHeaderConfig]);
 
   // Sync form when profile data loads from server
   // This is a legitimate pattern for syncing external (server) data to local form state
@@ -668,15 +666,6 @@ export function UserProfilePage() {
   if (showConnectSearch) {
     return (
       <>
-        {isMobile ? (
-          <MobileHeader title="Connect to Contact" />
-        ) : (
-          <header className="top-header">
-            <div className="page-header">
-              <h1>Connect to Contact</h1>
-            </div>
-          </header>
-        )}
         <div className="page-content">
           <ContactSearchAutocomplete
             onSelect={handleLinkContact}
@@ -692,19 +681,10 @@ export function UserProfilePage() {
   if (!profile?.linkedContactId) {
     return (
       <>
-        {isMobile ? (
-          <MobileHeader title="Profile" />
-        ) : (
-          <header className="top-header">
-            <div className="page-header">
-              <h1>Profile</h1>
-            </div>
-          </header>
-        )}
         <div className="page-content">
           {error && (
             <div className="edit-error">
-              <span className="material-symbols-outlined">error</span>
+              <Icon name="circle-exclamation" />
               {error}
             </div>
           )}
@@ -722,43 +702,6 @@ export function UserProfilePage() {
   // Linked state - show full profile editor
   return (
     <>
-      {isMobile ? (
-        <MobileHeader title="Profile" />
-      ) : (
-        <header className="top-header">
-          <div className="page-header">
-            <h1>Profile</h1>
-          </div>
-          <div className="header-actions">
-            {hasChanges && (
-              <button
-                className="primary-button"
-                onClick={handleSave}
-                disabled={updateProfileMutation.isPending}
-              >
-                {updateProfileMutation.isPending ? (
-                  <>
-                    <span className="material-symbols-outlined spinning">sync</span>
-                    <span>Saving...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined">save</span>
-                    <span>Save Changes</span>
-                  </>
-                )}
-              </button>
-            )}
-            {saveSuccess && (
-              <span className="save-success">
-                <span className="material-symbols-outlined">check_circle</span>
-                Saved
-              </span>
-            )}
-          </div>
-        </header>
-      )}
-
       <div className="page-content">
         <div className="profile-page-layout">
           {/* Left panel: Edit form */}
@@ -766,7 +709,7 @@ export function UserProfilePage() {
             {/* Error message */}
             {error && (
               <div className="edit-error">
-                <span className="material-symbols-outlined">error</span>
+                <Icon name="circle-exclamation" />
                 {error}
               </div>
             )}
@@ -783,7 +726,7 @@ export function UserProfilePage() {
             <div className="profile-section public-card-controls">
               <div className="public-toggle-row">
                 <div className="public-toggle-label">
-                  <span className="material-symbols-outlined">public</span>
+                  <Icon name="globe" />
                   <div>
                     <strong>Make my contact card public</strong>
                     <p>Share your contact info with a public link</p>
@@ -805,7 +748,7 @@ export function UserProfilePage() {
                   className="hide-all-btn"
                   onClick={hideAllVisibility}
                 >
-                  <span className="material-symbols-outlined">visibility_off</span>
+                  <Icon name="eye-slash" />
                   Hide All Fields
                 </button>
               )}
@@ -813,7 +756,7 @@ export function UserProfilePage() {
               {form.isPublic && profile?.publicUrl && (
                 <div className="public-url-row">
                   <div className="public-url-display">
-                    <span className="material-symbols-outlined">link</span>
+                    <Icon name="link" />
                     <code>{profile.publicUrl}</code>
                   </div>
                   <div className="public-url-actions">
@@ -824,7 +767,7 @@ export function UserProfilePage() {
                       className="view-card-btn"
                       title="View public card"
                     >
-                      <span className="material-symbols-outlined">open_in_new</span>
+                      <Icon name="arrow-up-right-from-square" />
                     </a>
                     <button
                       type="button"
@@ -832,9 +775,7 @@ export function UserProfilePage() {
                       onClick={handleCopyUrl}
                       title="Copy URL"
                     >
-                      <span className="material-symbols-outlined">
-                        {copySuccess ? 'check' : 'content_copy'}
-                      </span>
+                      <Icon name={copySuccess ? 'check' : 'copy'} />
                     </button>
                   </div>
                 </div>
@@ -941,7 +882,7 @@ export function UserProfilePage() {
                 {form.emails.map((email, i) => (
                   <div key={`email-${i}`} className="profile-field-row">
                     <EditableArrayItem onRemove={() => removeEmail(i)}>
-                      <span className="material-symbols-outlined">mail</span>
+                      <Icon name="envelope" />
                       <div className="edit-field-group">
                         <EditableField
                           value={email.email}
@@ -966,7 +907,7 @@ export function UserProfilePage() {
                   </div>
                 ))}
                 <button type="button" className="add-item-btn" onClick={addEmail}>
-                  <span className="material-symbols-outlined">add</span>
+                  <Icon name="plus" />
                   Add Email
                 </button>
               </div>
@@ -977,7 +918,7 @@ export function UserProfilePage() {
                 {form.phones.map((phone, i) => (
                   <div key={`phone-${i}`} className="profile-field-row">
                     <EditableArrayItem onRemove={() => removePhone(i)}>
-                      <span className="material-symbols-outlined">call</span>
+                      <Icon name="phone" />
                       <div className="edit-field-group">
                         <EditableField
                           value={phone.phoneDisplay}
@@ -1001,7 +942,7 @@ export function UserProfilePage() {
                   </div>
                 ))}
                 <button type="button" className="add-item-btn" onClick={addPhone}>
-                  <span className="material-symbols-outlined">add</span>
+                  <Icon name="plus" />
                   Add Phone
                 </button>
               </div>
@@ -1012,7 +953,7 @@ export function UserProfilePage() {
                 {form.addresses.map((addr, i) => (
                   <div key={`addr-${i}`} className="profile-field-row address-row">
                     <EditableArrayItem onRemove={() => removeAddress(i)}>
-                      <span className="material-symbols-outlined">location_on</span>
+                      <Icon name="location-dot" />
                       <div className="edit-field-group address-fields">
                         <EditableField
                           value={addr.street || ''}
@@ -1060,7 +1001,7 @@ export function UserProfilePage() {
                   </div>
                 ))}
                 <button type="button" className="add-item-btn" onClick={addAddress}>
-                  <span className="material-symbols-outlined">add</span>
+                  <Icon name="plus" />
                   Add Address
                 </button>
               </div>
@@ -1144,7 +1085,7 @@ export function UserProfilePage() {
                 {form.otherSocialLinks.map((link, i) => (
                   <div key={`social-${i}`} className="profile-field-row">
                     <EditableArrayItem onRemove={() => removeSocialLink(i)}>
-                      <span className="material-symbols-outlined">link</span>
+                      <Icon name="link" />
                       <div className="edit-field-group">
                         <EditableField
                           value={link.platform}
@@ -1173,7 +1114,7 @@ export function UserProfilePage() {
                   </div>
                 ))}
                 <button type="button" className="add-item-btn" onClick={addSocialLink}>
-                  <span className="material-symbols-outlined">add</span>
+                  <Icon name="plus" />
                   Add Social Link
                 </button>
               </div>
@@ -1306,7 +1247,7 @@ const profileStyles = `
     border-radius: 50%;
   }
 
-  .setup-icon .material-symbols-outlined {
+  .setup-icon i {
     font-size: 40px;
     color: var(--ds-color-primary);
   }
@@ -1356,7 +1297,7 @@ const profileStyles = `
     flex-shrink: 0;
   }
 
-  .option-icon .material-symbols-outlined {
+  .option-icon i {
     font-size: 24px;
     color: var(--ds-color-primary);
   }
@@ -1495,7 +1436,7 @@ const profileStyles = `
     border-bottom: 1px solid var(--ds-border-color);
   }
 
-  .search-input-wrapper .material-symbols-outlined {
+  .search-input-wrapper i {
     color: var(--ds-text-secondary);
   }
 
@@ -1634,7 +1575,7 @@ const profileStyles = `
     gap: 12px;
   }
 
-  .public-toggle-label .material-symbols-outlined {
+  .public-toggle-label i {
     font-size: 28px;
     color: var(--ds-color-primary);
   }
@@ -1671,7 +1612,7 @@ const profileStyles = `
     background: rgba(102, 126, 234, 0.05);
   }
 
-  .hide-all-btn .material-symbols-outlined {
+  .hide-all-btn i {
     font-size: 18px;
   }
 
@@ -1952,7 +1893,7 @@ const profileStyles = `
     color: var(--ds-text-secondary);
   }
 
-  .preview-disabled-message .material-symbols-outlined {
+  .preview-disabled-message i {
     font-size: 48px;
     margin-bottom: 16px;
     opacity: 0.5;
@@ -2012,7 +1953,7 @@ const profileStyles = `
     font-size: 14px;
   }
 
-  .preview-item .material-symbols-outlined {
+  .preview-item i {
     font-size: 18px;
     color: var(--ds-text-secondary);
   }
@@ -2138,7 +2079,7 @@ const profileStyles = `
     border-radius: 8px;
   }
 
-  .editable-array-item .material-symbols-outlined {
+  .editable-array-item i {
     margin-top: 8px;
     color: var(--ds-text-secondary);
   }

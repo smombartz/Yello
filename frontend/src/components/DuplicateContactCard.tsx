@@ -1,3 +1,4 @@
+import { Icon } from './Icon';
 import { Avatar } from './Avatar';
 import type { ContactDetail, ContactAddress, ContactSocialProfile, DeduplicationMode } from '../api/types';
 import { getCountryFlag, getCountryName } from '../lib/phoneUtils';
@@ -74,7 +75,7 @@ export function DuplicateContactCard({
             key={idx}
             className={`duplicate-card-field ${isMatchingEmail(email.email, matchingValue) ? 'matching' : ''}`}
           >
-            <span className="material-symbols-outlined">mail</span>
+            <Icon name="envelope" />
             <span className="value">{email.email}</span>
           </div>
         ))}
@@ -88,7 +89,7 @@ export function DuplicateContactCard({
               key={idx}
               className={`duplicate-card-field ${isMatchingPhone(phone.phone, matchingValue) ? 'matching' : ''}`}
             >
-              <span className="material-symbols-outlined">phone</span>
+              <Icon name="phone" />
               <span className="value phone-display">
                 {flag && <span className="phone-flag" title={countryName}>{flag}</span>}
                 <span>{phone.phoneDisplay}</span>
@@ -103,7 +104,7 @@ export function DuplicateContactCard({
             key={idx}
             className={`duplicate-card-field ${isMatchingAddressSingle(addr, matchingValue) ? 'matching' : ''}`}
           >
-            <span className="material-symbols-outlined">location_on</span>
+            <Icon name="location-dot" />
             <span className="value">{formatSingleAddress(addr)}</span>
           </div>
         ))}
@@ -114,7 +115,7 @@ export function DuplicateContactCard({
             key={idx}
             className={`duplicate-card-field ${isMatchingSocialSingle(social, matchingValue) ? 'matching' : ''}`}
           >
-            <span className="material-symbols-outlined">share</span>
+            <Icon name="share-nodes" />
             <span className="value">{social.platform}: @{social.username}</span>
           </div>
         ))}
@@ -128,7 +129,7 @@ export function DuplicateContactCard({
                 key={`email-${idx}`}
                 className={`duplicate-card-field ${isFieldTypeMatching('email') ? 'matching' : ''}`}
               >
-                <span className="material-symbols-outlined">mail</span>
+                <Icon name="envelope" />
                 <span className="value">{email.email}</span>
               </div>
             ))}
@@ -142,7 +143,7 @@ export function DuplicateContactCard({
                   key={`phone-${idx}`}
                   className={`duplicate-card-field ${isFieldTypeMatching('phone') ? 'matching' : ''}`}
                 >
-                  <span className="material-symbols-outlined">phone</span>
+                  <Icon name="phone" />
                   <span className="value phone-display">
                     {flag && <span className="phone-flag" title={countryName}>{flag}</span>}
                     <span>{phone.phoneDisplay}</span>
@@ -157,7 +158,7 @@ export function DuplicateContactCard({
                 key={`social-${idx}`}
                 className={`duplicate-card-field ${isFieldTypeMatching('social') ? 'matching' : ''}`}
               >
-                <span className="material-symbols-outlined">share</span>
+                <Icon name="share-nodes" />
                 <span className="value">{social.platform}: @{social.username}</span>
               </div>
             ))}

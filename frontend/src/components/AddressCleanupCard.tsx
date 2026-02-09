@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { Icon } from './Icon';
 import type { AddressCleanupContact, AddressFix, DuplicateAddressConfidence } from '../api/types';
 import { formatAddress } from '../lib/addressUtils';
 
@@ -108,7 +109,7 @@ export function AddressCleanupCard({
             />
           ) : (
             <div className="address-cleanup-avatar placeholder">
-              <span className="material-symbols-outlined">person</span>
+              <Icon name="user" />
             </div>
           )}
           <div className="address-cleanup-contact-details">
@@ -128,7 +129,7 @@ export function AddressCleanupCard({
           <div key={group.fingerprint} className="address-group">
             {group.addresses.length > 1 && (
               <div className="address-group-label">
-                <span className="material-symbols-outlined">content_copy</span>
+                <Icon name="copy" />
                 Duplicate addresses - select one to keep:
                 {confidenceInfo && (
                   <span className={`confidence-badge ${confidenceInfo.className}`}>
@@ -139,7 +140,7 @@ export function AddressCleanupCard({
             )}
             {group.addresses.length === 1 && group.addresses[0].issues.includes('no_street') && (
               <div className="address-group-label">
-                <span className="material-symbols-outlined">warning</span>
+                <Icon name="triangle-exclamation" />
                 Address with "No street" artifact - will be removed:
               </div>
             )}
@@ -156,9 +157,10 @@ export function AddressCleanupCard({
                   >
                     {!isOnlyNoStreet && (
                       <div className="address-radio">
-                        <span className="material-symbols-outlined">
-                          {isSelected ? 'radio_button_checked' : 'radio_button_unchecked'}
-                        </span>
+                        {isSelected
+                          ? <Icon name="circle-dot" />
+                          : <Icon name="circle" style="regular" />
+                        }
                       </div>
                     )}
                     <div className="address-content">
@@ -175,7 +177,7 @@ export function AddressCleanupCard({
                         })}
                         {addr.isRecommended && (
                           <span className="address-recommended">
-                            <span className="material-symbols-outlined">recommend</span>
+                            <Icon name="thumbs-up" />
                             Recommended
                           </span>
                         )}
@@ -203,7 +205,7 @@ export function AddressCleanupCard({
           onClick={handleApply}
           disabled={isApplying}
         >
-          <span className="material-symbols-outlined">check</span>
+          <Icon name="check" />
           {isApplying ? 'Applying...' : 'Apply Changes'}
         </button>
       </div>

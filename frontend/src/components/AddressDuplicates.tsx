@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { Icon } from './Icon';
 import { Pagination } from './Pagination';
 import { AddressCleanupCard } from './AddressCleanupCard';
 import {
@@ -111,7 +112,7 @@ export function AddressDuplicates() {
   if (isLoading) {
     return (
       <div className="duplicates-loading">
-        <span className="material-symbols-outlined spinning">sync</span>
+        <Icon name="arrows-rotate" className="spinning" />
         <p>Finding duplicate addresses...</p>
       </div>
     );
@@ -155,7 +156,7 @@ export function AddressDuplicates() {
             onClick={() => setShowFixAllConfirm(true)}
             disabled={fixMutation.isPending || isFixingAll || isEmpty}
           >
-            <span className="material-symbols-outlined">auto_fix_high</span>
+            <Icon name="wand-magic-sparkles" />
             {isFixingAll ? 'Fixing...' : `Fix All Contacts (${total})`}
           </button>
         </div>
@@ -163,7 +164,7 @@ export function AddressDuplicates() {
 
       {isEmpty ? (
         <div className="duplicates-empty">
-          <span className="material-symbols-outlined">check_circle</span>
+          <Icon name="circle-check" />
           <p>No duplicate addresses found{confidenceFilter !== 'all' ? ` for "${confidenceFilter}" confidence` : ''}</p>
         </div>
       ) : (
@@ -191,7 +192,7 @@ export function AddressDuplicates() {
 
       {toast && (
         <div className="undo-toast">
-          <span className="material-symbols-outlined">check_circle</span>
+          <Icon name="circle-check" />
           <span className="message">{toast.message}</span>
           <button
             className="dismiss"
@@ -200,7 +201,7 @@ export function AddressDuplicates() {
               setToast(null);
             }}
           >
-            <span className="material-symbols-outlined">close</span>
+            <Icon name="xmark" />
           </button>
         </div>
       )}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ContactDetail, ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, UpdateContactRequest } from '../api/types';
 import { useUpdateContact } from '../api/hooks';
+import { Icon } from './Icon';
 import {
   EditableField,
   ContactInfoSection,
@@ -225,12 +226,12 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
               >
                 {updateContactMutation.isPending ? (
                   <>
-                    <span className="material-symbols-outlined spinning">sync</span>
+                    <Icon name="arrows-rotate" className="spinning" />
                     Saving...
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined">save</span>
+                    <Icon name="floppy-disk" />
                     Save
                   </>
                 )}
@@ -238,7 +239,7 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
             </>
           ) : (
             <button className="action-button" onClick={handleEnterEditMode}>
-              <span className="material-symbols-outlined">edit</span>
+              <Icon name="pen-to-square" />
               Edit
             </button>
           )}
@@ -248,7 +249,7 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
       {/* Error message */}
       {error && (
         <div className="edit-error">
-          <span className="material-symbols-outlined">error</span>
+          <Icon name="circle-exclamation" />
           {error}
         </div>
       )}

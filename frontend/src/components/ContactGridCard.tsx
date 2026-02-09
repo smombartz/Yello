@@ -1,5 +1,6 @@
 import type { ContactListItem } from '../api/types';
 import { Avatar } from './Avatar';
+import { Icon } from './Icon';
 
 interface ContactGridCardProps {
   contact: ContactListItem;
@@ -38,13 +39,13 @@ export function ContactGridCard({
       <div className="contact-grid-card-details">
         {contact.primaryEmail && (
           <div className="contact-grid-card-detail">
-            <span className="material-symbols-outlined">mail</span>
+            <Icon name="envelope" />
             <span className="value">{contact.primaryEmail}</span>
           </div>
         )}
         {contact.primaryPhone && (
           <div className="contact-grid-card-detail">
-            <span className="material-symbols-outlined">call</span>
+            <Icon name="phone" />
             <span className="value">{contact.primaryPhone}</span>
           </div>
         )}

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { Icon } from './Icon';
 import { Pagination } from './Pagination';
 import {
   useNormalizeContacts,
@@ -60,7 +61,7 @@ function NormalizeCard({ contact, onRemove, onSkip, isRemoving }: NormalizeCardP
             />
           ) : (
             <div className="normalize-avatar placeholder">
-              <span className="material-symbols-outlined">person</span>
+              <Icon name="user" />
             </div>
           )}
           <div className="normalize-contact-details">
@@ -91,7 +92,7 @@ function NormalizeCard({ contact, onRemove, onSkip, isRemoving }: NormalizeCardP
                 disabled={isRemoving}
                 title="Remove this address"
               >
-                <span className="material-symbols-outlined">delete</span>
+                <Icon name="trash" />
               </button>
             </div>
           );
@@ -111,7 +112,7 @@ function NormalizeCard({ contact, onRemove, onSkip, isRemoving }: NormalizeCardP
           onClick={handleRemoveAll}
           disabled={isRemoving}
         >
-          <span className="material-symbols-outlined">delete</span>
+          <Icon name="trash" />
           {isRemoving ? 'Removing...' : `Remove All (${issueCount})`}
         </button>
       </div>
@@ -200,7 +201,7 @@ export function AddressNormalize() {
   if (isLoading) {
     return (
       <div className="normalize-loading">
-        <span className="material-symbols-outlined spinning">sync</span>
+        <Icon name="arrows-rotate" className="spinning" />
         <p>Finding junk addresses...</p>
       </div>
     );
@@ -209,7 +210,7 @@ export function AddressNormalize() {
   if (total === 0 && !isFetching) {
     return (
       <div className="normalize-empty">
-        <span className="material-symbols-outlined">check_circle</span>
+        <Icon name="circle-check" />
         <p>No junk addresses found</p>
       </div>
     );
@@ -233,7 +234,7 @@ export function AddressNormalize() {
           onClick={() => setShowFixAllConfirm(true)}
           disabled={removeMutation.isPending || isFixingAll}
         >
-          <span className="material-symbols-outlined">auto_fix_high</span>
+          <Icon name="wand-magic-sparkles" />
           {isFixingAll ? 'Removing...' : `Remove All Junk (${total})`}
         </button>
       </div>
@@ -261,7 +262,7 @@ export function AddressNormalize() {
 
       {toast && (
         <div className="undo-toast">
-          <span className="material-symbols-outlined">check_circle</span>
+          <Icon name="circle-check" />
           <span className="message">{toast.message}</span>
           <button
             className="dismiss"
@@ -270,7 +271,7 @@ export function AddressNormalize() {
               setToast(null);
             }}
           >
-            <span className="material-symbols-outlined">close</span>
+            <Icon name="xmark" />
           </button>
         </div>
       )}

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icon } from './Icon';
 import { DuplicateContactCard } from './DuplicateContactCard';
 import type { DuplicateGroup as DuplicateGroupType, ConfidenceLevel } from '../api/types';
 
@@ -75,17 +76,17 @@ export function DuplicateGroup({
       <div className="duplicate-group-header">
         <div className="duplicate-group-info">
           <span className="match-indicator">
-            <span className="material-symbols-outlined">
-              {group.matchingField === 'email'
-                ? 'mail'
+            <Icon name={
+              group.matchingField === 'email'
+                ? 'envelope'
                 : group.matchingField === 'phone'
                   ? 'phone'
                   : group.matchingField === 'address'
-                    ? 'location_on'
+                    ? 'location-dot'
                     : group.matchingField === 'recommended'
-                      ? 'auto_awesome'
-                      : 'share'}
-            </span>
+                      ? 'wand-magic-sparkles'
+                      : 'share-nodes'
+            } />
             <span className="match-value">
               {formatMatchingValue(group.matchingValue, group.matchingField, group.matchedCriteria)}
             </span>
