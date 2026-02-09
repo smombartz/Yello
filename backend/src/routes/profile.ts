@@ -119,22 +119,22 @@ function generateSlug(): string {
   return slug;
 }
 
-// Get default visibility settings
+// Get default visibility settings - all fields hidden by default for privacy
 function getDefaultVisibility(): ProfileVisibility {
   return {
-    avatar: true,
-    firstName: true,
-    lastName: true,
-    tagline: true,
-    company: true,
-    title: true,
+    avatar: false,
+    firstName: false,
+    lastName: false,
+    tagline: false,
+    company: false,
+    title: false,
     emails: {},
     phones: {},
     addresses: {},
-    website: true,
-    linkedin: true,
-    instagram: true,
-    whatsapp: true,
+    website: false,
+    linkedin: false,
+    instagram: false,
+    whatsapp: false,
     otherSocialLinks: {},
     birthday: false,
   };
@@ -890,14 +890,14 @@ export default async function profileRoutes(
       tagline: visibility.tagline ? fullProfile.tagline : null,
       company: visibility.company ? fullProfile.company : null,
       title: visibility.title ? fullProfile.title : null,
-      emails: fullProfile.emails.filter(e => visibility.emails[e.email] !== false),
-      phones: fullProfile.phones.filter(p => visibility.phones[p.phone] !== false),
-      addresses: fullProfile.addresses.filter(a => a.id && visibility.addresses[a.id] !== false),
+      emails: fullProfile.emails.filter(e => visibility.emails[e.email] === true),
+      phones: fullProfile.phones.filter(p => visibility.phones[p.phone] === true),
+      addresses: fullProfile.addresses.filter(a => a.id && visibility.addresses[a.id] === true),
       website: visibility.website ? fullProfile.website : null,
       linkedin: visibility.linkedin ? fullProfile.linkedin : null,
       instagram: visibility.instagram ? fullProfile.instagram : null,
       whatsapp: visibility.whatsapp ? fullProfile.whatsapp : null,
-      otherSocialLinks: fullProfile.otherSocialLinks.filter(s => s.id && visibility.otherSocialLinks[s.id] !== false),
+      otherSocialLinks: fullProfile.otherSocialLinks.filter(s => s.id && visibility.otherSocialLinks[s.id] === true),
       birthday: visibility.birthday ? fullProfile.birthday : null,
       notes: null, // Notes are always private
       visibility: getDefaultVisibility(), // Don't expose visibility settings

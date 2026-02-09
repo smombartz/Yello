@@ -31,22 +31,22 @@ interface OutletContext {
   isMobile: boolean;
 }
 
-// Default visibility settings
+// Default visibility settings - all fields hidden by default for privacy
 function getDefaultVisibility(): ProfileVisibility {
   return {
-    avatar: true,
-    firstName: true,
-    lastName: true,
-    tagline: true,
-    company: true,
-    title: true,
+    avatar: false,
+    firstName: false,
+    lastName: false,
+    tagline: false,
+    company: false,
+    title: false,
     emails: {},
     phones: {},
     addresses: {},
-    website: true,
-    linkedin: true,
-    instagram: true,
-    whatsapp: true,
+    website: false,
+    linkedin: false,
+    instagram: false,
+    whatsapp: false,
     otherSocialLinks: {},
     birthday: false,
   };
@@ -148,13 +148,13 @@ function PublicCardPreview({ form, isPublic }: { form: FormState; isPublic: bool
     .join(' ') || 'Anonymous';
 
   const visibleEmails = form.emails.filter(
-    (e) => visibility.emails[e.email] !== false
+    (e) => visibility.emails[e.email] === true
   );
   const visiblePhones = form.phones.filter(
-    (p) => visibility.phones[p.phone] !== false
+    (p) => visibility.phones[p.phone] === true
   );
   const visibleAddresses = form.addresses.filter(
-    (a) => a.id && visibility.addresses[a.id] !== false
+    (a) => a.id && visibility.addresses[a.id] === true
   );
 
   return (
@@ -499,6 +499,28 @@ export function UserProfilePage() {
     setSaveSuccess(false);
   }, []);
 
+  // Hide all visibility fields
+  const hideAllVisibility = useCallback(() => {
+    const newVisibility: ProfileVisibility = {
+      avatar: false,
+      firstName: false,
+      lastName: false,
+      tagline: false,
+      company: false,
+      title: false,
+      emails: Object.fromEntries(form.emails.map(e => [e.email, false])),
+      phones: Object.fromEntries(form.phones.map(p => [p.phone, false])),
+      addresses: Object.fromEntries(form.addresses.filter(a => a.id).map(a => [a.id!, false])),
+      website: false,
+      linkedin: false,
+      instagram: false,
+      whatsapp: false,
+      otherSocialLinks: Object.fromEntries(form.otherSocialLinks.filter(l => l.id).map(l => [l.id!, false])),
+      birthday: false,
+    };
+    updateForm('visibility', newVisibility);
+  }, [form.emails, form.phones, form.addresses, form.otherSocialLinks, updateForm]);
+
   // Save handler
   const handleSave = async () => {
     setError(null);
@@ -777,6 +799,17 @@ export function UserProfilePage() {
                 </label>
               </div>
 
+              {form.isPublic && (
+                <button
+                  type="button"
+                  className="hide-all-btn"
+                  onClick={hideAllVisibility}
+                >
+                  <span className="material-symbols-outlined">visibility_off</span>
+                  Hide All Fields
+                </button>
+              )}
+
               {form.isPublic && profile?.publicUrl && (
                 <div className="public-url-row">
                   <div className="public-url-display">
@@ -924,7 +957,7 @@ export function UserProfilePage() {
                       </div>
                     </EditableArrayItem>
                     <VisibilityToggle
-                      visible={form.visibility.emails[email.email] !== false}
+                      visible={form.visibility.emails[email.email] === true}
                       onChange={(v) =>
                         updateVisibility('emails', { ...form.visibility.emails, [email.email]: v })
                       }
@@ -959,7 +992,7 @@ export function UserProfilePage() {
                       </div>
                     </EditableArrayItem>
                     <VisibilityToggle
-                      visible={form.visibility.phones[phone.phone] !== false}
+                      visible={form.visibility.phones[phone.phone] === true}
                       onChange={(v) =>
                         updateVisibility('phones', { ...form.visibility.phones, [phone.phone]: v })
                       }
@@ -1018,7 +1051,7 @@ export function UserProfilePage() {
                       </div>
                     </EditableArrayItem>
                     <VisibilityToggle
-                      visible={addr.id ? form.visibility.addresses[addr.id] !== false : true}
+                      visible={addr.id ? form.visibility.addresses[addr.id] === true : false}
                       onChange={(v) =>
                         addr.id && updateVisibility('addresses', { ...form.visibility.addresses, [addr.id]: v })
                       }
@@ -1131,7 +1164,7 @@ export function UserProfilePage() {
                       </div>
                     </EditableArrayItem>
                     <VisibilityToggle
-                      visible={link.id ? form.visibility.otherSocialLinks[link.id] !== false : true}
+                      visible={link.id ? form.visibility.otherSocialLinks[link.id] === true : false}
                       onChange={(v) =>
                         link.id && updateVisibility('otherSocialLinks', { ...form.visibility.otherSocialLinks, [link.id]: v })
                       }
@@ -1615,6 +1648,31 @@ const profileStyles = `
     margin: 2px 0 0 0;
     font-size: 13px;
     color: var(--ds-text-secondary);
+  }
+
+  .hide-all-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 16px;
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--ds-border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--ds-text-secondary);
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .hide-all-btn:hover {
+    border-color: var(--ds-color-primary);
+    color: var(--ds-color-primary);
+    background: rgba(102, 126, 234, 0.05);
+  }
+
+  .hide-all-btn .material-symbols-outlined {
+    font-size: 18px;
   }
 
   .toggle-switch {

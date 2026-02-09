@@ -1398,6 +1398,19 @@ a.nav-item {
   font-size: 0.75rem;
   color: var(--ds-text-secondary);
   text-transform: capitalize;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* Show type labels on hover */
+.expanded-item:hover .item-type,
+.expanded-item:focus-within .item-type {
+  opacity: 1;
+}
+
+/* Always show type labels in edit mode */
+.edit-section-content .item-type {
+  opacity: 1;
 }
 
 .metadata-section {
