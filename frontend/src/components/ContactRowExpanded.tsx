@@ -11,7 +11,8 @@ import {
   InstantMessagesSection,
   UrlsSection,
   RelatedPeopleSection,
-  NotesSection
+  NotesSection,
+  LinkedInSection
 } from './ContactFormSections';
 
 interface ContactRowExpandedProps {
@@ -169,6 +170,7 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
   const hasUrls = contact.urls?.length > 0;
   const hasRelatedPeople = contact.relatedPeople?.length > 0;
   const hasBirthday = !!contact.birthday;
+  const hasLinkedIn = !!contact.linkedinEnrichment;
 
   // Use edit form data when in edit mode
   const displayData = isEditMode && editForm ? {
@@ -307,8 +309,11 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
           )}
         </div>
 
-        {/* Right column: Social + URLs + Metadata */}
+        {/* Right column: LinkedIn + Social + URLs + Metadata */}
         <div className="expanded-column">
+          {hasLinkedIn && !isEditMode && (
+            <LinkedInSection enrichment={contact.linkedinEnrichment!} contactPhotoUrl={contact.photoUrl} />
+          )}
           {(hasSocial || isEditMode) && (
             <SocialLinksSection
               socialProfiles={displayData.socialProfiles}

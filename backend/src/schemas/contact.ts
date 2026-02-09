@@ -82,6 +82,24 @@ export const ContactRelatedPersonSchema = Type.Object({
   relationship: Type.Union([Type.String(), Type.Null()])
 });
 
+export const LinkedInEnrichmentSchema = Type.Object({
+  linkedinFirstName: Type.Union([Type.String(), Type.Null()]),
+  linkedinLastName: Type.Union([Type.String(), Type.Null()]),
+  headline: Type.Union([Type.String(), Type.Null()]),
+  about: Type.Union([Type.String(), Type.Null()]),
+  jobTitle: Type.Union([Type.String(), Type.Null()]),
+  companyName: Type.Union([Type.String(), Type.Null()]),
+  companyLinkedinUrl: Type.Union([Type.String(), Type.Null()]),
+  industry: Type.Union([Type.String(), Type.Null()]),
+  location: Type.Union([Type.String(), Type.Null()]),
+  country: Type.Union([Type.String(), Type.Null()]),
+  followersCount: Type.Union([Type.Number(), Type.Null()]),
+  education: Type.Union([Type.Array(Type.String()), Type.Null()]),
+  skills: Type.Union([Type.Array(Type.String()), Type.Null()]),
+  photoLinkedin: Type.Union([Type.String(), Type.Null()]),
+  enrichedAt: Type.Union([Type.String(), Type.Null()])
+});
+
 export const ContactListItemSchema = Type.Object({
   id: Type.Number(),
   displayName: Type.String(),
@@ -120,7 +138,8 @@ export const ContactDetailSchema = Type.Object({
   instantMessages: Type.Array(ContactInstantMessageSchema),
   urls: Type.Array(ContactUrlSchema),
   relatedPeople: Type.Array(ContactRelatedPersonSchema),
-  photoUrl: Type.Union([Type.String(), Type.Null()])
+  photoUrl: Type.Union([Type.String(), Type.Null()]),
+  linkedinEnrichment: Type.Union([LinkedInEnrichmentSchema, Type.Null()])
 });
 
 export const ContactCountResponseSchema = Type.Object({

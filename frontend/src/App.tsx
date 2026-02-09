@@ -9,6 +9,7 @@ import { ArchivedView } from './components/ArchivedView';
 import { GroupsView } from './components/GroupsView';
 import { MapView } from './components/MapView';
 import { SettingsView } from './components/SettingsView';
+import { EnrichView } from './components/EnrichView';
 import { UserProfilePage } from './components/UserProfilePage';
 import { DashboardView } from './components/DashboardView';
 import { LoginPage } from './components/LoginPage';
@@ -142,6 +143,7 @@ function AppRoutes() {
         <Route path="groups" element={<GroupsView />} />
         <Route path="map" element={<MapView />} />
         <Route path="settings" element={<SettingsView />} />
+        <Route path="enrich" element={<EnrichView />} />
         <Route path="profile" element={<UserProfilePage />} />
       </Route>
 

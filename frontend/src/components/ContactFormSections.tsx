@@ -1,4 +1,4 @@
-import type { ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson } from '../api/types';
+import type { ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, LinkedInEnrichment } from '../api/types';
 import { getCountryFlag, getCountryName } from '../lib/phoneUtils';
 import { formatAddress } from '../lib/addressUtils';
 import {
@@ -762,6 +762,139 @@ export function NotesSection({ notes, isEditMode, onNotesChange }: {
   return (
     <div className="notes-box">
       <div className="notes-content">{notes}</div>
+    </div>
+  );
+}
+
+// LinkedIn Section (read-only, displays enrichment data)
+export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: LinkedInEnrichment; contactPhotoUrl?: string | null }) {
+  const formatDate = (dateString: string | null): string => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // Show LinkedIn photo if available and different from contact's existing photo
+  const showLinkedInPhoto = enrichment.photoLinkedin && enrichment.photoLinkedin !== contactPhotoUrl;
+
+  return (
+    <div className="expanded-section linkedin-section">
+      <h4 className="section-header">
+        <svg className="linkedin-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+        </svg>
+        LinkedIn
+      </h4>
+      <div className="section-content linkedin-content">
+        {/* Profile photo from LinkedIn */}
+        {showLinkedInPhoto && (
+          <div className="linkedin-profile-photo">
+            <img
+              src={enrichment.photoLinkedin!}
+              alt="LinkedIn profile"
+              className="linkedin-avatar"
+              onError={(e) => {
+                // Hide image on error (expired URL, etc.)
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          </div>
+        )}
+
+        {/* Headline - prominently displayed */}
+        {enrichment.headline && (
+          <div className="linkedin-headline">{enrichment.headline}</div>
+        )}
+
+        {/* Job + Company */}
+        {(enrichment.jobTitle || enrichment.companyName) && (
+          <div className="expanded-item">
+            <span className="material-symbols-outlined">work</span>
+            <div className="expanded-item-content">
+              <span>
+                {enrichment.jobTitle}
+                {enrichment.jobTitle && enrichment.companyName && ' at '}
+                {enrichment.companyLinkedinUrl ? (
+                  <a href={enrichment.companyLinkedinUrl} target="_blank" rel="noopener noreferrer">
+                    {enrichment.companyName}
+                  </a>
+                ) : (
+                  enrichment.companyName
+                )}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Industry + Location */}
+        {(enrichment.industry || enrichment.location) && (
+          <div className="expanded-item">
+            <span className="material-symbols-outlined">location_on</span>
+            <div className="expanded-item-content">
+              <span>
+                {[enrichment.location, enrichment.industry].filter(Boolean).join(' · ')}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* About - collapsible if long */}
+        {enrichment.about && (
+          <div className="linkedin-about">
+            <details>
+              <summary>About</summary>
+              <p>{enrichment.about}</p>
+            </details>
+          </div>
+        )}
+
+        {/* Skills as tags */}
+        {enrichment.skills && enrichment.skills.length > 0 && (
+          <div className="linkedin-skills">
+            <div className="expanded-item">
+              <span className="material-symbols-outlined">verified</span>
+              <div className="expanded-item-content skills-list">
+                {enrichment.skills.map((skill, i) => (
+                  <span key={i} className="skill-tag">{skill}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Education */}
+        {enrichment.education && enrichment.education.length > 0 && (
+          <div className="expanded-item">
+            <span className="material-symbols-outlined">school</span>
+            <div className="expanded-item-content">
+              <ul className="education-list">
+                {enrichment.education.map((edu, i) => (
+                  <li key={i}>{edu}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Followers count */}
+        {enrichment.followersCount !== null && enrichment.followersCount > 0 && (
+          <div className="expanded-item">
+            <span className="material-symbols-outlined">group</span>
+            <div className="expanded-item-content">
+              <span>{enrichment.followersCount.toLocaleString()} followers</span>
+            </div>
+          </div>
+        )}
+
+        {/* Enriched date footer */}
+        <div className="linkedin-footer">
+          <span className="material-symbols-outlined">update</span>
+          <span>Enriched from LinkedIn {formatDate(enrichment.enrichedAt)}</span>
+        </div>
+      </div>
     </div>
   );
 }

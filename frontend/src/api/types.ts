@@ -69,6 +69,24 @@ export interface ContactRelatedPerson {
   relationship: string | null;
 }
 
+export interface LinkedInEnrichment {
+  linkedinFirstName: string | null;
+  linkedinLastName: string | null;
+  headline: string | null;
+  about: string | null;
+  jobTitle: string | null;
+  companyName: string | null;
+  companyLinkedinUrl: string | null;
+  industry: string | null;
+  location: string | null;
+  country: string | null;
+  followersCount: number | null;
+  education: string[] | null;
+  skills: string[] | null;
+  photoLinkedin: string | null;
+  enrichedAt: string | null;
+}
+
 export interface ContactDetail {
   id: number;
   firstName: string | null;
@@ -89,6 +107,7 @@ export interface ContactDetail {
   photoUrl: string | null;
   createdAt: string;
   updatedAt: string;
+  linkedinEnrichment: LinkedInEnrichment | null;
 }
 
 export interface ContactListResponse {
@@ -678,4 +697,35 @@ export interface UpdateUserProfileRequest {
   birthday?: string | null;
   notes?: string | null;
   visibility?: ProfileVisibility;
+}
+
+// LinkedIn Enrichment types
+export interface LinkedInEnrichmentSummary {
+  configured: boolean;
+  totalWithLinkedIn: number;
+  alreadyEnriched: number;
+  pendingEnrichment: number;
+}
+
+export interface LinkedInEnrichmentProgress {
+  current: number;
+  total: number;
+  succeeded: number;
+  failed: number;
+  currentContact?: string;
+}
+
+export interface EnrichedContactInfo {
+  contactId: number;
+  contactName: string;
+  headline: string | null;
+  jobTitle: string | null;
+  companyName: string | null;
+}
+
+export interface LinkedInEnrichmentResult {
+  succeeded: number;
+  failed: number;
+  errors: Array<{ contactId: number; contactName: string; reason: string }>;
+  enrichedContacts: EnrichedContactInfo[];
 }

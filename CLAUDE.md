@@ -99,6 +99,7 @@ SESSION_SECRET=<required for production>
 GOOGLE_CLIENT_ID=<OAuth>
 GOOGLE_CLIENT_SECRET=<OAuth>
 HERE_API_KEY=<for geocoding - get from developer.here.com>
+APOLLO_API_KEY=<for LinkedIn enrichment - get from apollo.io>
 ```
 
 ## Photo URL Construction

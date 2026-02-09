@@ -305,6 +305,9 @@ export function getDatabase(): DatabaseType {
     console.log('Token columns added successfully');
   }
 
+  // Migration: Create linkedin_enrichment table for storing LinkedIn profile data
+  runLinkedInEnrichmentMigration(db);
+
   // Migration: Populate profile_images from existing avatar_url
   const profileImagesMigrationNeeded = (() => {
     const usersWithAvatars = db.prepare(`
@@ -660,6 +663,56 @@ function migratePhoneFormats(database: DatabaseType): void {
 
   migrateAll();
   console.log(`Phone migration complete: ${updated} updated, ${failed} could not be parsed`);
+}
+
+/**
+ * Run LinkedIn enrichment migration
+ */
+export function runLinkedInEnrichmentMigration(database: DatabaseType): void {
+  // Check if linkedin_enrichment table exists
+  const tableExists = database.prepare(`
+    SELECT name FROM sqlite_master WHERE type='table' AND name='linkedin_enrichment'
+  `).get();
+
+  if (!tableExists) {
+    console.log('Running LinkedIn enrichment migration: creating linkedin_enrichment table...');
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS linkedin_enrichment (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        contact_id INTEGER NOT NULL UNIQUE REFERENCES contacts(id) ON DELETE CASCADE,
+        linkedin_first_name TEXT,
+        linkedin_last_name TEXT,
+        headline TEXT,
+        about TEXT,
+        job_title TEXT,
+        company_name TEXT,
+        company_linkedin_url TEXT,
+        industry TEXT,
+        country TEXT,
+        location TEXT,
+        followers_count INTEGER,
+        education TEXT,
+        skills TEXT,
+        photo_linkedin TEXT,
+        enriched_at TEXT,
+        raw_response TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_linkedin_enrichment_contact_id ON linkedin_enrichment(contact_id);
+    `);
+    console.log('LinkedIn enrichment migration complete');
+  } else {
+    // Check if photo_linkedin column exists, add if missing
+    const tableInfo = database.prepare("PRAGMA table_info(linkedin_enrichment)").all() as Array<{ name: string }>;
+    const hasPhotoLinkedin = tableInfo.some(col => col.name === 'photo_linkedin');
+
+    if (!hasPhotoLinkedin) {
+      console.log('Adding photo_linkedin column to linkedin_enrichment table...');
+      database.exec(`
+        ALTER TABLE linkedin_enrichment ADD COLUMN photo_linkedin TEXT;
+      `);
+      console.log('photo_linkedin column added successfully');
+    }
+  }
 }
 
 /**

@@ -671,6 +671,33 @@ export default async function contactsRoutes(
       WHERE contact_id = ?
     `).all(id) as RelatedPersonRow[];
 
+    // Fetch LinkedIn enrichment data if available
+    interface LinkedInEnrichmentRow {
+      linkedin_first_name: string | null;
+      linkedin_last_name: string | null;
+      headline: string | null;
+      about: string | null;
+      job_title: string | null;
+      company_name: string | null;
+      company_linkedin_url: string | null;
+      industry: string | null;
+      country: string | null;
+      location: string | null;
+      followers_count: number | null;
+      education: string | null;
+      skills: string | null;
+      photo_linkedin: string | null;
+      enriched_at: string | null;
+    }
+
+    const enrichment = db.prepare(`
+      SELECT linkedin_first_name, linkedin_last_name, headline, about,
+             job_title, company_name, company_linkedin_url, industry,
+             country, location, followers_count, education, skills,
+             photo_linkedin, enriched_at
+      FROM linkedin_enrichment WHERE contact_id = ?
+    `).get(id) as LinkedInEnrichmentRow | undefined;
+
     return {
       id: contact.id,
       firstName: contact.first_name,
@@ -743,7 +770,33 @@ export default async function contactsRoutes(
         name: rp.name,
         relationship: rp.relationship
       })),
-      photoUrl: getPhotoUrl(contact.photo_hash, 'medium')
+      photoUrl: getPhotoUrl(contact.photo_hash, 'medium'),
+      linkedinEnrichment: enrichment ? {
+        linkedinFirstName: enrichment.linkedin_first_name,
+        linkedinLastName: enrichment.linkedin_last_name,
+        headline: enrichment.headline,
+        about: enrichment.about,
+        jobTitle: enrichment.job_title,
+        companyName: enrichment.company_name,
+        companyLinkedinUrl: enrichment.company_linkedin_url,
+        industry: enrichment.industry,
+        country: enrichment.country,
+        location: enrichment.location,
+        followersCount: enrichment.followers_count,
+        education: enrichment.education ? JSON.parse(enrichment.education) : null,
+        skills: enrichment.skills ? (() => {
+          const parsed = JSON.parse(enrichment.skills);
+          // Skills are stored as [{name: "...", ...}], extract just the names
+          if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
+            // Get unique skill names (dedupe and filter)
+            const names = [...new Set(parsed.map((s: { name: string }) => s.name).filter(Boolean))];
+            return names.slice(0, 20); // Limit to top 20 skills
+          }
+          return parsed; // Already an array of strings
+        })() : null,
+        photoLinkedin: enrichment.photo_linkedin,
+        enrichedAt: enrichment.enriched_at
+      } : null
     };
   });
 

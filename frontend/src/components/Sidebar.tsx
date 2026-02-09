@@ -34,7 +34,7 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Tools routes for auto-expand and active state
-  const toolsRoutes = ['/archived', '/merge', '/cleanup'];
+  const toolsRoutes = ['/archived', '/merge', '/cleanup', '/enrich'];
   const isToolsRouteActive = toolsRoutes.some(route => location.pathname.startsWith(route));
 
   // Derive effective state: show menu if manually opened OR on a tools route
@@ -128,6 +128,13 @@ export function Sidebar({ currentView = 'contacts' }: SidebarProps) {
               >
                 <span className="material-symbols-outlined">cleaning_services</span>
                 <span>Cleanup</span>
+              </NavLink>
+              <NavLink
+                to="/enrich"
+                className={({ isActive }) => `nav-item tools-menu-item ${isActive ? 'active' : ''}`}
+              >
+                <span className="material-symbols-outlined">auto_awesome</span>
+                <span>Enrich</span>
               </NavLink>
             </div>
           )}
