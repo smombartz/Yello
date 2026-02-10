@@ -9,6 +9,9 @@
  */
 
 :root {
+  /* Lock root font-size — override Pico's responsive scaling */
+  --pico-font-size: 100%;
+
   /* ============================================
    * COLORS - Primary Brand
    * ============================================ */
@@ -177,6 +180,9 @@
    * Semantic tokens for specific components
    * ============================================ */
 
+  /* Control height - uniform height for all buttons & form fields */
+  --ds-control-height: 2rem;  /* 32px */
+
   /* Buttons */
   --ds-btn-padding-x: var(--ds-space-4);
   --ds-btn-padding-y: var(--ds-space-2);
@@ -226,7 +232,7 @@
   --ds-layout-gap: 8px;
 
   /* Layout - Navigation */
-  --ds-nav-icon-size: 36px;
+  --ds-nav-icon-size: 24px;
   --ds-nav-item-padding: 8px;
   --ds-nav-gap: 4px;
 

@@ -9,9 +9,7 @@ export function ContactsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [totalContacts, setTotalContacts] = useState<number>(0);
-  const [viewMode] = useState<'list' | 'grid'>(() => {
-    return (localStorage.getItem('contactViewMode') as 'list' | 'grid') || 'list';
-  });
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   useEffect(() => {
     setHeaderConfig({
@@ -36,6 +34,7 @@ export function ContactsPage() {
     <ContactList
       search={search}
       viewMode={viewMode}
+      onViewModeChange={setViewMode}
       onTotalChange={setTotalContacts}
     />
   );

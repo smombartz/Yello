@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, Link } from 'react-router-dom';
 import { Icon } from './Icon';
 import {
   useDeleteAllContacts,
@@ -125,6 +125,31 @@ export function SettingsView() {
   return (
     <div className="settings-view">
       <div className="settings-content">
+        {/* Page Links */}
+        <nav className="settings-nav">
+          <Link to="/merge" className="collapsible-card settings-nav-link">
+            <div className="settings-section-header">
+              <Icon name="code-merge" />
+              <h2>Merge</h2>
+            </div>
+            <Icon name="chevron-right" className="nav-link-arrow" />
+          </Link>
+          <Link to="/cleanup" className="collapsible-card settings-nav-link">
+            <div className="settings-section-header">
+              <Icon name="broom" />
+              <h2>Cleanup</h2>
+            </div>
+            <Icon name="chevron-right" className="nav-link-arrow" />
+          </Link>
+          <Link to="/enrich" className="collapsible-card settings-nav-link">
+            <div className="settings-section-header">
+              <Icon name="sparkles" />
+              <h2>Enrich</h2>
+            </div>
+            <Icon name="chevron-right" className="nav-link-arrow" />
+          </Link>
+        </nav>
+
         {/* Export Section */}
         <section className={`settings-section collapsible-card${exportExpanded ? ' expanded' : ''}`}>
           <button

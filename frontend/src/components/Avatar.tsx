@@ -1,8 +1,13 @@
+import { Icon } from './Icon';
+
 interface AvatarProps {
   photoUrl: string | null;
   name: string;
   size?: number;
   className?: string;
+  selectable?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 function getInitials(name: string): string {
@@ -22,7 +27,15 @@ function stringToColor(str: string): string {
   return `hsl(${hue}, 65%, 45%)`;
 }
 
-export function Avatar({ photoUrl, name, size = 48, className = '' }: AvatarProps) {
+export function Avatar({
+  photoUrl,
+  name,
+  size = 48,
+  className = '',
+  selectable = false,
+  isSelected = false,
+  onToggleSelect,
+}: AvatarProps) {
   const style: React.CSSProperties = {
     width: size,
     height: size,
@@ -30,24 +43,39 @@ export function Avatar({ photoUrl, name, size = 48, className = '' }: AvatarProp
     backgroundColor: stringToColor(name),
   };
 
-  if (photoUrl) {
-    return (
-      <div className={`avatar ${className}`} style={style}>
-        <img
-          src={photoUrl}
-          alt={name}
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-            e.currentTarget.parentElement!.textContent = getInitials(name);
-          }}
-        />
-      </div>
-    );
+  const avatarEl = photoUrl ? (
+    <div className={`avatar ${className}`} style={style}>
+      <img
+        src={photoUrl}
+        alt={name}
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+          e.currentTarget.parentElement!.textContent = getInitials(name);
+        }}
+      />
+    </div>
+  ) : (
+    <div className={`avatar ${className}`} style={style}>
+      {getInitials(name)}
+    </div>
+  );
+
+  if (!selectable) {
+    return avatarEl;
   }
 
   return (
-    <div className={`avatar ${className}`} style={style}>
-      {getInitials(name)}
+    <div
+      className={`avatar-wrapper ${isSelected ? 'selected' : ''}`}
+      onClick={(e) => { e.stopPropagation(); onToggleSelect?.(); }}
+      role="checkbox"
+      aria-checked={isSelected}
+      aria-label={isSelected ? 'Deselect contact' : 'Select contact'}
+    >
+      {avatarEl}
+      <span className="avatar-select-badge">
+        <Icon name="circle-check" />
+      </span>
     </div>
   );
 }

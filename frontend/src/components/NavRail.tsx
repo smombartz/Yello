@@ -13,9 +13,9 @@ function NavRailItem({ to, icon, label }: NavRailItemProps) {
     <NavLink
       to={to}
       className={({ isActive }) => `nav-rail-item ${isActive ? 'active' : ''}`}
-      title={label}
     >
       <Icon name={icon} />
+      <span className="nav-rail-label">{label}</span>
     </NavLink>
   );
 }
@@ -45,7 +45,6 @@ export function NavRail() {
       <button
         type="button"
         className="nav-rail-item nav-rail-avatar-btn"
-        title={displayName}
         onClick={() => navigate('/profile')}
       >
         {avatarUrl ? (
@@ -58,6 +57,7 @@ export function NavRail() {
         ) : (
           <div className="nav-rail-avatar-initials">{initials}</div>
         )}
+        <span className="nav-rail-label">{displayName}</span>
       </button>
     </nav>
   );

@@ -154,7 +154,7 @@ export function ArchivedView() {
             <Icon name="box-open" />
             {unarchiveMutation.isPending
               ? 'Restoring...'
-              : `Restore Selected (${selectedIds.size})`}
+              : `Restore (${selectedIds.size})`}
           </button>
           <button
             className="delete-selected-button"
@@ -214,7 +214,7 @@ export function ArchivedView() {
               {contacts.map(contact => (
                 <div
                   key={contact.id}
-                  className={`archived-card ${selectedIds.has(contact.id) ? 'selected' : ''}`}
+                  className={`card archived-card ${selectedIds.has(contact.id) ? 'selected' : ''}`}
                 >
                   <div className="archived-card-checkbox">
                     <input

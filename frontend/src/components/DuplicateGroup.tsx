@@ -72,7 +72,7 @@ export function DuplicateGroup({
   };
 
   return (
-    <div className="duplicate-group">
+    <div className="card duplicate-group">
       <div className="duplicate-group-header">
         <div className="duplicate-group-info">
           <span className="match-indicator">

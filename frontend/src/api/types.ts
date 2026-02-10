@@ -2,10 +2,13 @@ export interface ContactListItem {
   id: number;
   displayName: string;
   company: string | null;
+  title: string | null;
   primaryEmail: string | null;
   primaryPhone: string | null;
   primaryPhoneCountryCode: string | null;
   photoUrl: string | null;
+  linkedinUrl: string | null;
+  websiteUrl: string | null;
 }
 
 export interface ContactEmail {

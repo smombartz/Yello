@@ -70,7 +70,7 @@ export function DashboardView() {
         {/* Overview Stats Row */}
         <section className="dashboard-section overview-section">
           <div className="stat-cards-grid">
-            <div className="stat-card" onClick={() => navigate('/contacts')}>
+            <div className="card stat-card" onClick={() => navigate('/contacts')}>
               <div className="stat-icon">
                 <Icon name="address-book" />
               </div>
@@ -80,7 +80,7 @@ export function DashboardView() {
               </div>
             </div>
 
-            <div className="stat-card">
+            <div className="card stat-card">
               <div className="stat-icon countries">
                 <Icon name="globe" />
               </div>
@@ -90,7 +90,7 @@ export function DashboardView() {
               </div>
             </div>
 
-            <div className="stat-card">
+            <div className="card stat-card">
               <div className="stat-icon cities">
                 <Icon name="city" />
               </div>
@@ -100,7 +100,7 @@ export function DashboardView() {
               </div>
             </div>
 
-            <div className="stat-card">
+            <div className="card stat-card">
               <div className="stat-icon photos">
                 <Icon name="camera" />
               </div>
@@ -110,7 +110,7 @@ export function DashboardView() {
               </div>
             </div>
 
-            <div className="stat-card">
+            <div className="card stat-card">
               <div className="stat-icon birthdays">
                 <Icon name="cake-candles" />
               </div>
@@ -126,7 +126,7 @@ export function DashboardView() {
         <section className="dashboard-section activity-section">
           <div className="activity-grid">
             {/* Upcoming Birthdays */}
-            <div className="dashboard-card">
+            <div className="card dashboard-card">
               <div className="card-header">
                 <Icon name="cake-candles" />
                 <h2>Upcoming Birthdays</h2>
@@ -169,7 +169,7 @@ export function DashboardView() {
             </div>
 
             {/* Recently Added */}
-            <div className="dashboard-card">
+            <div className="card dashboard-card">
               <div className="card-header">
                 <Icon name="user-plus" />
                 <h2>Recently Added</h2>
@@ -214,7 +214,7 @@ export function DashboardView() {
         <section className="dashboard-section geography-section">
           <div className="geography-grid">
             {/* Top Countries */}
-            <div className="dashboard-card">
+            <div className="card dashboard-card">
               <div className="card-header">
                 <Icon name="globe" />
                 <h2>Top Countries</h2>
@@ -240,7 +240,7 @@ export function DashboardView() {
             </div>
 
             {/* Top Cities */}
-            <div className="dashboard-card">
+            <div className="card dashboard-card">
               <div className="card-header">
                 <Icon name="city" />
                 <h2>Top Cities</h2>
@@ -288,7 +288,6 @@ const dashboardStyles = `
     flex: 1;
     overflow-y: auto;
     padding: 24px 32px;
-    background: var(--ds-bg-secondary);
   }
 
   .dashboard-section {
@@ -307,16 +306,7 @@ const dashboardStyles = `
     align-items: center;
     gap: 16px;
     padding: 20px;
-    background: var(--ds-bg-primary);
-    border-radius: 12px;
-    box-shadow: var(--ds-shadow-sm);
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-
-  .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--ds-shadow-md);
   }
 
   .stat-icon {
@@ -366,9 +356,6 @@ const dashboardStyles = `
 
   /* Dashboard Cards */
   .dashboard-card {
-    background: var(--ds-bg-primary);
-    border-radius: 12px;
-    box-shadow: var(--ds-shadow-sm);
     overflow: hidden;
   }
 

@@ -1,5 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import L from 'leaflet';
 import { Icon } from './Icon';
@@ -51,11 +50,43 @@ function createAvatarIcon(photoUrl: string | null, displayName: string): L.DivIc
   });
 }
 
-// Component to handle marker clustering
-function MarkerClusterGroup({ markers }: { markers: MapMarker[] }) {
-  const map = useMap();
+// Imperative Leaflet map — creation and destruction live in the same useEffect,
+// so React StrictMode's double-invoke (create → destroy → create) works correctly.
+function LeafletMap({ markers }: { markers: MapMarker[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
 
+  // Create and destroy the map instance
   useEffect(() => {
+    if (!containerRef.current) return;
+
+    const map = L.map(containerRef.current, {
+      center: [39.8283, -98.5795],
+      zoom: 4,
+    });
+    mapRef.current = map;
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
+
+    return () => {
+      mapRef.current = null;
+      clusterRef.current = null;
+      map.remove();
+    };
+  }, []);
+
+  // Manage marker cluster layer (separate so markers can update without recreating the map)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (clusterRef.current) {
+      map.removeLayer(clusterRef.current);
+    }
+
     const clusterGroup = L.markerClusterGroup({
       showCoverageOnHover: false,
       maxClusterRadius: 50,
@@ -96,27 +127,21 @@ function MarkerClusterGroup({ markers }: { markers: MapMarker[] }) {
     });
 
     map.addLayer(clusterGroup);
+    clusterRef.current = clusterGroup;
 
-    // Fit bounds if there are markers
     if (markers.length > 0) {
       const bounds = L.latLngBounds(markers.map(m => [m.latitude, m.longitude]));
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
     }
+  }, [markers]);
 
-    return () => {
-      map.removeLayer(clusterGroup);
-    };
-  }, [map, markers]);
-
-  return null;
+  return <div ref={containerRef} className="leaflet-map" />;
 }
 
 export function MapView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const mapRef = useRef<L.Map | null>(null);
-
   const { data: mapData, isLoading, error } = useMapMarkers(debouncedSearch || undefined);
   const { data: statsData } = useMapStats();
   const geocodeMutation = useGeocode();
@@ -133,11 +158,7 @@ export function MapView() {
 
   const handleGeocode = useCallback(() => {
     geocodeMutation.mutate(25);
-  }, [geocodeMutation]);
-
-  // Default center (US)
-  const defaultCenter: [number, number] = [39.8283, -98.5795];
-  const defaultZoom = 4;
+  }, [geocodeMutation.mutate]);
 
   // Configure page header
   useEffect(() => {
@@ -193,18 +214,7 @@ export function MapView() {
             )}
           </div>
         ) : (
-          <MapContainer
-            center={defaultCenter}
-            zoom={defaultZoom}
-            className="leaflet-map"
-            ref={mapRef}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <MarkerClusterGroup markers={markers} />
-          </MapContainer>
+          <LeafletMap markers={markers} />
         )}
       </div>
 

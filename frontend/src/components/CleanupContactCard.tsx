@@ -24,7 +24,7 @@ export function CleanupContactCard({
 
   return (
     <div
-      className={`cleanup-card ${isSelected ? 'selected' : ''}`}
+      className={`card cleanup-card ${isSelected ? 'selected' : ''}`}
       onClick={() => onToggleSelect(contact.id)}
       style={{ cursor: 'pointer' }}
     >

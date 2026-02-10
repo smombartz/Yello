@@ -79,7 +79,7 @@ export function GroupsView() {
             {data.groups.map((group) => (
               <div
                 key={group.category}
-                className="group-card"
+                className="card group-card"
                 onClick={() => handleGroupClick(group.category)}
               >
                 <div className="group-card-icon">

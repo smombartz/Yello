@@ -332,7 +332,8 @@ function getContactDetails(contactIds: number[]): ContactDetail[] {
       instantMessages,
       urls,
       relatedPeople,
-      photoUrl: getPhotoUrl(contact.photoHash, 'medium')
+      photoUrl: getPhotoUrl(contact.photoHash, 'medium'),
+      linkedinEnrichment: null
     };
   });
 }

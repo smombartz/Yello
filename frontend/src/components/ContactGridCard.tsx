@@ -18,18 +18,15 @@ export function ContactGridCard({
   selectionEnabled = false
 }: ContactGridCardProps) {
   return (
-    <div className={`contact-grid-card ${isSelected ? 'selected' : ''}`} onClick={onClick}>
-      {selectionEnabled && (
-        <div className="contact-grid-card-checkbox">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => onToggleSelect?.(contact.id)}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
-      <Avatar photoUrl={contact.photoUrl} name={contact.displayName} size={64} />
+    <div className={`card contact-grid-card ${isSelected ? 'selected' : ''}`} onClick={onClick}>
+      <Avatar
+        photoUrl={contact.photoUrl}
+        name={contact.displayName}
+        size={64}
+        selectable={selectionEnabled}
+        isSelected={isSelected}
+        onToggleSelect={() => onToggleSelect?.(contact.id)}
+      />
       <div className="contact-grid-card-info">
         <div className="contact-grid-card-name">{contact.displayName}</div>
         {contact.company && (

@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useContacts, fetchAllContactIds, useMergePreview, useMergeSelectedContacts } from '../api/hooks';
 import { useDeleteContacts } from '../api/cleanupHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
@@ -13,6 +13,7 @@ interface ContactListProps {
   search?: string;
   categoryFilter?: string;
   viewMode: 'list' | 'grid';
+  onViewModeChange?: (mode: 'list' | 'grid') => void;
   onTotalChange?: (total: number) => void;
 }
 
@@ -21,13 +22,14 @@ interface ToastState {
   timeout: ReturnType<typeof setTimeout>;
 }
 
-const COLLAPSED_HEIGHT = 92;   // 80 + 12 (0.75rem gap)
-const EXPANDED_HEIGHT = 462;   // 450 + 12 (0.75rem gap)
+const COLLAPSED_HEIGHT = 76;   // 74px content + 2px border
+const EXPANDED_HEIGHT = 450;   // expanded card height
+const ROW_GAP = 8;             // space between cards
 const PAGE_SIZE = 100;
 
-export function ContactList({ search = '', categoryFilter, viewMode, onTotalChange }: ContactListProps) {
+export function ContactList({ search = '', categoryFilter, viewMode, onViewModeChange, onTotalChange }: ContactListProps) {
   const navigate = useNavigate();
-  const parentRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   // Selection state
@@ -234,14 +236,15 @@ export function ContactList({ search = '', categoryFilter, viewMode, onTotalChan
     }));
   }, []);
 
-  const virtualizer = useVirtualizer({
+  const virtualizer = useWindowVirtualizer({
     count: data?.contacts.length ?? 0,
-    getScrollElement: () => parentRef.current,
     estimateSize: useCallback((index: number) => {
       const contact = data?.contacts[index];
       return contact?.id === expandedId ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT;
     }, [data?.contacts, expandedId]),
     overscan: 5,
+    gap: ROW_GAP,
+    scrollMargin: listRef.current?.offsetTop ?? 0,
     measureElement: (el) => el.getBoundingClientRect().height,
   });
 
@@ -275,6 +278,24 @@ export function ContactList({ search = '', categoryFilter, viewMode, onTotalChan
     <div className="contact-list">
       {/* Selection toolbar */}
       <div className="contact-list-actions">
+        {onViewModeChange && (
+          <div className="view-toggle">
+            <button
+              className={`contact-action-button ${viewMode === 'list' ? 'active' : ''}`}
+              onClick={() => onViewModeChange('list')}
+              title="List view"
+            >
+              <Icon name="list" />
+            </button>
+            <button
+              className={`contact-action-button ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => onViewModeChange('grid')}
+              title="Grid view"
+            >
+              <Icon name="table-cells-large" />
+            </button>
+          </div>
+        )}
         <div className="contact-selection-actions">
           <button
             className="contact-action-button"
@@ -310,7 +331,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onTotalChan
                 <Icon name="code-merge" />
                 {mergePreviewMutation.isPending
                   ? 'Loading...'
-                  : `Merge Selected (${selectedIds.size})`}
+                  : `Merge (${selectedIds.size})`}
               </button>
             )}
             <button
@@ -321,7 +342,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onTotalChan
               <Icon name="box-archive" />
               {archiveMutation.isPending
                 ? 'Archiving...'
-                : `Archive Selected (${selectedIds.size})`}
+                : `Archive (${selectedIds.size})`}
             </button>
             <button
               className="delete-selected-button"
@@ -331,17 +352,14 @@ export function ContactList({ search = '', categoryFilter, viewMode, onTotalChan
               <Icon name="trash" />
               {deleteMutation.isPending
                 ? 'Deleting...'
-                : `Delete Selected (${selectedIds.size})`}
+                : `Delete (${selectedIds.size})`}
             </button>
           </div>
         )}
       </div>
 
       {viewMode === 'list' ? (
-        <div
-          ref={parentRef}
-          className="virtual-scroll-container"
-        >
+        <div ref={listRef}>
           <div
             style={{
               height: `${virtualizer.getTotalSize()}px`,
@@ -363,7 +381,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onTotalChan
                     top: 0,
                     left: 0,
                     width: '100%',
-                    transform: `translateY(${virtualRow.start}px)`,
+                    transform: `translateY(${virtualRow.start - virtualizer.options.scrollMargin}px)`,
                   }}
                 >
                   <ContactRow

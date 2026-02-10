@@ -76,7 +76,6 @@ export function Layout() {
         <main className="main-content">
           <Outlet context={{ setModalOpen: handleSetModalOpen, setHeaderConfig: handleSetHeaderConfig, isMobile } satisfies OutletContext} />
         </main>
-        {!isMobile && <div className="app-body-spacer" />}
       </div>
       {isMobile && <BottomTabBar />}
     </div>

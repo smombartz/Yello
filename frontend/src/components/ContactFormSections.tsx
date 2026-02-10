@@ -1,18 +1,79 @@
+import { useState } from 'react';
 import type { ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, LinkedInEnrichment } from '../api/types';
 import { getCountryFlag, getCountryName } from '../lib/phoneUtils';
-import { formatAddress } from '../lib/addressUtils';
+import { formatAddressLines } from '../lib/addressUtils';
 import { Icon } from './Icon';
 import {
   formatBirthday,
   getZodiacSign,
   getPlatformIcon,
+  getPlatformIconStyle,
   getServiceIcon,
   getUrlIcon,
   getDisplayLabel,
   getRelationshipIcon
 } from '../utils/contactFormatters';
 
-// Editable input component for simple text fields
+// ─── Shared helpers ──────────────────────────────────────────────
+
+function SectionHeading({ icon, label, iconStyle, zodiacSign }: {
+  icon: string;
+  label: string;
+  iconStyle?: 'solid' | 'regular' | 'brands';
+  zodiacSign?: string | null;
+}) {
+  return (
+    <div className="section-heading">
+      <div className="section-heading-row">
+        {zodiacSign ? (
+          <img
+            src={`/zodiac/${zodiacSign}.svg`}
+            alt={zodiacSign}
+            className="zodiac-icon"
+            title={zodiacSign.charAt(0).toUpperCase() + zodiacSign.slice(1)}
+          />
+        ) : (
+          <Icon name={icon} style={iconStyle} />
+        )}
+        <span className="section-heading-label">{label}</span>
+      </div>
+    </div>
+  );
+}
+
+function InfoField({ icon, iconStyle, children, flagEmoji }: {
+  icon?: string;
+  iconStyle?: 'solid' | 'regular' | 'brands';
+  children: React.ReactNode;
+  flagEmoji?: string;
+}) {
+  return (
+    <div className="info-field">
+      <div className="info-field-icon">
+        {flagEmoji ? (
+          <span className="flag-emoji">{flagEmoji}</span>
+        ) : icon ? (
+          <Icon name={icon} style={iconStyle} />
+        ) : null}
+      </div>
+      <div className="info-field-value">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function getEmailIcon(email: string): { icon: string; style?: 'solid' | 'regular' | 'brands' } {
+  const lower = email.toLowerCase();
+  if (lower.includes('@gmail') || lower.includes('@googlemail')) return { icon: 'google', style: 'brands' };
+  if (lower.includes('@yahoo')) return { icon: 'yahoo', style: 'brands' };
+  if (lower.includes('@outlook') || lower.includes('@hotmail') || lower.includes('@live.') || lower.includes('@msn.')) return { icon: 'microsoft', style: 'brands' };
+  if (lower.includes('@icloud') || lower.includes('@me.com') || lower.includes('@mac.com')) return { icon: 'apple', style: 'brands' };
+  return { icon: 'globe' };
+}
+
+// ─── Editable components (shared) ────────────────────────────────
+
 export function EditableField({
   value,
   onChange,
@@ -35,7 +96,6 @@ export function EditableField({
   );
 }
 
-// Editable array item with remove button
 export function EditableArrayItem({
   children,
   onRemove
@@ -52,6 +112,190 @@ export function EditableArrayItem({
     </div>
   );
 }
+
+// ─── PhoneSection (new, for expanded card view mode) ─────────────
+
+export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit = 3 }: {
+  phones: ContactPhone[];
+  isEditMode: boolean;
+  onPhonesChange?: (phones: ContactPhone[]) => void;
+  initialLimit?: number;
+}) {
+  const [showAll, setShowAll] = useState(false);
+
+  if (!isEditMode && !phones.length) return null;
+
+  const addPhone = () => {
+    if (onPhonesChange) {
+      onPhonesChange([...phones, { phone: '', phoneDisplay: '', countryCode: null, type: null, isPrimary: phones.length === 0 }]);
+    }
+  };
+
+  const updatePhone = (index: number, field: keyof ContactPhone, value: string | boolean) => {
+    if (onPhonesChange) {
+      const updated = [...phones];
+      updated[index] = { ...updated[index], [field]: value };
+      if (field === 'phone') {
+        updated[index].phoneDisplay = value as string;
+      }
+      onPhonesChange(updated);
+    }
+  };
+
+  const removePhone = (index: number) => {
+    if (onPhonesChange) {
+      onPhonesChange(phones.filter((_, i) => i !== index));
+    }
+  };
+
+  if (isEditMode) {
+    return (
+      <div className="expanded-section">
+        <h4 className="section-header">Phone</h4>
+        <div className="section-content edit-section-content">
+          {phones.map((phone, i) => (
+            <EditableArrayItem key={`phone-${i}`} onRemove={() => removePhone(i)}>
+              <Icon name="phone" />
+              <div className="edit-field-group">
+                <EditableField
+                  value={phone.phoneDisplay}
+                  onChange={(v) => updatePhone(i, 'phone', v)}
+                  placeholder="Phone number"
+                />
+                <EditableField
+                  value={phone.type || ''}
+                  onChange={(v) => updatePhone(i, 'type', v)}
+                  placeholder="Type (home, work...)"
+                />
+              </div>
+            </EditableArrayItem>
+          ))}
+          <button type="button" className="add-item-btn" onClick={addPhone}>
+            <Icon name="plus" />
+            Add Phone
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const visible = showAll ? phones : phones.slice(0, initialLimit);
+  const remaining = phones.length - initialLimit;
+
+  return (
+    <div className="expanded-section-view">
+      <SectionHeading icon="phone" label="Phone" />
+      {visible.map((phone, i) => {
+        const flag = getCountryFlag(phone.countryCode);
+        return (
+          <InfoField key={`phone-${i}`} flagEmoji={flag || undefined} icon={!flag ? 'phone' : undefined}>
+            <a href={`tel:${phone.phone}`} title={getCountryName(phone.countryCode) || undefined}>
+              {phone.phoneDisplay}
+            </a>
+          </InfoField>
+        );
+      })}
+      {!showAll && remaining > 0 && (
+        <div className="show-more-link">
+          <button className="show-more-button" onClick={() => setShowAll(true)}>
+            Show {remaining} additional number{remaining !== 1 ? 's' : ''}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── EmailSection (new, for expanded card view mode) ─────────────
+
+export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit = 3 }: {
+  emails: ContactEmail[];
+  isEditMode: boolean;
+  onEmailsChange?: (emails: ContactEmail[]) => void;
+  initialLimit?: number;
+}) {
+  const [showAll, setShowAll] = useState(false);
+
+  if (!isEditMode && !emails.length) return null;
+
+  const addEmail = () => {
+    if (onEmailsChange) {
+      onEmailsChange([...emails, { email: '', type: null, isPrimary: emails.length === 0 }]);
+    }
+  };
+
+  const updateEmail = (index: number, field: keyof ContactEmail, value: string | boolean) => {
+    if (onEmailsChange) {
+      const updated = [...emails];
+      updated[index] = { ...updated[index], [field]: value };
+      onEmailsChange(updated);
+    }
+  };
+
+  const removeEmail = (index: number) => {
+    if (onEmailsChange) {
+      onEmailsChange(emails.filter((_, i) => i !== index));
+    }
+  };
+
+  if (isEditMode) {
+    return (
+      <div className="expanded-section">
+        <h4 className="section-header">Email</h4>
+        <div className="section-content edit-section-content">
+          {emails.map((email, i) => (
+            <EditableArrayItem key={`email-${i}`} onRemove={() => removeEmail(i)}>
+              <Icon name="envelope" />
+              <div className="edit-field-group">
+                <EditableField
+                  value={email.email}
+                  onChange={(v) => updateEmail(i, 'email', v)}
+                  placeholder="Email address"
+                  type="email"
+                />
+                <EditableField
+                  value={email.type || ''}
+                  onChange={(v) => updateEmail(i, 'type', v)}
+                  placeholder="Type (home, work...)"
+                />
+              </div>
+            </EditableArrayItem>
+          ))}
+          <button type="button" className="add-item-btn" onClick={addEmail}>
+            <Icon name="plus" />
+            Add Email
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const visible = showAll ? emails : emails.slice(0, initialLimit);
+  const remaining = emails.length - initialLimit;
+
+  return (
+    <div className="expanded-section-view">
+      <SectionHeading icon="envelope" label="Email" />
+      {visible.map((email, i) => {
+        const { icon, style } = getEmailIcon(email.email);
+        return (
+          <InfoField key={`email-${i}`} icon={icon} iconStyle={style}>
+            <a href={`mailto:${email.email}`}>{email.email}</a>
+          </InfoField>
+        );
+      })}
+      {!showAll && remaining > 0 && (
+        <div className="show-more-link">
+          <button className="show-more-button" onClick={() => setShowAll(true)}>
+            Show {remaining} additional email{remaining !== 1 ? 's' : ''}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── ContactInfoSection (legacy, used by AddContactPage) ─────────
 
 export function ContactInfoSection({ emails, phones, isEditMode, onEmailsChange, onPhonesChange }: {
   emails: ContactEmail[];
@@ -92,7 +336,6 @@ export function ContactInfoSection({ emails, phones, isEditMode, onEmailsChange,
     if (onPhonesChange) {
       const updated = [...phones];
       updated[index] = { ...updated[index], [field]: value };
-      // Keep phoneDisplay in sync with phone for editing
       if (field === 'phone') {
         updated[index].phoneDisplay = value as string;
       }
@@ -194,6 +437,8 @@ export function ContactInfoSection({ emails, phones, isEditMode, onEmailsChange,
   );
 }
 
+// ─── LocationsSection ────────────────────────────────────────────
+
 export function LocationsSection({ addresses, isEditMode, onAddressesChange }: {
   addresses: ContactAddress[];
   isEditMode: boolean;
@@ -224,7 +469,7 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange }: {
   if (isEditMode) {
     return (
       <div className="expanded-section">
-        <h4 className="section-header">Locations</h4>
+        <h4 className="section-header">Address</h4>
         <div className="section-content edit-section-content">
           {addresses.map((addr, i) => (
             <EditableArrayItem key={i} onRemove={() => removeAddress(i)}>
@@ -277,30 +522,30 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange }: {
   }
 
   return (
-    <div className="expanded-section">
-      <h4 className="section-header">Locations</h4>
-      <div className="section-content">
-        {addresses.map((addr, i) => {
-          const formatted = formatAddress(addr);
-          if (formatted === '(Empty address)') return null;
+    <div className="expanded-section-view">
+      <SectionHeading icon="location-dot" label="Address" />
+      {addresses.map((addr, i) => {
+        const lines = formatAddressLines(addr);
+        if (lines.length === 1 && lines[0] === '(Empty address)') return null;
 
-          const icon = addr.type?.toLowerCase() === 'home' ? 'house' :
-                       addr.type?.toLowerCase() === 'work' ? 'building' : 'location-dot';
+        const icon = addr.type?.toLowerCase() === 'home' ? 'house' :
+                     addr.type?.toLowerCase() === 'work' ? 'building' : 'location-dot';
 
-          return (
-            <div key={i} className="expanded-item">
-              <Icon name={icon} />
-              <div className="expanded-item-content">
-                <span className="address-text">{formatted}</span>
-                {addr.type && <span className="item-type">{addr.type}</span>}
-              </div>
+        return (
+          <InfoField key={i} icon={icon}>
+            <div className="address-lines">
+              {lines.map((line, li) => (
+                <span key={li}>{line}</span>
+              ))}
             </div>
-          );
-        })}
-      </div>
+          </InfoField>
+        );
+      })}
     </div>
   );
 }
+
+// ─── SocialLinksSection ──────────────────────────────────────────
 
 export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfilesChange }: {
   socialProfiles: ContactSocialProfile[];
@@ -332,11 +577,11 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
   if (isEditMode) {
     return (
       <div className="expanded-section">
-        <h4 className="section-header">Social & Links</h4>
+        <h4 className="section-header">Social Links</h4>
         <div className="section-content edit-section-content">
           {socialProfiles.map((profile, i) => (
             <EditableArrayItem key={i} onRemove={() => removeProfile(i)}>
-              <Icon name={getPlatformIcon(profile.platform)} />
+              <Icon name={getPlatformIcon(profile.platform)} style={getPlatformIconStyle(profile.platform)} />
               <div className="edit-field-group">
                 <EditableField
                   value={profile.platform}
@@ -366,28 +611,24 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
   }
 
   return (
-    <div className="expanded-section">
-      <h4 className="section-header">Social & Links</h4>
-      <div className="section-content">
-        {socialProfiles.map((profile) => (
-          <div key={profile.id} className="expanded-item">
-            <Icon name={getPlatformIcon(profile.platform)} />
-            <div className="expanded-item-content">
-              {profile.profileUrl ? (
-                <a href={profile.profileUrl} target="_blank" rel="noopener noreferrer">
-                  {profile.username || profile.platform}
-                </a>
-              ) : (
-                <span>{profile.username}</span>
-              )}
-              <span className="item-type">{profile.platform}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="expanded-section-view">
+      <SectionHeading icon="share-nodes" label="Social Links" />
+      {socialProfiles.map((profile) => (
+        <InfoField key={profile.id} icon={getPlatformIcon(profile.platform)} iconStyle={getPlatformIconStyle(profile.platform)}>
+          {profile.profileUrl ? (
+            <a href={profile.profileUrl} target="_blank" rel="noopener noreferrer">
+              {profile.username || profile.platform}
+            </a>
+          ) : (
+            <span>{profile.username}</span>
+          )}
+        </InfoField>
+      ))}
     </div>
   );
 }
+
+// ─── BirthdaySection ─────────────────────────────────────────────
 
 export function BirthdaySection({ birthday, isEditMode, onBirthdayChange }: {
   birthday: string | null;
@@ -420,28 +661,16 @@ export function BirthdaySection({ birthday, isEditMode, onBirthdayChange }: {
   }
 
   return (
-    <div className="expanded-section">
-      <h4 className="section-header">Birthday</h4>
-      <div className="section-content">
-        <div className="expanded-item">
-          {zodiacSign ? (
-            <img
-              src={`/zodiac/${zodiacSign}.svg`}
-              alt={zodiacSign}
-              className="zodiac-icon"
-              title={zodiacSign.charAt(0).toUpperCase() + zodiacSign.slice(1)}
-            />
-          ) : (
-            <Icon name="cake-candles" />
-          )}
-          <div className="expanded-item-content">
-            <span>{formatBirthday(birthday!)}</span>
-          </div>
-        </div>
-      </div>
+    <div className="expanded-section-view">
+      <SectionHeading icon="cake-candles" label="Birthday" zodiacSign={zodiacSign} />
+      <InfoField icon="cake-candles">
+        <span>{formatBirthday(birthday!)}</span>
+      </InfoField>
     </div>
   );
 }
+
+// ─── CategoriesSection ───────────────────────────────────────────
 
 export function CategoriesSection({ categories, isEditMode, onCategoriesChange }: {
   categories: ContactCategory[];
@@ -509,6 +738,8 @@ export function CategoriesSection({ categories, isEditMode, onCategoriesChange }
   );
 }
 
+// ─── InstantMessagesSection ──────────────────────────────────────
+
 export function InstantMessagesSection({ instantMessages, isEditMode, onInstantMessagesChange }: {
   instantMessages: ContactInstantMessage[];
   isEditMode: boolean;
@@ -568,22 +799,18 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
   }
 
   return (
-    <div className="expanded-section">
-      <h4 className="section-header">Instant Messages</h4>
-      <div className="section-content">
-        {instantMessages.map((im) => (
-          <div key={im.id} className="expanded-item">
-            <Icon name={getServiceIcon(im.service)} />
-            <div className="expanded-item-content">
-              <span>{im.handle}</span>
-              <span className="item-type">{im.service}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="expanded-section-view">
+      <SectionHeading icon="message" label="Instant Messages" />
+      {instantMessages.map((im) => (
+        <InfoField key={im.id} icon={getServiceIcon(im.service)}>
+          <span>{im.handle}</span>
+        </InfoField>
+      ))}
     </div>
   );
 }
+
+// ─── UrlsSection ─────────────────────────────────────────────────
 
 export function UrlsSection({ urls, isEditMode, onUrlsChange }: {
   urls: ContactUrl[];
@@ -615,7 +842,7 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange }: {
   if (isEditMode) {
     return (
       <div className="expanded-section">
-        <h4 className="section-header">Links</h4>
+        <h4 className="section-header">Web Links</h4>
         <div className="section-content edit-section-content">
           {urls.map((u, i) => (
             <EditableArrayItem key={i} onRemove={() => removeUrl(i)}>
@@ -644,24 +871,20 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange }: {
   }
 
   return (
-    <div className="expanded-section">
-      <h4 className="section-header">Links</h4>
-      <div className="section-content">
-        {urls.map((u) => (
-          <div key={u.id} className="expanded-item">
-            <Icon name={getUrlIcon(u.url, u.label)} />
-            <div className="expanded-item-content">
-              <a href={u.url} target="_blank" rel="noopener noreferrer">
-                {getDisplayLabel(u.url, u.label)}
-              </a>
-              {u.label && <span className="item-type">{u.label}</span>}
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="expanded-section-view">
+      <SectionHeading icon="link" label="Web Links" />
+      {urls.map((u) => (
+        <InfoField key={u.id} icon={getUrlIcon(u.url, u.label)}>
+          <a href={u.url} target="_blank" rel="noopener noreferrer">
+            {getDisplayLabel(u.url, u.label)}
+          </a>
+        </InfoField>
+      ))}
     </div>
   );
 }
+
+// ─── RelatedPeopleSection ────────────────────────────────────────
 
 export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopleChange }: {
   relatedPeople: ContactRelatedPerson[];
@@ -722,22 +945,18 @@ export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopl
   }
 
   return (
-    <div className="expanded-section">
-      <h4 className="section-header">Related People</h4>
-      <div className="section-content">
-        {relatedPeople.map((person) => (
-          <div key={person.id} className="expanded-item">
-            <Icon name={getRelationshipIcon(person.relationship)} />
-            <div className="expanded-item-content">
-              <span>{person.name}</span>
-              {person.relationship && <span className="item-type">{person.relationship}</span>}
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="expanded-section-view">
+      <SectionHeading icon="user" label="Related" />
+      {relatedPeople.map((person) => (
+        <InfoField key={person.id} icon={getRelationshipIcon(person.relationship)}>
+          <span>{person.name}</span>
+        </InfoField>
+      ))}
     </div>
   );
 }
+
+// ─── NotesSection ────────────────────────────────────────────────
 
 export function NotesSection({ notes, isEditMode, onNotesChange }: {
   notes: string | null;
@@ -748,7 +967,8 @@ export function NotesSection({ notes, isEditMode, onNotesChange }: {
 
   if (isEditMode) {
     return (
-      <div className="notes-box edit-notes-box">
+      <div>
+        <h4 className="section-header">Notes</h4>
         <textarea
           value={notes || ''}
           onChange={(e) => onNotesChange?.(e.target.value || null)}
@@ -761,13 +981,15 @@ export function NotesSection({ notes, isEditMode, onNotesChange }: {
   }
 
   return (
-    <div className="notes-box">
-      <div className="notes-content">{notes}</div>
+    <div className="expanded-section-view">
+      <SectionHeading icon="pencil" label="Notes" />
+      <div className="notes-field">{notes}</div>
     </div>
   );
 }
 
-// LinkedIn Section (read-only, displays enrichment data)
+// ─── LinkedInSection (read-only, displays enrichment data) ───────
+
 export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: LinkedInEnrichment; contactPhotoUrl?: string | null }) {
   const formatDate = (dateString: string | null): string => {
     if (!dateString) return '';
@@ -778,7 +1000,6 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
     });
   };
 
-  // Show LinkedIn photo if available and different from contact's existing photo
   const showLinkedInPhoto = enrichment.photoLinkedin && enrichment.photoLinkedin !== contactPhotoUrl;
 
   return (
@@ -790,7 +1011,6 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
         LinkedIn
       </h4>
       <div className="section-content linkedin-content">
-        {/* Profile photo from LinkedIn */}
         {showLinkedInPhoto && (
           <div className="linkedin-profile-photo">
             <img
@@ -798,19 +1018,16 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
               alt="LinkedIn profile"
               className="linkedin-avatar"
               onError={(e) => {
-                // Hide image on error (expired URL, etc.)
                 (e.target as HTMLImageElement).style.display = 'none';
               }}
             />
           </div>
         )}
 
-        {/* Headline - prominently displayed */}
         {enrichment.headline && (
           <div className="linkedin-headline">{enrichment.headline}</div>
         )}
 
-        {/* Job + Company */}
         {(enrichment.jobTitle || enrichment.companyName) && (
           <div className="expanded-item">
             <Icon name="briefcase" />
@@ -830,7 +1047,6 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
           </div>
         )}
 
-        {/* Industry + Location */}
         {(enrichment.industry || enrichment.location) && (
           <div className="expanded-item">
             <Icon name="location-dot" />
@@ -842,7 +1058,6 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
           </div>
         )}
 
-        {/* About - collapsible if long */}
         {enrichment.about && (
           <div className="linkedin-about">
             <details>
@@ -852,7 +1067,6 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
           </div>
         )}
 
-        {/* Skills as tags */}
         {enrichment.skills && enrichment.skills.length > 0 && (
           <div className="linkedin-skills">
             <div className="expanded-item">
@@ -866,7 +1080,6 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
           </div>
         )}
 
-        {/* Education */}
         {enrichment.education && enrichment.education.length > 0 && (
           <div className="expanded-item">
             <Icon name="graduation-cap" />
@@ -880,7 +1093,6 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
           </div>
         )}
 
-        {/* Followers count */}
         {enrichment.followersCount !== null && enrichment.followersCount > 0 && (
           <div className="expanded-item">
             <Icon name="users" />
@@ -890,7 +1102,6 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
           </div>
         )}
 
-        {/* Enriched date footer */}
         <div className="linkedin-footer">
           <Icon name="clock-rotate-left" />
           <span>Enriched from LinkedIn {formatDate(enrichment.enrichedAt)}</span>
@@ -900,7 +1111,8 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
   );
 }
 
-// Edit form state interface (for use by both ContactRowExpanded and AddContactPage)
+// ─── Shared type export ──────────────────────────────────────────
+
 export interface EditFormState {
   firstName: string | null;
   lastName: string | null;

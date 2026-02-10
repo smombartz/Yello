@@ -104,10 +104,13 @@ export const ContactListItemSchema = Type.Object({
   id: Type.Number(),
   displayName: Type.String(),
   company: Type.Union([Type.String(), Type.Null()]),
+  title: Type.Union([Type.String(), Type.Null()]),
   primaryEmail: Type.Union([Type.String(), Type.Null()]),
   primaryPhone: Type.Union([Type.String(), Type.Null()]),
   primaryPhoneCountryCode: Type.Union([Type.String(), Type.Null()]),
-  photoUrl: Type.Union([Type.String(), Type.Null()])
+  photoUrl: Type.Union([Type.String(), Type.Null()]),
+  linkedinUrl: Type.Union([Type.String(), Type.Null()]),
+  websiteUrl: Type.Union([Type.String(), Type.Null()])
 });
 
 export const ContactListResponseSchema = Type.Object({

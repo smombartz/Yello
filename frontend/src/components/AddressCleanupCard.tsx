@@ -98,7 +98,7 @@ export function AddressCleanupCard({
   const issueText = totalIssues === 1 ? '1 address issue' : `${totalIssues} address issues`;
 
   return (
-    <div className="address-cleanup-card">
+    <div className="card address-cleanup-card">
       <div className="address-cleanup-card-header">
         <div className="address-cleanup-contact-info">
           {contact.photoUrl ? (

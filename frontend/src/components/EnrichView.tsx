@@ -123,15 +123,15 @@ export function EnrichView() {
             <>
               {/* Summary Stats */}
               <div className="enrichment-stats">
-                <div className="stat-card">
+                <div className="card stat-card">
                   <span className="stat-value">{summary.totalWithLinkedIn}</span>
                   <span className="stat-label">Contacts with LinkedIn</span>
                 </div>
-                <div className="stat-card">
+                <div className="card stat-card">
                   <span className="stat-value">{summary.alreadyEnriched}</span>
                   <span className="stat-label">Already Enriched</span>
                 </div>
-                <div className="stat-card highlight">
+                <div className="card stat-card highlight">
                   <span className="stat-value">{summary.pendingEnrichment}</span>
                   <span className="stat-label">Ready to Enrich</span>
                 </div>
@@ -435,8 +435,6 @@ export function EnrichView() {
           flex-direction: column;
           align-items: center;
           padding: 16px;
-          background: var(--ds-bg-secondary);
-          border-radius: 8px;
           text-align: center;
         }
 

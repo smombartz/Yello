@@ -105,12 +105,21 @@ export function getZodiacSign(dateString: string): string | null {
 
 export function getPlatformIcon(platform: string): string {
   const p = platform.toLowerCase();
-  if (p.includes('linkedin')) return 'briefcase';
-  if (p.includes('twitter') || p.includes('x')) return 'hashtag';
-  if (p.includes('facebook')) return 'users';
-  if (p.includes('instagram')) return 'camera';
-  if (p.includes('github')) return 'code';
+  if (p.includes('linkedin')) return 'linkedin';
+  if (p.includes('twitter') || p.includes('x')) return 'x-twitter';
+  if (p.includes('facebook')) return 'facebook';
+  if (p.includes('instagram')) return 'instagram';
+  if (p.includes('github')) return 'github';
   return 'link';
+}
+
+export function getPlatformIconStyle(platform: string): 'solid' | 'brands' {
+  const p = platform.toLowerCase();
+  if (p.includes('linkedin') || p.includes('twitter') || p.includes('x') ||
+      p.includes('facebook') || p.includes('instagram') || p.includes('github')) {
+    return 'brands';
+  }
+  return 'solid';
 }
 
 export function getServiceIcon(service: string): string {

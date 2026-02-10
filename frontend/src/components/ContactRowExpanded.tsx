@@ -4,7 +4,8 @@ import { useUpdateContact } from '../api/hooks';
 import { Icon } from './Icon';
 import {
   EditableField,
-  ContactInfoSection,
+  PhoneSection,
+  EmailSection,
   LocationsSection,
   SocialLinksSection,
   BirthdaySection,
@@ -13,7 +14,6 @@ import {
   UrlsSection,
   RelatedPeopleSection,
   NotesSection,
-  LinkedInSection
 } from './ContactFormSections';
 
 interface ContactRowExpandedProps {
@@ -22,22 +22,30 @@ interface ContactRowExpandedProps {
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
+    year: 'numeric'
   });
 }
 
 function MetadataSection({ createdAt, updatedAt }: { createdAt: string; updatedAt: string }) {
   return (
-    <div className="expanded-section metadata-section">
-      <div className="metadata-item">
-        <span className="metadata-label">Created</span>
-        <span className="metadata-value">{formatDate(createdAt)}</span>
+    <div className="expanded-section-view gap-lg">
+      <div className="section-heading">
+        <div className="section-heading-row">
+          <Icon name="clock" />
+          <span className="section-heading-label">Meta Data</span>
+        </div>
       </div>
-      <div className="metadata-item">
-        <span className="metadata-label">Updated</span>
-        <span className="metadata-value">{formatDate(updatedAt)}</span>
+      <div className="metadata-row">
+        <div className="metadata-pair">
+          <span className="metadata-pair-label">Created </span>
+          <span className="metadata-pair-value">{formatDate(createdAt)}</span>
+        </div>
+        <div className="metadata-pair">
+          <span className="metadata-pair-label">Updated </span>
+          <span className="metadata-pair-value">{formatDate(updatedAt)}</span>
+        </div>
       </div>
     </div>
   );
@@ -99,7 +107,6 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
 
     setError(null);
 
-    // Build the update request
     const updateData: UpdateContactRequest = {
       firstName: editForm.firstName,
       lastName: editForm.lastName,
@@ -163,15 +170,14 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
     }
   };
 
-  const hasContactInfo = contact.emails.length > 0 || contact.phones.length > 0;
+  const hasPhones = contact.phones.length > 0;
+  const hasEmails = contact.emails.length > 0;
   const hasLocations = contact.addresses.length > 0;
   const hasSocial = contact.socialProfiles.length > 0;
   const hasCategories = contact.categories?.length > 0;
-  const hasInstantMessages = contact.instantMessages?.length > 0;
   const hasUrls = contact.urls?.length > 0;
   const hasRelatedPeople = contact.relatedPeople?.length > 0;
   const hasBirthday = !!contact.birthday;
-  const hasLinkedIn = !!contact.linkedinEnrichment;
 
   // Use edit form data when in edit mode
   const displayData = isEditMode && editForm ? {
@@ -179,11 +185,12 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
     ...editForm,
   } : contact;
 
-  return (
-    <div className="expanded-content" onClick={(e) => e.stopPropagation()}>
-      {/* Title + Quick Actions row */}
-      <div className="expanded-top-row">
-        {isEditMode ? (
+  // ─── Edit Mode ───────────────────────────────────────────────
+  if (isEditMode) {
+    return (
+      <div className="expanded-content" onClick={(e) => e.stopPropagation()}>
+        {/* Name fields + Save/Cancel */}
+        <div className="expanded-top-row">
           <div className="edit-name-fields">
             <EditableField
               value={editForm?.firstName || ''}
@@ -206,143 +213,171 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
               placeholder="Title"
             />
           </div>
-        ) : (
-          contact.title && <p className="expanded-title">{contact.title}</p>
-        )}
-        <div className="expanded-actions">
-          {isEditMode ? (
-            <>
-              <button
-                className="action-button secondary"
-                onClick={handleCancel}
-                disabled={updateContactMutation.isPending}
-              >
-                Cancel
-              </button>
-              <button
-                className="action-button primary"
-                onClick={handleSave}
-                disabled={updateContactMutation.isPending}
-              >
-                {updateContactMutation.isPending ? (
-                  <>
-                    <Icon name="arrows-rotate" className="spinning" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Icon name="floppy-disk" />
-                    Save
-                  </>
-                )}
-              </button>
-            </>
-          ) : (
-            <button className="action-button" onClick={handleEnterEditMode}>
-              <Icon name="pen-to-square" />
-              Edit
+          <div className="expanded-actions">
+            <button
+              className="action-button secondary"
+              onClick={handleCancel}
+              disabled={updateContactMutation.isPending}
+            >
+              Cancel
             </button>
-          )}
+            <button
+              className="action-button primary"
+              onClick={handleSave}
+              disabled={updateContactMutation.isPending}
+            >
+              {updateContactMutation.isPending ? (
+                <>
+                  <Icon name="arrows-rotate" className="spinning" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Icon name="floppy-disk" />
+                  Save
+                </>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Error message */}
-      {error && (
-        <div className="edit-error">
-          <Icon name="circle-exclamation" />
-          {error}
-        </div>
-      )}
+        {error && (
+          <div className="edit-error">
+            <Icon name="circle-exclamation" />
+            {error}
+          </div>
+        )}
 
-      {/* Categories row */}
-      {(hasCategories || isEditMode) && (
-        <CategoriesSection
-          categories={displayData.categories}
-          isEditMode={isEditMode}
-          onCategoriesChange={(categories) => setEditForm(f => f ? { ...f, categories } : null)}
-        />
-      )}
+        {/* Categories */}
+        {(hasCategories || isEditMode) && (
+          <CategoriesSection
+            categories={displayData.categories}
+            isEditMode={isEditMode}
+            onCategoriesChange={(categories) => setEditForm(f => f ? { ...f, categories } : null)}
+          />
+        )}
 
-      {/* Main content grid */}
-      <div className="expanded-grid">
-        {/* Left column: Contact Info + Instant Messages */}
-        <div className="expanded-column">
-          {(hasContactInfo || isEditMode) && (
-            <ContactInfoSection
-              emails={displayData.emails}
+        {/* Edit grid: 3 columns with all sections */}
+        <div className="expanded-grid">
+          <div className="expanded-column">
+            <PhoneSection
               phones={displayData.phones}
               isEditMode={isEditMode}
-              onEmailsChange={(emails) => setEditForm(f => f ? { ...f, emails } : null)}
               onPhonesChange={(phones) => setEditForm(f => f ? { ...f, phones } : null)}
             />
-          )}
-          {(hasInstantMessages || isEditMode) && (
+            <EmailSection
+              emails={displayData.emails}
+              isEditMode={isEditMode}
+              onEmailsChange={(emails) => setEditForm(f => f ? { ...f, emails } : null)}
+            />
             <InstantMessagesSection
               instantMessages={displayData.instantMessages}
               isEditMode={isEditMode}
               onInstantMessagesChange={(instantMessages) => setEditForm(f => f ? { ...f, instantMessages } : null)}
             />
-          )}
-        </div>
+          </div>
 
-        {/* Center column: Locations + Birthday + Related People */}
-        <div className="expanded-column">
-          {(hasLocations || isEditMode) && (
+          <div className="expanded-column">
             <LocationsSection
               addresses={displayData.addresses}
               isEditMode={isEditMode}
               onAddressesChange={(addresses) => setEditForm(f => f ? { ...f, addresses } : null)}
             />
-          )}
-          {(hasBirthday || isEditMode) && (
             <BirthdaySection
               birthday={displayData.birthday}
               isEditMode={isEditMode}
               onBirthdayChange={(birthday) => setEditForm(f => f ? { ...f, birthday } : null)}
             />
-          )}
-          {(hasRelatedPeople || isEditMode) && (
             <RelatedPeopleSection
               relatedPeople={displayData.relatedPeople}
               isEditMode={isEditMode}
               onRelatedPeopleChange={(relatedPeople) => setEditForm(f => f ? { ...f, relatedPeople } : null)}
             />
-          )}
-        </div>
+          </div>
 
-        {/* Right column: LinkedIn + Social + URLs + Metadata */}
-        <div className="expanded-column">
-          {hasLinkedIn && !isEditMode && (
-            <LinkedInSection enrichment={contact.linkedinEnrichment!} contactPhotoUrl={contact.photoUrl} />
-          )}
-          {(hasSocial || isEditMode) && (
+          <div className="expanded-column">
             <SocialLinksSection
               socialProfiles={displayData.socialProfiles}
               isEditMode={isEditMode}
               onSocialProfilesChange={(socialProfiles) => setEditForm(f => f ? { ...f, socialProfiles } : null)}
             />
-          )}
-          {(hasUrls || isEditMode) && (
             <UrlsSection
               urls={displayData.urls}
               isEditMode={isEditMode}
               onUrlsChange={(urls) => setEditForm(f => f ? { ...f, urls } : null)}
             />
-          )}
-          <MetadataSection createdAt={contact.createdAt} updatedAt={contact.updatedAt} />
+          </div>
         </div>
-      </div>
 
-      {/* Notes section */}
-      {(contact.notes || isEditMode) && (
-        <div className="expanded-notes-row">
-          <NotesSection
-            notes={displayData.notes}
-            isEditMode={isEditMode}
-            onNotesChange={(notes) => setEditForm(f => f ? { ...f, notes } : null)}
-          />
+        {/* Notes */}
+        <NotesSection
+          notes={displayData.notes}
+          isEditMode={isEditMode}
+          onNotesChange={(notes) => setEditForm(f => f ? { ...f, notes } : null)}
+        />
+      </div>
+    );
+  }
+
+  // ─── View Mode (Figma layout) ────────────────────────────────
+  const hasRow1 = hasPhones || hasLocations || hasSocial;
+  const hasRow2 = hasEmails || hasBirthday || hasRelatedPeople || hasUrls;
+
+  return (
+    <div className="expanded-content" onClick={(e) => e.stopPropagation()}>
+      {/* Row 1: Phone | Address | Social Links */}
+      {hasRow1 && (
+        <div className="expanded-row">
+          {hasPhones && (
+            <PhoneSection phones={contact.phones} isEditMode={false} />
+          )}
+          {hasLocations && (
+            <LocationsSection addresses={contact.addresses} isEditMode={false} />
+          )}
+          {hasSocial && (
+            <SocialLinksSection socialProfiles={contact.socialProfiles} isEditMode={false} />
+          )}
         </div>
       )}
+
+      {/* Row 2: Email | Birthday+Related | Web Links */}
+      {hasRow2 && (
+        <div className="expanded-row">
+          {hasEmails && (
+            <EmailSection emails={contact.emails} isEditMode={false} />
+          )}
+          {(hasBirthday || hasRelatedPeople) && (
+            <div className="expanded-column">
+              {hasBirthday && (
+                <BirthdaySection birthday={contact.birthday} isEditMode={false} />
+              )}
+              {hasRelatedPeople && (
+                <RelatedPeopleSection relatedPeople={contact.relatedPeople} isEditMode={false} />
+              )}
+            </div>
+          )}
+          {hasUrls && (
+            <UrlsSection urls={contact.urls} isEditMode={false} />
+          )}
+        </div>
+      )}
+
+      {/* Row 3: Notes (2fr) | Meta Data (1fr) */}
+      {contact.notes ? (
+        <div className="expanded-row expanded-row-notes">
+          <NotesSection notes={contact.notes} isEditMode={false} />
+          <MetadataSection createdAt={contact.createdAt} updatedAt={contact.updatedAt} />
+        </div>
+      ) : (
+        <MetadataSection createdAt={contact.createdAt} updatedAt={contact.updatedAt} />
+      )}
+
+      {/* Bottom: Edit button right-aligned */}
+      <div className="expanded-bottom-actions">
+        <button className="edit-button-primary" onClick={handleEnterEditMode}>
+          Edit
+        </button>
+      </div>
     </div>
   );
 }

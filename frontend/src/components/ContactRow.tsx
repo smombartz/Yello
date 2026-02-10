@@ -26,53 +26,71 @@ export function ContactRow({
 
   return (
     <div
-      className={`contact-card ${isExpanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''}`}
+      className={`card contact-card ${isExpanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''}`}
       onClick={() => onToggle(contact.id)}
     >
       <div className="collapsed-content">
         <div className="contact-card-main">
-          {selectionEnabled && (
-            <div className="contact-card-checkbox">
-              <input
-                type="checkbox"
-                checked={isSelected}
-                onChange={() => onToggleSelect?.(contact.id)}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-          )}
-          <Avatar photoUrl={contact.photoUrl} name={contact.displayName} size={48} />
+          <Avatar
+            photoUrl={contact.photoUrl}
+            name={contact.displayName}
+            size={48}
+            selectable={selectionEnabled}
+            isSelected={isSelected}
+            onToggleSelect={() => onToggleSelect?.(contact.id)}
+          />
           <div className="contact-info">
             <h3 className="contact-name">{contact.displayName}</h3>
-            {contact.company && (
-              <p className="contact-role">{contact.company}</p>
+            {(contact.title || contact.company) && (
+              <p className="contact-role">
+                {[contact.title, contact.company].filter(Boolean).join(' \u2022 ')}
+              </p>
             )}
           </div>
         </div>
         <div className="contact-details">
-          {contact.primaryEmail && (
-            <div className="contact-detail-item">
-              <Icon name="envelope" />
-              <span>{contact.primaryEmail}</span>
-            </div>
-          )}
-          {contact.primaryPhone && (
-            <div className="contact-detail-item">
-              <Icon name="phone" />
-              <span className="phone-display">
-                {contact.primaryPhoneCountryCode && (
+          <div className="contact-detail-item">
+            {contact.primaryEmail && (
+              <>
+                <Icon name="envelope" />
+                <span>{contact.primaryEmail}</span>
+              </>
+            )}
+          </div>
+          <div className="contact-detail-item">
+            {contact.primaryPhone && (
+              <>
+                {contact.primaryPhoneCountryCode ? (
                   <span className="phone-flag" title={getCountryName(contact.primaryPhoneCountryCode)}>
                     {getCountryFlag(contact.primaryPhoneCountryCode)}
                   </span>
+                ) : (
+                  <Icon name="phone" />
                 )}
                 <span>{contact.primaryPhone}</span>
-              </span>
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </div>
-        <div className="contact-actions">
-          <button className="icon-button">
-            <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} />
+        <div className="contact-card-actions">
+          <span className="contact-action-icon">
+            {contact.linkedinUrl ? (
+              <a href={contact.linkedinUrl} target="_blank" rel="noopener noreferrer"
+                 onClick={(e) => e.stopPropagation()}>
+                <Icon name="linkedin" style="brands" />
+              </a>
+            ) : null}
+          </span>
+          <span className="contact-action-icon">
+            {contact.websiteUrl ? (
+              <a href={contact.websiteUrl} target="_blank" rel="noopener noreferrer"
+                 onClick={(e) => e.stopPropagation()}>
+                <Icon name="globe" />
+              </a>
+            ) : null}
+          </span>
+          <button className="contact-action-icon" onClick={(e) => e.stopPropagation()}>
+            <Icon name="ellipsis-vertical" />
           </button>
         </div>
       </div>

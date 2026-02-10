@@ -42,10 +42,13 @@ interface ContactListRow {
   id: number;
   display_name: string;
   company: string | null;
+  title: string | null;
   photo_hash: string | null;
   primary_email: string | null;
   primary_phone: string | null;
   primary_phone_country_code: string | null;
+  linkedin_url: string | null;
+  website_url: string | null;
 }
 
 interface EmailRow {
@@ -249,10 +252,13 @@ export default async function contactsRoutes(
           c.id,
           c.display_name,
           c.company,
+          c.title,
           c.photo_hash,
           (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
           (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone,
-          (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code
+          (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code,
+          (SELECT profile_url FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'linkedin' LIMIT 1) as linkedin_url,
+          (SELECT url FROM contact_urls WHERE contact_id = c.id LIMIT 1) as website_url
         FROM contacts c
         ${categoryJoin}
         ${whereClause}
@@ -273,10 +279,13 @@ export default async function contactsRoutes(
           c.id,
           c.display_name,
           c.company,
+          c.title,
           c.photo_hash,
           (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
           (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone,
-          (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code
+          (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code,
+          (SELECT profile_url FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'linkedin' LIMIT 1) as linkedin_url,
+          (SELECT url FROM contact_urls WHERE contact_id = c.id LIMIT 1) as website_url
         FROM contacts c
         ${categoryJoin}
         WHERE ${categoryCondition}
@@ -292,10 +301,13 @@ export default async function contactsRoutes(
           c.id,
           c.display_name,
           c.company,
+          c.title,
           c.photo_hash,
           (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
           (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone,
-          (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code
+          (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code,
+          (SELECT profile_url FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'linkedin' LIMIT 1) as linkedin_url,
+          (SELECT url FROM contact_urls WHERE contact_id = c.id LIMIT 1) as website_url
         FROM contacts c
         ORDER BY c.last_name, c.first_name, c.display_name
         LIMIT ? OFFSET ?
@@ -309,10 +321,13 @@ export default async function contactsRoutes(
         id: row.id,
         displayName: row.display_name,
         company: row.company,
+        title: row.title,
         primaryEmail: row.primary_email,
         primaryPhone: row.primary_phone,
         primaryPhoneCountryCode: row.primary_phone_country_code,
-        photoUrl: getPhotoUrl(row.photo_hash, 'thumbnail')
+        photoUrl: getPhotoUrl(row.photo_hash, 'thumbnail'),
+        linkedinUrl: row.linkedin_url,
+        websiteUrl: row.website_url
       })),
       total,
       page,

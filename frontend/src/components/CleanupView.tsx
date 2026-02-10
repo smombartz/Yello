@@ -253,7 +253,7 @@ export function CleanupView() {
                       <Icon name="box-archive" />
                       {archiveMutation.isPending
                         ? 'Archiving...'
-                        : `Archive Selected (${selectedIds.size})`}
+                        : `Archive (${selectedIds.size})`}
                     </button>
                     <button
                       className="delete-selected-button"
@@ -263,7 +263,7 @@ export function CleanupView() {
                       <Icon name="trash" />
                       {deleteMutation.isPending
                         ? 'Deleting...'
-                        : `Delete Selected (${selectedIds.size})`}
+                        : `Delete (${selectedIds.size})`}
                     </button>
                   </div>
                 )}

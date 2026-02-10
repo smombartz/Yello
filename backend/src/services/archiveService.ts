@@ -184,7 +184,8 @@ export function getArchivedContacts(limit: number, offset: number): {
       instantMessages,
       urls,
       relatedPeople,
-      photoUrl: getPhotoUrl(contact.photoHash, 'medium')
+      photoUrl: getPhotoUrl(contact.photoHash, 'medium'),
+      linkedinEnrichment: null
     };
   });
 

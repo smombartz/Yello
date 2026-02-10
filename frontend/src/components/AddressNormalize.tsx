@@ -50,7 +50,7 @@ function NormalizeCard({ contact, onRemove, onSkip, isRemoving }: NormalizeCardP
   const issueText = issueCount === 1 ? '1 junk address' : `${issueCount} junk addresses`;
 
   return (
-    <div className="normalize-card">
+    <div className="card normalize-card">
       <div className="normalize-card-header">
         <div className="normalize-contact-info">
           {contact.photoUrl ? (

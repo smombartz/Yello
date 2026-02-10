@@ -250,7 +250,7 @@ function GeocodingCard({
   const addressText = addressCount === 1 ? '1 address' : `${addressCount} addresses`;
 
   return (
-    <div className="geocoding-card">
+    <div className="card geocoding-card">
       <div className="geocoding-card-header">
         <div className="geocoding-contact-info">
           {contact.photoUrl ? (

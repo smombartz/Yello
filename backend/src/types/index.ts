@@ -89,6 +89,24 @@ export interface ContactListItem {
   photoUrl: string | null;
 }
 
+export interface LinkedInEnrichment {
+  linkedinFirstName: string | null;
+  linkedinLastName: string | null;
+  headline: string | null;
+  about: string | null;
+  jobTitle: string | null;
+  companyName: string | null;
+  companyLinkedinUrl: string | null;
+  industry: string | null;
+  location: string | null;
+  country: string | null;
+  followersCount: number | null;
+  education: string[] | null;
+  skills: string[] | null;
+  photoLinkedin: string | null;
+  enrichedAt: string | null;
+}
+
 export interface ContactDetail extends Contact {
   emails: ContactEmail[];
   phones: ContactPhone[];
@@ -99,6 +117,7 @@ export interface ContactDetail extends Contact {
   urls: ContactUrl[];
   relatedPeople: ContactRelatedPerson[];
   photoUrl: string | null;
+  linkedinEnrichment: LinkedInEnrichment | null;
 }
 
 // Deduplication types
