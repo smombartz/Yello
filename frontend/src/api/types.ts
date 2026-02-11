@@ -732,3 +732,39 @@ export interface LinkedInEnrichmentResult {
   errors: Array<{ contactId: number; contactName: string; reason: string }>;
   enrichedContacts: EnrichedContactInfo[];
 }
+
+// Email History
+export interface EmailHistoryItem {
+  id: number;
+  gmailMessageId: string;
+  threadId: string;
+  subject: string | null;
+  date: string;
+  direction: 'inbound' | 'outbound';
+  snippet: string | null;
+}
+
+export interface EmailHistoryStats {
+  total: number;
+  avgPerMonth: number;
+  last30Days: number;
+}
+
+export interface EmailHistoryResponse {
+  emails: EmailHistoryItem[];
+  stats: EmailHistoryStats;
+  hasMore: boolean;
+  nextCursor: string | null;
+  lastSyncedAt: string | null;
+}
+
+export interface EmailSyncResult {
+  synced: number;
+  total: number;
+}
+
+export interface EmailRefreshAllResult {
+  contactsRefreshed: number;
+  emailsSynced: number;
+  errors: number;
+}

@@ -115,11 +115,12 @@ export function EditableArrayItem({
 
 // ─── PhoneSection (new, for expanded card view mode) ─────────────
 
-export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit = 3 }: {
+export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit = 3, renderItemSuffix }: {
   phones: ContactPhone[];
   isEditMode: boolean;
   onPhonesChange?: (phones: ContactPhone[]) => void;
   initialLimit?: number;
+  renderItemSuffix?: (index: number) => React.ReactNode;
 }) {
   const [showAll, setShowAll] = useState(false);
 
@@ -154,21 +155,24 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
         <h4 className="section-header">Phone</h4>
         <div className="section-content edit-section-content">
           {phones.map((phone, i) => (
-            <EditableArrayItem key={`phone-${i}`} onRemove={() => removePhone(i)}>
-              <Icon name="phone" />
-              <div className="edit-field-group">
-                <EditableField
-                  value={phone.phoneDisplay}
-                  onChange={(v) => updatePhone(i, 'phone', v)}
-                  placeholder="Phone number"
-                />
-                <EditableField
-                  value={phone.type || ''}
-                  onChange={(v) => updatePhone(i, 'type', v)}
-                  placeholder="Type (home, work...)"
-                />
-              </div>
-            </EditableArrayItem>
+            <div key={`phone-${i}`} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
+              <EditableArrayItem onRemove={() => removePhone(i)}>
+                <Icon name="phone" />
+                <div className="edit-field-group">
+                  <EditableField
+                    value={phone.phoneDisplay}
+                    onChange={(v) => updatePhone(i, 'phone', v)}
+                    placeholder="Phone number"
+                  />
+                  <EditableField
+                    value={phone.type || ''}
+                    onChange={(v) => updatePhone(i, 'type', v)}
+                    placeholder="Type (home, work...)"
+                  />
+                </div>
+              </EditableArrayItem>
+              {renderItemSuffix?.(i)}
+            </div>
           ))}
           <button type="button" className="add-item-btn" onClick={addPhone}>
             <Icon name="plus" />
@@ -208,11 +212,12 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
 
 // ─── EmailSection (new, for expanded card view mode) ─────────────
 
-export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit = 3 }: {
+export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit = 3, renderItemSuffix }: {
   emails: ContactEmail[];
   isEditMode: boolean;
   onEmailsChange?: (emails: ContactEmail[]) => void;
   initialLimit?: number;
+  renderItemSuffix?: (index: number) => React.ReactNode;
 }) {
   const [showAll, setShowAll] = useState(false);
 
@@ -244,22 +249,25 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
         <h4 className="section-header">Email</h4>
         <div className="section-content edit-section-content">
           {emails.map((email, i) => (
-            <EditableArrayItem key={`email-${i}`} onRemove={() => removeEmail(i)}>
-              <Icon name="envelope" />
-              <div className="edit-field-group">
-                <EditableField
-                  value={email.email}
-                  onChange={(v) => updateEmail(i, 'email', v)}
-                  placeholder="Email address"
-                  type="email"
-                />
-                <EditableField
-                  value={email.type || ''}
-                  onChange={(v) => updateEmail(i, 'type', v)}
-                  placeholder="Type (home, work...)"
-                />
-              </div>
-            </EditableArrayItem>
+            <div key={`email-${i}`} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
+              <EditableArrayItem onRemove={() => removeEmail(i)}>
+                <Icon name="envelope" />
+                <div className="edit-field-group">
+                  <EditableField
+                    value={email.email}
+                    onChange={(v) => updateEmail(i, 'email', v)}
+                    placeholder="Email address"
+                    type="email"
+                  />
+                  <EditableField
+                    value={email.type || ''}
+                    onChange={(v) => updateEmail(i, 'type', v)}
+                    placeholder="Type (home, work...)"
+                  />
+                </div>
+              </EditableArrayItem>
+              {renderItemSuffix?.(i)}
+            </div>
           ))}
           <button type="button" className="add-item-btn" onClick={addEmail}>
             <Icon name="plus" />
@@ -439,10 +447,11 @@ export function ContactInfoSection({ emails, phones, isEditMode, onEmailsChange,
 
 // ─── LocationsSection ────────────────────────────────────────────
 
-export function LocationsSection({ addresses, isEditMode, onAddressesChange }: {
+export function LocationsSection({ addresses, isEditMode, onAddressesChange, renderItemSuffix }: {
   addresses: ContactAddress[];
   isEditMode: boolean;
   onAddressesChange?: (addresses: ContactAddress[]) => void;
+  renderItemSuffix?: (index: number) => React.ReactNode;
 }) {
   if (!isEditMode && !addresses.length) return null;
 
@@ -472,45 +481,48 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange }: {
         <h4 className="section-header">Address</h4>
         <div className="section-content edit-section-content">
           {addresses.map((addr, i) => (
-            <EditableArrayItem key={i} onRemove={() => removeAddress(i)}>
-              <Icon name="location-dot" />
-              <div className="edit-field-group address-fields">
-                <EditableField
-                  value={addr.street || ''}
-                  onChange={(v) => updateAddress(i, 'street', v)}
-                  placeholder="Street"
-                />
-                <div className="address-row">
+            <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
+              <EditableArrayItem onRemove={() => removeAddress(i)}>
+                <Icon name="location-dot" />
+                <div className="edit-field-group address-fields">
                   <EditableField
-                    value={addr.city || ''}
-                    onChange={(v) => updateAddress(i, 'city', v)}
-                    placeholder="City"
+                    value={addr.street || ''}
+                    onChange={(v) => updateAddress(i, 'street', v)}
+                    placeholder="Street"
                   />
+                  <div className="address-row">
+                    <EditableField
+                      value={addr.city || ''}
+                      onChange={(v) => updateAddress(i, 'city', v)}
+                      placeholder="City"
+                    />
+                    <EditableField
+                      value={addr.state || ''}
+                      onChange={(v) => updateAddress(i, 'state', v)}
+                      placeholder="State"
+                    />
+                  </div>
+                  <div className="address-row">
+                    <EditableField
+                      value={addr.postalCode || ''}
+                      onChange={(v) => updateAddress(i, 'postalCode', v)}
+                      placeholder="Postal Code"
+                    />
+                    <EditableField
+                      value={addr.country || ''}
+                      onChange={(v) => updateAddress(i, 'country', v)}
+                      placeholder="Country"
+                    />
+                  </div>
                   <EditableField
-                    value={addr.state || ''}
-                    onChange={(v) => updateAddress(i, 'state', v)}
-                    placeholder="State"
+                    value={addr.type || ''}
+                    onChange={(v) => updateAddress(i, 'type', v)}
+                    placeholder="Type (home, work...)"
                   />
                 </div>
-                <div className="address-row">
-                  <EditableField
-                    value={addr.postalCode || ''}
-                    onChange={(v) => updateAddress(i, 'postalCode', v)}
-                    placeholder="Postal Code"
-                  />
-                  <EditableField
-                    value={addr.country || ''}
-                    onChange={(v) => updateAddress(i, 'country', v)}
-                    placeholder="Country"
-                  />
-                </div>
-                <EditableField
-                  value={addr.type || ''}
-                  onChange={(v) => updateAddress(i, 'type', v)}
-                  placeholder="Type (home, work...)"
-                />
-              </div>
-            </EditableArrayItem>
+              </EditableArrayItem>
+              {renderItemSuffix?.(i)}
+            </div>
           ))}
           <button type="button" className="add-item-btn" onClick={addAddress}>
             <Icon name="plus" />
@@ -547,10 +559,11 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange }: {
 
 // ─── SocialLinksSection ──────────────────────────────────────────
 
-export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfilesChange }: {
+export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfilesChange, renderItemSuffix }: {
   socialProfiles: ContactSocialProfile[];
   isEditMode: boolean;
   onSocialProfilesChange?: (profiles: ContactSocialProfile[]) => void;
+  renderItemSuffix?: (index: number) => React.ReactNode;
 }) {
   if (!isEditMode && !socialProfiles.length) return null;
 
@@ -580,26 +593,29 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
         <h4 className="section-header">Social Links</h4>
         <div className="section-content edit-section-content">
           {socialProfiles.map((profile, i) => (
-            <EditableArrayItem key={i} onRemove={() => removeProfile(i)}>
-              <Icon name={getPlatformIcon(profile.platform)} style={getPlatformIconStyle(profile.platform)} />
-              <div className="edit-field-group">
-                <EditableField
-                  value={profile.platform}
-                  onChange={(v) => updateProfile(i, 'platform', v)}
-                  placeholder="Platform (LinkedIn, Twitter...)"
-                />
-                <EditableField
-                  value={profile.username}
-                  onChange={(v) => updateProfile(i, 'username', v)}
-                  placeholder="Username"
-                />
-                <EditableField
-                  value={profile.profileUrl || ''}
-                  onChange={(v) => updateProfile(i, 'profileUrl', v)}
-                  placeholder="Profile URL"
-                />
-              </div>
-            </EditableArrayItem>
+            <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
+              <EditableArrayItem onRemove={() => removeProfile(i)}>
+                <Icon name={getPlatformIcon(profile.platform)} style={getPlatformIconStyle(profile.platform)} />
+                <div className="edit-field-group">
+                  <EditableField
+                    value={profile.platform}
+                    onChange={(v) => updateProfile(i, 'platform', v)}
+                    placeholder="Platform (LinkedIn, Twitter...)"
+                  />
+                  <EditableField
+                    value={profile.username}
+                    onChange={(v) => updateProfile(i, 'username', v)}
+                    placeholder="Username"
+                  />
+                  <EditableField
+                    value={profile.profileUrl || ''}
+                    onChange={(v) => updateProfile(i, 'profileUrl', v)}
+                    placeholder="Profile URL"
+                  />
+                </div>
+              </EditableArrayItem>
+              {renderItemSuffix?.(i)}
+            </div>
           ))}
           <button type="button" className="add-item-btn" onClick={addProfile}>
             <Icon name="plus" />
@@ -630,10 +646,11 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
 
 // ─── BirthdaySection ─────────────────────────────────────────────
 
-export function BirthdaySection({ birthday, isEditMode, onBirthdayChange }: {
+export function BirthdaySection({ birthday, isEditMode, onBirthdayChange, renderSuffix }: {
   birthday: string | null;
   isEditMode: boolean;
   onBirthdayChange?: (birthday: string | null) => void;
+  renderSuffix?: () => React.ReactNode;
 }) {
   if (!isEditMode && !birthday) return null;
 
@@ -644,16 +661,19 @@ export function BirthdaySection({ birthday, isEditMode, onBirthdayChange }: {
       <div className="expanded-section">
         <h4 className="section-header">Birthday</h4>
         <div className="section-content edit-section-content">
-          <div className="expanded-item">
-            <Icon name="cake-candles" />
-            <div className="edit-field-group">
-              <EditableField
-                value={birthday || ''}
-                onChange={(v) => onBirthdayChange?.(v || null)}
-                placeholder="YYYY-MM-DD"
-                type="date"
-              />
+          <div className={renderSuffix ? 'edit-item-with-suffix' : undefined}>
+            <div className="expanded-item">
+              <Icon name="cake-candles" />
+              <div className="edit-field-group">
+                <EditableField
+                  value={birthday || ''}
+                  onChange={(v) => onBirthdayChange?.(v || null)}
+                  placeholder="YYYY-MM-DD"
+                  type="date"
+                />
+              </div>
             </div>
+            {renderSuffix?.()}
           </div>
         </div>
       </div>
@@ -672,10 +692,11 @@ export function BirthdaySection({ birthday, isEditMode, onBirthdayChange }: {
 
 // ─── CategoriesSection ───────────────────────────────────────────
 
-export function CategoriesSection({ categories, isEditMode, onCategoriesChange }: {
+export function CategoriesSection({ categories, isEditMode, onCategoriesChange, renderItemSuffix }: {
   categories: ContactCategory[];
   isEditMode: boolean;
   onCategoriesChange?: (categories: ContactCategory[]) => void;
+  renderItemSuffix?: (index: number) => React.ReactNode;
 }) {
   if (!isEditMode && !categories.length) return null;
 
@@ -705,13 +726,16 @@ export function CategoriesSection({ categories, isEditMode, onCategoriesChange }
         <h4 className="section-header">Categories</h4>
         <div className="section-content edit-section-content">
           {categories.map((cat, i) => (
-            <EditableArrayItem key={i} onRemove={() => removeCategory(i)}>
-              <EditableField
-                value={cat.category}
-                onChange={(v) => updateCategory(i, v)}
-                placeholder="Category name"
-              />
-            </EditableArrayItem>
+            <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
+              <EditableArrayItem onRemove={() => removeCategory(i)}>
+                <EditableField
+                  value={cat.category}
+                  onChange={(v) => updateCategory(i, v)}
+                  placeholder="Category name"
+                />
+              </EditableArrayItem>
+              {renderItemSuffix?.(i)}
+            </div>
           ))}
           <button type="button" className="add-item-btn" onClick={addCategory}>
             <Icon name="plus" />
@@ -740,10 +764,11 @@ export function CategoriesSection({ categories, isEditMode, onCategoriesChange }
 
 // ─── InstantMessagesSection ──────────────────────────────────────
 
-export function InstantMessagesSection({ instantMessages, isEditMode, onInstantMessagesChange }: {
+export function InstantMessagesSection({ instantMessages, isEditMode, onInstantMessagesChange, renderItemSuffix }: {
   instantMessages: ContactInstantMessage[];
   isEditMode: boolean;
   onInstantMessagesChange?: (messages: ContactInstantMessage[]) => void;
+  renderItemSuffix?: (index: number) => React.ReactNode;
 }) {
   if (!isEditMode && !instantMessages.length) return null;
 
@@ -773,21 +798,24 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
         <h4 className="section-header">Instant Messages</h4>
         <div className="section-content edit-section-content">
           {instantMessages.map((im, i) => (
-            <EditableArrayItem key={i} onRemove={() => removeIM(i)}>
-              <Icon name={getServiceIcon(im.service)} />
-              <div className="edit-field-group">
-                <EditableField
-                  value={im.service}
-                  onChange={(v) => updateIM(i, 'service', v)}
-                  placeholder="Service (Skype, AIM...)"
-                />
-                <EditableField
-                  value={im.handle}
-                  onChange={(v) => updateIM(i, 'handle', v)}
-                  placeholder="Handle"
-                />
-              </div>
-            </EditableArrayItem>
+            <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
+              <EditableArrayItem onRemove={() => removeIM(i)}>
+                <Icon name={getServiceIcon(im.service)} />
+                <div className="edit-field-group">
+                  <EditableField
+                    value={im.service}
+                    onChange={(v) => updateIM(i, 'service', v)}
+                    placeholder="Service (Skype, AIM...)"
+                  />
+                  <EditableField
+                    value={im.handle}
+                    onChange={(v) => updateIM(i, 'handle', v)}
+                    placeholder="Handle"
+                  />
+                </div>
+              </EditableArrayItem>
+              {renderItemSuffix?.(i)}
+            </div>
           ))}
           <button type="button" className="add-item-btn" onClick={addIM}>
             <Icon name="plus" />
@@ -812,10 +840,11 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
 
 // ─── UrlsSection ─────────────────────────────────────────────────
 
-export function UrlsSection({ urls, isEditMode, onUrlsChange }: {
+export function UrlsSection({ urls, isEditMode, onUrlsChange, renderItemSuffix }: {
   urls: ContactUrl[];
   isEditMode: boolean;
   onUrlsChange?: (urls: ContactUrl[]) => void;
+  renderItemSuffix?: (index: number) => React.ReactNode;
 }) {
   if (!isEditMode && !urls.length) return null;
 
@@ -845,21 +874,24 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange }: {
         <h4 className="section-header">Web Links</h4>
         <div className="section-content edit-section-content">
           {urls.map((u, i) => (
-            <EditableArrayItem key={i} onRemove={() => removeUrl(i)}>
-              <Icon name={getUrlIcon(u.url, u.label)} />
-              <div className="edit-field-group">
-                <EditableField
-                  value={u.url}
-                  onChange={(v) => updateUrl(i, 'url', v)}
-                  placeholder="URL"
-                />
-                <EditableField
-                  value={u.label || ''}
-                  onChange={(v) => updateUrl(i, 'label', v || null)}
-                  placeholder="Label"
-                />
-              </div>
-            </EditableArrayItem>
+            <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
+              <EditableArrayItem onRemove={() => removeUrl(i)}>
+                <Icon name={getUrlIcon(u.url, u.label)} />
+                <div className="edit-field-group">
+                  <EditableField
+                    value={u.url}
+                    onChange={(v) => updateUrl(i, 'url', v)}
+                    placeholder="URL"
+                  />
+                  <EditableField
+                    value={u.label || ''}
+                    onChange={(v) => updateUrl(i, 'label', v || null)}
+                    placeholder="Label"
+                  />
+                </div>
+              </EditableArrayItem>
+              {renderItemSuffix?.(i)}
+            </div>
           ))}
           <button type="button" className="add-item-btn" onClick={addUrl}>
             <Icon name="plus" />
@@ -886,10 +918,11 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange }: {
 
 // ─── RelatedPeopleSection ────────────────────────────────────────
 
-export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopleChange }: {
+export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopleChange, renderItemSuffix }: {
   relatedPeople: ContactRelatedPerson[];
   isEditMode: boolean;
   onRelatedPeopleChange?: (people: ContactRelatedPerson[]) => void;
+  renderItemSuffix?: (index: number) => React.ReactNode;
 }) {
   if (!isEditMode && !relatedPeople.length) return null;
 
@@ -919,21 +952,24 @@ export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopl
         <h4 className="section-header">Related People</h4>
         <div className="section-content edit-section-content">
           {relatedPeople.map((person, i) => (
-            <EditableArrayItem key={i} onRemove={() => removePerson(i)}>
-              <Icon name={getRelationshipIcon(person.relationship)} />
-              <div className="edit-field-group">
-                <EditableField
-                  value={person.name}
-                  onChange={(v) => updatePerson(i, 'name', v)}
-                  placeholder="Name"
-                />
-                <EditableField
-                  value={person.relationship || ''}
-                  onChange={(v) => updatePerson(i, 'relationship', v || null)}
-                  placeholder="Relationship"
-                />
-              </div>
-            </EditableArrayItem>
+            <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
+              <EditableArrayItem onRemove={() => removePerson(i)}>
+                <Icon name={getRelationshipIcon(person.relationship)} />
+                <div className="edit-field-group">
+                  <EditableField
+                    value={person.name}
+                    onChange={(v) => updatePerson(i, 'name', v)}
+                    placeholder="Name"
+                  />
+                  <EditableField
+                    value={person.relationship || ''}
+                    onChange={(v) => updatePerson(i, 'relationship', v || null)}
+                    placeholder="Relationship"
+                  />
+                </div>
+              </EditableArrayItem>
+              {renderItemSuffix?.(i)}
+            </div>
           ))}
           <button type="button" className="add-item-btn" onClick={addPerson}>
             <Icon name="plus" />
@@ -958,10 +994,11 @@ export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopl
 
 // ─── NotesSection ────────────────────────────────────────────────
 
-export function NotesSection({ notes, isEditMode, onNotesChange }: {
+export function NotesSection({ notes, isEditMode, onNotesChange, renderSuffix }: {
   notes: string | null;
   isEditMode: boolean;
   onNotesChange?: (notes: string | null) => void;
+  renderSuffix?: () => React.ReactNode;
 }) {
   if (!isEditMode && !notes) return null;
 
@@ -969,13 +1006,16 @@ export function NotesSection({ notes, isEditMode, onNotesChange }: {
     return (
       <div>
         <h4 className="section-header">Notes</h4>
-        <textarea
-          value={notes || ''}
-          onChange={(e) => onNotesChange?.(e.target.value || null)}
-          placeholder="Add notes..."
-          className="edit-notes-textarea"
-          rows={4}
-        />
+        <div className={renderSuffix ? 'edit-item-with-suffix' : undefined}>
+          <textarea
+            value={notes || ''}
+            onChange={(e) => onNotesChange?.(e.target.value || null)}
+            placeholder="Add notes..."
+            className="edit-notes-textarea"
+            rows={4}
+          />
+          {renderSuffix?.()}
+        </div>
       </div>
     );
   }

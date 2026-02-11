@@ -2,19 +2,7 @@ import { useState } from 'react';
 import type { ContactDetail, ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, UpdateContactRequest } from '../api/types';
 import { useUpdateContact } from '../api/hooks';
 import { Icon } from './Icon';
-import {
-  EditableField,
-  PhoneSection,
-  EmailSection,
-  LocationsSection,
-  SocialLinksSection,
-  BirthdaySection,
-  CategoriesSection,
-  InstantMessagesSection,
-  UrlsSection,
-  RelatedPeopleSection,
-  NotesSection,
-} from './ContactFormSections';
+import { EditableField } from './ContactFormSections';
 import { ContactCardView } from './ContactCardView';
 import { EmailHistorySection } from './EmailHistorySection';
 
@@ -141,38 +129,30 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
     }
   };
 
-  const hasCategories = contact.categories?.length > 0;
-
-  // Use edit form data when in edit mode
-  const displayData = isEditMode && editForm ? {
-    ...contact,
-    ...editForm,
-  } : contact;
-
   // ─── Edit Mode ───────────────────────────────────────────────
-  if (isEditMode) {
+  if (isEditMode && editForm) {
     return (
       <div className="expanded-content" onClick={(e) => e.stopPropagation()}>
         {/* Name fields + Save/Cancel */}
         <div className="expanded-top-row">
           <div className="edit-name-fields">
             <EditableField
-              value={editForm?.firstName || ''}
+              value={editForm.firstName || ''}
               onChange={(v) => setEditForm(f => f ? { ...f, firstName: v || null } : null)}
               placeholder="First name"
             />
             <EditableField
-              value={editForm?.lastName || ''}
+              value={editForm.lastName || ''}
               onChange={(v) => setEditForm(f => f ? { ...f, lastName: v || null } : null)}
               placeholder="Last name"
             />
             <EditableField
-              value={editForm?.company || ''}
+              value={editForm.company || ''}
               onChange={(v) => setEditForm(f => f ? { ...f, company: v || null } : null)}
               placeholder="Company"
             />
             <EditableField
-              value={editForm?.title || ''}
+              value={editForm.title || ''}
               onChange={(v) => setEditForm(f => f ? { ...f, title: v || null } : null)}
               placeholder="Title"
             />
@@ -212,72 +192,25 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
           </div>
         )}
 
-        {/* Categories */}
-        {(hasCategories || isEditMode) && (
-          <CategoriesSection
-            categories={displayData.categories}
-            isEditMode={isEditMode}
-            onCategoriesChange={(categories) => setEditForm(f => f ? { ...f, categories } : null)}
-          />
-        )}
-
-        {/* Edit grid: 3 columns with all sections */}
-        <div className="expanded-grid">
-          <div className="expanded-column">
-            <PhoneSection
-              phones={displayData.phones}
-              isEditMode={isEditMode}
-              onPhonesChange={(phones) => setEditForm(f => f ? { ...f, phones } : null)}
-            />
-            <EmailSection
-              emails={displayData.emails}
-              isEditMode={isEditMode}
-              onEmailsChange={(emails) => setEditForm(f => f ? { ...f, emails } : null)}
-            />
-            <InstantMessagesSection
-              instantMessages={displayData.instantMessages}
-              isEditMode={isEditMode}
-              onInstantMessagesChange={(instantMessages) => setEditForm(f => f ? { ...f, instantMessages } : null)}
-            />
-          </div>
-
-          <div className="expanded-column">
-            <LocationsSection
-              addresses={displayData.addresses}
-              isEditMode={isEditMode}
-              onAddressesChange={(addresses) => setEditForm(f => f ? { ...f, addresses } : null)}
-            />
-            <BirthdaySection
-              birthday={displayData.birthday}
-              isEditMode={isEditMode}
-              onBirthdayChange={(birthday) => setEditForm(f => f ? { ...f, birthday } : null)}
-            />
-            <RelatedPeopleSection
-              relatedPeople={displayData.relatedPeople}
-              isEditMode={isEditMode}
-              onRelatedPeopleChange={(relatedPeople) => setEditForm(f => f ? { ...f, relatedPeople } : null)}
-            />
-          </div>
-
-          <div className="expanded-column">
-            <SocialLinksSection
-              socialProfiles={displayData.socialProfiles}
-              isEditMode={isEditMode}
-              onSocialProfilesChange={(socialProfiles) => setEditForm(f => f ? { ...f, socialProfiles } : null)}
-            />
-            <UrlsSection
-              urls={displayData.urls}
-              isEditMode={isEditMode}
-              onUrlsChange={(urls) => setEditForm(f => f ? { ...f, urls } : null)}
-            />
-          </div>
-        </div>
-
-        {/* Notes */}
-        <NotesSection
-          notes={displayData.notes}
-          isEditMode={isEditMode}
-          onNotesChange={(notes) => setEditForm(f => f ? { ...f, notes } : null)}
+        <ContactCardView
+          data={contact}
+          isEditMode={true}
+          editState={{
+            phones: editForm.phones,
+            emails: editForm.emails,
+            addresses: editForm.addresses,
+            socialProfiles: editForm.socialProfiles,
+            categories: editForm.categories,
+            instantMessages: editForm.instantMessages,
+            urls: editForm.urls,
+            relatedPeople: editForm.relatedPeople,
+            birthday: editForm.birthday,
+            notes: editForm.notes,
+          }}
+          onEditStateChange={(key, value) => {
+            setEditForm(f => f ? { ...f, [key]: value } : null);
+          }}
+          showMetadata={false}
         />
       </div>
     );

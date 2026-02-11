@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Icon } from './Icon';
 import { ContactCardView } from './ContactCardView';
-import type { ContactCardViewData } from './ContactCardView';
+import type { ContactCardViewData, ContactCardEditState, SectionSuffixes } from './ContactCardView';
 import type {
   ContactSocialProfile,
   ContactUrl,
@@ -30,11 +30,8 @@ import type {
 } from '../api/types';
 import { Avatar } from './Avatar';
 import type { OutletContext } from './Layout';
-import {
-  EditableField,
-  EditableArrayItem,
-} from './ContactFormSections';
-import { formatBirthday, getZodiacSign } from '../utils/contactFormatters';
+import { EditableField } from './ContactFormSections';
+import { formatBirthday } from '../utils/contactFormatters';
 
 // Default visibility settings - all fields hidden by default for privacy
 function getDefaultVisibility(): ProfileVisibility {
@@ -158,6 +155,134 @@ function mapProfileToCardData(form: FormState): ContactCardViewData {
     birthday: form.birthday,
     notes: form.notes,
   };
+}
+
+// ─── Sentinel IDs for bidirectional mapping ───────────────────
+// These negative IDs track which social profile / URL maps to which named field
+const SENTINEL_LINKEDIN = -1;
+const SENTINEL_INSTAGRAM = -2;
+const SENTINEL_WHATSAPP = -3;
+const SENTINEL_WEBSITE_URL = -200;
+// otherSocialLinks use -100, -101, ...
+function otherSocialSentinel(index: number) { return -(100 + index); }
+
+/** Map form state → ContactCardEditState for edit mode */
+function mapFormToEditState(form: FormState): ContactCardEditState {
+  const socialProfiles: ContactSocialProfile[] = [];
+
+  // Always include all 3 named slots (even if empty) so user can type into them
+  socialProfiles.push({
+    id: SENTINEL_LINKEDIN, contactId: 0,
+    platform: 'linkedin', username: form.linkedin || '',
+    profileUrl: form.linkedin
+      ? (form.linkedin.startsWith('http') ? form.linkedin : `https://linkedin.com/in/${form.linkedin}`)
+      : null,
+    type: null,
+  });
+  socialProfiles.push({
+    id: SENTINEL_INSTAGRAM, contactId: 0,
+    platform: 'instagram', username: form.instagram || '',
+    profileUrl: form.instagram ? `https://instagram.com/${form.instagram}` : null,
+    type: null,
+  });
+  socialProfiles.push({
+    id: SENTINEL_WHATSAPP, contactId: 0,
+    platform: 'whatsapp', username: form.whatsapp || '',
+    profileUrl: form.whatsapp ? `https://wa.me/${form.whatsapp.replace(/\D/g, '')}` : null,
+    type: null,
+  });
+
+  // Other social links
+  form.otherSocialLinks.forEach((link, i) => {
+    socialProfiles.push({
+      id: otherSocialSentinel(i), contactId: 0,
+      platform: link.platform, username: link.username,
+      profileUrl: link.profileUrl,
+      type: null,
+    });
+  });
+
+  const urls: ContactUrl[] = [];
+  urls.push({
+    id: SENTINEL_WEBSITE_URL, contactId: 0,
+    url: form.website || '', label: 'Website', type: null,
+  });
+
+  return {
+    phones: form.phones as ContactPhone[],
+    emails: form.emails as ContactEmail[],
+    addresses: form.addresses as ContactAddress[],
+    socialProfiles,
+    categories: [],
+    instantMessages: [],
+    urls,
+    relatedPeople: [],
+    birthday: form.birthday,
+    notes: form.notes,
+  };
+}
+
+/** Reverse map: editState change → form state updates */
+function mapEditStateToForm(
+  key: keyof ContactCardEditState,
+  value: unknown,
+  currentForm: FormState,
+): Partial<FormState> {
+  switch (key) {
+    case 'phones':
+      return { phones: value as ProfilePhone[] };
+    case 'emails':
+      return { emails: value as ProfileEmail[] };
+    case 'addresses':
+      return { addresses: value as ProfileAddress[] };
+    case 'birthday':
+      return { birthday: value as string | null };
+    case 'notes':
+      return { notes: value as string | null };
+
+    case 'socialProfiles': {
+      const profiles = value as ContactSocialProfile[];
+      let linkedin = currentForm.linkedin;
+      let instagram = currentForm.instagram;
+      let whatsapp = currentForm.whatsapp;
+      const otherSocialLinks: ProfileSocialLink[] = [];
+
+      for (const p of profiles) {
+        if (p.id === SENTINEL_LINKEDIN) {
+          linkedin = p.username || null;
+        } else if (p.id === SENTINEL_INSTAGRAM) {
+          instagram = p.username || null;
+        } else if (p.id === SENTINEL_WHATSAPP) {
+          whatsapp = p.username || null;
+        } else {
+          // Other social links (sentinel IDs <= -100) or newly added (id=0)
+          const existingIndex = p.id <= -100 ? -(p.id + 100) : -1;
+          const existing = existingIndex >= 0 ? currentForm.otherSocialLinks[existingIndex] : undefined;
+          otherSocialLinks.push({
+            id: existing?.id,
+            platform: p.platform,
+            username: p.username,
+            profileUrl: p.profileUrl,
+          });
+        }
+      }
+      return { linkedin, instagram, whatsapp, otherSocialLinks };
+    }
+
+    case 'urls': {
+      const urlList = value as ContactUrl[];
+      let website = currentForm.website;
+      for (const u of urlList) {
+        if (u.id === SENTINEL_WEBSITE_URL) {
+          website = u.url || null;
+        }
+      }
+      return { website };
+    }
+
+    default:
+      return {};
+  }
 }
 
 // Visibility toggle component
@@ -694,60 +819,117 @@ export function UserProfilePage() {
     }
   };
 
-  // Email handlers
-  const addEmail = () => {
-    updateForm('emails', [...form.emails, { email: '', type: null, isPrimary: form.emails.length === 0 }]);
-  };
-  const updateEmail = (index: number, field: keyof ProfileEmail, value: string | boolean) => {
-    const updated = [...form.emails];
-    updated[index] = { ...updated[index], [field]: value };
-    updateForm('emails', updated);
-  };
-  const removeEmail = (index: number) => {
-    updateForm('emails', form.emails.filter((_, i) => i !== index));
-  };
+  // Memoize edit state for ContactCardView
+  const editState = useMemo<ContactCardEditState>(
+    () => mapFormToEditState(form),
+    [form]
+  );
 
-  // Phone handlers
-  const addPhone = () => {
-    updateForm('phones', [...form.phones, { phone: '', phoneDisplay: '', countryCode: null, type: null, isPrimary: form.phones.length === 0 }]);
-  };
-  const updatePhone = (index: number, field: keyof ProfilePhone, value: string | boolean) => {
-    const updated = [...form.phones];
-    updated[index] = { ...updated[index], [field]: value };
-    if (field === 'phone') {
-      updated[index].phoneDisplay = value as string;
-    }
-    updateForm('phones', updated);
-  };
-  const removePhone = (index: number) => {
-    updateForm('phones', form.phones.filter((_, i) => i !== index));
-  };
+  // Build sectionSuffixes for visibility toggles
+  const sectionSuffixes = useMemo<SectionSuffixes>(() => ({
+    phones: (index: number) => {
+      const phone = form.phones[index];
+      if (!phone) return null;
+      return (
+        <VisibilityToggle
+          visible={form.visibility.phones[phone.phone] === true}
+          onChange={(v) => updateVisibility('phones', { ...form.visibility.phones, [phone.phone]: v })}
+          disabled={!form.isPublic}
+        />
+      );
+    },
+    emails: (index: number) => {
+      const email = form.emails[index];
+      if (!email) return null;
+      return (
+        <VisibilityToggle
+          visible={form.visibility.emails[email.email] === true}
+          onChange={(v) => updateVisibility('emails', { ...form.visibility.emails, [email.email]: v })}
+          disabled={!form.isPublic}
+        />
+      );
+    },
+    addresses: (index: number) => {
+      const addr = form.addresses[index];
+      if (!addr) return null;
+      return (
+        <VisibilityToggle
+          visible={addr.id ? form.visibility.addresses[addr.id] === true : false}
+          onChange={(v) => addr.id && updateVisibility('addresses', { ...form.visibility.addresses, [addr.id]: v })}
+          disabled={!form.isPublic}
+        />
+      );
+    },
+    socialProfiles: (index: number) => {
+      const profile = editState.socialProfiles[index];
+      if (!profile) return null;
+      // Map sentinel IDs back to visibility keys
+      if (profile.id === SENTINEL_LINKEDIN) {
+        return (
+          <VisibilityToggle
+            visible={form.visibility.linkedin}
+            onChange={(v) => updateVisibility('linkedin', v)}
+            disabled={!form.isPublic}
+          />
+        );
+      }
+      if (profile.id === SENTINEL_INSTAGRAM) {
+        return (
+          <VisibilityToggle
+            visible={form.visibility.instagram}
+            onChange={(v) => updateVisibility('instagram', v)}
+            disabled={!form.isPublic}
+          />
+        );
+      }
+      if (profile.id === SENTINEL_WHATSAPP) {
+        return (
+          <VisibilityToggle
+            visible={form.visibility.whatsapp}
+            onChange={(v) => updateVisibility('whatsapp', v)}
+            disabled={!form.isPublic}
+          />
+        );
+      }
+      // Other social links
+      const otherIndex = -(profile.id + 100);
+      const otherLink = otherIndex >= 0 ? form.otherSocialLinks[otherIndex] : undefined;
+      if (otherLink?.id) {
+        return (
+          <VisibilityToggle
+            visible={form.visibility.otherSocialLinks[otherLink.id] === true}
+            onChange={(v) => updateVisibility('otherSocialLinks', { ...form.visibility.otherSocialLinks, [otherLink.id!]: v })}
+            disabled={!form.isPublic}
+          />
+        );
+      }
+      return null;
+    },
+    urls: (index: number) => {
+      const url = editState.urls[index];
+      if (!url) return null;
+      if (url.id === SENTINEL_WEBSITE_URL) {
+        return (
+          <VisibilityToggle
+            visible={form.visibility.website}
+            onChange={(v) => updateVisibility('website', v)}
+            disabled={!form.isPublic}
+          />
+        );
+      }
+      return null;
+    },
+    birthday: () => (
+      <VisibilityToggle
+        visible={form.visibility.birthday}
+        onChange={(v) => updateVisibility('birthday', v)}
+        disabled={!form.isPublic}
+      />
+    ),
+    // notes: no visibility toggle (always private)
+  }), [form, editState.socialProfiles, editState.urls, updateVisibility]);
 
-  // Address handlers
-  const addAddress = () => {
-    updateForm('addresses', [...form.addresses, { id: `new-${Date.now()}`, street: null, city: null, state: null, postalCode: null, country: null, type: null }]);
-  };
-  const updateAddress = (index: number, field: keyof ProfileAddress, value: string | null) => {
-    const updated = [...form.addresses];
-    updated[index] = { ...updated[index], [field]: value || null };
-    updateForm('addresses', updated);
-  };
-  const removeAddress = (index: number) => {
-    updateForm('addresses', form.addresses.filter((_, i) => i !== index));
-  };
-
-  // Social link handlers
-  const addSocialLink = () => {
-    updateForm('otherSocialLinks', [...form.otherSocialLinks, { id: `new-${Date.now()}`, platform: '', username: '', profileUrl: null }]);
-  };
-  const updateSocialLink = (index: number, field: keyof ProfileSocialLink, value: string | null) => {
-    const updated = [...form.otherSocialLinks];
-    updated[index] = { ...updated[index], [field]: value };
-    updateForm('otherSocialLinks', updated);
-  };
-  const removeSocialLink = (index: number) => {
-    updateForm('otherSocialLinks', form.otherSocialLinks.filter((_, i) => i !== index));
-  };
+  const hiddenSections = useMemo(() => new Set(['categories', 'instantMessages', 'relatedPeople']), []);
 
   if (isLoading) {
     return (
@@ -800,85 +982,100 @@ export function UserProfilePage() {
     <>
       <div className="page-content">
         <div className="profile-page-layout">
-          {/* Left panel */}
-          <div className="profile-edit-panel">
-            {/* Error message */}
-            {error && (
-              <div className="edit-error">
-                <Icon name="circle-exclamation" />
-                {error}
-              </div>
-            )}
-
-            {/* Linked contact header */}
-            {profile.linkedContact && (
-              <LinkedProfileHeader
-                linkedContact={profile.linkedContact}
-                onUnlink={handleUnlink}
-              />
-            )}
-
-            {/* Public card controls */}
-            <div className="profile-section public-card-controls">
-              <div className="public-toggle-row">
-                <div className="public-toggle-label">
-                  <Icon name="globe" />
-                  <div>
-                    <strong>Make my contact card public</strong>
-                    <p>Share your contact info with a public link</p>
-                  </div>
-                </div>
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={form.isPublic}
-                    onChange={(e) => updateForm('isPublic', e.target.checked)}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-
-              {form.isPublic && (
-                <button
-                  type="button"
-                  className="hide-all-btn"
-                  onClick={hideAllVisibility}
-                >
-                  <Icon name="eye-slash" />
-                  Hide All Fields
-                </button>
-              )}
-
-              {form.isPublic && profile?.publicUrl && (
-                <div className="public-url-row">
-                  <div className="public-url-display">
-                    <Icon name="link" />
-                    <code>{profile.publicUrl}</code>
-                  </div>
-                  <div className="public-url-actions">
-                    <a
-                      href={`/p/${profile.publicSlug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="view-card-btn"
-                      title="View public card"
-                    >
-                      <Icon name="arrow-up-right-from-square" />
-                    </a>
-                    <button
-                      type="button"
-                      className="copy-url-btn"
-                      onClick={handleCopyUrl}
-                      title="Copy URL"
-                    >
-                      <Icon name={copySuccess ? 'check' : 'copy'} />
-                    </button>
-                  </div>
+          {/* Section 1: Public settings — 2-col grid (controls + preview) */}
+          <div className="profile-public-settings">
+            <div className="public-settings-controls">
+              {/* Error message */}
+              {error && (
+                <div className="edit-error">
+                  <Icon name="circle-exclamation" />
+                  {error}
                 </div>
               )}
+
+              {/* Linked contact header */}
+              {profile.linkedContact && (
+                <LinkedProfileHeader
+                  linkedContact={profile.linkedContact}
+                  onUnlink={handleUnlink}
+                />
+              )}
+
+              {/* Public card controls */}
+              <div className="profile-section public-card-controls">
+                <div className="public-toggle-row">
+                  <div className="public-toggle-label">
+                    <Icon name="globe" />
+                    <div>
+                      <strong>Make my contact card public</strong>
+                      <p>Share your contact info with a public link</p>
+                    </div>
+                  </div>
+                  <label className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={form.isPublic}
+                      onChange={(e) => updateForm('isPublic', e.target.checked)}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
+                </div>
+
+                {form.isPublic && (
+                  <button
+                    type="button"
+                    className="hide-all-btn"
+                    onClick={hideAllVisibility}
+                  >
+                    <Icon name="eye-slash" />
+                    Hide All Fields
+                  </button>
+                )}
+
+                {form.isPublic && profile?.publicUrl && (
+                  <div className="public-url-row">
+                    <div className="public-url-display">
+                      <Icon name="link" />
+                      <code>{profile.publicUrl}</code>
+                    </div>
+                    <div className="public-url-actions">
+                      <a
+                        href={`/p/${profile.publicSlug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="view-card-btn"
+                        title="View public card"
+                      >
+                        <Icon name="arrow-up-right-from-square" />
+                      </a>
+                      <button
+                        type="button"
+                        className="copy-url-btn"
+                        onClick={handleCopyUrl}
+                        title="Copy URL"
+                      >
+                        <Icon name={copySuccess ? 'check' : 'copy'} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* View mode: ContactCardView */}
+            {/* Preview sidebar — only show in edit mode or when public */}
+            {(isEditMode || form.isPublic) && (
+              <div className="public-settings-preview">
+                <div className="preview-panel-header">
+                  <h3>Public Card Preview</h3>
+                  <p>This is how others will see your contact card</p>
+                </div>
+                <PublicCardPreview form={form} isPublic={form.isPublic} />
+              </div>
+            )}
+          </div>
+
+          {/* Section 2: Contact details — full width */}
+          <div className="profile-contact-details">
             {!isEditMode ? (
               <>
                 <div className="contact-detail-content">
@@ -893,462 +1090,153 @@ export function UserProfilePage() {
               </>
             ) : (
               <>
-                {/* Edit mode: editable fields */}
-                {/* Basic info section */}
-                <div className="profile-section">
-                  <h3 className="section-title">Basic Information</h3>
-
-                  {/* First Name */}
-                  <div className="profile-field-row">
-                    <div className="profile-field with-visibility">
-                      <label>First Name</label>
+                <div className="expanded-top-row">
+                  <div className="edit-name-fields profile-name-fields">
+                    <div className="name-field-with-toggle">
                       <EditableField
                         value={form.firstName || ''}
-                        onChange={(v) => updateForm('firstName', v || null)}
+                        onChange={(v) => { updateForm('firstName', v || null); }}
                         placeholder="First name"
                       />
+                      <VisibilityToggle
+                        visible={form.visibility.firstName}
+                        onChange={(v) => updateVisibility('firstName', v)}
+                        disabled={!form.isPublic}
+                      />
                     </div>
-                    <VisibilityToggle
-                      visible={form.visibility.firstName}
-                      onChange={(v) => updateVisibility('firstName', v)}
-                      disabled={!form.isPublic}
-                    />
-                  </div>
-
-                  {/* Last Name */}
-                  <div className="profile-field-row">
-                    <div className="profile-field with-visibility">
-                      <label>Last Name</label>
+                    <div className="name-field-with-toggle">
                       <EditableField
                         value={form.lastName || ''}
-                        onChange={(v) => updateForm('lastName', v || null)}
+                        onChange={(v) => { updateForm('lastName', v || null); }}
                         placeholder="Last name"
                       />
-                    </div>
-                    <VisibilityToggle
-                      visible={form.visibility.lastName}
-                      onChange={(v) => updateVisibility('lastName', v)}
-                      disabled={!form.isPublic}
-                    />
-                  </div>
-
-                  {/* Tagline */}
-                  <div className="profile-field-row">
-                    <div className="profile-field with-visibility">
-                      <label>Tagline</label>
-                      <EditableField
-                        value={form.tagline || ''}
-                        onChange={(v) => updateForm('tagline', v || null)}
-                        placeholder="3-word self-description"
+                      <VisibilityToggle
+                        visible={form.visibility.lastName}
+                        onChange={(v) => updateVisibility('lastName', v)}
+                        disabled={!form.isPublic}
                       />
                     </div>
-                    <VisibilityToggle
-                      visible={form.visibility.tagline}
-                      onChange={(v) => updateVisibility('tagline', v)}
-                      disabled={!form.isPublic}
-                    />
-                  </div>
-
-                  {/* Company */}
-                  <div className="profile-field-row">
-                    <div className="profile-field with-visibility">
-                      <label>Company</label>
+                    <div className="name-field-with-toggle">
                       <EditableField
                         value={form.company || ''}
-                        onChange={(v) => updateForm('company', v || null)}
-                        placeholder="Company or organization"
+                        onChange={(v) => { updateForm('company', v || null); }}
+                        placeholder="Company"
+                      />
+                      <VisibilityToggle
+                        visible={form.visibility.company}
+                        onChange={(v) => updateVisibility('company', v)}
+                        disabled={!form.isPublic}
                       />
                     </div>
-                    <VisibilityToggle
-                      visible={form.visibility.company}
-                      onChange={(v) => updateVisibility('company', v)}
-                      disabled={!form.isPublic}
-                    />
-                  </div>
-
-                  {/* Job Title */}
-                  <div className="profile-field-row">
-                    <div className="profile-field with-visibility">
-                      <label>Job Title</label>
+                    <div className="name-field-with-toggle">
                       <EditableField
                         value={form.title || ''}
-                        onChange={(v) => updateForm('title', v || null)}
+                        onChange={(v) => { updateForm('title', v || null); }}
                         placeholder="Job title"
                       />
+                      <VisibilityToggle
+                        visible={form.visibility.title}
+                        onChange={(v) => updateVisibility('title', v)}
+                        disabled={!form.isPublic}
+                      />
                     </div>
-                    <VisibilityToggle
-                      visible={form.visibility.title}
-                      onChange={(v) => updateVisibility('title', v)}
-                      disabled={!form.isPublic}
-                    />
+                    <div className="name-field-with-toggle">
+                      <EditableField
+                        value={form.tagline || ''}
+                        onChange={(v) => { updateForm('tagline', v || null); }}
+                        placeholder="Tagline"
+                      />
+                      <VisibilityToggle
+                        visible={form.visibility.tagline}
+                        onChange={(v) => updateVisibility('tagline', v)}
+                        disabled={!form.isPublic}
+                      />
+                    </div>
                   </div>
-                </div>
-
-                {/* Contact info section */}
-                <div className="profile-section">
-                  <h3 className="section-title">Contact Information</h3>
-
-                  {/* Emails */}
-                  <div className="profile-array-field">
-                    <label>Email Addresses</label>
-                    {form.emails.map((email, i) => (
-                      <div key={`email-${i}`} className="profile-field-row">
-                        <EditableArrayItem onRemove={() => removeEmail(i)}>
-                          <Icon name="envelope" />
-                          <div className="edit-field-group">
-                            <EditableField
-                              value={email.email}
-                              onChange={(v) => updateEmail(i, 'email', v)}
-                              placeholder="Email address"
-                              type="email"
-                            />
-                            <EditableField
-                              value={email.type || ''}
-                              onChange={(v) => updateEmail(i, 'type', v)}
-                              placeholder="Type (home, work...)"
-                            />
-                          </div>
-                        </EditableArrayItem>
-                        <VisibilityToggle
-                          visible={form.visibility.emails[email.email] === true}
-                          onChange={(v) =>
-                            updateVisibility('emails', { ...form.visibility.emails, [email.email]: v })
-                          }
-                          disabled={!form.isPublic}
-                        />
-                      </div>
-                    ))}
-                    <button type="button" className="add-item-btn" onClick={addEmail}>
-                      <Icon name="plus" />
-                      Add Email
+                  <div className="expanded-actions">
+                    <button
+                      className="action-button secondary"
+                      onClick={handleCancelEdit}
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      Cancel
                     </button>
-                  </div>
-
-                  {/* Phones */}
-                  <div className="profile-array-field">
-                    <label>Phone Numbers</label>
-                    {form.phones.map((phone, i) => (
-                      <div key={`phone-${i}`} className="profile-field-row">
-                        <EditableArrayItem onRemove={() => removePhone(i)}>
-                          <Icon name="phone" />
-                          <div className="edit-field-group">
-                            <EditableField
-                              value={phone.phoneDisplay}
-                              onChange={(v) => updatePhone(i, 'phone', v)}
-                              placeholder="Phone number"
-                            />
-                            <EditableField
-                              value={phone.type || ''}
-                              onChange={(v) => updatePhone(i, 'type', v)}
-                              placeholder="Type (mobile, home...)"
-                            />
-                          </div>
-                        </EditableArrayItem>
-                        <VisibilityToggle
-                          visible={form.visibility.phones[phone.phone] === true}
-                          onChange={(v) =>
-                            updateVisibility('phones', { ...form.visibility.phones, [phone.phone]: v })
-                          }
-                          disabled={!form.isPublic}
-                        />
-                      </div>
-                    ))}
-                    <button type="button" className="add-item-btn" onClick={addPhone}>
-                      <Icon name="plus" />
-                      Add Phone
-                    </button>
-                  </div>
-
-                  {/* Addresses */}
-                  <div className="profile-array-field">
-                    <label>Addresses</label>
-                    {form.addresses.map((addr, i) => (
-                      <div key={`addr-${i}`} className="profile-field-row address-row">
-                        <EditableArrayItem onRemove={() => removeAddress(i)}>
-                          <Icon name="location-dot" />
-                          <div className="edit-field-group address-fields">
-                            <EditableField
-                              value={addr.street || ''}
-                              onChange={(v) => updateAddress(i, 'street', v)}
-                              placeholder="Street"
-                            />
-                            <div className="address-row-inner">
-                              <EditableField
-                                value={addr.city || ''}
-                                onChange={(v) => updateAddress(i, 'city', v)}
-                                placeholder="City"
-                              />
-                              <EditableField
-                                value={addr.state || ''}
-                                onChange={(v) => updateAddress(i, 'state', v)}
-                                placeholder="State"
-                              />
-                            </div>
-                            <div className="address-row-inner">
-                              <EditableField
-                                value={addr.postalCode || ''}
-                                onChange={(v) => updateAddress(i, 'postalCode', v)}
-                                placeholder="Postal Code"
-                              />
-                              <EditableField
-                                value={addr.country || ''}
-                                onChange={(v) => updateAddress(i, 'country', v)}
-                                placeholder="Country"
-                              />
-                            </div>
-                            <EditableField
-                              value={addr.type || ''}
-                              onChange={(v) => updateAddress(i, 'type', v)}
-                              placeholder="Type (home, work...)"
-                            />
-                          </div>
-                        </EditableArrayItem>
-                        <VisibilityToggle
-                          visible={addr.id ? form.visibility.addresses[addr.id] === true : false}
-                          onChange={(v) =>
-                            addr.id && updateVisibility('addresses', { ...form.visibility.addresses, [addr.id]: v })
-                          }
-                          disabled={!form.isPublic}
-                        />
-                      </div>
-                    ))}
-                    <button type="button" className="add-item-btn" onClick={addAddress}>
-                      <Icon name="plus" />
-                      Add Address
+                    <button
+                      className="action-button primary"
+                      onClick={handleSave}
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      {updateProfileMutation.isPending ? (
+                        <>
+                          <Icon name="arrows-rotate" className="spinning" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Icon name="floppy-disk" />
+                          Save
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
 
-                {/* Social & Web section */}
-                <div className="profile-section">
-                  <h3 className="section-title">Social & Web</h3>
-
-                  {/* Website */}
-                  <div className="profile-field-row">
-                    <div className="profile-field with-visibility">
-                      <label>Website</label>
-                      <EditableField
-                        value={form.website || ''}
-                        onChange={(v) => updateForm('website', v || null)}
-                        placeholder="https://example.com"
-                      />
-                    </div>
-                    <VisibilityToggle
-                      visible={form.visibility.website}
-                      onChange={(v) => updateVisibility('website', v)}
-                      disabled={!form.isPublic}
-                    />
+                {error && (
+                  <div className="edit-error">
+                    <Icon name="circle-exclamation" />
+                    {error}
                   </div>
-
-                  {/* LinkedIn */}
-                  <div className="profile-field-row">
-                    <div className="profile-field with-visibility">
-                      <label>LinkedIn</label>
-                      <EditableField
-                        value={form.linkedin || ''}
-                        onChange={(v) => updateForm('linkedin', v || null)}
-                        placeholder="https://linkedin.com/in/username"
-                      />
-                    </div>
-                    <VisibilityToggle
-                      visible={form.visibility.linkedin}
-                      onChange={(v) => updateVisibility('linkedin', v)}
-                      disabled={!form.isPublic}
-                    />
-                  </div>
-
-                  {/* Instagram */}
-                  <div className="profile-field-row">
-                    <div className="profile-field with-visibility">
-                      <label>Instagram</label>
-                      <EditableField
-                        value={form.instagram || ''}
-                        onChange={(v) => updateForm('instagram', v || null)}
-                        placeholder="username"
-                      />
-                    </div>
-                    <VisibilityToggle
-                      visible={form.visibility.instagram}
-                      onChange={(v) => updateVisibility('instagram', v)}
-                      disabled={!form.isPublic}
-                    />
-                  </div>
-
-                  {/* WhatsApp */}
-                  <div className="profile-field-row">
-                    <div className="profile-field with-visibility">
-                      <label>WhatsApp</label>
-                      <EditableField
-                        value={form.whatsapp || ''}
-                        onChange={(v) => updateForm('whatsapp', v || null)}
-                        placeholder="+1234567890"
-                      />
-                    </div>
-                    <VisibilityToggle
-                      visible={form.visibility.whatsapp}
-                      onChange={(v) => updateVisibility('whatsapp', v)}
-                      disabled={!form.isPublic}
-                    />
-                  </div>
-
-                  {/* Other social links */}
-                  <div className="profile-array-field">
-                    <label>Other Social Links</label>
-                    {form.otherSocialLinks.map((link, i) => (
-                      <div key={`social-${i}`} className="profile-field-row">
-                        <EditableArrayItem onRemove={() => removeSocialLink(i)}>
-                          <Icon name="link" />
-                          <div className="edit-field-group">
-                            <EditableField
-                              value={link.platform}
-                              onChange={(v) => updateSocialLink(i, 'platform', v)}
-                              placeholder="Platform (Twitter, GitHub...)"
-                            />
-                            <EditableField
-                              value={link.username}
-                              onChange={(v) => updateSocialLink(i, 'username', v)}
-                              placeholder="Username"
-                            />
-                            <EditableField
-                              value={link.profileUrl || ''}
-                              onChange={(v) => updateSocialLink(i, 'profileUrl', v || null)}
-                              placeholder="Profile URL"
-                            />
-                          </div>
-                        </EditableArrayItem>
-                        <VisibilityToggle
-                          visible={link.id ? form.visibility.otherSocialLinks[link.id] === true : false}
-                          onChange={(v) =>
-                            link.id && updateVisibility('otherSocialLinks', { ...form.visibility.otherSocialLinks, [link.id]: v })
-                          }
-                          disabled={!form.isPublic}
-                        />
-                      </div>
-                    ))}
-                    <button type="button" className="add-item-btn" onClick={addSocialLink}>
-                      <Icon name="plus" />
-                      Add Social Link
-                    </button>
-                  </div>
-                </div>
-
-                {/* Personal section */}
-                <div className="profile-section">
-                  <h3 className="section-title">Personal</h3>
-
-                  {/* Birthday */}
-                  <div className="profile-field-row">
-                    <div className="profile-field with-visibility">
-                      <label>Birthday</label>
-                      <div className="birthday-field">
-                        <EditableField
-                          value={form.birthday || ''}
-                          onChange={(v) => updateForm('birthday', v || null)}
-                          placeholder="YYYY-MM-DD"
-                          type="date"
-                        />
-                        {form.birthday && (
-                          <span className="birthday-preview">
-                            {formatBirthday(form.birthday)}
-                            {getZodiacSign(form.birthday) && (
-                              <img
-                                src={`/zodiac/${getZodiacSign(form.birthday)}.svg`}
-                                alt={getZodiacSign(form.birthday) || ''}
-                                className="zodiac-icon-small"
-                              />
-                            )}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <VisibilityToggle
-                      visible={form.visibility.birthday}
-                      onChange={(v) => updateVisibility('birthday', v)}
-                      disabled={!form.isPublic}
-                    />
-                  </div>
-
-                  {/* Notes (private only) */}
-                  <div className="profile-field-row notes-row">
-                    <div className="profile-field full-width">
-                      <label>
-                        Notes
-                        <span className="private-badge">Private</span>
-                      </label>
-                      <textarea
-                        value={form.notes || ''}
-                        onChange={(e) => updateForm('notes', e.target.value || null)}
-                        placeholder="Private notes about yourself..."
-                        className="notes-textarea"
-                        rows={4}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Save/Cancel buttons */}
-                <div className="expanded-bottom-actions">
-                  <button
-                    className="action-button secondary"
-                    onClick={handleCancelEdit}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="action-button primary"
-                    onClick={handleSave}
-                    disabled={updateProfileMutation.isPending}
-                  >
-                    {updateProfileMutation.isPending ? 'Saving...' : 'Save'}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* Account section - always visible */}
-            <div className="profile-section account-section">
-              <h3 className="section-title">Account</h3>
-              <div className="account-info">
-                {user?.email && (
-                  <p className="account-email">
-                    <Icon name="envelope" />
-                    Signed in as <strong>{user.email}</strong>
-                  </p>
                 )}
-                <button
-                  type="button"
-                  className="logout-button"
-                  onClick={logout}
-                  disabled={isLoggingOut}
-                >
-                  <Icon name="right-from-bracket" />
-                  {isLoggingOut ? 'Signing out...' : 'Sign Out'}
-                </button>
-              </div>
-            </div>
 
-            {/* Mobile save button */}
-            {isMobile && isEditMode && hasChanges && (
-              <div className="mobile-save-bar">
-                <button
-                  className="primary-button full-width"
-                  onClick={handleSave}
-                  disabled={updateProfileMutation.isPending}
-                >
-                  {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
+                <ContactCardView
+                  data={mapProfileToCardData(form)}
+                  isEditMode={true}
+                  editState={editState}
+                  onEditStateChange={(key, value) => {
+                    const updates = mapEditStateToForm(key, value, form);
+                    setForm(prev => ({ ...prev, ...updates }));
+                    setHasChanges(true);
+                  }}
+                  sectionSuffixes={sectionSuffixes}
+                  hiddenSections={hiddenSections}
+                  showMetadata={false}
+                />
+              </>
             )}
           </div>
 
-          {/* Right panel: Live preview - only show in edit mode or when public */}
-          {(isEditMode || form.isPublic) && (
-            <div className="profile-preview-panel">
-              <div className="preview-panel-header">
-                <h3>Public Card Preview</h3>
-                <p>This is how others will see your contact card</p>
-              </div>
-              <PublicCardPreview form={form} isPublic={form.isPublic} />
+          {/* Section 3: Account — full width */}
+          <div className="profile-section account-section">
+            <h3 className="section-title">Account</h3>
+            <div className="account-info">
+              {user?.email && (
+                <p className="account-email">
+                  <Icon name="envelope" />
+                  Signed in as <strong>{user.email}</strong>
+                </p>
+              )}
+              <button
+                type="button"
+                className="logout-button"
+                onClick={logout}
+                disabled={isLoggingOut}
+              >
+                <Icon name="right-from-bracket" />
+                {isLoggingOut ? 'Signing out...' : 'Sign Out'}
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile save button */}
+          {isMobile && isEditMode && hasChanges && (
+            <div className="mobile-save-bar">
+              <button
+                className="primary-button full-width"
+                onClick={handleSave}
+                disabled={updateProfileMutation.isPending}
+              >
+                {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </button>
             </div>
           )}
         </div>
@@ -1666,24 +1554,14 @@ const profileStyles = `
     color: var(--ds-text-secondary);
   }
 
-  /* Profile page layout */
+  /* Profile page layout — stacked sections */
   .profile-page-layout {
-    display: grid;
-    grid-template-columns: 1fr 400px;
-    gap: 32px;
     max-width: 1200px;
     margin: 0 auto;
     padding: 24px;
-  }
-
-  @media (max-width: 1024px) {
-    .profile-page-layout {
-      grid-template-columns: 1fr;
-    }
-
-    .profile-preview-panel {
-      order: -1;
-    }
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
   }
 
   @media (max-width: 768px) {
@@ -1692,24 +1570,56 @@ const profileStyles = `
     }
   }
 
-  .profile-edit-panel {
+  /* Section 1: Public settings — 2-col grid */
+  .profile-public-settings {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 32px;
+    align-items: start;
+  }
+
+  .public-settings-controls {
     display: flex;
     flex-direction: column;
     gap: 24px;
   }
 
-  .profile-edit-panel .contact-detail-content {
+  .public-settings-preview {
+    position: sticky;
+    top: 24px;
+    height: fit-content;
+  }
+
+  @media (max-width: 1024px) {
+    .profile-public-settings {
+      grid-template-columns: 1fr;
+    }
+
+    .public-settings-preview {
+      position: static;
+      order: -1;
+    }
+  }
+
+  /* Section 2: Contact details — full width */
+  .profile-contact-details {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .profile-contact-details .contact-detail-content {
     background: var(--ds-bg-primary);
     border: 1px solid var(--ds-border-color);
     border-radius: 12px;
     padding: 20px;
   }
 
-  .profile-edit-panel .contact-detail-content .expanded-content {
+  .profile-contact-details .contact-detail-content .expanded-content {
     padding: 0;
   }
 
-  .profile-edit-panel .expanded-bottom-actions {
+  .profile-contact-details .expanded-bottom-actions {
     display: flex;
     justify-content: flex-end;
     padding: 16px 0;
@@ -1770,6 +1680,11 @@ const profileStyles = `
 
   .action-button.secondary:hover {
     background: var(--ds-border-color);
+  }
+
+  /* Profile name fields — inherits .edit-name-fields flex-wrap from index.css */
+  .profile-name-fields .name-field-with-toggle .visibility-toggle {
+    margin-top: 0;
   }
 
   .profile-section {
@@ -1942,53 +1857,6 @@ const profileStyles = `
     border-color: var(--ds-color-primary);
   }
 
-  .profile-field-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-
-  .profile-field-row.address-row {
-    align-items: flex-start;
-  }
-
-  .profile-field-row.notes-row {
-    display: block;
-  }
-
-  .profile-field {
-    flex: 1;
-  }
-
-  .profile-field.with-visibility {
-    flex: 1;
-  }
-
-  .profile-field.full-width {
-    width: 100%;
-  }
-
-  .profile-field label {
-    display: block;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--ds-text-secondary);
-    margin-bottom: 4px;
-  }
-
-  .profile-array-field {
-    margin-bottom: 16px;
-  }
-
-  .profile-array-field > label {
-    display: block;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--ds-text-secondary);
-    margin-bottom: 8px;
-  }
-
   .visibility-toggle {
     flex-shrink: 0;
     width: 36px;
@@ -2020,69 +1888,6 @@ const profileStyles = `
 
   .visibility-toggle:hover:not(.disabled) {
     transform: scale(1.05);
-  }
-
-  .birthday-field {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .birthday-preview {
-    font-size: 13px;
-    color: var(--ds-text-secondary);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .zodiac-icon-small {
-    width: 20px;
-    height: 20px;
-  }
-
-  .private-badge {
-    display: inline-block;
-    margin-left: 8px;
-    padding: 2px 6px;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    background: var(--ds-border-color);
-    border-radius: 4px;
-    color: var(--ds-text-secondary);
-  }
-
-  .notes-textarea {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid var(--ds-border-color);
-    border-radius: 8px;
-    font-size: 14px;
-    resize: vertical;
-    font-family: inherit;
-  }
-
-  .address-fields {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .address-row-inner {
-    display: flex;
-    gap: 8px;
-  }
-
-  .address-row-inner .edit-input {
-    flex: 1;
-  }
-
-  /* Preview panel */
-  .profile-preview-panel {
-    position: sticky;
-    top: 24px;
-    height: fit-content;
   }
 
   .preview-panel-header {
@@ -2287,82 +2092,6 @@ const profileStyles = `
 
   .secondary-button:hover {
     background: var(--ds-border-color);
-  }
-
-  /* Inherit styles from ContactFormSections */
-  .edit-input {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid var(--ds-border-color);
-    border-radius: 6px;
-    font-size: 14px;
-  }
-
-  .editable-array-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    flex: 1;
-    padding: 8px;
-    background: rgba(0, 0, 0, 0.02);
-    border-radius: 8px;
-  }
-
-  .editable-array-item i {
-    margin-top: 8px;
-    color: var(--ds-text-secondary);
-  }
-
-  .edit-field-group {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .remove-item-btn {
-    padding: 4px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    color: var(--ds-text-secondary);
-    opacity: 0.6;
-    transition: opacity 0.2s;
-  }
-
-  .remove-item-btn:hover {
-    opacity: 1;
-    color: var(--ds-color-error);
-  }
-
-  .add-item-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    border: 1px dashed var(--ds-border-color);
-    background: transparent;
-    border-radius: 6px;
-    cursor: pointer;
-    color: var(--ds-text-secondary);
-    font-size: 14px;
-    transition: all 0.2s;
-  }
-
-  .add-item-btn:hover {
-    border-color: var(--ds-color-primary);
-    color: var(--ds-color-primary);
-  }
-
-  .edit-error {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    background: var(--ds-color-error-light);
-    border-radius: 8px;
-    color: var(--ds-color-error-hover);
-    font-size: 14px;
   }
 
   .account-section {

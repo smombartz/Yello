@@ -1574,6 +1574,7 @@ a.nav-rail-item.active {
 .expanded-section {
   display: flex;
   flex-direction: column;
+  min-width: 0; /* prevent grid blowout from edit inputs */
 }
 
 /* Legacy section header (used by AddContactPage & edit mode) */
@@ -4013,6 +4014,44 @@ a.nav-rail-item.active {
   color: var(--ds-text-secondary);
 }
 
+/* Edit item with suffix (e.g. visibility toggle next to form field) */
+.edit-item-with-suffix {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.edit-item-with-suffix > .editable-array-item {
+  flex: 1;
+}
+
+.edit-item-with-suffix > .expanded-item {
+  flex: 1;
+}
+
+.edit-item-with-suffix > .edit-notes-textarea {
+  flex: 1;
+}
+
+/* Profile name fields with inline visibility toggles */
+.name-field-with-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 120px;
+}
+
+.name-field-with-toggle .edit-input {
+  flex: 1;
+}
+
+.name-field-with-toggle .visibility-toggle {
+  margin-top: 0;
+  width: 28px;
+  height: 28px;
+}
+
 /* Edit error message */
 .edit-error {
   display: flex;
@@ -6001,6 +6040,185 @@ a.nav-rail-item.active {
 
 .contact-detail-content .expanded-top-row {
   padding-top: 0;
+}
+
+/* ============================================================
+   Email History Section
+   ============================================================ */
+
+.email-history-section {
+  border-top: 1px solid var(--ds-border-color);
+  padding-top: 1rem;
+}
+
+.email-history-count {
+  background: var(--ds-bg-tertiary);
+  color: var(--ds-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--ds-radius-full);
+  margin-left: 0.25rem;
+}
+
+.email-history-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--ds-text-secondary);
+}
+
+.email-history-stats-sep {
+  color: var(--ds-text-muted);
+}
+
+.email-history-sync-status {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--ds-text-muted);
+}
+
+.email-history-refresh-btn {
+  background: none;
+  border: none;
+  padding: 0.125rem;
+  cursor: pointer;
+  color: var(--ds-text-muted);
+  font-size: 0.75rem;
+  line-height: 1;
+  border-radius: var(--ds-radius-sm);
+  transition: color 0.15s;
+}
+
+.email-history-refresh-btn:hover {
+  color: var(--ds-text-secondary);
+}
+
+.email-history-cta {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.email-history-cta p {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  color: var(--ds-text-secondary);
+}
+
+.email-history-sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 1rem;
+  border-radius: var(--ds-radius-md);
+  border: 1px solid var(--ds-color-primary);
+  background: var(--ds-color-primary);
+  color: var(--ds-text-inverse);
+  font-size: var(--ds-font-sm);
+  font-weight: var(--ds-weight-medium);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.email-history-sync-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.email-history-sync-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.email-history-loading {
+  text-align: center;
+  padding: 1rem 0;
+  color: var(--ds-text-muted);
+}
+
+.email-history-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.email-history-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--ds-radius-sm);
+  text-decoration: none;
+  color: var(--ds-text-primary);
+  font-size: 0.8125rem;
+  transition: background-color 0.1s;
+  cursor: pointer;
+}
+
+.email-history-item:hover {
+  background-color: var(--ds-bg-hover);
+}
+
+.email-history-direction {
+  flex-shrink: 0;
+  font-size: 0.625rem;
+  width: 1.25rem;
+  text-align: center;
+}
+
+.email-history-direction.inbound {
+  color: var(--ds-color-info);
+}
+
+.email-history-direction.outbound {
+  color: var(--ds-color-success);
+}
+
+.email-history-subject {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.email-history-date {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--ds-text-muted);
+  white-space: nowrap;
+}
+
+.email-history-empty {
+  text-align: center;
+  padding: 0.75rem 0;
+  font-size: 0.8125rem;
+  color: var(--ds-text-muted);
+}
+
+.email-history-load-more {
+  display: block;
+  width: 100%;
+  padding: 0.375rem 0;
+  margin-top: 0.25rem;
+  background: none;
+  border: none;
+  color: var(--ds-color-primary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  text-align: center;
+  border-radius: var(--ds-radius-sm);
+  transition: background-color 0.1s;
+}
+
+.email-history-load-more:hover {
+  background-color: var(--ds-bg-hover);
+}
+
+.email-history-load-more:disabled {
+  color: var(--ds-text-muted);
+  cursor: not-allowed;
 }
 
 /* ============================================================

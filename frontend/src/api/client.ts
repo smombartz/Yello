@@ -17,7 +17,12 @@ export async function fetchApi<T>(endpoint: string, options?: RequestInit): Prom
   });
 
   if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
+    let errorMessage = `API error: ${response.status}`;
+    try {
+      const body = await response.json();
+      if (body.error) errorMessage = body.error;
+    } catch { /* keep default message */ }
+    throw new Error(errorMessage);
   }
 
   return response.json();

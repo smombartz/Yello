@@ -202,10 +202,99 @@ export default async function authRoutes(fastify: FastifyInstance) {
       },
     });
 
-    // Google OAuth callback handler
-    fastify.get('/google/callback', async (request: FastifyRequest, reply: FastifyReply) => {
+    // Google OAuth callback handler (shared by normal login and Gmail re-auth)
+    fastify.get('/google/callback', async (request: FastifyRequest<{ Querystring: { code?: string; state?: string; error?: string } }>, reply: FastifyReply) => {
       try {
-        // Exchange authorization code for access token
+        const isGmailFlow = request.cookies.gmail_oauth_flow === '1';
+
+        if (isGmailFlow) {
+          // --- Gmail re-auth flow (manual token exchange) ---
+          reply.clearCookie('gmail_oauth_flow', { path: '/' });
+
+          const { code, state, error: oauthError } = request.query;
+
+          if (oauthError) {
+            fastify.log.error(`Gmail OAuth error: ${oauthError}`);
+            return reply.redirect('/?error=auth_failed');
+          }
+
+          if (!code) {
+            return reply.redirect('/?error=auth_failed');
+          }
+
+          // Verify state to prevent CSRF
+          const savedState = request.cookies.gmail_oauth_state;
+          if (!savedState || savedState !== state) {
+            fastify.log.error('Gmail OAuth state mismatch');
+            return reply.redirect('/?error=auth_failed');
+          }
+          reply.clearCookie('gmail_oauth_state', { path: '/' });
+
+          // Exchange authorization code for tokens
+          const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              code,
+              client_id: googleClientId,
+              client_secret: googleClientSecret,
+              redirect_uri: `${appUrl}/api/auth/google/callback`,
+              grant_type: 'authorization_code',
+            }),
+          });
+
+          if (!tokenResponse.ok) {
+            const errorBody = await tokenResponse.text();
+            fastify.log.error(`Gmail token exchange failed: ${errorBody}`);
+            return reply.redirect('/?error=auth_failed');
+          }
+
+          const tokenData = await tokenResponse.json() as {
+            access_token: string;
+            refresh_token?: string;
+            expires_in?: number;
+          };
+
+          // Fetch user profile from Google
+          const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` },
+          });
+
+          if (!userInfoResponse.ok) {
+            throw new Error('Failed to fetch user info from Google');
+          }
+
+          const userInfo = await userInfoResponse.json() as GoogleUserInfo;
+
+          // Create or update user with new tokens (now including Gmail scope)
+          const user = upsertUser(
+            userInfo.id,
+            userInfo.email,
+            userInfo.name || null,
+            userInfo.picture || null,
+            {
+              accessToken: tokenData.access_token,
+              refreshToken: tokenData.refresh_token,
+              expiresIn: tokenData.expires_in,
+            }
+          );
+
+          // Create session
+          const sessionId = createSession(user.id);
+
+          reply.setCookie('session_id', sessionId, {
+            path: '/',
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: SESSION_DURATION_MS / 1000,
+          });
+
+          cleanupExpiredSessions();
+          return reply.redirect('/');
+        }
+
+        // --- Normal login flow (uses @fastify/oauth2 plugin) ---
         const tokenResponse = await fastify.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
         const accessToken = tokenResponse.token.access_token as string;
         const refreshToken = tokenResponse.token.refresh_token as string | undefined;
@@ -275,6 +364,50 @@ export default async function authRoutes(fastify: FastifyInstance) {
       }
     });
   }
+
+  // Gmail re-auth: redirect to Google OAuth with expanded scope
+  fastify.get('/google/gmail', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!googleClientId || !googleClientSecret) {
+      return reply.status(503).send({ error: 'Google OAuth not configured' });
+    }
+
+    const scopes = [
+      'profile',
+      'email',
+      'https://www.googleapis.com/auth/contacts.other.readonly',
+      'https://www.googleapis.com/auth/gmail.readonly',
+    ].join(' ');
+
+    const state = randomBytes(16).toString('hex');
+    reply.setCookie('gmail_oauth_state', state, {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 600, // 10 minutes
+    });
+
+    // Flag this as a Gmail re-auth flow so the shared callback can differentiate
+    reply.setCookie('gmail_oauth_flow', '1', {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 600, // 10 minutes
+    });
+
+    const params = new URLSearchParams({
+      client_id: googleClientId,
+      redirect_uri: `${appUrl}/api/auth/google/callback`,
+      response_type: 'code',
+      scope: scopes,
+      access_type: 'offline',
+      prompt: 'consent',
+      state,
+    });
+
+    return reply.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  });
 
   // Get current user
   fastify.get('/me', {

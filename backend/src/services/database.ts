@@ -308,6 +308,9 @@ export function getDatabase(): DatabaseType {
   // Migration: Create linkedin_enrichment table for storing LinkedIn profile data
   runLinkedInEnrichmentMigration(db);
 
+  // Migration: Create email history table and add gmail sync columns to contacts
+  runEmailHistoryMigration(db);
+
   // Migration: Populate profile_images from existing avatar_url
   const profileImagesMigrationNeeded = (() => {
     const usersWithAvatars = db.prepare(`
@@ -718,6 +721,42 @@ export function runLinkedInEnrichmentMigration(database: DatabaseType): void {
 /**
  * Run geocoding-related migrations
  */
+/**
+ * Run email history migration
+ */
+export function runEmailHistoryMigration(database: DatabaseType): void {
+  // Create the email history table
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS contact_emails_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+      gmail_message_id TEXT NOT NULL UNIQUE,
+      thread_id TEXT NOT NULL,
+      subject TEXT,
+      date TEXT NOT NULL,
+      direction TEXT NOT NULL CHECK(direction IN ('inbound', 'outbound')),
+      snippet TEXT,
+      synced_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_email_history_contact ON contact_emails_history(contact_id, date DESC);
+    CREATE INDEX IF NOT EXISTS idx_email_history_gmail_id ON contact_emails_history(gmail_message_id);
+  `);
+
+  // Add gmail sync columns to contacts table
+  const contactsTableInfo = database.prepare("PRAGMA table_info(contacts)").all() as Array<{ name: string }>;
+  const hasGmailHistoryId = contactsTableInfo.some(col => col.name === 'gmail_history_id');
+
+  if (!hasGmailHistoryId) {
+    console.log('Adding Gmail sync columns to contacts table...');
+    database.exec(`
+      ALTER TABLE contacts ADD COLUMN gmail_history_id TEXT DEFAULT NULL;
+      ALTER TABLE contacts ADD COLUMN gmail_last_sync_at TEXT DEFAULT NULL;
+    `);
+    console.log('Gmail sync columns added successfully');
+  }
+}
+
 export function runGeocodingMigration(database: DatabaseType): void {
   // Check if latitude column exists in contact_addresses
   const addressTableInfo = database.prepare("PRAGMA table_info(contact_addresses)").all() as Array<{ name: string }>;
