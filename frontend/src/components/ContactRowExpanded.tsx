@@ -15,40 +15,11 @@ import {
   RelatedPeopleSection,
   NotesSection,
 } from './ContactFormSections';
+import { ContactCardView } from './ContactCardView';
+import { EmailHistorySection } from './EmailHistorySection';
 
 interface ContactRowExpandedProps {
   contact: ContactDetail;
-}
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
-}
-
-function MetadataSection({ createdAt, updatedAt }: { createdAt: string; updatedAt: string }) {
-  return (
-    <div className="expanded-section-view gap-lg">
-      <div className="section-heading">
-        <div className="section-heading-row">
-          <Icon name="clock" />
-          <span className="section-heading-label">Meta Data</span>
-        </div>
-      </div>
-      <div className="metadata-row">
-        <div className="metadata-pair">
-          <span className="metadata-pair-label">Created </span>
-          <span className="metadata-pair-value">{formatDate(createdAt)}</span>
-        </div>
-        <div className="metadata-pair">
-          <span className="metadata-pair-label">Updated </span>
-          <span className="metadata-pair-value">{formatDate(updatedAt)}</span>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // Edit form state interface
@@ -170,14 +141,7 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
     }
   };
 
-  const hasPhones = contact.phones.length > 0;
-  const hasEmails = contact.emails.length > 0;
-  const hasLocations = contact.addresses.length > 0;
-  const hasSocial = contact.socialProfiles.length > 0;
   const hasCategories = contact.categories?.length > 0;
-  const hasUrls = contact.urls?.length > 0;
-  const hasRelatedPeople = contact.relatedPeople?.length > 0;
-  const hasBirthday = !!contact.birthday;
 
   // Use edit form data when in edit mode
   const displayData = isEditMode && editForm ? {
@@ -320,57 +284,24 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
   }
 
   // ─── View Mode (Figma layout) ────────────────────────────────
-  const hasRow1 = hasPhones || hasLocations || hasSocial;
-  const hasRow2 = hasEmails || hasBirthday || hasRelatedPeople || hasUrls;
-
   return (
-    <div className="expanded-content" onClick={(e) => e.stopPropagation()}>
-      {/* Row 1: Phone | Address | Social Links */}
-      {hasRow1 && (
-        <div className="expanded-row">
-          {hasPhones && (
-            <PhoneSection phones={contact.phones} isEditMode={false} />
-          )}
-          {hasLocations && (
-            <LocationsSection addresses={contact.addresses} isEditMode={false} />
-          )}
-          {hasSocial && (
-            <SocialLinksSection socialProfiles={contact.socialProfiles} isEditMode={false} />
-          )}
-        </div>
-      )}
-
-      {/* Row 2: Email | Birthday+Related | Web Links */}
-      {hasRow2 && (
-        <div className="expanded-row">
-          {hasEmails && (
-            <EmailSection emails={contact.emails} isEditMode={false} />
-          )}
-          {(hasBirthday || hasRelatedPeople) && (
-            <div className="expanded-column">
-              {hasBirthday && (
-                <BirthdaySection birthday={contact.birthday} isEditMode={false} />
-              )}
-              {hasRelatedPeople && (
-                <RelatedPeopleSection relatedPeople={contact.relatedPeople} isEditMode={false} />
-              )}
-            </div>
-          )}
-          {hasUrls && (
-            <UrlsSection urls={contact.urls} isEditMode={false} />
-          )}
-        </div>
-      )}
-
-      {/* Row 3: Notes (2fr) | Meta Data (1fr) */}
-      {contact.notes ? (
-        <div className="expanded-row expanded-row-notes">
-          <NotesSection notes={contact.notes} isEditMode={false} />
-          <MetadataSection createdAt={contact.createdAt} updatedAt={contact.updatedAt} />
-        </div>
-      ) : (
-        <MetadataSection createdAt={contact.createdAt} updatedAt={contact.updatedAt} />
-      )}
+    <div onClick={(e) => e.stopPropagation()}>
+      <ContactCardView
+        data={{
+          phones: contact.phones,
+          emails: contact.emails,
+          addresses: contact.addresses,
+          socialProfiles: contact.socialProfiles,
+          urls: contact.urls,
+          relatedPeople: contact.relatedPeople,
+          birthday: contact.birthday,
+          notes: contact.notes,
+          createdAt: contact.createdAt,
+          updatedAt: contact.updatedAt,
+        }}
+      >
+        <EmailHistorySection contactId={contact.id} hasEmails={contact.emails.length > 0} />
+      </ContactCardView>
 
       {/* Bottom: Edit button right-aligned */}
       <div className="expanded-bottom-actions">
