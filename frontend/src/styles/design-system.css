@@ -9,9 +9,6 @@
  */
 
 :root {
-  /* Lock root font-size — override Pico's responsive scaling */
-  --pico-font-size: 100%;
-
   /* ============================================
    * COLORS - Primary Brand
    * ============================================ */

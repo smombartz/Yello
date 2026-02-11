@@ -323,7 +323,7 @@ function BulkProgressModal({ progress, onCancel }: BulkProgressModalProps) {
           </span>
         </div>
         <div className="geocoding-progress-actions">
-          <button onClick={onCancel}>Cancel</button>
+          <button className="cancel-button" onClick={onCancel}>Cancel</button>
         </div>
       </div>
     </div>

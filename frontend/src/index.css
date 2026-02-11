@@ -1,6 +1,23 @@
 @import './styles/design-system.css';
 
 /* ============================================
+ * BASE RESET
+ * ============================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.25;
+}
+
+input, select, textarea, button {
+  font: inherit;
+}
+
+/* ============================================
  * CARD BASE CLASS
  * Reusable card foundation: bg, border, radius, hover shadow
  * ============================================ */
@@ -49,6 +66,10 @@ body {
   min-height: 100vh;
   background-color: var(--ds-bg-secondary);
   color: var(--ds-text-primary);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ============================================
@@ -1414,6 +1435,38 @@ a.nav-rail-item.active {
 
 .confirm-button:hover {
   opacity: 0.9;
+}
+
+/* Import Modal */
+.import-modal {
+  max-width: 500px;
+  width: 100%;
+}
+
+.import-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.import-modal-header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.import-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--ds-text-secondary);
+  padding: 0;
+  line-height: 1;
+}
+
+.import-modal-close:hover {
+  color: var(--ds-text-primary);
 }
 
 /* Expanded Contact Card */
@@ -4812,10 +4865,6 @@ a.nav-rail-item.active {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
-/* Leaflet control overrides — undo Pico CSS global <a> styling */
-.leaflet-control-zoom a {
-  all: revert;
-}
 
 /* Geocode result toast */
 .geocode-result {
