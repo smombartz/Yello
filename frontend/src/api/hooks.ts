@@ -13,7 +13,7 @@ import type {
   MergeResponse
 } from './types';
 
-export function useContacts(page: number = 1, limit: number = 50, search?: string, category?: string) {
+export function useContacts(page: number = 1, limit: number = 50, search?: string, category?: string, sort?: string, filter?: string) {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -24,9 +24,15 @@ export function useContacts(page: number = 1, limit: number = 50, search?: strin
   if (category) {
     params.set('category', category);
   }
+  if (sort && sort !== 'name-asc') {
+    params.set('sort', sort);
+  }
+  if (filter) {
+    params.set('filter', filter);
+  }
 
   return useQuery({
-    queryKey: ['contacts', { page, limit, search, category }],
+    queryKey: ['contacts', { page, limit, search, category, sort, filter }],
     queryFn: () => fetchApi<ContactListResponse>(`/api/contacts?${params}`),
   });
 }

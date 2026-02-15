@@ -1,11 +1,12 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
-import { useContacts, fetchAllContactIds, useMergePreview, useMergeSelectedContacts } from '../api/hooks';
+import { useContacts, useMergePreview, useMergeSelectedContacts } from '../api/hooks';
 import { useDeleteContacts } from '../api/cleanupHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
 import { ContactRow } from './ContactRow';
 import { ContactGridCard } from './ContactGridCard';
+import { ContactFilters, getFilterLabel } from './ContactFilters';
 import { Icon } from './Icon';
 import type { MergeConflict, ContactDetail } from '../api/types';
 
@@ -15,6 +16,11 @@ interface ContactListProps {
   viewMode: 'list' | 'grid';
   onViewModeChange?: (mode: 'list' | 'grid') => void;
   onTotalChange?: (total: number) => void;
+  sort?: string;
+  onSortChange?: (sort: string) => void;
+  filters?: Set<string>;
+  onFiltersChange?: (filters: Set<string>) => void;
+  filterString?: string;
 }
 
 interface ToastState {
@@ -27,7 +33,7 @@ const EXPANDED_HEIGHT = 450;   // expanded card height
 const ROW_GAP = 8;             // space between cards
 const PAGE_SIZE = 100;
 
-export function ContactList({ search = '', categoryFilter, viewMode, onViewModeChange, onTotalChange }: ContactListProps) {
+export function ContactList({ search = '', categoryFilter, viewMode, onViewModeChange, onTotalChange, sort, onSortChange, filters, onFiltersChange, filterString }: ContactListProps) {
   const navigate = useNavigate();
   const listRef = useRef<HTMLDivElement>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -37,7 +43,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
-  const [isSelectingAll, setIsSelectingAll] = useState(false);
+
 
   // Merge state
   const [showMergeModal, setShowMergeModal] = useState(false);
@@ -46,7 +52,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
   const [mergePrimaryId, setMergePrimaryId] = useState<number | null>(null);
   const [mergeResolutions, setMergeResolutions] = useState<Record<string, string | null>>({});
 
-  const { data, isLoading, error } = useContacts(1, PAGE_SIZE, search || undefined, categoryFilter);
+  const { data, isLoading, error } = useContacts(1, PAGE_SIZE, search || undefined, categoryFilter, sort, filterString);
   const deleteMutation = useDeleteContacts();
   const archiveMutation = useArchiveContacts();
   const mergePreviewMutation = useMergePreview();
@@ -98,18 +104,6 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
       return newSet;
     });
   }, [data]);
-
-  const handleSelectAll = useCallback(async () => {
-    setIsSelectingAll(true);
-    try {
-      const allIds = await fetchAllContactIds(search || undefined);
-      setSelectedIds(new Set(allIds));
-    } catch (error) {
-      console.error('Failed to fetch all contact IDs:', error);
-    } finally {
-      setIsSelectingAll(false);
-    }
-  }, [search]);
 
   const handleSelectNone = useCallback(() => {
     setSelectedIds(new Set());
@@ -296,27 +290,51 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
             </button>
           </div>
         )}
+        {onSortChange && (
+          <select
+            className="contact-sort-select"
+            value={sort || 'name-asc'}
+            onChange={(e) => onSortChange(e.target.value)}
+          >
+            <option value="name-asc">A → Z</option>
+            <option value="name-desc">Z → A</option>
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="updated">Recently updated</option>
+            <option value="last-contacted">Last contacted</option>
+          </select>
+        )}
+        {filters && onFiltersChange && (
+          <>
+            <ContactFilters filters={filters} onFiltersChange={onFiltersChange} />
+            {filters.size > 0 && (
+              <div className="filter-chips">
+                {Array.from(filters).map(key => (
+                  <span key={key} className="filter-chip">
+                    {getFilterLabel(key)}
+                    <button
+                      className="filter-chip-remove"
+                      onClick={() => {
+                        const next = new Set(filters);
+                        next.delete(key);
+                        onFiltersChange(next);
+                      }}
+                      aria-label={`Remove filter: ${getFilterLabel(key)}`}
+                    >
+                      <Icon name="xmark" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
+        )}
         <div className="contact-selection-actions">
           <button
             className="contact-action-button"
-            onClick={handleSelectPage}
-            disabled={isSelectingAll}
+            onClick={selectedIds.size > 0 ? handleSelectNone : handleSelectPage}
           >
-            Select Page
-          </button>
-          <button
-            className="contact-action-button"
-            onClick={handleSelectAll}
-            disabled={isSelectingAll}
-          >
-            {isSelectingAll ? 'Selecting...' : 'Select All'}
-          </button>
-          <button
-            className="contact-action-button"
-            onClick={handleSelectNone}
-            disabled={selectedIds.size === 0}
-          >
-            Select None
+            {selectedIds.size > 0 ? 'Select None' : 'Select Page'}
           </button>
         </div>
 

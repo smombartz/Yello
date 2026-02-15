@@ -10,6 +10,7 @@ import { GroupsView } from './components/GroupsView';
 import { MapView } from './components/MapView';
 import { SettingsView } from './components/SettingsView';
 import { EnrichView } from './components/EnrichView';
+import { ImportView } from './components/ImportView';
 import { UserProfilePage } from './components/UserProfilePage';
 import { DashboardView } from './components/DashboardView';
 import { LoginPage } from './components/LoginPage';
@@ -137,12 +138,13 @@ function AppRoutes() {
         <Route path="contacts/new" element={<AddContactPage />} />
         <Route path="contacts/:id" element={<ContactDetailPage />} />
         <Route path="contacts" element={<ContactsPage />} />
+        <Route path="import" element={<ImportView />} />
         <Route path="merge" element={<DeduplicationView />} />
         <Route path="cleanup" element={<CleanupView />} />
         <Route path="archived" element={<ArchivedView />} />
         <Route path="groups" element={<GroupsView />} />
         <Route path="map" element={<MapView />} />
-        <Route path="settings" element={<SettingsView />} />
+        <Route path="tools" element={<SettingsView />} />
         <Route path="enrich" element={<EnrichView />} />
         <Route path="profile" element={<UserProfilePage />} />
       </Route>

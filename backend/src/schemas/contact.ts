@@ -4,7 +4,9 @@ export const ContactListQuerySchema = Type.Object({
   page: Type.Optional(Type.Number({ default: 1 })),
   limit: Type.Optional(Type.Number({ default: 50 })),
   search: Type.Optional(Type.String()),
-  category: Type.Optional(Type.String())
+  category: Type.Optional(Type.String()),
+  sort: Type.Optional(Type.String()),
+  filter: Type.Optional(Type.String())
 });
 
 export type ContactListQuery = Static<typeof ContactListQuerySchema>;

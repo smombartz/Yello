@@ -88,6 +88,10 @@ export interface LinkedInEnrichment {
   skills: string[] | null;
   photoLinkedin: string | null;
   enrichedAt: string | null;
+  positions: Array<{title: string; companyName?: string; locationName?: string; startDate?: string; endDate?: string}> | null;
+  certifications: Array<{name: string; authority?: string}> | null;
+  languages: Array<{name: string; proficiency?: string}> | null;
+  honors: Array<{title: string; issuer?: string; description?: string}> | null;
 }
 
 export interface ContactDetail {
@@ -708,6 +712,26 @@ export interface LinkedInEnrichmentSummary {
   totalWithLinkedIn: number;
   alreadyEnriched: number;
   pendingEnrichment: number;
+  totalContacts: number;
+  enriched: number;
+  readyToEnrich: number;
+  noLinkedIn: number;
+  failed: number;
+}
+
+export interface EnrichmentCategoryContact {
+  id: number;
+  displayName: string;
+  company: string | null;
+  linkedinUrl: string | null;
+  errorReason: string | null;
+  enrichedAt: string | null;
+}
+
+export interface EnrichmentCategoryResponse {
+  category: string;
+  total: number;
+  contacts: EnrichmentCategoryContact[];
 }
 
 export interface LinkedInEnrichmentProgress {

@@ -715,6 +715,38 @@ export function runLinkedInEnrichmentMigration(database: DatabaseType): void {
       `);
       console.log('photo_linkedin column added successfully');
     }
+
+    // Add positions, certifications, languages, honors columns if missing
+    const hasPositions = tableInfo.some(col => col.name === 'positions');
+    if (!hasPositions) {
+      console.log('Adding positions, certifications, languages, honors columns to linkedin_enrichment...');
+      database.exec(`
+        ALTER TABLE linkedin_enrichment ADD COLUMN positions TEXT;
+        ALTER TABLE linkedin_enrichment ADD COLUMN certifications TEXT;
+        ALTER TABLE linkedin_enrichment ADD COLUMN languages TEXT;
+        ALTER TABLE linkedin_enrichment ADD COLUMN honors TEXT;
+      `);
+      console.log('New enrichment columns added successfully');
+    }
+  }
+
+  // Create linkedin_enrichment_failures table if it doesn't exist
+  const failuresTableExists = database.prepare(`
+    SELECT name FROM sqlite_master WHERE type='table' AND name='linkedin_enrichment_failures'
+  `).get();
+
+  if (!failuresTableExists) {
+    console.log('Running LinkedIn enrichment migration: creating linkedin_enrichment_failures table...');
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS linkedin_enrichment_failures (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        contact_id INTEGER NOT NULL UNIQUE REFERENCES contacts(id) ON DELETE CASCADE,
+        error_reason TEXT NOT NULL,
+        attempted_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_linkedin_enrichment_failures_contact_id ON linkedin_enrichment_failures(contact_id);
+    `);
+    console.log('LinkedIn enrichment failures table created successfully');
   }
 }
 

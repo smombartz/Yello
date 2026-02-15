@@ -105,6 +105,10 @@ export interface LinkedInEnrichment {
   skills: string[] | null;
   photoLinkedin: string | null;
   enrichedAt: string | null;
+  positions: Array<{title: string; companyName?: string; locationName?: string; startDate?: string; endDate?: string}> | null;
+  certifications: Array<{name: string; authority?: string}> | null;
+  languages: Array<{name: string; proficiency?: string}> | null;
+  honors: Array<{title: string; issuer?: string; description?: string}> | null;
 }
 
 export interface ContactDetail extends Contact {

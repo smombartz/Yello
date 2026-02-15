@@ -213,106 +213,104 @@ export default async function contactsRoutes(
       }
     }
   }, async (request, _reply) => {
-    const { page = 1, limit = 50, search, category } = request.query;
+    const { page = 1, limit = 50, search, category, sort = 'name-asc', filter } = request.query;
     const db = getDatabase();
     const offset = (page - 1) * limit;
 
-    let contacts: ContactListRow[];
-    let total: number;
+    // Build query parts dynamically
+    const joins: string[] = [];
+    const conditions: string[] = [];
+    const params: (string | number)[] = [];
 
-    // Build category join and condition if filtering by category
-    const categoryJoin = category
-      ? 'INNER JOIN contact_categories cc ON c.id = cc.contact_id'
-      : '';
-    const categoryCondition = category ? 'cc.category = ?' : '';
+    // Category filter
+    if (category) {
+      joins.push('INNER JOIN contact_categories cc ON c.id = cc.contact_id');
+      conditions.push('cc.category = ?');
+      params.push(category);
+    }
 
+    // FTS search
     if (search) {
-      // Use FTS5 for search with prefix matching
-      // Escape double quotes and wrap in quotes for FTS5 phrase matching
       const escapedSearch = search.replace(/"/g, '""');
       const searchTerm = `"${escapedSearch}"*`;
-
-      const ftsCondition = 'c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)';
-      const whereClause = category
-        ? `WHERE ${ftsCondition} AND ${categoryCondition}`
-        : `WHERE ${ftsCondition}`;
-
-      const countParams = category ? [searchTerm, category] : [searchTerm];
-      const countResult = db.prepare(`
-        SELECT COUNT(DISTINCT c.id) as count
-        FROM contacts c
-        ${categoryJoin}
-        ${whereClause}
-      `).get(...countParams) as CountRow;
-      total = countResult.count;
-
-      const queryParams = category ? [searchTerm, category, limit, offset] : [searchTerm, limit, offset];
-      contacts = db.prepare(`
-        SELECT DISTINCT
-          c.id,
-          c.display_name,
-          c.company,
-          c.title,
-          c.photo_hash,
-          (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
-          (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone,
-          (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code,
-          (SELECT profile_url FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'linkedin' LIMIT 1) as linkedin_url,
-          (SELECT url FROM contact_urls WHERE contact_id = c.id LIMIT 1) as website_url
-        FROM contacts c
-        ${categoryJoin}
-        ${whereClause}
-        ORDER BY c.last_name, c.first_name, c.display_name
-        LIMIT ? OFFSET ?
-      `).all(...queryParams) as ContactListRow[];
-    } else if (category) {
-      const countResult = db.prepare(`
-        SELECT COUNT(DISTINCT c.id) as count
-        FROM contacts c
-        ${categoryJoin}
-        WHERE ${categoryCondition}
-      `).get(category) as CountRow;
-      total = countResult.count;
-
-      contacts = db.prepare(`
-        SELECT DISTINCT
-          c.id,
-          c.display_name,
-          c.company,
-          c.title,
-          c.photo_hash,
-          (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
-          (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone,
-          (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code,
-          (SELECT profile_url FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'linkedin' LIMIT 1) as linkedin_url,
-          (SELECT url FROM contact_urls WHERE contact_id = c.id LIMIT 1) as website_url
-        FROM contacts c
-        ${categoryJoin}
-        WHERE ${categoryCondition}
-        ORDER BY c.last_name, c.first_name, c.display_name
-        LIMIT ? OFFSET ?
-      `).all(category, limit, offset) as ContactListRow[];
-    } else {
-      const countResult = db.prepare('SELECT COUNT(*) as count FROM contacts').get() as CountRow;
-      total = countResult.count;
-
-      contacts = db.prepare(`
-        SELECT
-          c.id,
-          c.display_name,
-          c.company,
-          c.title,
-          c.photo_hash,
-          (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
-          (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone,
-          (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code,
-          (SELECT profile_url FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'linkedin' LIMIT 1) as linkedin_url,
-          (SELECT url FROM contact_urls WHERE contact_id = c.id LIMIT 1) as website_url
-        FROM contacts c
-        ORDER BY c.last_name, c.first_name, c.display_name
-        LIMIT ? OFFSET ?
-      `).all(limit, offset) as ContactListRow[];
+      conditions.push('c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)');
+      params.push(searchTerm);
     }
+
+    // Parse filters
+    const activeFilters = filter ? filter.split(',').map(f => f.trim()).filter(Boolean) : [];
+    for (const f of activeFilters) {
+      switch (f) {
+        case 'has-photo': conditions.push('c.photo_hash IS NOT NULL'); break;
+        case 'no-photo': conditions.push('c.photo_hash IS NULL'); break;
+        case 'has-email': conditions.push('EXISTS (SELECT 1 FROM contact_emails WHERE contact_id = c.id)'); break;
+        case 'no-email': conditions.push('NOT EXISTS (SELECT 1 FROM contact_emails WHERE contact_id = c.id)'); break;
+        case 'has-phone': conditions.push('EXISTS (SELECT 1 FROM contact_phones WHERE contact_id = c.id)'); break;
+        case 'no-phone': conditions.push('NOT EXISTS (SELECT 1 FROM contact_phones WHERE contact_id = c.id)'); break;
+        case 'has-address': conditions.push('EXISTS (SELECT 1 FROM contact_addresses WHERE contact_id = c.id)'); break;
+        case 'no-address': conditions.push('NOT EXISTS (SELECT 1 FROM contact_addresses WHERE contact_id = c.id)'); break;
+        case 'has-birthday': conditions.push('c.birthday IS NOT NULL'); break;
+        case 'no-birthday': conditions.push('c.birthday IS NULL'); break;
+        case 'has-enrichment': conditions.push('EXISTS (SELECT 1 FROM linkedin_enrichment WHERE contact_id = c.id)'); break;
+        case 'no-enrichment': conditions.push('NOT EXISTS (SELECT 1 FROM linkedin_enrichment WHERE contact_id = c.id)'); break;
+        case 'has-instagram': conditions.push("EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'instagram')"); break;
+        case 'no-instagram': conditions.push("NOT EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'instagram')"); break;
+        case 'has-linkedin': conditions.push("EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'linkedin')"); break;
+        case 'no-linkedin': conditions.push("NOT EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'linkedin')"); break;
+      }
+    }
+
+    // Last-contacted sort needs a join
+    let lastContactedSelect = '';
+    if (sort === 'last-contacted') {
+      joins.push('LEFT JOIN (SELECT contact_id, MAX(date) as last_contact_date FROM contact_emails_history GROUP BY contact_id) lc ON lc.contact_id = c.id');
+      lastContactedSelect = ', lc.last_contact_date';
+    }
+
+    // Build ORDER BY
+    let orderBy: string;
+    switch (sort) {
+      case 'name-desc': orderBy = 'c.last_name DESC, c.first_name DESC, c.display_name DESC'; break;
+      case 'newest': orderBy = 'c.created_at DESC'; break;
+      case 'oldest': orderBy = 'c.created_at ASC'; break;
+      case 'updated': orderBy = 'c.updated_at DESC'; break;
+      case 'last-contacted': orderBy = 'CASE WHEN lc.last_contact_date IS NULL THEN 1 ELSE 0 END, lc.last_contact_date DESC'; break;
+      default: orderBy = 'c.last_name, c.first_name, c.display_name'; break;
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const joinClause = joins.join('\n        ');
+
+    // Count query
+    const countResult = db.prepare(`
+      SELECT COUNT(DISTINCT c.id) as count
+      FROM contacts c
+      ${joinClause}
+      ${whereClause}
+    `).get(...params) as CountRow;
+    const total = countResult.count;
+
+    // Data query
+    const queryParams = [...params, limit, offset];
+    const contacts = db.prepare(`
+      SELECT DISTINCT
+        c.id,
+        c.display_name,
+        c.company,
+        c.title,
+        c.photo_hash,
+        (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
+        (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone,
+        (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code,
+        (SELECT profile_url FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'linkedin' LIMIT 1) as linkedin_url,
+        (SELECT url FROM contact_urls WHERE contact_id = c.id LIMIT 1) as website_url
+        ${lastContactedSelect}
+      FROM contacts c
+      ${joinClause}
+      ${whereClause}
+      ORDER BY ${orderBy}
+      LIMIT ? OFFSET ?
+    `).all(...queryParams) as ContactListRow[];
 
     const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
 
@@ -703,13 +701,18 @@ export default async function contactsRoutes(
       skills: string | null;
       photo_linkedin: string | null;
       enriched_at: string | null;
+      positions: string | null;
+      certifications: string | null;
+      languages: string | null;
+      honors: string | null;
     }
 
     const enrichment = db.prepare(`
       SELECT linkedin_first_name, linkedin_last_name, headline, about,
              job_title, company_name, company_linkedin_url, industry,
              country, location, followers_count, education, skills,
-             photo_linkedin, enriched_at
+             photo_linkedin, enriched_at, positions, certifications,
+             languages, honors
       FROM linkedin_enrichment WHERE contact_id = ?
     `).get(id) as LinkedInEnrichmentRow | undefined;
 
@@ -810,7 +813,11 @@ export default async function contactsRoutes(
           return parsed; // Already an array of strings
         })() : null,
         photoLinkedin: enrichment.photo_linkedin,
-        enrichedAt: enrichment.enriched_at
+        enrichedAt: enrichment.enriched_at,
+        positions: enrichment.positions ? JSON.parse(enrichment.positions) : null,
+        certifications: enrichment.certifications ? JSON.parse(enrichment.certifications) : null,
+        languages: enrichment.languages ? JSON.parse(enrichment.languages) : null,
+        honors: enrichment.honors ? JSON.parse(enrichment.honors) : null,
       } : null
     };
   });
@@ -1065,6 +1072,38 @@ export default async function contactsRoutes(
       WHERE contact_id = ?
     `).all(id) as RelatedPersonRow[];
 
+    // Fetch LinkedIn enrichment data if available
+    interface LinkedInEnrichmentRow {
+      linkedin_first_name: string | null;
+      linkedin_last_name: string | null;
+      headline: string | null;
+      about: string | null;
+      job_title: string | null;
+      company_name: string | null;
+      company_linkedin_url: string | null;
+      industry: string | null;
+      country: string | null;
+      location: string | null;
+      followers_count: number | null;
+      education: string | null;
+      skills: string | null;
+      photo_linkedin: string | null;
+      enriched_at: string | null;
+      positions: string | null;
+      certifications: string | null;
+      languages: string | null;
+      honors: string | null;
+    }
+
+    const enrichment = db.prepare(`
+      SELECT linkedin_first_name, linkedin_last_name, headline, about,
+             job_title, company_name, company_linkedin_url, industry,
+             country, location, followers_count, education, skills,
+             photo_linkedin, enriched_at, positions, certifications,
+             languages, honors
+      FROM linkedin_enrichment WHERE contact_id = ?
+    `).get(id) as LinkedInEnrichmentRow | undefined;
+
     return {
       id: contact.id,
       firstName: contact.first_name,
@@ -1137,7 +1176,35 @@ export default async function contactsRoutes(
         name: rp.name,
         relationship: rp.relationship
       })),
-      photoUrl: getPhotoUrl(contact.photo_hash, 'medium')
+      photoUrl: getPhotoUrl(contact.photo_hash, 'medium'),
+      linkedinEnrichment: enrichment ? {
+        linkedinFirstName: enrichment.linkedin_first_name,
+        linkedinLastName: enrichment.linkedin_last_name,
+        headline: enrichment.headline,
+        about: enrichment.about,
+        jobTitle: enrichment.job_title,
+        companyName: enrichment.company_name,
+        companyLinkedinUrl: enrichment.company_linkedin_url,
+        industry: enrichment.industry,
+        country: enrichment.country,
+        location: enrichment.location,
+        followersCount: enrichment.followers_count,
+        education: enrichment.education ? JSON.parse(enrichment.education) : null,
+        skills: enrichment.skills ? (() => {
+          const parsed = JSON.parse(enrichment.skills);
+          if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
+            const names = [...new Set(parsed.map((s: { name: string }) => s.name).filter(Boolean))];
+            return names.slice(0, 20);
+          }
+          return parsed;
+        })() : null,
+        photoLinkedin: enrichment.photo_linkedin,
+        enrichedAt: enrichment.enriched_at,
+        positions: enrichment.positions ? JSON.parse(enrichment.positions) : null,
+        certifications: enrichment.certifications ? JSON.parse(enrichment.certifications) : null,
+        languages: enrichment.languages ? JSON.parse(enrichment.languages) : null,
+        honors: enrichment.honors ? JSON.parse(enrichment.honors) : null,
+      } : null
     };
   });
 

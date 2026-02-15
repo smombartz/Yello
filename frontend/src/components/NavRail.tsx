@@ -40,7 +40,7 @@ export function NavRail() {
       <NavRailItem to="/contacts" icon="address-book" label="Contacts" />
       <NavRailItem to="/map" icon="map" label="Map" />
       <NavRailItem to="/groups" icon="users" label="Groups" />
-      <NavRailItem to="/settings" icon="screwdriver-wrench" label="Tools" />
+      <NavRailItem to="/tools" icon="screwdriver-wrench" label="Tools" />
 
       <button
         type="button"

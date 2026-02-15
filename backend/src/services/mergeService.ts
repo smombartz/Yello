@@ -557,7 +557,8 @@ function getContactDetail(contactId: number): ContactDetail {
     SELECT linkedin_first_name, linkedin_last_name, headline, about,
            job_title, company_name, company_linkedin_url, industry,
            country, location, followers_count, education, skills,
-           photo_linkedin, enriched_at
+           photo_linkedin, enriched_at, positions, certifications,
+           languages, honors
     FROM linkedin_enrichment WHERE contact_id = ?
   `).get(contactId) as {
     linkedin_first_name: string | null;
@@ -575,6 +576,10 @@ function getContactDetail(contactId: number): ContactDetail {
     skills: string | null;
     photo_linkedin: string | null;
     enriched_at: string | null;
+    positions: string | null;
+    certifications: string | null;
+    languages: string | null;
+    honors: string | null;
   } | undefined;
 
   return {
@@ -610,7 +615,11 @@ function getContactDetail(contactId: number): ContactDetail {
         return parsed;
       })() : null,
       photoLinkedin: enrichment.photo_linkedin,
-      enrichedAt: enrichment.enriched_at
+      enrichedAt: enrichment.enriched_at,
+      positions: enrichment.positions ? JSON.parse(enrichment.positions) : null,
+      certifications: enrichment.certifications ? JSON.parse(enrichment.certifications) : null,
+      languages: enrichment.languages ? JSON.parse(enrichment.languages) : null,
+      honors: enrichment.honors ? JSON.parse(enrichment.honors) : null,
     } : null
   };
 }

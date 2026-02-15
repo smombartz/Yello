@@ -1120,6 +1120,27 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
           </div>
         )}
 
+        {enrichment.positions && enrichment.positions.length > 0 && (
+          <div className="expanded-item">
+            <Icon name="briefcase" />
+            <div className="expanded-item-content">
+              <ul className="education-list">
+                {enrichment.positions.map((pos, i) => (
+                  <li key={i}>
+                    <span>{pos.title}{pos.companyName ? ` at ${pos.companyName}` : ''}</span>
+                    {(pos.startDate || pos.endDate) && (
+                      <span className="item-type"> ({pos.startDate || '?'} – {pos.endDate || 'Present'})</span>
+                    )}
+                    {pos.locationName && (
+                      <div className="linkedin-sub-detail">{pos.locationName}</div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
         {enrichment.education && enrichment.education.length > 0 && (
           <div className="expanded-item">
             <Icon name="graduation-cap" />
@@ -1127,6 +1148,45 @@ export function LinkedInSection({ enrichment, contactPhotoUrl }: { enrichment: L
               <ul className="education-list">
                 {enrichment.education.map((edu, i) => (
                   <li key={i}>{edu}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {enrichment.certifications && enrichment.certifications.length > 0 && (
+          <div className="expanded-item">
+            <Icon name="certificate" />
+            <div className="expanded-item-content">
+              <ul className="education-list">
+                {enrichment.certifications.map((cert, i) => (
+                  <li key={i}>{cert.name}{cert.authority ? ` — ${cert.authority}` : ''}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {enrichment.languages && enrichment.languages.length > 0 && (
+          <div className="expanded-item">
+            <Icon name="globe" />
+            <div className="expanded-item-content skills-list">
+              {enrichment.languages.map((lang, i) => (
+                <span key={i} className="skill-tag">
+                  {lang.name}{lang.proficiency ? ` (${lang.proficiency})` : ''}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {enrichment.honors && enrichment.honors.length > 0 && (
+          <div className="expanded-item">
+            <Icon name="star" />
+            <div className="expanded-item-content">
+              <ul className="education-list">
+                {enrichment.honors.map((honor, i) => (
+                  <li key={i}>{honor.title}{honor.issuer ? ` — ${honor.issuer}` : ''}</li>
                 ))}
               </ul>
             </div>

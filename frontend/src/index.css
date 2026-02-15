@@ -1954,6 +1954,11 @@ a.nav-rail-item.active {
   font-size: 0.875rem;
 }
 
+.linkedin-sub-detail {
+  font-size: 0.8rem;
+  color: var(--ds-text-tertiary);
+}
+
 /* Legacy notes-box (used by AddContactPage) */
 .notes-box {
   background: var(--ds-color-warning-light);
@@ -3513,7 +3518,8 @@ a.nav-rail-item.active {
 .contact-list-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
   padding: 0.75rem 0;
   margin-bottom: 0.5rem;
   border-bottom: 1px solid var(--ds-border-color);
@@ -3526,6 +3532,179 @@ a.nav-rail-item.active {
 .contact-selection-actions {
   display: flex;
   gap: 0.5rem;
+  margin-left: auto;
+}
+
+/* Sort Select */
+.contact-sort-select {
+  height: 2rem;
+  padding: 0 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--ds-border-color);
+  background-color: var(--ds-bg-primary);
+  color: var(--ds-text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.contact-sort-select:hover {
+  border-color: var(--ds-text-secondary);
+}
+
+/* Filter Popover */
+.contact-filters-container {
+  position: relative;
+}
+
+.filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.3rem;
+  border-radius: 99px;
+  background-color: var(--ds-color-primary);
+  color: white;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.filter-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: var(--ds-z-dropdown);
+  background: var(--ds-bg-primary);
+  border: 1px solid var(--ds-border-color);
+  border-radius: 0.5rem;
+  box-shadow: var(--ds-shadow-md);
+  min-width: 240px;
+  padding: 0.5rem 0;
+}
+
+.filter-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.375rem 0.75rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ds-text-primary);
+  border-bottom: 1px solid var(--ds-border-color);
+  margin-bottom: 0.25rem;
+}
+
+.filter-clear-btn {
+  background: none;
+  border: none;
+  color: var(--ds-color-primary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.filter-clear-btn:hover {
+  text-decoration: underline;
+}
+
+.filter-group {
+  padding: 0.25rem 0;
+}
+
+.filter-group + .filter-group {
+  border-top: 1px solid var(--ds-border-color);
+}
+
+.filter-group-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ds-text-tertiary);
+  padding: 0.375rem 0.75rem 0.125rem;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: var(--ds-text-primary);
+}
+
+.filter-row:hover {
+  background-color: var(--ds-bg-secondary);
+}
+
+.filter-row-label {
+  flex: 1;
+  text-align: left;
+}
+
+.filter-state {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.125rem 0.5rem;
+  border-radius: 99px;
+}
+
+.filter-state-any {
+  color: var(--ds-text-tertiary);
+}
+
+.filter-state-has {
+  color: var(--ds-color-success);
+  background-color: rgba(22, 163, 74, 0.1);
+}
+
+.filter-state-no {
+  color: var(--ds-color-error);
+  background-color: rgba(220, 38, 38, 0.1);
+}
+
+/* Filter Chips */
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1875rem 0.5rem;
+  background-color: var(--ds-bg-secondary);
+  border: 1px solid var(--ds-border-color);
+  border-radius: 99px;
+  font-size: 0.75rem;
+  color: var(--ds-text-secondary);
+}
+
+.filter-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ds-text-tertiary);
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.filter-chip-remove:hover {
+  color: var(--ds-color-error);
+  background-color: rgba(220, 38, 38, 0.1);
 }
 
 .contact-action-button {

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { ContactDetail, ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, UpdateContactRequest } from '../api/types';
 import { useUpdateContact } from '../api/hooks';
 import { Icon } from './Icon';
-import { EditableField } from './ContactFormSections';
+import { EditableField, LinkedInSection } from './ContactFormSections';
 import { ContactCardView } from './ContactCardView';
 import { EmailHistorySection } from './EmailHistorySection';
 
@@ -233,6 +233,9 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
           updatedAt: contact.updatedAt,
         }}
       >
+        {contact.linkedinEnrichment && (
+          <LinkedInSection enrichment={contact.linkedinEnrichment} contactPhotoUrl={contact.photoUrl} />
+        )}
         <EmailHistorySection contactId={contact.id} hasEmails={contact.emails.length > 0} />
       </ContactCardView>
 
