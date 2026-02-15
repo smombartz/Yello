@@ -345,6 +345,9 @@ export function getDatabase(): DatabaseType {
     console.log(`Migrated ${users.length} existing avatars to profile_images`);
   }
 
+  // Migration: Create contact_photos table for multi-source contact photos
+  runContactPhotosMigration(db);
+
   return db;
 }
 
@@ -803,5 +806,32 @@ export function runGeocodingMigration(database: DatabaseType): void {
       CREATE INDEX IF NOT EXISTS idx_contact_addresses_geocoded ON contact_addresses(latitude, longitude) WHERE latitude IS NOT NULL;
     `);
     console.log('Geocoding migration complete');
+  }
+}
+
+/**
+ * Run contact_photos migration for multi-source contact photos
+ */
+export function runContactPhotosMigration(database: DatabaseType): void {
+  const tableExists = database.prepare(`
+    SELECT name FROM sqlite_master WHERE type='table' AND name='contact_photos'
+  `).get();
+
+  if (!tableExists) {
+    console.log('Running contact_photos migration: creating contact_photos table...');
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS contact_photos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+        source TEXT NOT NULL CHECK (source IN ('vcard', 'google', 'gravatar', 'linkedin')),
+        original_url TEXT,
+        local_hash TEXT,
+        is_primary INTEGER DEFAULT 0,
+        fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_contact_photos_contact_id ON contact_photos(contact_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_contact_photos_contact_source ON contact_photos(contact_id, source);
+    `);
+    console.log('contact_photos table created successfully');
   }
 }

@@ -1090,17 +1090,24 @@ async function processApifyResults(
       clearEnrichmentFailure(contact.contactId);
       state.succeeded++;
 
-      // Download LinkedIn photo if available and contact has no existing photo
+      // Download LinkedIn photo if available (always download to collect all sources)
       if (profile.pictureUrl) {
         try {
           const db = getDatabase();
-          const contactRow = db.prepare('SELECT photo_hash FROM contacts WHERE id = ?').get(contact.contactId) as { photo_hash: string | null } | undefined;
-          if (contactRow && !contactRow.photo_hash) {
-            const hash = await downloadAndProcessImage(profile.pictureUrl, `linkedin-contact-${contact.contactId}`);
-            if (hash) {
-              db.prepare('UPDATE contacts SET photo_hash = ?, updated_at = datetime(\'now\') WHERE id = ?').run(hash, contact.contactId);
-              console.log(`[Enrich] Downloaded LinkedIn photo for ${contact.displayName}`);
-            }
+          const hash = await downloadAndProcessImage(profile.pictureUrl, `linkedin-contact-${contact.contactId}`);
+          if (hash) {
+            // Only set contacts.photo_hash if it's currently NULL
+            db.prepare('UPDATE contacts SET photo_hash = ?, updated_at = datetime(\'now\') WHERE id = ? AND photo_hash IS NULL').run(hash, contact.contactId);
+            // Always upsert into contact_photos
+            db.prepare(`
+              INSERT INTO contact_photos (contact_id, source, original_url, local_hash, is_primary)
+              VALUES (?, 'linkedin', ?, ?, CASE WHEN (SELECT photo_hash FROM contacts WHERE id = ?) = ? THEN 1 ELSE 0 END)
+              ON CONFLICT(contact_id, source) DO UPDATE SET
+                original_url = excluded.original_url,
+                local_hash = excluded.local_hash,
+                fetched_at = CURRENT_TIMESTAMP
+            `).run(contact.contactId, profile.pictureUrl, hash, contact.contactId, hash);
+            console.log(`[Enrich] Downloaded LinkedIn photo for ${contact.displayName}`);
           }
         } catch (photoError) {
           console.log(`[Enrich] Failed to download photo for ${contact.displayName}: ${photoError instanceof Error ? photoError.message : photoError}`);

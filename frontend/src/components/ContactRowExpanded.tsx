@@ -5,6 +5,7 @@ import { Icon } from './Icon';
 import { EditableField, LinkedInSection } from './ContactFormSections';
 import { ContactCardView } from './ContactCardView';
 import { EmailHistorySection } from './EmailHistorySection';
+import { ContactPhotoGallery } from './ContactPhotoGallery';
 
 interface ContactRowExpandedProps {
   contact: ContactDetail;
@@ -238,6 +239,11 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
         )}
         <EmailHistorySection contactId={contact.id} hasEmails={contact.emails.length > 0} />
       </ContactCardView>
+
+      {/* Photo gallery for multi-source photos */}
+      {contact.photos && contact.photos.length > 1 && (
+        <ContactPhotoGallery contactId={contact.id} photos={contact.photos} />
+      )}
 
       {/* Bottom: Edit button right-aligned */}
       <div className="expanded-bottom-actions">

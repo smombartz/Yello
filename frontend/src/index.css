@@ -1759,6 +1759,71 @@ a.nav-rail-item.active {
   justify-content: flex-end;
 }
 
+/* Contact Photo Gallery */
+.contact-photo-gallery {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.photo-gallery-label {
+  font-size: 0.75rem;
+  color: var(--ds-text-secondary, #6b7280);
+  white-space: nowrap;
+}
+
+.photo-gallery-thumbnails {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.photo-gallery-thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 2px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.photo-gallery-thumb:hover:not(:disabled) {
+  border-color: var(--ds-color-primary, #5f27e3);
+}
+
+.photo-gallery-thumb.is-primary {
+  border-color: var(--ds-color-primary, #5f27e3);
+}
+
+.photo-gallery-thumb img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.photo-gallery-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ds-bg-secondary, #f9fafb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: var(--ds-text-secondary, #6b7280);
+}
+
+.photo-gallery-source {
+  font-size: 0.6rem;
+  color: var(--ds-text-secondary, #6b7280);
+  line-height: 1;
+}
+
 .section-content {
   display: flex;
   flex-direction: column;
@@ -1988,6 +2053,15 @@ a.nav-rail-item.active {
 }
 
 @media (max-width: 640px) {
+  .contact-details {
+    display: none;
+  }
+  .contact-card-actions {
+    display: none;
+  }
+  .contact-role {
+    display: none;
+  }
   .expanded-row {
     grid-template-columns: 1fr;
   }
@@ -5942,6 +6016,139 @@ a.nav-rail-item.active {
 
 .normalize-remove-single [class*="fa-"] {
   font-size: 1.125rem;
+}
+
+.normalize-address-buttons {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.normalize-edit-single {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--ds-color-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.normalize-edit-single:hover:not(:disabled) {
+  background: rgba(95, 39, 227, 0.1);
+}
+
+.normalize-edit-single:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.normalize-edit-single [class*="fa-"] {
+  font-size: 0.875rem;
+}
+
+/* Address Edit Form (shared between normalize and duplicates) */
+.address-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0;
+}
+
+.address-edit-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.address-edit-input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--ds-border-color);
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  background: var(--ds-bg-primary);
+  color: var(--ds-text-primary);
+  transition: border-color 0.15s ease;
+}
+
+.address-edit-input:focus {
+  outline: none;
+  border-color: var(--ds-color-primary);
+  box-shadow: 0 0 0 2px rgba(95, 39, 227, 0.15);
+}
+
+.address-edit-input::placeholder {
+  color: var(--ds-text-muted);
+}
+
+.address-edit-short {
+  flex: 0 0 35%;
+}
+
+.address-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.address-edit-cancel {
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--ds-border-color);
+  background: var(--ds-bg-primary);
+  color: var(--ds-text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.address-edit-cancel:hover:not(:disabled) {
+  background: var(--ds-bg-secondary);
+}
+
+.address-edit-save {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  border: none;
+  background: var(--ds-color-primary);
+  color: white;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.address-edit-save:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.address-edit-save:disabled,
+.address-edit-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.address-edit-save [class*="fa-"] {
+  font-size: 0.75rem;
+}
+
+/* Custom option in duplicates card */
+.address-option .address-text [class*="fa-"] {
+  margin-right: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.address-options .address-edit-form {
+  padding: 0.5rem 1rem 0.75rem 2.25rem;
 }
 
 .normalize-card-actions {

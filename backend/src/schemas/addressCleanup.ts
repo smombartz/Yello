@@ -11,10 +11,20 @@ export const AddressCleanupQuerySchema = Type.Object({
 
 export type AddressCleanupQuery = Static<typeof AddressCleanupQuerySchema>;
 
+export const AddressUpdateFieldsSchema = Type.Object({
+  addressId: Type.Number(),
+  street: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  city: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  state: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  postalCode: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  country: Type.Optional(Type.Union([Type.String(), Type.Null()]))
+});
+
 export const AddressFixSchema = Type.Object({
   contactId: Type.Number(),
   keepAddressIds: Type.Array(Type.Number()),
-  removeAddressIds: Type.Array(Type.Number())
+  removeAddressIds: Type.Array(Type.Number()),
+  updatedAddress: Type.Optional(AddressUpdateFieldsSchema)
 });
 
 export const AddressFixRequestSchema = Type.Object({
@@ -22,6 +32,17 @@ export const AddressFixRequestSchema = Type.Object({
 });
 
 export type AddressFixRequest = Static<typeof AddressFixRequestSchema>;
+
+export const AddressUpdateRequestSchema = Type.Object({
+  addressId: Type.Number(),
+  street: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  city: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  state: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  postalCode: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  country: Type.Optional(Type.Union([Type.String(), Type.Null()]))
+});
+
+export type AddressUpdateRequest = Static<typeof AddressUpdateRequestSchema>;
 
 // ============================================================
 // Response Schemas
@@ -84,6 +105,21 @@ export const AddressFixResponseSchema = Type.Object({
 });
 
 export type AddressFixResponse = Static<typeof AddressFixResponseSchema>;
+
+export const AddressUpdateResponseSchema = Type.Object({
+  address: Type.Object({
+    id: Type.Number(),
+    contactId: Type.Number(),
+    street: Type.Union([Type.String(), Type.Null()]),
+    city: Type.Union([Type.String(), Type.Null()]),
+    state: Type.Union([Type.String(), Type.Null()]),
+    postalCode: Type.Union([Type.String(), Type.Null()]),
+    country: Type.Union([Type.String(), Type.Null()]),
+    type: Type.Union([Type.String(), Type.Null()])
+  })
+});
+
+export type AddressUpdateResponse = Static<typeof AddressUpdateResponseSchema>;
 
 export const AddressCleanupErrorSchema = Type.Object({
   error: Type.String()

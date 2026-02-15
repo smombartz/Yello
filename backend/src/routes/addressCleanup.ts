@@ -16,6 +16,7 @@ import {
   retryGeocoding,
   batchGeocode,
   updateAddressAndGeocode,
+  updateAddress,
   isGeocodingAvailable,
   type GeocodingStatus
 } from '../services/addressCleanupService.js';
@@ -50,7 +51,10 @@ import {
   GeocodingBatchResponseSchema,
   GeocodingUpdateRequestSchema,
   GeocodingUpdateRequest,
-  GeocodingUpdateResponseSchema
+  GeocodingUpdateResponseSchema,
+  AddressUpdateRequestSchema,
+  AddressUpdateRequest,
+  AddressUpdateResponseSchema
 } from '../schemas/addressCleanup.js';
 
 export default async function addressCleanupRoutes(
@@ -168,6 +172,32 @@ export default async function addressCleanupRoutes(
     try {
       const { addressIds } = request.body;
       return removeJunkAddresses(addressIds);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return reply.status(500).send({ error: message });
+    }
+  });
+
+  // PUT /api/cleanup/addresses/update - update address fields (no geocoding)
+  fastify.put<{ Body: AddressUpdateRequest }>('/update', {
+    schema: {
+      body: AddressUpdateRequestSchema,
+      response: {
+        200: AddressUpdateResponseSchema,
+        404: AddressCleanupErrorSchema,
+        500: AddressCleanupErrorSchema
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { addressId, ...updates } = request.body;
+      const result = updateAddress(addressId, updates);
+
+      if (!result) {
+        return reply.status(404).send({ error: 'Address not found' });
+      }
+
+      return { address: result };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       return reply.status(500).send({ error: message });

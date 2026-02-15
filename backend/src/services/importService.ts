@@ -76,6 +76,14 @@ export async function importVcf(vcfContent: string): Promise<ImportResult> {
         try {
           photoHash = await processPhoto(contact.photoBase64, contactId);
           db.prepare('UPDATE contacts SET photo_hash = ? WHERE id = ?').run(photoHash, contactId);
+          // Also record in contact_photos table
+          db.prepare(`
+            INSERT INTO contact_photos (contact_id, source, local_hash, is_primary)
+            VALUES (?, 'vcard', ?, 1)
+            ON CONFLICT(contact_id, source) DO UPDATE SET
+              local_hash = excluded.local_hash,
+              fetched_at = CURRENT_TIMESTAMP
+          `).run(contactId, photoHash);
           photosProcessed++;
         } catch {
           /* skip photo on error */

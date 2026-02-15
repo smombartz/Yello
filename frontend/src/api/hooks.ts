@@ -153,3 +153,20 @@ export function useMergeSelectedContacts() {
     },
   });
 }
+
+// Set a contact photo as primary
+export function useSetContactPhotoPrimary() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ contactId, photoId }: { contactId: number; photoId: number }) =>
+      fetchApi<{ success: boolean }>(`/api/contacts/${contactId}/photos/${photoId}/primary`, {
+        method: 'POST',
+      }),
+    onSuccess: (_data, variables) => {
+      // Invalidate both the contact detail and contacts list to refresh the avatar
+      queryClient.invalidateQueries({ queryKey: ['contact', variables.contactId] });
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+    },
+  });
+}

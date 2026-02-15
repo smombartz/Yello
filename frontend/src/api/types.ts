@@ -94,6 +94,13 @@ export interface LinkedInEnrichment {
   honors: Array<{title: string; issuer?: string; description?: string}> | null;
 }
 
+export interface ContactPhoto {
+  id: number;
+  source: 'vcard' | 'google' | 'gravatar' | 'linkedin';
+  url: string | null;
+  isPrimary: boolean;
+}
+
 export interface ContactDetail {
   id: number;
   firstName: string | null;
@@ -112,6 +119,7 @@ export interface ContactDetail {
   urls: ContactUrl[];
   relatedPeople: ContactRelatedPerson[];
   photoUrl: string | null;
+  photos: ContactPhoto[];
   createdAt: string;
   updatedAt: string;
   linkedinEnrichment: LinkedInEnrichment | null;
@@ -457,15 +465,38 @@ export interface AddressCleanupResponse {
   total: number;
 }
 
+export interface AddressUpdateData {
+  addressId: number;
+  street?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+}
+
 export interface AddressFix {
   contactId: number;
   keepAddressIds: number[];
   removeAddressIds: number[];
+  updatedAddress?: AddressUpdateData;
 }
 
 export interface AddressFixResponse {
   fixed: number;
   removed: number;
+}
+
+export interface AddressUpdateResponse {
+  address: {
+    id: number;
+    contactId: number;
+    street: string | null;
+    city: string | null;
+    state: string | null;
+    postalCode: string | null;
+    country: string | null;
+    type: string | null;
+  };
 }
 
 export interface AddressCleanupBulkContact {

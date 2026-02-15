@@ -716,6 +716,14 @@ export default async function contactsRoutes(
       FROM linkedin_enrichment WHERE contact_id = ?
     `).get(id) as LinkedInEnrichmentRow | undefined;
 
+    // Fetch contact photos from all sources
+    const contactPhotos = db.prepare(`
+      SELECT id, source, original_url, local_hash, is_primary
+      FROM contact_photos
+      WHERE contact_id = ?
+      ORDER BY is_primary DESC, fetched_at ASC
+    `).all(id) as Array<{ id: number; source: string; original_url: string | null; local_hash: string | null; is_primary: number }>;
+
     return {
       id: contact.id,
       firstName: contact.first_name,
@@ -789,6 +797,12 @@ export default async function contactsRoutes(
         relationship: rp.relationship
       })),
       photoUrl: getPhotoUrl(contact.photo_hash, 'medium'),
+      photos: contactPhotos.map(p => ({
+        id: p.id,
+        source: p.source,
+        url: getPhotoUrl(p.local_hash, 'thumbnail'),
+        isPrimary: p.is_primary === 1,
+      })),
       linkedinEnrichment: enrichment ? {
         linkedinFirstName: enrichment.linkedin_first_name,
         linkedinLastName: enrichment.linkedin_last_name,
@@ -804,13 +818,11 @@ export default async function contactsRoutes(
         education: enrichment.education ? JSON.parse(enrichment.education) : null,
         skills: enrichment.skills ? (() => {
           const parsed = JSON.parse(enrichment.skills);
-          // Skills are stored as [{name: "...", ...}], extract just the names
           if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
-            // Get unique skill names (dedupe and filter)
             const names = [...new Set(parsed.map((s: { name: string }) => s.name).filter(Boolean))];
-            return names.slice(0, 20); // Limit to top 20 skills
+            return names.slice(0, 20);
           }
-          return parsed; // Already an array of strings
+          return parsed;
         })() : null,
         photoLinkedin: enrichment.photo_linkedin,
         enrichedAt: enrichment.enriched_at,
@@ -1104,6 +1116,14 @@ export default async function contactsRoutes(
       FROM linkedin_enrichment WHERE contact_id = ?
     `).get(id) as LinkedInEnrichmentRow | undefined;
 
+    // Fetch contact photos from all sources
+    const contactPhotos = db.prepare(`
+      SELECT id, source, original_url, local_hash, is_primary
+      FROM contact_photos
+      WHERE contact_id = ?
+      ORDER BY is_primary DESC, fetched_at ASC
+    `).all(id) as Array<{ id: number; source: string; original_url: string | null; local_hash: string | null; is_primary: number }>;
+
     return {
       id: contact.id,
       firstName: contact.first_name,
@@ -1177,6 +1197,12 @@ export default async function contactsRoutes(
         relationship: rp.relationship
       })),
       photoUrl: getPhotoUrl(contact.photo_hash, 'medium'),
+      photos: contactPhotos.map(p => ({
+        id: p.id,
+        source: p.source,
+        url: getPhotoUrl(p.local_hash, 'thumbnail'),
+        isPrimary: p.is_primary === 1,
+      })),
       linkedinEnrichment: enrichment ? {
         linkedinFirstName: enrichment.linkedin_first_name,
         linkedinLastName: enrichment.linkedin_last_name,
@@ -1206,6 +1232,80 @@ export default async function contactsRoutes(
         honors: enrichment.honors ? JSON.parse(enrichment.honors) : null,
       } : null
     };
+  });
+
+  // GET /api/contacts/:id/photos - Get all photos for a contact
+  fastify.get<{ Params: ContactIdParams }>('/:id/photos', {
+    schema: {
+      params: ContactIdParamsSchema,
+    },
+  }, async (request, reply) => {
+    const { id } = request.params;
+    const db = getDatabase();
+
+    const contact = db.prepare('SELECT id FROM contacts WHERE id = ?').get(id);
+    if (!contact) {
+      return reply.status(404).send({ error: 'Contact not found' });
+    }
+
+    const photos = db.prepare(`
+      SELECT id, source, original_url, local_hash, is_primary
+      FROM contact_photos
+      WHERE contact_id = ?
+      ORDER BY is_primary DESC, fetched_at ASC
+    `).all(id) as Array<{ id: number; source: string; original_url: string | null; local_hash: string | null; is_primary: number }>;
+
+    return photos.map(p => ({
+      id: p.id,
+      source: p.source,
+      url: getPhotoUrl(p.local_hash, 'thumbnail'),
+      isPrimary: p.is_primary === 1,
+    }));
+  });
+
+  // POST /api/contacts/:id/photos/:photoId/primary - Set a photo as primary
+  fastify.post<{ Params: { id: string; photoId: string } }>('/:id/photos/:photoId/primary', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['id', 'photoId'],
+        properties: {
+          id: { type: 'string' },
+          photoId: { type: 'string' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const contactId = parseInt(request.params.id, 10);
+    const photoId = parseInt(request.params.photoId, 10);
+
+    if (isNaN(contactId) || isNaN(photoId)) {
+      return reply.status(400).send({ error: 'Invalid ID' });
+    }
+
+    const db = getDatabase();
+
+    // Verify the photo belongs to this contact
+    const photo = db.prepare(`
+      SELECT id, local_hash FROM contact_photos WHERE id = ? AND contact_id = ?
+    `).get(photoId, contactId) as { id: number; local_hash: string | null } | undefined;
+
+    if (!photo) {
+      return reply.status(404).send({ error: 'Photo not found' });
+    }
+
+    db.transaction(() => {
+      // Remove primary from all contact's photos
+      db.prepare('UPDATE contact_photos SET is_primary = 0 WHERE contact_id = ?').run(contactId);
+      // Set new primary
+      db.prepare('UPDATE contact_photos SET is_primary = 1 WHERE id = ?').run(photoId);
+      // Update contacts.photo_hash to match the selected photo
+      if (photo.local_hash) {
+        db.prepare('UPDATE contacts SET photo_hash = ?, updated_at = datetime(\'now\') WHERE id = ?').run(photo.local_hash, contactId);
+      }
+    })();
+
+    return { success: true };
   });
 
   // POST /api/contacts/merge/preview - Check for conflicts before merging

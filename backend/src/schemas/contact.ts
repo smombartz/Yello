@@ -144,6 +144,12 @@ export const ContactDetailSchema = Type.Object({
   urls: Type.Array(ContactUrlSchema),
   relatedPeople: Type.Array(ContactRelatedPersonSchema),
   photoUrl: Type.Union([Type.String(), Type.Null()]),
+  photos: Type.Optional(Type.Array(Type.Object({
+    id: Type.Number(),
+    source: Type.String(),
+    url: Type.Union([Type.String(), Type.Null()]),
+    isPrimary: Type.Boolean(),
+  }))),
   linkedinEnrichment: Type.Union([LinkedInEnrichmentSchema, Type.Null()])
 });
 

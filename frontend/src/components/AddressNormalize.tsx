@@ -4,9 +4,10 @@ import { Pagination } from './Pagination';
 import {
   useNormalizeContacts,
   useRemoveJunkAddresses,
+  useUpdateAddress,
   fetchAllJunkAddressIds
 } from '../api/addressCleanupHooks';
-import type { JunkIssueType, NormalizeContact } from '../api/types';
+import type { JunkIssueType, NormalizeContact, JunkAddress } from '../api/types';
 import { formatAddress } from '../lib/addressUtils';
 
 interface ToastState {
@@ -29,14 +30,107 @@ function getIssueLabel(issue: JunkIssueType): { text: string; className: string 
   }
 }
 
+interface AddressEditValues {
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
+
+function AddressEditForm({
+  values,
+  onChange,
+  onSave,
+  onCancel,
+  isSaving
+}: {
+  values: AddressEditValues;
+  onChange: (values: AddressEditValues) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  isSaving: boolean;
+}) {
+  return (
+    <div className="address-edit-form">
+      <input
+        className="address-edit-input"
+        placeholder="Street"
+        value={values.street}
+        onChange={(e) => onChange({ ...values, street: e.target.value })}
+      />
+      <div className="address-edit-row">
+        <input
+          className="address-edit-input"
+          placeholder="City"
+          value={values.city}
+          onChange={(e) => onChange({ ...values, city: e.target.value })}
+        />
+        <input
+          className="address-edit-input address-edit-short"
+          placeholder="State"
+          value={values.state}
+          onChange={(e) => onChange({ ...values, state: e.target.value })}
+        />
+      </div>
+      <div className="address-edit-row">
+        <input
+          className="address-edit-input address-edit-short"
+          placeholder="Postal Code"
+          value={values.postalCode}
+          onChange={(e) => onChange({ ...values, postalCode: e.target.value })}
+        />
+        <input
+          className="address-edit-input"
+          placeholder="Country"
+          value={values.country}
+          onChange={(e) => onChange({ ...values, country: e.target.value })}
+        />
+      </div>
+      <div className="address-edit-actions">
+        <button
+          className="address-edit-cancel"
+          onClick={onCancel}
+          disabled={isSaving}
+        >
+          Cancel
+        </button>
+        <button
+          className="address-edit-save"
+          onClick={onSave}
+          disabled={isSaving}
+        >
+          <Icon name="check" />
+          {isSaving ? 'Saving...' : 'Save'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function addressToEditValues(addr: JunkAddress): AddressEditValues {
+  return {
+    street: addr.street || '',
+    city: addr.city || '',
+    state: addr.state || '',
+    postalCode: addr.postalCode || '',
+    country: addr.country || '',
+  };
+}
+
 interface NormalizeCardProps {
   contact: NormalizeContact;
   onRemove: (addressIds: number[]) => void;
   onSkip: () => void;
+  onEdit: (addressId: number, values: AddressEditValues) => void;
   isRemoving: boolean;
+  isEditing: boolean;
 }
 
-function NormalizeCard({ contact, onRemove, onSkip, isRemoving }: NormalizeCardProps) {
+function NormalizeCard({ contact, onRemove, onSkip, onEdit, isRemoving, isEditing }: NormalizeCardProps) {
+  const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
+  const [editValues, setEditValues] = useState<AddressEditValues>({ street: '', city: '', state: '', postalCode: '', country: '' });
+
   const handleRemoveAll = () => {
     const ids = contact.junkAddresses.map(a => a.id);
     onRemove(ids);
@@ -44,6 +138,22 @@ function NormalizeCard({ contact, onRemove, onSkip, isRemoving }: NormalizeCardP
 
   const handleRemoveSingle = (addressId: number) => {
     onRemove([addressId]);
+  };
+
+  const handleStartEdit = (addr: JunkAddress) => {
+    setEditingAddressId(addr.id);
+    setEditValues(addressToEditValues(addr));
+  };
+
+  const handleCancelEdit = () => {
+    setEditingAddressId(null);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingAddressId !== null) {
+      onEdit(editingAddressId, editValues);
+      setEditingAddressId(null);
+    }
   };
 
   const issueCount = contact.junkAddresses.length;
@@ -77,23 +187,47 @@ function NormalizeCard({ contact, onRemove, onSkip, isRemoving }: NormalizeCardP
       <div className="normalize-addresses">
         {contact.junkAddresses.map((addr) => {
           const { text, className } = getIssueLabel(addr.issue);
+          const isEditingThis = editingAddressId === addr.id;
+
           return (
             <div key={addr.id} className="normalize-address-item">
-              <div className="normalize-address-content">
-                <div className="normalize-address-text">{formatAddress(addr)}</div>
-                <div className="normalize-address-meta">
-                  {addr.type && <span className="normalize-address-type">{addr.type}</span>}
-                  <span className={`normalize-address-issue ${className}`}>{text}</span>
-                </div>
-              </div>
-              <button
-                className="normalize-remove-single"
-                onClick={() => handleRemoveSingle(addr.id)}
-                disabled={isRemoving}
-                title="Remove this address"
-              >
-                <Icon name="trash" />
-              </button>
+              {isEditingThis ? (
+                <AddressEditForm
+                  values={editValues}
+                  onChange={setEditValues}
+                  onSave={handleSaveEdit}
+                  onCancel={handleCancelEdit}
+                  isSaving={isEditing}
+                />
+              ) : (
+                <>
+                  <div className="normalize-address-content">
+                    <div className="normalize-address-text">{formatAddress(addr)}</div>
+                    <div className="normalize-address-meta">
+                      {addr.type && <span className="normalize-address-type">{addr.type}</span>}
+                      <span className={`normalize-address-issue ${className}`}>{text}</span>
+                    </div>
+                  </div>
+                  <div className="normalize-address-buttons">
+                    <button
+                      className="normalize-edit-single"
+                      onClick={() => handleStartEdit(addr)}
+                      disabled={isRemoving || isEditing}
+                      title="Edit this address"
+                    >
+                      <Icon name="pen" />
+                    </button>
+                    <button
+                      className="normalize-remove-single"
+                      onClick={() => handleRemoveSingle(addr.id)}
+                      disabled={isRemoving || isEditing}
+                      title="Remove this address"
+                    >
+                      <Icon name="trash" />
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           );
         })}
@@ -103,14 +237,14 @@ function NormalizeCard({ contact, onRemove, onSkip, isRemoving }: NormalizeCardP
         <button
           className="normalize-skip-button"
           onClick={onSkip}
-          disabled={isRemoving}
+          disabled={isRemoving || isEditing}
         >
           Skip
         </button>
         <button
           className="normalize-remove-button"
           onClick={handleRemoveAll}
-          disabled={isRemoving}
+          disabled={isRemoving || isEditing}
         >
           <Icon name="trash" />
           {isRemoving ? 'Removing...' : `Remove All (${issueCount})`}
@@ -134,6 +268,7 @@ export function AddressNormalize() {
   } = useNormalizeContacts(currentPage, PAGE_SIZE);
 
   const removeMutation = useRemoveJunkAddresses();
+  const updateMutation = useUpdateAddress();
 
   // Cleanup toast timeout on unmount
   useEffect(() => {
@@ -167,6 +302,21 @@ export function AddressNormalize() {
       return next;
     });
   }, []);
+
+  const handleEdit = useCallback((addressId: number, values: AddressEditValues) => {
+    updateMutation.mutate({
+      addressId,
+      street: values.street || null,
+      city: values.city || null,
+      state: values.state || null,
+      postalCode: values.postalCode || null,
+      country: values.country || null,
+    }, {
+      onSuccess: () => {
+        showToast('Address updated');
+      },
+    });
+  }, [updateMutation, showToast]);
 
   const handleFixAll = useCallback(async () => {
     setIsFixingAll(true);
@@ -246,7 +396,9 @@ export function AddressNormalize() {
             contact={contact}
             onRemove={handleRemove}
             onSkip={() => handleSkip(contact.id)}
+            onEdit={handleEdit}
             isRemoving={removeMutation.isPending}
+            isEditing={updateMutation.isPending}
           />
         ))}
       </div>

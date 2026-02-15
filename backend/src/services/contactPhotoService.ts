@@ -63,13 +63,12 @@ export async function fetchContactPhotos(
   // Get valid access token
   const accessToken = await getValidAccessToken(userId);
 
-  // Get contacts with emails but no photo
+  // Get all contacts with emails (process even those with existing photos to collect all sources)
   const contactsWithEmails = db.prepare(`
     SELECT DISTINCT c.id, e.email
     FROM contacts c
     JOIN contact_emails e ON e.contact_id = c.id
-    WHERE c.photo_hash IS NULL
-      AND c.archived_at IS NULL
+    WHERE c.archived_at IS NULL
     ORDER BY c.id
   `).all() as ContactWithEmail[];
 
@@ -187,11 +186,21 @@ export async function fetchContactPhotos(
     const photoHash = await processContactPhoto(photoUrl, contactId);
 
     if (photoHash) {
-      // Update contact with photo hash
+      // Only set contacts.photo_hash if it's currently NULL (don't overwrite existing primary)
       db.prepare(`
         UPDATE contacts SET photo_hash = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE id = ? AND photo_hash IS NULL
       `).run(photoHash, contactId);
+
+      // Always upsert into contact_photos
+      db.prepare(`
+        INSERT INTO contact_photos (contact_id, source, original_url, local_hash, is_primary)
+        VALUES (?, ?, ?, ?, CASE WHEN (SELECT photo_hash FROM contacts WHERE id = ?) = ? THEN 1 ELSE 0 END)
+        ON CONFLICT(contact_id, source) DO UPDATE SET
+          original_url = excluded.original_url,
+          local_hash = excluded.local_hash,
+          fetched_at = CURRENT_TIMESTAMP
+      `).run(contactId, source, photoUrl, photoHash, contactId, photoHash);
 
       console.log(`[PhotoFetch] Contact ${contactId}: DOWNLOADED photo from ${source}`);
       result.downloaded++;

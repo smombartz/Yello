@@ -1,7 +1,17 @@
 import { useState, useCallback } from 'react';
 import { Icon } from './Icon';
-import type { AddressCleanupContact, AddressFix, DuplicateAddressConfidence } from '../api/types';
+import type { AddressCleanupContact, AddressFix, AddressWithIssues, DuplicateAddressConfidence } from '../api/types';
 import { formatAddress } from '../lib/addressUtils';
+
+interface AddressEditValues {
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
+
+const CUSTOM_SELECTION = -1;
 
 interface AddressCleanupCardProps {
   contact: AddressCleanupContact;
@@ -31,22 +41,90 @@ function getConfidenceLabel(confidence: DuplicateAddressConfidence | undefined):
   }
 }
 
+function addressToEditValues(addr: AddressWithIssues): AddressEditValues {
+  return {
+    street: addr.street || '',
+    city: addr.city || '',
+    state: addr.state || '',
+    postalCode: addr.postalCode || '',
+    country: addr.country || '',
+  };
+}
+
+function DuplicateEditForm({
+  values,
+  onChange,
+}: {
+  values: AddressEditValues;
+  onChange: (values: AddressEditValues) => void;
+}) {
+  return (
+    <div className="address-edit-form">
+      <input
+        className="address-edit-input"
+        placeholder="Street"
+        value={values.street}
+        onChange={(e) => onChange({ ...values, street: e.target.value })}
+      />
+      <div className="address-edit-row">
+        <input
+          className="address-edit-input"
+          placeholder="City"
+          value={values.city}
+          onChange={(e) => onChange({ ...values, city: e.target.value })}
+        />
+        <input
+          className="address-edit-input address-edit-short"
+          placeholder="State"
+          value={values.state}
+          onChange={(e) => onChange({ ...values, state: e.target.value })}
+        />
+      </div>
+      <div className="address-edit-row">
+        <input
+          className="address-edit-input address-edit-short"
+          placeholder="Postal Code"
+          value={values.postalCode}
+          onChange={(e) => onChange({ ...values, postalCode: e.target.value })}
+        />
+        <input
+          className="address-edit-input"
+          placeholder="Country"
+          value={values.country}
+          onChange={(e) => onChange({ ...values, country: e.target.value })}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function AddressCleanupCard({
   contact,
   onApplyFix,
   onSkip,
   isApplying
 }: AddressCleanupCardProps) {
-  // Track which address is selected within each group
+  // Track which address is selected within each group (CUSTOM_SELECTION = custom edit)
   const [selectedAddresses, setSelectedAddresses] = useState<Map<string, number>>(() => {
     const initial = new Map<string, number>();
     for (const group of contact.addressGroups) {
-      // Default to recommended address
       const recommended = group.addresses.find(a => a.isRecommended);
       if (recommended) {
         initial.set(group.fingerprint, recommended.id);
       } else if (group.addresses.length > 0) {
         initial.set(group.fingerprint, group.addresses[0].id);
+      }
+    }
+    return initial;
+  });
+
+  // Track custom edit values per group
+  const [customValues, setCustomValues] = useState<Map<string, AddressEditValues>>(() => {
+    const initial = new Map<string, AddressEditValues>();
+    for (const group of contact.addressGroups) {
+      const recommended = group.addresses.find(a => a.isRecommended) || group.addresses[0];
+      if (recommended) {
+        initial.set(group.fingerprint, addressToEditValues(recommended));
       }
     }
     return initial;
@@ -60,20 +138,49 @@ export function AddressCleanupCard({
     });
   }, []);
 
+  const handleCustomValuesChange = useCallback((fingerprint: string, values: AddressEditValues) => {
+    setCustomValues(prev => {
+      const next = new Map(prev);
+      next.set(fingerprint, values);
+      return next;
+    });
+  }, []);
+
   const handleApply = useCallback(() => {
     const keepIds: number[] = [];
     const removeIds: number[] = [];
+    let updatedAddress: AddressFix['updatedAddress'];
 
     for (const group of contact.addressGroups) {
       const selectedId = selectedAddresses.get(group.fingerprint);
+      const isCustom = selectedId === CUSTOM_SELECTION;
+
+      // For custom selection, keep the recommended address and update it
+      const recommended = group.addresses.find(a => a.isRecommended) || group.addresses[0];
 
       for (const addr of group.addresses) {
-        if (addr.id === selectedId) {
-          // Only keep if it doesn't have no_street issue
+        if (isCustom) {
+          if (addr.id === recommended.id) {
+            keepIds.push(addr.id);
+            // Set the update data for this address
+            const vals = customValues.get(group.fingerprint);
+            if (vals) {
+              updatedAddress = {
+                addressId: addr.id,
+                street: vals.street || null,
+                city: vals.city || null,
+                state: vals.state || null,
+                postalCode: vals.postalCode || null,
+                country: vals.country || null,
+              };
+            }
+          } else {
+            removeIds.push(addr.id);
+          }
+        } else if (addr.id === selectedId) {
           if (!addr.issues.includes('no_street')) {
             keepIds.push(addr.id);
           } else {
-            // Still remove no_street addresses even if selected
             removeIds.push(addr.id);
           }
         } else {
@@ -85,9 +192,10 @@ export function AddressCleanupCard({
     onApplyFix({
       contactId: contact.id,
       keepAddressIds: keepIds,
-      removeAddressIds: removeIds
+      removeAddressIds: removeIds,
+      updatedAddress,
     });
-  }, [contact, selectedAddresses, onApplyFix]);
+  }, [contact, selectedAddresses, customValues, onApplyFix]);
 
   // Count total issues for the header badge
   const totalIssues = contact.addressGroups.reduce(
@@ -186,6 +294,35 @@ export function AddressCleanupCard({
                   </div>
                 );
               })}
+              {group.addresses.length > 1 && (() => {
+                const isCustomSelected = selectedAddresses.get(group.fingerprint) === CUSTOM_SELECTION;
+                return (
+                  <>
+                    <div
+                      className={`address-option ${isCustomSelected ? 'selected' : ''}`}
+                      onClick={() => handleToggleAddress(group.fingerprint, CUSTOM_SELECTION)}
+                    >
+                      <div className="address-radio">
+                        {isCustomSelected
+                          ? <Icon name="circle-dot" />
+                          : <Icon name="circle" style="regular" />
+                        }
+                      </div>
+                      <div className="address-content">
+                        <div className="address-text">
+                          <Icon name="pen" /> Custom
+                        </div>
+                      </div>
+                    </div>
+                    {isCustomSelected && (
+                      <DuplicateEditForm
+                        values={customValues.get(group.fingerprint) || { street: '', city: '', state: '', postalCode: '', country: '' }}
+                        onChange={(vals) => handleCustomValuesChange(group.fingerprint, vals)}
+                      />
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         );

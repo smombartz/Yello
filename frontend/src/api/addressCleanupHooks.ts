@@ -6,6 +6,8 @@ import type {
   AddressFixResponse,
   AddressCleanupBulkResponse,
   AddressFix,
+  AddressUpdateData,
+  AddressUpdateResponse,
   NormalizeSummary,
   NormalizeResponse,
   NormalizeFixResponse,
@@ -112,6 +114,22 @@ export function useRemoveJunkAddresses() {
       fetchApi<NormalizeFixResponse>('/api/cleanup/addresses/normalize/fix', {
         method: 'POST',
         body: JSON.stringify({ addressIds }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['addressCleanup'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+    },
+  });
+}
+
+export function useUpdateAddress() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: AddressUpdateData) =>
+      fetchApi<AddressUpdateResponse>('/api/cleanup/addresses/update', {
+        method: 'PUT',
+        body: JSON.stringify(data),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['addressCleanup'] });

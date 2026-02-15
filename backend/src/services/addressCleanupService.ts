@@ -48,10 +48,20 @@ export interface AddressCleanupSummary {
   totalContacts: number;
 }
 
+export interface AddressUpdate {
+  addressId: number;
+  street?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+}
+
 export interface AddressFix {
   contactId: number;
   keepAddressIds: number[];
   removeAddressIds: number[];
+  updatedAddress?: AddressUpdate;
 }
 
 export interface AddressFixResult {
@@ -534,9 +544,35 @@ export function applyAddressFixes(fixes: AddressFix[]): AddressFixResult {
   let removed = 0;
 
   const deleteStmt = db.prepare('DELETE FROM contact_addresses WHERE id = ?');
+  const updateStmt = db.prepare(`
+    UPDATE contact_addresses
+    SET street = ?, city = ?, state = ?, postal_code = ?, country = ?
+    WHERE id = ?
+  `);
 
   const transaction = db.transaction(() => {
     for (const fix of fixes) {
+      // Apply address update if provided (before removing duplicates)
+      if (fix.updatedAddress) {
+        const { addressId, street, city, state, postalCode, country } = fix.updatedAddress;
+        // Get current values to merge with updates
+        const current = db.prepare(`
+          SELECT street, city, state, postal_code as postalCode, country
+          FROM contact_addresses WHERE id = ?
+        `).get(addressId) as { street: string | null; city: string | null; state: string | null; postalCode: string | null; country: string | null } | undefined;
+
+        if (current) {
+          updateStmt.run(
+            street !== undefined ? street : current.street,
+            city !== undefined ? city : current.city,
+            state !== undefined ? state : current.state,
+            postalCode !== undefined ? postalCode : current.postalCode,
+            country !== undefined ? country : current.country,
+            addressId
+          );
+        }
+      }
+
       // Remove addresses that are not in the keep list
       for (const addressId of fix.removeAddressIds) {
         deleteStmt.run(addressId);
@@ -1402,6 +1438,58 @@ export async function updateAddressAndGeocode(
   return {
     ...updatedAddr,
     status: getGeocodingStatus(updatedAddr.geocodedAt, updatedAddr.latitude, updatedAddr.longitude)
+  };
+}
+
+/**
+ * Update address fields (without geocoding)
+ * Used by normalize/duplicates cleanup to fix addresses inline
+ */
+export function updateAddress(
+  addressId: number,
+  updates: {
+    street?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postalCode?: string | null;
+    country?: string | null;
+  }
+): AddressRecord | null {
+  const db = getDatabase();
+
+  // Get current address
+  const current = db.prepare(`
+    SELECT id, contact_id as contactId, street, city, state, postal_code as postalCode, country, type
+    FROM contact_addresses
+    WHERE id = ?
+  `).get(addressId) as AddressRecord | undefined;
+
+  if (!current) return null;
+
+  // Merge updates with current values
+  const updated = {
+    street: updates.street !== undefined ? updates.street : current.street,
+    city: updates.city !== undefined ? updates.city : current.city,
+    state: updates.state !== undefined ? updates.state : current.state,
+    postalCode: updates.postalCode !== undefined ? updates.postalCode : current.postalCode,
+    country: updates.country !== undefined ? updates.country : current.country
+  };
+
+  // Update address fields
+  db.prepare(`
+    UPDATE contact_addresses
+    SET street = ?, city = ?, state = ?, postal_code = ?, country = ?
+    WHERE id = ?
+  `).run(updated.street, updated.city, updated.state, updated.postalCode, updated.country, addressId);
+
+  // Return updated address
+  return {
+    ...current,
+    street: updated.street,
+    city: updated.city,
+    state: updated.state,
+    postalCode: updated.postalCode,
+    country: updated.country
   };
 }
 
