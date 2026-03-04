@@ -88,8 +88,8 @@ export default async function enrichRoutes(
 
       sendEvent('complete', result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Enrichment failed';
-      sendEvent('error', { error: message });
+      fastify.log.error(error, 'Enrichment failed');
+      sendEvent('error', { error: 'Enrichment failed. Please try again.' });
     } finally {
       reply.raw.end();
     }
@@ -230,8 +230,8 @@ export default async function enrichRoutes(
 
       sendEvent('complete', result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Recovery failed';
-      sendEvent('error', { error: message });
+      fastify.log.error(error, 'Recovery failed');
+      sendEvent('error', { error: 'Recovery failed. Please try again.' });
     } finally {
       reply.raw.end();
     }

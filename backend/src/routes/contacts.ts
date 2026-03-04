@@ -1361,8 +1361,8 @@ export default async function contactsRoutes(
       const result = detectMergeConflicts(contactIds);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(400).send({ error: message });
+      fastify.log.error(error, 'Merge conflict detection failed');
+      return reply.status(500).send({ error: 'Contact merge failed. Please try again.' });
     }
   });
 
@@ -1411,8 +1411,8 @@ export default async function contactsRoutes(
       const result = mergeContactsWithResolutions(contactIds, primaryContactId, resolutions);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(400).send({ error: message });
+      fastify.log.error(error, 'Contact merge failed');
+      return reply.status(500).send({ error: 'Contact update failed. Please try again.' });
     }
   });
 

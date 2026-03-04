@@ -1,25 +1,10 @@
 import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
-import { getDatabase } from '../services/database.js';
 import { fetchContactPhotos, ProgressUpdate } from '../services/contactPhotoService.js';
 import {
   importLinkedInContacts,
   LinkedInContact,
   LinkedInProgressUpdate
 } from '../services/linkedinImportService.js';
-
-// Get user from session helper
-function getUserIdFromSession(request: FastifyRequest): number | null {
-  const sessionId = request.cookies.session_id;
-  if (!sessionId) return null;
-
-  const db = getDatabase();
-
-  const session = db.prepare(`
-    SELECT user_id FROM sessions WHERE id = ? AND expires_at > datetime('now')
-  `).get(sessionId) as { user_id: number } | undefined;
-
-  return session?.user_id || null;
-}
 
 export default async function settingsRoutes(
   fastify: FastifyInstance,
@@ -43,26 +28,20 @@ export default async function settingsRoutes(
       }
     }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated. Please log in with Google first.' });
-    }
+    const userId = request.user!.id;
 
     try {
       const result = await fetchContactPhotos(userId);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to fetch contact photos';
-      return reply.status(500).send({ error: message });
+      fastify.log.error(error, 'Photo fetch failed');
+      return reply.status(500).send({ error: 'Photo fetch failed. Please try again.' });
     }
   });
 
   // GET /api/settings/fetch-contact-photos-stream - Stream progress while fetching photos (SSE)
   fastify.get('/fetch-contact-photos-stream', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated. Please log in with Google first.' });
-    }
+    const userId = request.user!.id;
 
     // Set SSE headers
     reply.raw.writeHead(200, {
@@ -85,8 +64,8 @@ export default async function settingsRoutes(
 
       sendEvent('complete', result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to fetch contact photos';
-      sendEvent('error', { error: message });
+      fastify.log.error(error, 'Photo fetch stream failed');
+      sendEvent('error', { error: 'Photo fetch failed. Please try again.' });
     } finally {
       reply.raw.end();
     }
@@ -127,8 +106,8 @@ export default async function settingsRoutes(
 
       sendEvent('complete', result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to import LinkedIn contacts';
-      sendEvent('error', { error: message });
+      fastify.log.error(error, 'LinkedIn import failed');
+      sendEvent('error', { error: 'LinkedIn import failed. Please try again.' });
     } finally {
       reply.raw.end();
     }

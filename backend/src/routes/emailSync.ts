@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { requireAuth } from '../middleware/auth.js';
+
 import {
   fullSyncContact,
   incrementalSyncContact,
@@ -8,9 +8,6 @@ import {
 } from '../services/emailSyncService.js';
 
 export default async function emailSyncRoutes(fastify: FastifyInstance) {
-  // All routes require authentication
-  fastify.addHook('preHandler', requireAuth);
-
   // Full sync for a contact
   fastify.post<{ Params: { id: string } }>(
     '/:id/email-sync',
@@ -42,7 +39,7 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
       } catch (error) {
         fastify.log.error(error, 'Email sync failed');
         return reply.status(500).send({
-          error: error instanceof Error ? error.message : 'Email sync failed',
+          error: 'Email sync failed. Please try again.',
         });
       }
     }
@@ -76,7 +73,7 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
       } catch (error) {
         fastify.log.error(error, 'Email refresh failed');
         return reply.status(500).send({
-          error: error instanceof Error ? error.message : 'Email refresh failed',
+          error: 'Email refresh failed. Please try again.',
         });
       }
     }
@@ -133,7 +130,7 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
       } catch (error) {
         fastify.log.error(error, 'Bulk email refresh failed');
         return reply.status(500).send({
-          error: error instanceof Error ? error.message : 'Bulk refresh failed',
+          error: 'Bulk refresh failed. Please try again.',
         });
       }
     }

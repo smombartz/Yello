@@ -114,8 +114,8 @@ export default async function addressCleanupRoutes(
       const { fixes } = request.body;
       return applyAddressFixes(fixes);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(500).send({ error: message });
+      fastify.log.error(error, 'Address operation failed');
+      return reply.status(500).send({ error: 'Address operation failed. Please try again.' });
     }
   });
 
@@ -173,8 +173,8 @@ export default async function addressCleanupRoutes(
       const { addressIds } = request.body;
       return removeJunkAddresses(addressIds);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(500).send({ error: message });
+      fastify.log.error(error, 'Address operation failed');
+      return reply.status(500).send({ error: 'Address operation failed. Please try again.' });
     }
   });
 
@@ -199,8 +199,8 @@ export default async function addressCleanupRoutes(
 
       return { address: result };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(500).send({ error: message });
+      fastify.log.error(error, 'Address operation failed');
+      return reply.status(500).send({ error: 'Address operation failed. Please try again.' });
     }
   });
 
@@ -264,8 +264,8 @@ export default async function addressCleanupRoutes(
       const { fixes } = request.body;
       return applyAddressFixes(fixes);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(500).send({ error: message });
+      fastify.log.error(error, 'Address operation failed');
+      return reply.status(500).send({ error: 'Address operation failed. Please try again.' });
     }
   });
 
@@ -315,8 +315,8 @@ export default async function addressCleanupRoutes(
       const { addressIds } = request.body;
       return await retryGeocoding(addressIds);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(500).send({ error: message });
+      fastify.log.error(error, 'Address operation failed');
+      return reply.status(500).send({ error: 'Address operation failed. Please try again.' });
     }
   });
 
@@ -338,8 +338,8 @@ export default async function addressCleanupRoutes(
       const { limit = 50 } = request.body;
       return await batchGeocode(limit);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(500).send({ error: message });
+      fastify.log.error(error, 'Address operation failed');
+      return reply.status(500).send({ error: 'Address operation failed. Please try again.' });
     }
   });
 
@@ -368,8 +368,8 @@ export default async function addressCleanupRoutes(
 
       return { address: result };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(500).send({ error: message });
+      fastify.log.error(error, 'Address operation failed');
+      return reply.status(500).send({ error: 'Address operation failed. Please try again.' });
     }
   });
 }

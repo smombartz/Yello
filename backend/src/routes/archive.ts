@@ -44,8 +44,8 @@ export default async function archiveRoutes(
       const result = archiveContacts(contactIds);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(400).send({ error: message });
+      fastify.log.error(error, 'Archive operation failed');
+      return reply.status(500).send({ error: 'Archive operation failed. Please try again.' });
     }
   });
 
@@ -97,8 +97,8 @@ export default async function archiveRoutes(
       const result = unarchiveContacts(contactIds);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(400).send({ error: message });
+      fastify.log.error(error, 'Unarchive operation failed');
+      return reply.status(500).send({ error: 'Archive operation failed. Please try again.' });
     }
   });
 
@@ -118,8 +118,8 @@ export default async function archiveRoutes(
       const result = deleteArchivedContacts(contactIds);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(400).send({ error: message });
+      fastify.log.error(error, 'Delete archived contacts failed');
+      return reply.status(500).send({ error: 'Archive operation failed. Please try again.' });
     }
   });
 

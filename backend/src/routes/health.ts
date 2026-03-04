@@ -3,9 +3,9 @@ import { getDatabase } from '../services/database.js';
 
 const healthRoutes: FastifyPluginAsync = async (app) => {
   app.get('/health', async () => {
-    const db = getDatabase();
-    const result = db.prepare('SELECT COUNT(*) as total FROM contacts').get() as { total: number };
-    return { status: 'ok', contacts: result.total };
+    // Verify DB is accessible without leaking data
+    getDatabase().prepare('SELECT 1').get();
+    return { status: 'ok' };
   });
 };
 

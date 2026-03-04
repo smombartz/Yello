@@ -58,8 +58,8 @@ export default async function invalidLinksCleanupRoutes(
       const result = removeInvalidLinks(patterns);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(500).send({ error: message });
+      fastify.log.error(error, 'Link validation failed');
+      return reply.status(500).send({ error: 'Link validation failed. Please try again.' });
     }
   });
 }

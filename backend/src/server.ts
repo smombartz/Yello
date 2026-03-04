@@ -5,9 +5,10 @@ import fastifyMultipart from '@fastify/multipart';
 import fastifyCors from '@fastify/cors';
 import fastifyCookie from '@fastify/cookie';
 import path from 'path';
-import fs from 'fs';
+import fs, { createReadStream } from 'fs';
 import { fileURLToPath } from 'url';
 
+import { requireAuth } from './middleware/auth.js';
 import healthRoutes from './routes/health.js';
 import contactRoutes from './routes/contacts.js';
 import importRoutes from './routes/import.js';
@@ -31,6 +32,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = Fastify({ logger: true });
 
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+  console.error('FATAL: SESSION_SECRET environment variable is required in production');
+  process.exit(1);
+}
+
 // Register CORS
 await app.register(fastifyCors, {
   origin: process.env.NODE_ENV === 'production' ? false : true,
@@ -41,6 +47,24 @@ await app.register(fastifyCors, {
 // Register cookie plugin (required for @fastify/oauth2 and session management)
 await app.register(fastifyCookie, {
   secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+});
+
+// Global auth: protect all /api/* and /photos/* routes except auth endpoints
+app.addHook('onRequest', async (request, reply) => {
+  if (
+    request.url === '/health' ||
+    request.url.startsWith('/api/auth/') ||
+    request.url.startsWith('/api/profile/public/')
+  ) {
+    return;
+  }
+
+  if (
+    request.url.startsWith('/api/') ||
+    request.url.startsWith('/photos/')
+  ) {
+    return requireAuth(request, reply);
+  }
 });
 
 // Register multipart for file uploads (100MB limit for VCF files)
@@ -70,13 +94,6 @@ if (process.env.NODE_ENV === 'production') {
     prefix: '/',
   });
 
-  // Register photos SECOND with decorateReply disabled (to avoid conflict)
-  await app.register(fastifyStatic, {
-    root: photosPath,
-    prefix: '/photos/',
-    decorateReply: false
-  });
-
   // SPA fallback - serve index.html for non-API routes
   app.setNotFoundHandler((request, reply) => {
     if (!request.url.startsWith('/api') && !request.url.startsWith('/photos') && !request.url.startsWith('/health')) {
@@ -84,13 +101,36 @@ if (process.env.NODE_ENV === 'production') {
     }
     return reply.code(404).send({ error: 'Not Found' });
   });
-} else {
-  // In development, only serve photos (frontend runs on vite dev server)
-  await app.register(fastifyStatic, {
-    root: photosPath,
-    prefix: '/photos/',
-  });
 }
+
+// Authenticated photo serving
+app.get('/photos/*', async (request, reply) => {
+  const url = request.url.replace(/\?.*$/, '');
+  const relativePath = url.replace('/photos/', '');
+  const filePath = path.join(photosPath, relativePath);
+
+  // Prevent path traversal
+  const resolved = path.resolve(filePath);
+  if (!resolved.startsWith(path.resolve(photosPath))) {
+    return reply.status(403).send({ error: 'Forbidden' });
+  }
+
+  if (!fs.existsSync(resolved)) {
+    return reply.status(404).send({ error: 'Not found' });
+  }
+
+  const ext = path.extname(resolved).toLowerCase();
+  const mimeTypes: Record<string, string> = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+  };
+
+  reply.type(mimeTypes[ext] || 'application/octet-stream');
+  reply.header('Cache-Control', 'private, max-age=86400');
+  return reply.send(createReadStream(resolved));
+});
 
 // Register API routes
 await app.register(healthRoutes);

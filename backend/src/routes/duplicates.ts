@@ -87,8 +87,8 @@ export default async function duplicatesRoutes(
       const result = mergeContacts(contactIds, primaryContactId);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(400).send({ error: message });
+      fastify.log.error(error, 'Duplicate merge failed');
+      return reply.status(500).send({ error: 'Duplicate detection failed. Please try again.' });
     }
   });
 }

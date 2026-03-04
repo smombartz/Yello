@@ -102,8 +102,8 @@ export default async function socialLinksCleanupRoutes(
       const result = fixAllWithinContactIssues();
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(500).send({ error: message });
+      fastify.log.error(error, 'Social links cleanup failed');
+      return reply.status(500).send({ error: 'Social links cleanup failed. Please try again.' });
     }
   });
 }

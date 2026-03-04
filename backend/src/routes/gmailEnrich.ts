@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
-import { requireAuth } from '../middleware/auth.js';
+
 import { getDatabase } from '../services/database.js';
 import {
   getGmailSyncSummary,
@@ -12,9 +12,6 @@ import {
 } from '../services/emailSyncService.js';
 
 export default async function gmailEnrichRoutes(fastify: FastifyInstance) {
-  // All routes require authentication
-  fastify.addHook('preHandler', requireAuth);
-
   // GET /summary - sync status overview
   fastify.get('/summary', async () => {
     return getGmailSyncSummary();
@@ -46,7 +43,7 @@ export default async function gmailEnrichRoutes(fastify: FastifyInstance) {
         return reply.status(403).send({ error: 'gmail_scope_required' });
       }
       fastify.log.error(error, 'Gmail discover failed');
-      return reply.status(500).send({ error: msg });
+      return reply.status(500).send({ error: 'Gmail discovery failed. Please try again.' });
     }
   });
 
@@ -167,8 +164,8 @@ export default async function gmailEnrichRoutes(fastify: FastifyInstance) {
 
       sendEvent('complete', { succeeded, failed });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Bulk sync failed';
-      sendEvent('error', { error: message });
+      fastify.log.error(error, 'Gmail bulk sync failed');
+      sendEvent('error', { error: 'Bulk sync failed. Please try again.' });
     } finally {
       reply.raw.end();
     }

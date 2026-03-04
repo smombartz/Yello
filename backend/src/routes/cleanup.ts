@@ -138,8 +138,8 @@ export default async function cleanupRoutes(
       const result = deleteContacts(contactIds);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(400).send({ error: message });
+      fastify.log.error(error, 'Cleanup operation failed');
+      return reply.status(500).send({ error: 'Cleanup operation failed. Please try again.' });
     }
   });
 }

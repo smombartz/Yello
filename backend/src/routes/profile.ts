@@ -95,20 +95,6 @@ interface UrlRow {
   label: string | null;
 }
 
-// Get user from session helper
-function getUserIdFromSession(request: FastifyRequest): number | null {
-  const sessionId = request.cookies.session_id;
-  if (!sessionId) return null;
-
-  const db = getDatabase();
-
-  const session = db.prepare(`
-    SELECT user_id FROM sessions WHERE id = ? AND expires_at > datetime('now')
-  `).get(sessionId) as { user_id: number } | undefined;
-
-  return session?.user_id || null;
-}
-
 // Generate a unique slug for public profile URL
 function generateSlug(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -440,10 +426,7 @@ export default async function profileRoutes(
       }
     }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
+    const userId = request.user!.id;
 
     const profile = getOrCreateProfile(db, userId);
     const baseUrl = `${request.protocol}://${request.hostname}`;
@@ -469,10 +452,7 @@ export default async function profileRoutes(
       }
     }
   }, async (request: FastifyRequest<{ Querystring: { q: string } }>, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
+    const userId = request.user!.id;
 
     const { q } = request.query;
     const escapedSearch = q.replace(/"/g, '""');
@@ -512,10 +492,7 @@ export default async function profileRoutes(
       }
     }
   }, async (request: FastifyRequest<{ Body: LinkProfileToContact }>, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
+    const userId = request.user!.id;
 
     const { contactId } = request.body;
 
@@ -553,10 +530,7 @@ export default async function profileRoutes(
       }
     }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
+    const userId = request.user!.id;
 
     const profile = getOrCreateProfile(db, userId);
 
@@ -593,10 +567,7 @@ export default async function profileRoutes(
       }
     }
   }, async (request: FastifyRequest<{ Body: { displayName: string } }>, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
+    const userId = request.user!.id;
 
     const { displayName } = request.body;
 
@@ -645,10 +616,7 @@ export default async function profileRoutes(
       }
     }
   }, async (request: FastifyRequest<{ Body: UpdateUserProfile }>, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
+    const userId = request.user!.id;
 
     const updates = request.body;
     const profile = getOrCreateProfile(db, userId);
