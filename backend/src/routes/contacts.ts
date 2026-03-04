@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { getDatabase, rebuildContactSearch } from '../services/database.js';
+import { getUserDatabase } from '../services/userDatabase.js';
+import { rebuildContactSearch } from '../services/database.js';
 import { getPhotoUrl } from '../services/photoProcessor.js';
 import { detectMergeConflicts, mergeContactsWithResolutions } from '../services/mergeService.js';
 import { geocodeAddress, isValidCoordinate } from '../services/geocoding.js';
@@ -138,8 +139,8 @@ export default async function contactsRoutes(
         200: ContactCountResponseSchema
       }
     }
-  }, async (_request, _reply) => {
-    const db = getDatabase();
+  }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
     const result = db.prepare('SELECT COUNT(*) as count FROM contacts').get() as CountRow;
     return { total: result.count };
   });
@@ -151,8 +152,8 @@ export default async function contactsRoutes(
         200: GroupsResponseSchema
       }
     }
-  }, async (_request, _reply) => {
-    const db = getDatabase();
+  }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
     const groups = db.prepare(`
       SELECT category, COUNT(DISTINCT contact_id) as contactCount
       FROM contact_categories
@@ -173,7 +174,7 @@ export default async function contactsRoutes(
     }
   }, async (request, _reply) => {
     const { search } = request.query;
-    const db = getDatabase();
+    const db = getUserDatabase(request.user!.id);
 
     let contactIds: number[];
 
@@ -214,7 +215,7 @@ export default async function contactsRoutes(
     }
   }, async (request, _reply) => {
     const { page = 1, limit = 50, search, category, sort = 'name-asc', filter } = request.query;
-    const db = getDatabase();
+    const db = getUserDatabase(request.user!.id);
     const offset = (page - 1) * limit;
 
     // Build query parts dynamically
@@ -344,7 +345,7 @@ export default async function contactsRoutes(
     }
   }, async (request, reply) => {
     const data = request.body;
-    const db = getDatabase();
+    const db = getUserDatabase(request.user!.id);
 
     // Insert main contact
     const insertContact = db.prepare(`
@@ -622,7 +623,7 @@ export default async function contactsRoutes(
     }
   }, async (request, reply) => {
     const { id } = request.params;
-    const db = getDatabase();
+    const db = getUserDatabase(request.user!.id);
 
     const contact = db.prepare(`
       SELECT
@@ -847,7 +848,7 @@ export default async function contactsRoutes(
   }, async (request, reply) => {
     const { id } = request.params;
     const updates = request.body;
-    const db = getDatabase();
+    const db = getUserDatabase(request.user!.id);
 
     // Check if contact exists
     const existingContact = db.prepare('SELECT id FROM contacts WHERE id = ?').get(id) as { id: number } | undefined;
@@ -1241,7 +1242,7 @@ export default async function contactsRoutes(
     },
   }, async (request, reply) => {
     const { id } = request.params;
-    const db = getDatabase();
+    const db = getUserDatabase(request.user!.id);
 
     const contact = db.prepare('SELECT id FROM contacts WHERE id = ?').get(id);
     if (!contact) {
@@ -1283,7 +1284,7 @@ export default async function contactsRoutes(
       return reply.status(400).send({ error: 'Invalid ID' });
     }
 
-    const db = getDatabase();
+    const db = getUserDatabase(request.user!.id);
 
     // Verify the photo belongs to this contact
     const photo = db.prepare(`
@@ -1358,7 +1359,8 @@ export default async function contactsRoutes(
     const { contactIds } = request.body;
 
     try {
-      const result = detectMergeConflicts(contactIds);
+      const db = getUserDatabase(request.user!.id);
+      const result = detectMergeConflicts(db, contactIds);
       return result;
     } catch (error) {
       fastify.log.error(error, 'Merge conflict detection failed');
@@ -1408,7 +1410,8 @@ export default async function contactsRoutes(
     const { contactIds, primaryContactId, resolutions } = request.body;
 
     try {
-      const result = mergeContactsWithResolutions(contactIds, primaryContactId, resolutions);
+      const db = getUserDatabase(request.user!.id);
+      const result = mergeContactsWithResolutions(db, contactIds, primaryContactId, resolutions);
       return result;
     } catch (error) {
       fastify.log.error(error, 'Contact merge failed');
@@ -1422,7 +1425,7 @@ export default async function contactsRoutes(
   fastify.get<{
     Querystring: { regenerate?: string }
   }>('/export/vcf', async (request, reply) => {
-    const db = getDatabase();
+    const db = getUserDatabase(request.user!.id);
     const regenerate = request.query.regenerate === 'true';
 
     let vcfContent: string;
@@ -1541,8 +1544,8 @@ export default async function contactsRoutes(
         }
       }
     }
-  }, async (_request, _reply) => {
-    const db = getDatabase();
+  }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
 
     const countResult = db.prepare('SELECT COUNT(*) as count FROM contacts').get() as { count: number };
     const count = countResult.count;
