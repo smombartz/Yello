@@ -823,3 +823,36 @@ export interface EmailRefreshAllResult {
   emailsSynced: number;
   errors: number;
 }
+
+// Gmail Bulk Sync (Enrich) types
+export interface GmailSyncSummary {
+  totalWithEmail: number;
+  synced: number;
+  notSynced: number;
+}
+
+export interface GmailDiscoveredContact {
+  contactId: number;
+  displayName: string;
+  email: string;
+  messageCount: number;
+  lastEmailDate: string;
+}
+
+export interface GmailDiscoveryResult {
+  contacts: GmailDiscoveredContact[];
+  scannedMessages: number;
+}
+
+export interface GmailBulkSyncProgress {
+  current: number;
+  total: number;
+  contactName: string;
+  succeeded: number;
+  failed: number;
+}
+
+export interface GmailBulkSyncResult {
+  succeeded: number;
+  failed: number;
+}

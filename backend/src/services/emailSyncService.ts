@@ -2,7 +2,7 @@ import { getDatabase } from './database.js';
 import { getValidAccessToken } from './googleAuthService.js';
 
 // Gmail API types
-interface GmailMessageListResponse {
+export interface GmailMessageListResponse {
   messages?: Array<{ id: string; threadId: string }>;
   nextPageToken?: string;
   resultSizeEstimate?: number;
@@ -17,7 +17,7 @@ interface GmailMessagePayload {
   headers: GmailMessageHeader[];
 }
 
-interface GmailMessage {
+export interface GmailMessage {
   id: string;
   threadId: string;
   historyId: string;
@@ -93,7 +93,7 @@ const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
  * Make a Gmail API request with the user's access token.
  * Returns null if the token lacks Gmail scope (triggers re-auth).
  */
-async function gmailFetch<T>(accessToken: string, path: string): Promise<{ data: T | null; scopeError: boolean }> {
+export async function gmailFetch<T>(accessToken: string, path: string): Promise<{ data: T | null; scopeError: boolean }> {
   const response = await fetch(`${GMAIL_API_BASE}${path}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -118,7 +118,7 @@ async function gmailFetch<T>(accessToken: string, path: string): Promise<{ data:
 /**
  * Fetch full message metadata from Gmail API.
  */
-async function fetchMessageMetadata(accessToken: string, messageId: string): Promise<GmailMessage | null> {
+export async function fetchMessageMetadata(accessToken: string, messageId: string): Promise<GmailMessage | null> {
   const result = await gmailFetch<GmailMessage>(
     accessToken,
     `/messages/${messageId}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Cc&metadataHeaders=Date`
@@ -129,7 +129,7 @@ async function fetchMessageMetadata(accessToken: string, messageId: string): Pro
 /**
  * Extract email address from a header value like "John Doe <john@example.com>" or "john@example.com"
  */
-function extractEmailAddresses(headerValue: string): string[] {
+export function extractEmailAddresses(headerValue: string): string[] {
   const addresses: string[] = [];
   // Match email patterns in angle brackets or standalone
   const regex = /<?([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})>?/g;
@@ -143,7 +143,7 @@ function extractEmailAddresses(headerValue: string): string[] {
 /**
  * Get a header value from a Gmail message.
  */
-function getHeader(message: GmailMessage, name: string): string {
+export function getHeader(message: GmailMessage, name: string): string {
   const header = message.payload.headers.find(
     h => h.name.toLowerCase() === name.toLowerCase()
   );

@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { useOutletContext, Link, useNavigate } from 'react-router-dom';
 import { useLinkedInEnrichmentSummary, useLinkedInEnrichment, useLinkedInRecovery, useEnrichmentCategoryContacts } from '../api/enrichHooks';
 import { useFetchContactPhotosStream } from '../api/settingsHooks';
+import { useGmailSyncSummary, useGmailDiscover, useGmailBulkSync } from '../api/gmailEnrichHooks';
+import type { GmailDiscoveredContact } from '../api/types';
 import type { OutletContext } from './Layout';
 import { LoadingSpinner } from './LoadingSpinner';
 import { Icon } from './Icon';
@@ -21,6 +23,12 @@ export function EnrichView() {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [enrichExpanded, setEnrichExpanded] = useState(false);
   const [photosExpanded, setPhotosExpanded] = useState(false);
+  const [gmailExpanded, setGmailExpanded] = useState(false);
+  const [gmailStrategy, setGmailStrategy] = useState<'recent' | 'frequent' | 'all' | 'unsynced'>('recent');
+  const [gmailScanDepth, setGmailScanDepth] = useState(500);
+  const [gmailLimit, setGmailLimit] = useState(100);
+  const [discoveredContacts, setDiscoveredContacts] = useState<GmailDiscoveredContact[]>([]);
+  const [discoveryPhase, setDiscoveryPhase] = useState<'idle' | 'discovering' | 'discovered' | 'syncing'>('idle');
 
   const { data: summary, isLoading: isSummaryLoading, refetch: refetchSummary } = useLinkedInEnrichmentSummary(includeAlreadyEnriched);
   const { data: categoryContacts, isLoading: categoryLoading } = useEnrichmentCategoryContacts(expandedCategory);
@@ -45,6 +53,18 @@ export function EnrichView() {
   } = useLinkedInRecovery();
 
   const { isStreaming, progress: photosProgress, startFetching, cancel: cancelFetching } = useFetchContactPhotosStream();
+
+  const { data: gmailSummary, isLoading: isGmailSummaryLoading, refetch: refetchGmailSummary } = useGmailSyncSummary();
+  const gmailDiscover = useGmailDiscover();
+  const {
+    isSyncing: isGmailSyncing,
+    progress: gmailProgress,
+    result: gmailResult,
+    error: gmailError,
+    startSync: startGmailSync,
+    cancel: cancelGmailSync,
+    reset: resetGmailSync,
+  } = useGmailBulkSync();
 
   const [datasetId, setDatasetId] = useState('');
 
@@ -123,6 +143,57 @@ export function EnrichView() {
       }
     );
   }, [startFetching, showToast]);
+
+  const handleGmailDiscover = useCallback(() => {
+    setDiscoveryPhase('discovering');
+    gmailDiscover.mutate(
+      { strategy: gmailStrategy as 'recent' | 'frequent', scanDepth: gmailScanDepth },
+      {
+        onSuccess: (data) => {
+          setDiscoveredContacts(data.contacts);
+          setDiscoveryPhase('discovered');
+        },
+        onError: (err) => {
+          showToast(err instanceof Error ? err.message : 'Discovery failed', 'error');
+          setDiscoveryPhase('idle');
+        },
+      }
+    );
+  }, [gmailDiscover, gmailStrategy, gmailScanDepth, showToast]);
+
+  const handleGmailSync = useCallback(() => {
+    resetGmailSync();
+    setDiscoveryPhase('syncing');
+
+    let params: { contactIds?: number[]; strategy?: 'all' | 'unsynced'; limit: number };
+    if (gmailStrategy === 'recent' || gmailStrategy === 'frequent') {
+      // Use discovered contacts
+      params = { contactIds: discoveredContacts.slice(0, gmailLimit).map(c => c.contactId), limit: gmailLimit };
+    } else {
+      params = { strategy: gmailStrategy, limit: gmailLimit };
+    }
+
+    startGmailSync(
+      params,
+      (syncResult) => {
+        if (syncResult.succeeded > 0) {
+          showToast(`Synced email history for ${syncResult.succeeded} contact${syncResult.succeeded !== 1 ? 's' : ''}`, 'success');
+        } else {
+          showToast('No contacts synced', 'success');
+        }
+        refetchGmailSummary();
+        setDiscoveryPhase('idle');
+      },
+      (errorMsg) => {
+        showToast(errorMsg, 'error');
+        setDiscoveryPhase('idle');
+      }
+    );
+  }, [gmailStrategy, discoveredContacts, gmailLimit, startGmailSync, resetGmailSync, showToast, refetchGmailSummary]);
+
+  const gmailProgressPercent = gmailProgress && gmailProgress.total > 0
+    ? Math.round((gmailProgress.current / gmailProgress.total) * 100)
+    : 0;
 
   const progressPercent = progress && progress.total > 0
     ? Math.round((progress.current / progress.total) * 100)
@@ -538,6 +609,245 @@ export function EnrichView() {
                 <Icon name={isStreaming ? 'arrows-rotate' : 'cloud-arrow-down'} className={isStreaming ? 'spinning' : ''} />
                 {isStreaming ? 'Cancel' : 'Fetch Contact Photos'}
               </button>
+            </div>
+          )}
+        </section>
+
+        {/* Gmail Email History */}
+        <section className={`settings-section collapsible-card${gmailExpanded ? ' expanded' : ''}`}>
+          <button
+            className="collapsible-header"
+            onClick={() => setGmailExpanded(!gmailExpanded)}
+          >
+            <div className="settings-section-header">
+              <Icon name="envelope" />
+              <h2>Gmail Email History</h2>
+            </div>
+            <Icon name="chevron-down" className={`expand-icon${gmailExpanded ? ' rotated' : ''}`} />
+          </button>
+          {gmailExpanded && (
+            <div className="collapsible-content">
+              <p className="settings-description">
+                Sync email history from Gmail for your contacts. Discover which contacts you email most
+                or sync all contacts with email addresses.
+              </p>
+
+              {isGmailSummaryLoading ? (
+                <LoadingSpinner size={32} message="Loading summary..." />
+              ) : gmailSummary && (
+                <>
+                  {/* Summary Stats */}
+                  <div className="enrich-stats-row" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                    <div className="enrich-stat-card">
+                      <div className="enrich-stat-count" style={{ color: 'var(--ds-color-success)' }}>{gmailSummary.synced}</div>
+                      <div className="enrich-stat-label">Synced</div>
+                    </div>
+                    <div className="enrich-stat-card">
+                      <div className="enrich-stat-count" style={{ color: 'var(--ds-color-primary)' }}>{gmailSummary.notSynced}</div>
+                      <div className="enrich-stat-label">Not Synced</div>
+                    </div>
+                    <div className="enrich-stat-card">
+                      <div className="enrich-stat-count" style={{ color: 'var(--ds-text-secondary)' }}>{gmailSummary.totalWithEmail}</div>
+                      <div className="enrich-stat-label">Total with Email</div>
+                    </div>
+                  </div>
+
+                  {/* Strategy selector */}
+                  <div className="enrichment-options">
+                    <div className="limit-input-group">
+                      <label htmlFor="gmail-strategy">Strategy:</label>
+                      <select
+                        id="gmail-strategy"
+                        value={gmailStrategy}
+                        onChange={(e) => {
+                          setGmailStrategy(e.target.value as typeof gmailStrategy);
+                          setDiscoveredContacts([]);
+                          setDiscoveryPhase('idle');
+                          resetGmailSync();
+                        }}
+                        disabled={isGmailSyncing}
+                        className="strategy-select"
+                      >
+                        <option value="recent">Most recently emailed</option>
+                        <option value="frequent">Most frequently emailed</option>
+                        <option value="unsynced">Not yet synced</option>
+                        <option value="all">All contacts with email</option>
+                      </select>
+                    </div>
+
+                    {(gmailStrategy === 'recent' || gmailStrategy === 'frequent') && (
+                      <div className="limit-input-group">
+                        <label htmlFor="gmail-scan-depth">Scan depth:</label>
+                        <input
+                          id="gmail-scan-depth"
+                          type="number"
+                          min="50"
+                          max="5000"
+                          step="100"
+                          value={gmailScanDepth}
+                          onChange={(e) => setGmailScanDepth(Math.max(50, parseInt(e.target.value, 10) || 500))}
+                          disabled={isGmailSyncing || discoveryPhase === 'discovering'}
+                          className="limit-input"
+                        />
+                        <span className="limit-hint">messages to scan</span>
+                      </div>
+                    )}
+
+                    <div className="limit-input-group">
+                      <label htmlFor="gmail-limit">Sync up to:</label>
+                      <input
+                        id="gmail-limit"
+                        type="number"
+                        min="1"
+                        max="5000"
+                        value={gmailLimit}
+                        onChange={(e) => setGmailLimit(Math.max(1, parseInt(e.target.value, 10) || 100))}
+                        disabled={isGmailSyncing}
+                        className="limit-input"
+                      />
+                      <span className="limit-hint">contacts</span>
+                    </div>
+                  </div>
+
+                  {/* Discovery results */}
+                  {discoveryPhase === 'discovered' && discoveredContacts.length > 0 && (
+                    <div className="gmail-discovery-results">
+                      <div className="gmail-discovery-header">
+                        Found {discoveredContacts.length} contacts.
+                        {discoveredContacts.length > gmailLimit && ` Top ${gmailLimit} selected.`}
+                      </div>
+                      <div className="gmail-discovery-list">
+                        {discoveredContacts.slice(0, 10).map(c => (
+                          <div key={c.contactId} className="gmail-discovery-item">
+                            <span className="gmail-discovery-name">{c.displayName}</span>
+                            <span className="gmail-discovery-detail">
+                              {gmailStrategy === 'frequent'
+                                ? `${c.messageCount} emails`
+                                : new Date(c.lastEmailDate).toLocaleDateString()
+                              }
+                            </span>
+                          </div>
+                        ))}
+                        {discoveredContacts.length > 10 && (
+                          <div className="gmail-discovery-more">
+                            ...and {discoveredContacts.length - 10} more
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {discoveryPhase === 'discovered' && discoveredContacts.length === 0 && (
+                    <div className="gmail-discovery-results">
+                      <div className="gmail-discovery-header">No matching contacts found in your recent Gmail messages.</div>
+                    </div>
+                  )}
+
+                  {/* Progress Display */}
+                  {isGmailSyncing && gmailProgress && (
+                    <div className="enrichment-progress">
+                      <div className="progress-header">
+                        <span className="progress-status">
+                          <Icon name="arrows-rotate" className="spinning" />
+                          Syncing email history...
+                        </span>
+                        <span className="progress-count">
+                          {gmailProgress.current} of {gmailProgress.total}
+                        </span>
+                      </div>
+                      <div className="progress-bar-container">
+                        <div
+                          className="progress-bar-fill"
+                          style={{ width: `${gmailProgressPercent}%` }}
+                        />
+                      </div>
+                      <div className="progress-current">
+                        Syncing: {gmailProgress.contactName}
+                      </div>
+                      <div className="progress-stats">
+                        <span className="stat success">
+                          <Icon name="circle-check" />
+                          {gmailProgress.succeeded} synced
+                        </span>
+                        <span className="stat error">
+                          <Icon name="circle-exclamation" />
+                          {gmailProgress.failed} failed
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Result Display */}
+                  {gmailResult && (
+                    <div className="enrichment-result">
+                      <div className="result-header">
+                        <Icon name="circle-check" className="success-icon" />
+                        <span>Sync Complete</span>
+                      </div>
+                      <div className="result-stats">
+                        <div className="stat-item success">
+                          <span className="stat-value">{gmailResult.succeeded}</span>
+                          <span className="stat-label">Synced</span>
+                        </div>
+                        <div className="stat-item error">
+                          <span className="stat-value">{gmailResult.failed}</span>
+                          <span className="stat-label">Failed</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Error Display */}
+                  {gmailError && (
+                    <div className="enrichment-error">
+                      <Icon name="circle-exclamation" />
+                      <span>{gmailError}</span>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="enrichment-actions">
+                    {isGmailSyncing ? (
+                      <button className="secondary-button" onClick={() => { cancelGmailSync(); setDiscoveryPhase('idle'); }}>
+                        <Icon name="xmark" />
+                        Cancel
+                      </button>
+                    ) : (
+                      <>
+                        {(gmailStrategy === 'recent' || gmailStrategy === 'frequent') && discoveryPhase !== 'discovered' && (
+                          <button
+                            className="primary-button"
+                            onClick={handleGmailDiscover}
+                            disabled={discoveryPhase === 'discovering'}
+                          >
+                            <Icon name={discoveryPhase === 'discovering' ? 'arrows-rotate' : 'magnifying-glass'} className={discoveryPhase === 'discovering' ? 'spinning' : ''} />
+                            {discoveryPhase === 'discovering' ? 'Discovering...' : 'Discover Contacts'}
+                          </button>
+                        )}
+                        {((gmailStrategy === 'recent' || gmailStrategy === 'frequent') && discoveryPhase === 'discovered' && discoveredContacts.length > 0) && (
+                          <button className="primary-button" onClick={handleGmailSync}>
+                            <Icon name="rocket" />
+                            Start Sync
+                            <span className="button-badge">{Math.min(discoveredContacts.length, gmailLimit)}</span>
+                          </button>
+                        )}
+                        {(gmailStrategy === 'all' || gmailStrategy === 'unsynced') && (
+                          <button
+                            className="primary-button"
+                            onClick={handleGmailSync}
+                            disabled={gmailStrategy === 'unsynced' && gmailSummary.notSynced === 0}
+                          >
+                            <Icon name="rocket" />
+                            Start Sync
+                            {gmailStrategy === 'unsynced' && gmailSummary.notSynced > 0 && (
+                              <span className="button-badge">{Math.min(gmailSummary.notSynced, gmailLimit)}</span>
+                            )}
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </section>
@@ -1146,6 +1456,78 @@ export function EnrichView() {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+
+        .strategy-select {
+          padding: 6px 10px;
+          border: 1px solid var(--ds-border-color);
+          border-radius: 6px;
+          font-size: 14px;
+          background: var(--ds-bg-primary);
+          color: var(--ds-text-primary);
+          cursor: pointer;
+          min-width: 200px;
+        }
+
+        .strategy-select:focus {
+          outline: none;
+          border-color: var(--ds-color-primary);
+          box-shadow: 0 0 0 2px rgba(95, 39, 227, 0.1);
+        }
+
+        .strategy-select:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .gmail-discovery-results {
+          background: var(--ds-bg-secondary);
+          border-radius: 8px;
+          padding: 16px;
+          margin-bottom: 20px;
+        }
+
+        .gmail-discovery-header {
+          font-size: 14px;
+          font-weight: 500;
+          color: var(--ds-text-primary);
+          margin-bottom: 12px;
+        }
+
+        .gmail-discovery-list {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .gmail-discovery-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 6px 0;
+          font-size: 13px;
+          border-bottom: 1px solid var(--ds-border-color);
+        }
+
+        .gmail-discovery-item:last-child {
+          border-bottom: none;
+        }
+
+        .gmail-discovery-name {
+          color: var(--ds-text-primary);
+          font-weight: 500;
+        }
+
+        .gmail-discovery-detail {
+          color: var(--ds-text-secondary);
+          font-size: 12px;
+        }
+
+        .gmail-discovery-more {
+          font-size: 12px;
+          color: var(--ds-text-tertiary);
+          font-style: italic;
+          padding-top: 8px;
         }
 
         @media (max-width: 768px) {
