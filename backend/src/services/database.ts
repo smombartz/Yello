@@ -3,9 +3,11 @@ import type { Database as DatabaseType } from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 import { parsePhoneNumber } from 'libphonenumber-js';
+import { encryptToken, isEncryptedToken } from './tokenEncryption.js';
 
 let db: DatabaseType | null = null;
 
+/** @deprecated Use getUserDatabase(userId) from userDatabase.js for contact data. Will be removed in Task 18. */
 export function getDatabase(): DatabaseType {
   if (db) return db;
 
@@ -305,6 +307,11 @@ export function getDatabase(): DatabaseType {
     console.log('Token columns added successfully');
   }
 
+  // Migration: Encrypt existing plaintext OAuth tokens
+  if (process.env.SESSION_SECRET) {
+    runTokenEncryptionMigration(db);
+  }
+
   // Migration: Create linkedin_enrichment table for storing LinkedIn profile data
   runLinkedInEnrichmentMigration(db);
 
@@ -432,6 +439,7 @@ function buildSearchableTextInternal(database: DatabaseType, contactId: number):
   return parts.join(' ');
 }
 
+/** @deprecated Will be removed in Task 18 alongside getDatabase(). */
 export function closeDatabase(): void {
   if (db) {
     db.close();
@@ -669,6 +677,48 @@ function migratePhoneFormats(database: DatabaseType): void {
 
   migrateAll();
   console.log(`Phone migration complete: ${updated} updated, ${failed} could not be parsed`);
+}
+
+/**
+ * Encrypt plaintext OAuth tokens in the users table
+ */
+function runTokenEncryptionMigration(database: DatabaseType): void {
+  const users = database.prepare(`
+    SELECT id, access_token, refresh_token FROM users
+    WHERE access_token IS NOT NULL OR refresh_token IS NOT NULL
+  `).all() as Array<{ id: number; access_token: string | null; refresh_token: string | null }>;
+
+  let migrated = 0;
+
+  const migrateAll = database.transaction(() => {
+    for (const user of users) {
+      let needsUpdate = false;
+      let newAccessToken = user.access_token;
+      let newRefreshToken = user.refresh_token;
+
+      if (user.access_token && !isEncryptedToken(user.access_token)) {
+        newAccessToken = encryptToken(user.access_token);
+        needsUpdate = true;
+      }
+      if (user.refresh_token && !isEncryptedToken(user.refresh_token)) {
+        newRefreshToken = encryptToken(user.refresh_token);
+        needsUpdate = true;
+      }
+
+      if (needsUpdate) {
+        database.prepare(`
+          UPDATE users SET access_token = ?, refresh_token = ? WHERE id = ?
+        `).run(newAccessToken, newRefreshToken, user.id);
+        migrated++;
+      }
+    }
+  });
+
+  migrateAll();
+
+  if (migrated > 0) {
+    console.log(`Token encryption migration: encrypted tokens for ${migrated} user(s)`);
+  }
 }
 
 /**
