@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import oauthPlugin from '@fastify/oauth2';
 import type { OAuth2Namespace } from '@fastify/oauth2';
 import { randomBytes } from 'crypto';
+import { encryptToken } from '../services/tokenEncryption.js';
 
 // Google OAuth2 configuration - manually defined since types don't export it
 // See: https://github.com/fastify/fastify-oauth2
@@ -11,7 +12,7 @@ const GOOGLE_CONFIGURATION = {
   tokenHost: 'https://www.googleapis.com',
   tokenPath: '/oauth2/v4/token',
 };
-import { getDatabase } from '../services/database.js';
+import { getAuthDatabase } from '../services/authDatabase.js';
 import { AuthMeResponseSchema, AuthErrorSchema } from '../schemas/auth.js';
 import { fetchAndStoreGoogleAvatar, fetchAndStoreGravatar, getProfileImages, getProfileImageUrl, enrichUsersFromGoogleContacts } from '../services/profileImageService.js';
 
@@ -63,7 +64,7 @@ function upsertUser(
   avatarUrl: string | null,
   tokenData?: TokenData
 ): UserRow {
-  const db = getDatabase();
+  const db = getAuthDatabase();
 
   // Calculate token expiration time
   const tokenExpiresAt = tokenData?.expiresIn
@@ -72,6 +73,10 @@ function upsertUser(
 
   // Check if user exists
   const existing = db.prepare('SELECT * FROM users WHERE google_id = ?').get(googleId) as UserRow | undefined;
+
+  // Encrypt tokens before storing
+  const encryptedAccessToken = tokenData?.accessToken ? encryptToken(tokenData.accessToken) : null;
+  const encryptedRefreshToken = tokenData?.refreshToken ? encryptToken(tokenData.refreshToken) : null;
 
   if (existing) {
     // Update existing user with tokens if provided
@@ -82,7 +87,7 @@ function upsertUser(
             access_token = ?, refresh_token = COALESCE(?, refresh_token), token_expires_at = ?,
             updated_at = CURRENT_TIMESTAMP
         WHERE google_id = ?
-      `).run(email, name, avatarUrl, tokenData.accessToken, tokenData.refreshToken || null, tokenExpiresAt, googleId);
+      `).run(email, name, avatarUrl, encryptedAccessToken, encryptedRefreshToken, tokenExpiresAt, googleId);
     } else {
       db.prepare(`
         UPDATE users
@@ -102,8 +107,8 @@ function upsertUser(
       email,
       name,
       avatarUrl,
-      tokenData?.accessToken || null,
-      tokenData?.refreshToken || null,
+      encryptedAccessToken,
+      encryptedRefreshToken,
       tokenExpiresAt
     );
 
@@ -113,7 +118,7 @@ function upsertUser(
 
 // Create a new session for a user
 function createSession(userId: number): string {
-  const db = getDatabase();
+  const db = getAuthDatabase();
   const sessionId = generateSessionId();
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS).toISOString();
 
@@ -127,7 +132,7 @@ function createSession(userId: number): string {
 
 // Get user from session ID
 function getUserFromSession(sessionId: string): UserRow | null {
-  const db = getDatabase();
+  const db = getAuthDatabase();
 
   // Get session and check if it's valid
   const session = db.prepare(`
@@ -145,13 +150,13 @@ function getUserFromSession(sessionId: string): UserRow | null {
 
 // Delete a session
 function deleteSession(sessionId: string): void {
-  const db = getDatabase();
+  const db = getAuthDatabase();
   db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
 }
 
 // Clean up expired sessions (called periodically)
 function cleanupExpiredSessions(): void {
-  const db = getDatabase();
+  const db = getAuthDatabase();
   db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')").run();
 }
 
@@ -166,17 +171,17 @@ export default async function authRoutes(fastify: FastifyInstance) {
   // Check if Google OAuth is configured
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const appUrl = process.env.APP_URL || 'http://localhost:3000';
+  const appUrl = process.env.APP_URL || 'http://localhost:3456';
 
   if (!googleClientId || !googleClientSecret) {
     // Register placeholder routes that return helpful errors
-    fastify.get('/google', async (_request, reply) => {
+    fastify.get('/google', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (_request, reply) => {
       return reply.status(503).send({
         error: 'Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.'
       });
     });
 
-    fastify.get('/google/callback', async (_request, reply) => {
+    fastify.get('/google/callback', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (_request, reply) => {
       return reply.status(503).send({
         error: 'Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.'
       });
@@ -203,7 +208,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     });
 
     // Google OAuth callback handler (shared by normal login and Gmail re-auth)
-    fastify.get('/google/callback', async (request: FastifyRequest<{ Querystring: { code?: string; state?: string; error?: string } }>, reply: FastifyReply) => {
+    fastify.get('/google/callback', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request: FastifyRequest<{ Querystring: { code?: string; state?: string; error?: string } }>, reply: FastifyReply) => {
       try {
         const isGmailFlow = request.cookies.gmail_oauth_flow === '1';
 
@@ -366,7 +371,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   }
 
   // Gmail re-auth: redirect to Google OAuth with expanded scope
-  fastify.get('/google/gmail', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/google/gmail', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request: FastifyRequest, reply: FastifyReply) => {
     if (!googleClientId || !googleClientSecret) {
       return reply.status(503).send({ error: 'Google OAuth not configured' });
     }
