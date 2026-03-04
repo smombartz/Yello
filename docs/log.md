@@ -1,5 +1,17 @@
 # Change Log
 
+## 2026-03-04 11:10 — Security Hardening
+
+- Added global `onRequest` auth hook in `server.ts` protecting all `/api/*` and `/photos/*` routes
+- Allowlisted `/health`, `/api/auth/*`, `/api/profile/public/*` from auth requirement
+- Removed redundant per-route `requireAuth` from `import.ts`, `stats.ts`, `emailSync.ts`, `gmailEnrich.ts`
+- Replaced custom `getUserIdFromSession` helpers with `request.user!.id` in `settings.ts`, `profileImages.ts`, `profile.ts`
+- Photos now served through authenticated route with path traversal protection (replaced static serving)
+- Removed contact count from `/health` endpoint to prevent data leakage
+- Added `SESSION_SECRET` env var validation on production startup
+- Sanitized all error messages across 10 route files to prevent internal info leakage (CWE-209)
+- Updated health test to match new response format
+
 ## 2026-02-15 14:00 — Bulk Gmail Email History Sync in Enrich View
 
 - Added `emailDiscoveryService.ts` — discovers which contacts user emails most recently/frequently by scanning Gmail messages
