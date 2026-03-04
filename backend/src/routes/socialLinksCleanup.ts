@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { getUserDatabase } from '../services/userDatabase.js';
 import {
   getSocialLinksSummary,
   findCrossContactDuplicates,
@@ -32,8 +33,9 @@ export default async function socialLinksCleanupRoutes(
         200: SocialLinksSummaryResponseSchema
       }
     }
-  }, async (_request, _reply) => {
-    return getSocialLinksSummary();
+  }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
+    return getSocialLinksSummary(db);
   });
 
   // GET /api/cleanup/social-links/cross-contact
@@ -46,7 +48,8 @@ export default async function socialLinksCleanupRoutes(
     }
   }, async (request, _reply) => {
     const { limit = 50, offset = 0, platform } = request.query;
-    const { groups, totalGroups } = findCrossContactDuplicates(limit, offset, platform);
+    const db = getUserDatabase(request.user!.id);
+    const { groups, totalGroups } = findCrossContactDuplicates(db, limit, offset, platform);
 
     return {
       groups,
@@ -66,7 +69,8 @@ export default async function socialLinksCleanupRoutes(
     }
   }, async (request, _reply) => {
     const { platform } = request.query;
-    return findAllCrossContactGroups(platform);
+    const db = getUserDatabase(request.user!.id);
+    return findAllCrossContactGroups(db, platform);
   });
 
   // GET /api/cleanup/social-links/within-contact
@@ -79,7 +83,8 @@ export default async function socialLinksCleanupRoutes(
     }
   }, async (request, _reply) => {
     const { limit = 50, offset = 0 } = request.query;
-    const { contacts, total } = findWithinContactIssues(limit, offset);
+    const db = getUserDatabase(request.user!.id);
+    const { contacts, total } = findWithinContactIssues(db, limit, offset);
 
     return {
       contacts,
@@ -97,9 +102,10 @@ export default async function socialLinksCleanupRoutes(
         500: SocialLinksErrorSchema
       }
     }
-  }, async (_request, reply) => {
+  }, async (request, reply) => {
     try {
-      const result = fixAllWithinContactIssues();
+      const db = getUserDatabase(request.user!.id);
+      const result = fixAllWithinContactIssues(db);
       return result;
     } catch (error) {
       fastify.log.error(error, 'Social links cleanup failed');
