@@ -1,4 +1,4 @@
-import { getDatabase } from './database.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
 import type { DeduplicationMode, ConfidenceLevel } from '../schemas/duplicates.js';
 import type { ContactDetail, DuplicateGroup, ContactSocialProfile } from '../types/index.js';
 import { getPhotoUrl } from './photoProcessor.js';
@@ -14,8 +14,7 @@ interface DuplicateMatch {
   contactIds: string;
 }
 
-function findEmailDuplicates(limit: number, offset: number): DuplicateMatch[] {
-  const db = getDatabase();
+function findEmailDuplicates(db: DatabaseType, limit: number, offset: number): DuplicateMatch[] {
   return db.prepare(`
     SELECT LOWER(e.email) as matchValue, GROUP_CONCAT(DISTINCT e.contact_id) as contactIds
     FROM contact_emails e
@@ -28,8 +27,7 @@ function findEmailDuplicates(limit: number, offset: number): DuplicateMatch[] {
   `).all(limit, offset) as DuplicateMatch[];
 }
 
-function findPhoneDuplicates(limit: number, offset: number): DuplicateMatch[] {
-  const db = getDatabase();
+function findPhoneDuplicates(db: DatabaseType, limit: number, offset: number): DuplicateMatch[] {
   return db.prepare(`
     SELECT p.phone as matchValue, GROUP_CONCAT(DISTINCT p.contact_id) as contactIds
     FROM contact_phones p
@@ -42,8 +40,7 @@ function findPhoneDuplicates(limit: number, offset: number): DuplicateMatch[] {
   `).all(limit, offset) as DuplicateMatch[];
 }
 
-function findAddressDuplicates(limit: number, offset: number): DuplicateMatch[] {
-  const db = getDatabase();
+function findAddressDuplicates(db: DatabaseType, limit: number, offset: number): DuplicateMatch[] {
   return db.prepare(`
     SELECT
       LOWER(COALESCE(a.street, '')) || '|' || LOWER(COALESCE(a.city, '')) || '|' || LOWER(COALESCE(a.postal_code, '')) as matchValue,
@@ -60,8 +57,7 @@ function findAddressDuplicates(limit: number, offset: number): DuplicateMatch[] 
 }
 
 
-function countEmailDuplicateGroups(): number {
-  const db = getDatabase();
+function countEmailDuplicateGroups(db: DatabaseType): number {
   const result = db.prepare(`
     SELECT COUNT(*) as count FROM (
       SELECT 1
@@ -75,8 +71,7 @@ function countEmailDuplicateGroups(): number {
   return result.count;
 }
 
-function countPhoneDuplicateGroups(): number {
-  const db = getDatabase();
+function countPhoneDuplicateGroups(db: DatabaseType): number {
   const result = db.prepare(`
     SELECT COUNT(*) as count FROM (
       SELECT 1
@@ -90,8 +85,7 @@ function countPhoneDuplicateGroups(): number {
   return result.count;
 }
 
-function countAddressDuplicateGroups(): number {
-  const db = getDatabase();
+function countAddressDuplicateGroups(db: DatabaseType): number {
   const result = db.prepare(`
     SELECT COUNT(*) as count FROM (
       SELECT 1
@@ -189,8 +183,7 @@ class UnionFind {
 /**
  * Load all contact data needed for duplicate detection
  */
-function loadContactMatchData(): Map<number, ContactMatchData> {
-  const db = getDatabase();
+function loadContactMatchData(db: DatabaseType): Map<number, ContactMatchData> {
   const contacts = new Map<number, ContactMatchData>();
 
   // Load basic contact info (excluding archived contacts)
@@ -503,13 +496,13 @@ function sortGroups(groups: ScoredGroup[]): ScoredGroup[] {
 /**
  * Count recommended duplicate groups by confidence level
  */
-export function countRecommendedDuplicateGroups(): {
+export function countRecommendedDuplicateGroups(db: DatabaseType): {
   veryHigh: number;
   high: number;
   medium: number;
   total: number
 } {
-  const contacts = loadContactMatchData();
+  const contacts = loadContactMatchData(db);
   const pairs = buildCandidatePairs(contacts);
   const groups = groupConnectedContacts(pairs);
 
@@ -542,11 +535,12 @@ export function countRecommendedDuplicateGroups(): {
  * Get recommended duplicate groups with pagination and optional confidence filtering
  */
 export function getRecommendedDuplicates(
+  db: DatabaseType,
   confidenceLevels: string[] | undefined,
   limit: number,
   offset: number
 ): { groups: DuplicateGroup[]; totalGroups: number } {
-  const contacts = loadContactMatchData();
+  const contacts = loadContactMatchData(db);
   const pairs = buildCandidatePairs(contacts);
   let groups = groupConnectedContacts(pairs);
 
@@ -564,7 +558,7 @@ export function getRecommendedDuplicates(
 
   // Convert to DuplicateGroup format with full contact details
   const duplicateGroups: DuplicateGroup[] = paginatedGroups.map((group, index) => {
-    const contactDetails = getContactDetails(group.contactIds);
+    const contactDetails = getContactDetails(db, group.contactIds);
 
     // Create a readable matching value from criteria
     const matchingValue = group.matchedCriteria.join(', ');
@@ -582,7 +576,7 @@ export function getRecommendedDuplicates(
   return { groups: duplicateGroups, totalGroups };
 }
 
-export function getDuplicateSummary(): {
+export function getDuplicateSummary(database: DatabaseType): {
   email: number;
   phone: number;
   address: number;
@@ -590,16 +584,15 @@ export function getDuplicateSummary(): {
   recommended: { veryHigh: number; high: number; medium: number; total: number };
 } {
   return {
-    email: countEmailDuplicateGroups(),
-    phone: countPhoneDuplicateGroups(),
-    address: countAddressDuplicateGroups(),
-    socialLinks: countCrossContactDuplicates(),
-    recommended: countRecommendedDuplicateGroups()
+    email: countEmailDuplicateGroups(database),
+    phone: countPhoneDuplicateGroups(database),
+    address: countAddressDuplicateGroups(database),
+    socialLinks: countCrossContactDuplicates(database),
+    recommended: countRecommendedDuplicateGroups(database)
   };
 }
 
-function getContactDetails(contactIds: number[]): ContactDetail[] {
-  const db = getDatabase();
+function getContactDetails(db: DatabaseType, contactIds: number[]): ContactDetail[] {
   const placeholders = contactIds.map(() => '?').join(',');
 
   const contacts = db.prepare(`
@@ -731,12 +724,13 @@ export interface DuplicateGroupLight {
  * Get all duplicate group IDs without full contact details (for bulk operations)
  */
 export function getAllDuplicateGroupIds(
+  database: DatabaseType,
   mode: DeduplicationMode,
   confidenceLevels?: string[]
 ): { groups: DuplicateGroupLight[]; totalGroups: number } {
   if (mode === 'recommended') {
     // Use the existing recommended logic but extract only IDs
-    const contacts = loadContactMatchData();
+    const contacts = loadContactMatchData(database);
     const pairs = buildCandidatePairs(contacts);
     let groups = groupConnectedContacts(pairs);
 
@@ -760,7 +754,7 @@ export function getAllDuplicateGroupIds(
 
   // Handle social-links mode separately (uses different data structure)
   if (mode === 'social-links') {
-    const result = findAllCrossContactGroups();
+    const result = findAllCrossContactGroups(database);
     const lightGroups: DuplicateGroupLight[] = result.groups.map(g => ({
       id: g.id,
       contactIds: g.contactIds,
@@ -774,13 +768,13 @@ export function getAllDuplicateGroupIds(
 
   switch (mode) {
     case 'email':
-      allMatches = findEmailDuplicatesAll();
+      allMatches = findEmailDuplicatesAll(database);
       break;
     case 'phone':
-      allMatches = findPhoneDuplicatesAll();
+      allMatches = findPhoneDuplicatesAll(database);
       break;
     case 'address':
-      allMatches = findAddressDuplicatesAll();
+      allMatches = findAddressDuplicatesAll(database);
       break;
   }
 
@@ -797,8 +791,7 @@ export function getAllDuplicateGroupIds(
 }
 
 // Helper functions to fetch all matches without pagination (for bulk operations)
-function findEmailDuplicatesAll(): DuplicateMatch[] {
-  const db = getDatabase();
+function findEmailDuplicatesAll(db: DatabaseType): DuplicateMatch[] {
   return db.prepare(`
     SELECT LOWER(e.email) as matchValue, GROUP_CONCAT(DISTINCT e.contact_id) as contactIds
     FROM contact_emails e
@@ -810,8 +803,7 @@ function findEmailDuplicatesAll(): DuplicateMatch[] {
   `).all() as DuplicateMatch[];
 }
 
-function findPhoneDuplicatesAll(): DuplicateMatch[] {
-  const db = getDatabase();
+function findPhoneDuplicatesAll(db: DatabaseType): DuplicateMatch[] {
   return db.prepare(`
     SELECT p.phone as matchValue, GROUP_CONCAT(DISTINCT p.contact_id) as contactIds
     FROM contact_phones p
@@ -823,8 +815,7 @@ function findPhoneDuplicatesAll(): DuplicateMatch[] {
   `).all() as DuplicateMatch[];
 }
 
-function findAddressDuplicatesAll(): DuplicateMatch[] {
-  const db = getDatabase();
+function findAddressDuplicatesAll(db: DatabaseType): DuplicateMatch[] {
   return db.prepare(`
     SELECT
       LOWER(COALESCE(a.street, '')) || '|' || LOWER(COALESCE(a.city, '')) || '|' || LOWER(COALESCE(a.postal_code, '')) as matchValue,
@@ -841,6 +832,7 @@ function findAddressDuplicatesAll(): DuplicateMatch[] {
 
 
 export function findDuplicates(
+  database: DatabaseType,
   mode: DeduplicationMode,
   limit: number,
   offset: number,
@@ -848,12 +840,12 @@ export function findDuplicates(
 ): { groups: DuplicateGroup[]; totalGroups: number } {
   // Handle recommended mode separately
   if (mode === 'recommended') {
-    return getRecommendedDuplicates(confidenceLevels, limit, offset);
+    return getRecommendedDuplicates(database, confidenceLevels, limit, offset);
   }
 
   // Handle social-links mode separately (uses different service)
   if (mode === 'social-links') {
-    const result = findCrossContactDuplicates(limit, offset);
+    const result = findCrossContactDuplicates(database, limit, offset);
     // Update matchingField to 'social-links' instead of 'social'
     const groups = result.groups.map(g => ({
       ...g,
@@ -867,22 +859,22 @@ export function findDuplicates(
 
   switch (mode) {
     case 'email':
-      matches = findEmailDuplicates(limit, offset);
-      totalGroups = countEmailDuplicateGroups();
+      matches = findEmailDuplicates(database, limit, offset);
+      totalGroups = countEmailDuplicateGroups(database);
       break;
     case 'phone':
-      matches = findPhoneDuplicates(limit, offset);
-      totalGroups = countPhoneDuplicateGroups();
+      matches = findPhoneDuplicates(database, limit, offset);
+      totalGroups = countPhoneDuplicateGroups(database);
       break;
     case 'address':
-      matches = findAddressDuplicates(limit, offset);
-      totalGroups = countAddressDuplicateGroups();
+      matches = findAddressDuplicates(database, limit, offset);
+      totalGroups = countAddressDuplicateGroups(database);
       break;
   }
 
   const groups: DuplicateGroup[] = matches.map(match => {
     const contactIds = match.contactIds.split(',').map(id => parseInt(id, 10));
-    const contacts = getContactDetails(contactIds);
+    const contacts = getContactDetails(database, contactIds);
 
     return {
       id: Buffer.from(match.matchValue).toString('base64'),
