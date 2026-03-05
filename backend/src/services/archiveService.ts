@@ -1,4 +1,5 @@
-import { getDatabase, deleteContactsFromSearch } from './database.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
+import { deleteContactsFromSearch } from './database.js';
 import type { ContactDetail, ContactSocialProfile } from '../types/index.js';
 import { getPhotoUrl } from './photoProcessor.js';
 
@@ -9,12 +10,10 @@ export interface ArchivedContact extends ContactDetail {
 /**
  * Archive contacts by setting archived_at timestamp
  */
-export function archiveContacts(contactIds: number[]): { archivedCount: number } {
+export function archiveContacts(db: DatabaseType, contactIds: number[]): { archivedCount: number } {
   if (contactIds.length === 0) {
     return { archivedCount: 0 };
   }
-
-  const db = getDatabase();
   const placeholders = contactIds.map(() => '?').join(',');
 
   const result = db.prepare(`
@@ -29,12 +28,10 @@ export function archiveContacts(contactIds: number[]): { archivedCount: number }
 /**
  * Unarchive contacts by clearing archived_at
  */
-export function unarchiveContacts(contactIds: number[]): { unarchivedCount: number } {
+export function unarchiveContacts(db: DatabaseType, contactIds: number[]): { unarchivedCount: number } {
   if (contactIds.length === 0) {
     return { unarchivedCount: 0 };
   }
-
-  const db = getDatabase();
   const placeholders = contactIds.map(() => '?').join(',');
 
   const result = db.prepare(`
@@ -49,8 +46,7 @@ export function unarchiveContacts(contactIds: number[]): { unarchivedCount: numb
 /**
  * Get count of archived contacts
  */
-export function getArchivedCount(): number {
-  const db = getDatabase();
+export function getArchivedCount(db: DatabaseType): number {
   const result = db.prepare(`
     SELECT COUNT(*) as count FROM contacts WHERE archived_at IS NOT NULL
   `).get() as { count: number };
@@ -60,12 +56,11 @@ export function getArchivedCount(): number {
 /**
  * Get archived contacts with pagination
  */
-export function getArchivedContacts(limit: number, offset: number): {
+export function getArchivedContacts(db: DatabaseType, limit: number, offset: number): {
   contacts: ArchivedContact[];
   total: number;
 } {
-  const db = getDatabase();
-  const total = getArchivedCount();
+  const total = getArchivedCount(db);
 
   const rows = db.prepare(`
     SELECT
@@ -195,12 +190,10 @@ export function getArchivedContacts(limit: number, offset: number): {
 /**
  * Permanently delete archived contacts
  */
-export function deleteArchivedContacts(contactIds: number[]): { deletedCount: number } {
+export function deleteArchivedContacts(db: DatabaseType, contactIds: number[]): { deletedCount: number } {
   if (contactIds.length === 0) {
     return { deletedCount: 0 };
   }
-
-  const db = getDatabase();
   const placeholders = contactIds.map(() => '?').join(',');
 
   const deleteInTransaction = db.transaction(() => {
@@ -232,8 +225,7 @@ export function deleteArchivedContacts(contactIds: number[]): { deletedCount: nu
 /**
  * Export archived contacts as VCF
  */
-export function exportArchivedContactsVcf(): string {
-  const db = getDatabase();
+export function exportArchivedContactsVcf(db: DatabaseType): string {
 
   const rows = db.prepare(`
     SELECT raw_vcard as rawVcard
