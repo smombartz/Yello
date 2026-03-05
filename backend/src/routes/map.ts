@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { getDatabase } from '../services/database.js';
+import { getUserDatabase } from '../services/userDatabase.js';
 import { getPhotoUrl } from '../services/photoProcessor.js';
 import { geocodeAddress, isValidCoordinate } from '../services/geocoding.js';
 
@@ -81,7 +81,7 @@ export default async function mapRoutes(
     }
   }, async (request, _reply) => {
     const { search, category } = request.query;
-    const db = getDatabase();
+    const db = getUserDatabase(request.user!.id);
 
     // Build query to get contacts with geocoded addresses
     let contactIdsQuery = '';
@@ -188,7 +188,7 @@ export default async function mapRoutes(
     }
   }, async (request, _reply) => {
     const { limit = 50 } = request.body;
-    const db = getDatabase();
+    const db = getUserDatabase(request.user!.id);
 
     // Get addresses without geocoding
     const ungeocodedAddresses = db.prepare(`
@@ -272,8 +272,8 @@ export default async function mapRoutes(
         }
       }
     }
-  }, async (_request, _reply) => {
-    const db = getDatabase();
+  }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
 
     const stats = db.prepare(`
       SELECT

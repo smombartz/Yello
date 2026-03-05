@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { getDatabase } from '../services/database.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
+import { getUserDatabase } from '../services/userDatabase.js';
 
 
 interface OverviewStats {
@@ -39,8 +40,7 @@ interface DashboardResponse {
   geography: GeographyStats;
 }
 
-function getOverviewStats(): OverviewStats {
-  const db = getDatabase();
+function getOverviewStats(db: DatabaseType): OverviewStats {
 
   const totalContacts = db.prepare(
     'SELECT COUNT(*) as count FROM contacts WHERE archived_at IS NULL'
@@ -75,8 +75,7 @@ function getOverviewStats(): OverviewStats {
   };
 }
 
-function getUpcomingBirthdays(): UpcomingBirthday[] {
-  const db = getDatabase();
+function getUpcomingBirthdays(db: DatabaseType): UpcomingBirthday[] {
 
   // Get current date
   const now = new Date();
@@ -145,8 +144,7 @@ function getUpcomingBirthdays(): UpcomingBirthday[] {
   return upcomingBirthdays;
 }
 
-function getRecentlyAdded(): RecentContact[] {
-  const db = getDatabase();
+function getRecentlyAdded(db: DatabaseType): RecentContact[] {
 
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -175,8 +173,7 @@ function getRecentlyAdded(): RecentContact[] {
   }));
 }
 
-function getRecentlyModified(): RecentContact[] {
-  const db = getDatabase();
+function getRecentlyModified(db: DatabaseType): RecentContact[] {
 
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -208,8 +205,7 @@ function getRecentlyModified(): RecentContact[] {
   }));
 }
 
-function getGeographyStats(): GeographyStats {
-  const db = getDatabase();
+function getGeographyStats(db: DatabaseType): GeographyStats {
 
   const topCountries = db.prepare(`
     SELECT country, COUNT(*) as count
@@ -246,12 +242,13 @@ export default async function statsRoutes(
   // GET /api/stats/dashboard
   fastify.get<{ Reply: DashboardResponse }>(
     '/dashboard',
-    async (_request, _reply) => {
-    const overview = getOverviewStats();
-    const upcomingBirthdays = getUpcomingBirthdays();
-    const recentlyAdded = getRecentlyAdded();
-    const recentlyModified = getRecentlyModified();
-    const geography = getGeographyStats();
+    async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
+    const overview = getOverviewStats(db);
+    const upcomingBirthdays = getUpcomingBirthdays(db);
+    const recentlyAdded = getRecentlyAdded(db);
+    const recentlyModified = getRecentlyModified(db);
+    const geography = getGeographyStats(db);
 
     return {
       overview,
