@@ -8,7 +8,7 @@ import type {
   DeleteArchivedResponse
 } from './types';
 
-const API_BASE = import.meta.env.PROD ? '' : 'http://localhost:3000';
+const API_BASE = import.meta.env.PROD ? '' : 'http://localhost:3456';
 
 export function useArchivedContacts(page: number = 1, pageSize: number = 50) {
   const offset = (page - 1) * pageSize;

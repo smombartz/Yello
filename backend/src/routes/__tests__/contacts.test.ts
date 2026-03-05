@@ -3,14 +3,33 @@ import Fastify, { FastifyInstance } from 'fastify';
 import { rebuildContactSearch } from '../../services/database.js';
 import { getUserDatabase, closeAllUserDatabases } from '../../services/userDatabase.js';
 import contactsRoutes from '../contacts.js';
+import os from 'os';
+import fs from 'fs';
+import path from 'path';
 
 describe('contacts routes', () => {
   let app: FastifyInstance;
+  let tmpDir: string;
 
   beforeAll(async () => {
-    process.env.DATABASE_PATH = ':memory:';
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'yello-contacts-test-'));
+    process.env.USER_DATA_PATH = tmpDir;
 
     app = Fastify();
+
+    // Mock request.user so getUserDatabase(request.user!.id) works
+    app.addHook('onRequest', async (request) => {
+      request.user = {
+        id: 1,
+        googleId: 'test-google-id',
+        email: 'test@test.com',
+        name: 'Test User',
+        avatarUrl: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
     await app.register(contactsRoutes, { prefix: '/api/contacts' });
     await app.ready();
   });
@@ -18,6 +37,7 @@ describe('contacts routes', () => {
   afterAll(async () => {
     await app.close();
     closeAllUserDatabases();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
   beforeEach(() => {

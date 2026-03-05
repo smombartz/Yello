@@ -19,7 +19,9 @@ describe('profileImageService', () => {
   let userId: number;
 
   beforeAll(async () => {
-    process.env.DATABASE_PATH = TEST_DB_PATH;
+    // Close any existing auth DB singleton before changing path
+    closeAuthDatabase();
+    process.env.AUTH_DATABASE_PATH = TEST_DB_PATH;
     process.env.PHOTOS_PATH = TEST_PHOTOS_PATH;
     await fs.mkdir('./test-data', { recursive: true });
 

@@ -5,9 +5,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': 'http://localhost:3000',
-      '/photos': 'http://localhost:3000',
-      '/health': 'http://localhost:3000'
+      '/api': 'http://localhost:3456',
+      '/photos': 'http://localhost:3456',
+      '/health': 'http://localhost:3456'
     }
   }
 });

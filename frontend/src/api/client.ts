@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.PROD ? '' : 'http://localhost:3000';
+const API_BASE = import.meta.env.PROD ? '' : 'http://localhost:3456';
 
 export async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
