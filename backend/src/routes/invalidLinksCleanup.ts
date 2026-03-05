@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { getUserDatabase } from '../services/userDatabase.js';
 import {
   searchInvalidLinks,
   removeInvalidLinks
@@ -33,7 +34,8 @@ export default async function invalidLinksCleanupRoutes(
       return reply.status(400).send({ error: 'At least one pattern is required' });
     }
 
-    const result = searchInvalidLinks(patterns);
+    const db = getUserDatabase(request.user!.id);
+    const result = searchInvalidLinks(db, patterns);
     return result;
   });
 
@@ -55,11 +57,12 @@ export default async function invalidLinksCleanupRoutes(
     }
 
     try {
-      const result = removeInvalidLinks(patterns);
+      const db = getUserDatabase(request.user!.id);
+      const result = removeInvalidLinks(db, patterns);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(500).send({ error: message });
+      fastify.log.error(error, 'Link validation failed');
+      return reply.status(500).send({ error: 'Link validation failed. Please try again.' });
     }
   });
 }

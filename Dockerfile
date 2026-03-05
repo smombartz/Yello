@@ -29,14 +29,16 @@ COPY --from=backend-builder /app/backend/dist ./dist
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 # Create data directories
-RUN mkdir -p /data/photos
+RUN mkdir -p /data/users && chown -R node:node /app /data
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=3000
-ENV DATABASE_PATH=/data/contacts.db
-ENV PHOTOS_PATH=/data/photos
+ENV PORT=3456
+ENV AUTH_DATABASE_PATH=/data/auth.db
+ENV USER_DATA_PATH=/data/users
 
-EXPOSE 3000
+USER node
+
+EXPOSE 3456
 
 CMD ["node", "dist/server.js"]

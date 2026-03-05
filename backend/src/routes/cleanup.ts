@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { getUserDatabase } from '../services/userDatabase.js';
 import {
   getCleanupSummary,
   findEmptyContacts,
@@ -38,8 +39,9 @@ export default async function cleanupRoutes(
       }
     }
   }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
     const { threshold = 3 } = request.query;
-    return getCleanupSummary(threshold);
+    return getCleanupSummary(db, threshold);
   });
 
   // GET /api/cleanup/ids - Get all contact IDs for a query (for bulk selection)
@@ -52,6 +54,7 @@ export default async function cleanupRoutes(
       }
     }
   }, async (request, reply) => {
+    const db = getUserDatabase(request.user!.id);
     const { mode, types, threshold = 3 } = request.query;
 
     if (mode === 'empty') {
@@ -60,7 +63,7 @@ export default async function cleanupRoutes(
         ? types.split(',').map(t => t.trim()).filter((t): t is EmptyContactType => validEmptyTypes.includes(t as EmptyContactType))
         : undefined;
 
-      const contactIds = getAllEmptyContactIds(typeFilter);
+      const contactIds = getAllEmptyContactIds(db, typeFilter);
       return { contactIds };
     } else if (mode === 'problematic') {
       const validProblematicTypes: ProblematicContactType[] = ['many_domains', 'same_domain'];
@@ -68,7 +71,7 @@ export default async function cleanupRoutes(
         ? types.split(',').map(t => t.trim()).filter((t): t is ProblematicContactType => validProblematicTypes.includes(t as ProblematicContactType))
         : undefined;
 
-      const contactIds = getAllProblematicContactIds(threshold, typeFilter);
+      const contactIds = getAllProblematicContactIds(db, threshold, typeFilter);
       return { contactIds };
     }
 
@@ -85,6 +88,7 @@ export default async function cleanupRoutes(
       }
     }
   }, async (request, reply) => {
+    const db = getUserDatabase(request.user!.id);
     const { mode, limit = 50, offset = 0, types, threshold = 3 } = request.query;
 
     if (mode === 'empty') {
@@ -94,7 +98,7 @@ export default async function cleanupRoutes(
         ? types.split(',').map(t => t.trim()).filter((t): t is EmptyContactType => validEmptyTypes.includes(t as EmptyContactType))
         : undefined;
 
-      const { contacts, total } = findEmptyContacts(limit, offset, typeFilter);
+      const { contacts, total } = findEmptyContacts(db, limit, offset, typeFilter);
 
       return {
         contacts,
@@ -109,7 +113,7 @@ export default async function cleanupRoutes(
         ? types.split(',').map(t => t.trim()).filter((t): t is ProblematicContactType => validProblematicTypes.includes(t as ProblematicContactType))
         : undefined;
 
-      const { contacts, total } = findProblematicContacts(limit, offset, threshold, typeFilter);
+      const { contacts, total } = findProblematicContacts(db, limit, offset, threshold, typeFilter);
 
       return {
         contacts,
@@ -132,14 +136,15 @@ export default async function cleanupRoutes(
       }
     }
   }, async (request, reply) => {
+    const db = getUserDatabase(request.user!.id);
     const { contactIds } = request.body;
 
     try {
-      const result = deleteContacts(contactIds);
+      const result = deleteContacts(db, contactIds);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(400).send({ error: message });
+      fastify.log.error(error, 'Cleanup operation failed');
+      return reply.status(500).send({ error: 'Cleanup operation failed. Please try again.' });
     }
   });
 }

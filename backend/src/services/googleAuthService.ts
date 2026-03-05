@@ -1,4 +1,5 @@
-import { getDatabase } from './database.js';
+import { getAuthDatabase } from './authDatabase.js';
+import { encryptToken, decryptToken, isEncryptedToken } from './tokenEncryption.js';
 
 interface UserTokens {
   access_token: string | null;
@@ -18,7 +19,7 @@ interface TokenRefreshResponse {
  * Returns null if the user has no tokens or refresh fails.
  */
 export async function getValidAccessToken(userId: number): Promise<string | null> {
-  const db = getDatabase();
+  const db = getAuthDatabase();
 
   const user = db.prepare(`
     SELECT access_token, refresh_token, token_expires_at
@@ -29,6 +30,19 @@ export async function getValidAccessToken(userId: number): Promise<string | null
     return null;
   }
 
+  // Decrypt tokens if encrypted, otherwise treat as legacy plaintext
+  const accessToken = isEncryptedToken(user.access_token)
+    ? decryptToken(user.access_token)
+    : user.access_token;
+  const refreshToken = user.refresh_token
+    ? (isEncryptedToken(user.refresh_token) ? decryptToken(user.refresh_token) : user.refresh_token)
+    : null;
+
+  if (!accessToken) {
+    console.log('Failed to decrypt access token for user', userId);
+    return null;
+  }
+
   // Check if token is still valid (with 5 minute buffer)
   if (user.token_expires_at) {
     const expiresAt = new Date(user.token_expires_at);
@@ -36,17 +50,17 @@ export async function getValidAccessToken(userId: number): Promise<string | null
 
     if (expiresAt.getTime() - bufferMs > Date.now()) {
       // Token is still valid
-      return user.access_token;
+      return accessToken;
     }
   }
 
   // Token is expired or expiring soon, try to refresh
-  if (!user.refresh_token) {
+  if (!refreshToken) {
     console.log('No refresh token available for user', userId);
     return null;
   }
 
-  const newToken = await refreshAccessToken(userId, user.refresh_token);
+  const newToken = await refreshAccessToken(userId, refreshToken);
   return newToken;
 }
 
@@ -84,15 +98,16 @@ async function refreshAccessToken(userId: number, refreshToken: string): Promise
 
     const data = await response.json() as TokenRefreshResponse;
 
-    // Update tokens in database
-    const db = getDatabase();
+    // Encrypt and update tokens in database
+    const db = getAuthDatabase();
     const tokenExpiresAt = new Date(Date.now() + data.expires_in * 1000).toISOString();
+    const encryptedAccessToken = encryptToken(data.access_token);
 
     db.prepare(`
       UPDATE users
       SET access_token = ?, token_expires_at = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(data.access_token, tokenExpiresAt, userId);
+    `).run(encryptedAccessToken, tokenExpiresAt, userId);
 
     return data.access_token;
   } catch (error) {
@@ -105,7 +120,7 @@ async function refreshAccessToken(userId: number, refreshToken: string): Promise
  * Check if a user has Google OAuth tokens stored.
  */
 export function hasGoogleTokens(userId: number): boolean {
-  const db = getDatabase();
+  const db = getAuthDatabase();
 
   const user = db.prepare(`
     SELECT access_token, refresh_token FROM users WHERE id = ?

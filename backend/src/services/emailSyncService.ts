@@ -1,4 +1,5 @@
-import { getDatabase } from './database.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
+import { getAuthDatabase } from './authDatabase.js';
 import { getValidAccessToken } from './googleAuthService.js';
 
 // Gmail API types
@@ -154,20 +155,20 @@ export function getHeader(message: GmailMessage, name: string): string {
  * Full sync: fetch all emails for a contact from Gmail.
  */
 export async function fullSyncContact(
+  db: DatabaseType,
   userId: number,
   contactId: number,
   onProgress?: (processed: number, total: number) => void
 ): Promise<SyncResult> {
-  const db = getDatabase();
-
   // Get user's access token
   const accessToken = await getValidAccessToken(userId);
   if (!accessToken) {
     return { synced: 0, total: 0, error: 'no_token' };
   }
 
-  // Get the user's own email to determine direction
-  const userRow = db.prepare('SELECT email FROM users WHERE id = ?').get(userId) as { email: string } | undefined;
+  // Get the user's own email to determine direction (from auth DB)
+  const authDb = getAuthDatabase();
+  const userRow = authDb.prepare('SELECT email FROM users WHERE id = ?').get(userId) as { email: string } | undefined;
   if (!userRow) {
     return { synced: 0, total: 0, error: 'user_not_found' };
   }
@@ -288,11 +289,10 @@ export async function fullSyncContact(
  * Incremental sync: fetch only new emails since last sync.
  */
 export async function incrementalSyncContact(
+  db: DatabaseType,
   userId: number,
   contactId: number
 ): Promise<SyncResult> {
-  const db = getDatabase();
-
   // Get contact's sync state
   const syncInfo = db.prepare(
     'SELECT gmail_history_id, gmail_last_sync_at FROM contacts WHERE id = ?'
@@ -300,7 +300,7 @@ export async function incrementalSyncContact(
 
   if (!syncInfo?.gmail_history_id) {
     // Never synced before — do a full sync
-    return fullSyncContact(userId, contactId);
+    return fullSyncContact(db, userId, contactId);
   }
 
   const accessToken = await getValidAccessToken(userId);
@@ -308,7 +308,8 @@ export async function incrementalSyncContact(
     return { synced: 0, total: 0, error: 'no_token' };
   }
 
-  const userRow = db.prepare('SELECT email FROM users WHERE id = ?').get(userId) as { email: string } | undefined;
+  const authDb = getAuthDatabase();
+  const userRow = authDb.prepare('SELECT email FROM users WHERE id = ?').get(userId) as { email: string } | undefined;
   if (!userRow) {
     return { synced: 0, total: 0, error: 'user_not_found' };
   }
@@ -358,7 +359,7 @@ export async function incrementalSyncContact(
     // History ID may be too old — Gmail returns 404. Fall back to full sync.
     const errMsg = error instanceof Error ? error.message : String(error);
     if (errMsg.includes('404')) {
-      return fullSyncContact(userId, contactId);
+      return fullSyncContact(db, userId, contactId);
     }
     throw error;
   }
@@ -423,11 +424,11 @@ export async function incrementalSyncContact(
  * Get email history for a contact with stats.
  */
 export function getContactEmailHistory(
+  db: DatabaseType,
   contactId: number,
   limit: number = 10,
   cursor?: string
 ): EmailHistoryResponse {
-  const db = getDatabase();
 
   // Get sync info
   const syncInfo = db.prepare(
@@ -525,8 +526,7 @@ export function getContactEmailHistory(
 /**
  * Get all contact IDs that have been synced (for incremental refresh on login).
  */
-export function getSyncedContactIds(): number[] {
-  const db = getDatabase();
+export function getSyncedContactIds(db: DatabaseType): number[] {
   const rows = db.prepare(
     'SELECT id FROM contacts WHERE gmail_last_sync_at IS NOT NULL'
   ).all() as Array<{ id: number }>;

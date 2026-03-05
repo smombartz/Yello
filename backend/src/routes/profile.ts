@@ -1,5 +1,8 @@
 import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
-import { getDatabase, rebuildContactSearch } from '../services/database.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
+import { getUserDatabase } from '../services/userDatabase.js';
+import { getAuthDatabase } from '../services/authDatabase.js';
+import { rebuildContactSearch } from '../services/database.js';
 import { getPhotoUrl } from '../services/photoProcessor.js';
 import {
   UserProfileSchema,
@@ -95,18 +98,35 @@ interface UrlRow {
   label: string | null;
 }
 
-// Get user from session helper
-function getUserIdFromSession(request: FastifyRequest): number | null {
-  const sessionId = request.cookies.session_id;
-  if (!sessionId) return null;
+// Ensure the auth DB has a profile_slugs mapping table for public profile lookups
+function ensureProfileSlugTable(): void {
+  const authDb = getAuthDatabase();
+  authDb.exec(`
+    CREATE TABLE IF NOT EXISTS profile_slugs (
+      slug TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+}
 
-  const db = getDatabase();
+// Sync a profile slug to the auth DB mapping table
+function syncProfileSlug(userId: number, slug: string | null): void {
+  const authDb = getAuthDatabase();
+  ensureProfileSlugTable();
+  // Remove any existing slug for this user
+  authDb.prepare('DELETE FROM profile_slugs WHERE user_id = ?').run(userId);
+  // Insert new slug if present
+  if (slug) {
+    authDb.prepare('INSERT OR REPLACE INTO profile_slugs (slug, user_id) VALUES (?, ?)').run(slug, userId);
+  }
+}
 
-  const session = db.prepare(`
-    SELECT user_id FROM sessions WHERE id = ? AND expires_at > datetime('now')
-  `).get(sessionId) as { user_id: number } | undefined;
-
-  return session?.user_id || null;
+// Lookup user_id by public slug from the auth DB
+function lookupUserIdBySlug(slug: string): number | null {
+  const authDb = getAuthDatabase();
+  ensureProfileSlugTable();
+  const row = authDb.prepare('SELECT user_id FROM profile_slugs WHERE slug = ?').get(slug) as { user_id: number } | undefined;
+  return row?.user_id ?? null;
 }
 
 // Generate a unique slug for public profile URL
@@ -141,7 +161,7 @@ function getDefaultVisibility(): ProfileVisibility {
 }
 
 // Initialize tables for user profile
-function ensureProfileTables(db: ReturnType<typeof getDatabase>): void {
+function ensureProfileTables(db: DatabaseType): void {
   // Check if table exists first
   const tableExists = db.prepare(`
     SELECT name FROM sqlite_master WHERE type='table' AND name='user_profiles'
@@ -152,7 +172,7 @@ function ensureProfileTables(db: ReturnType<typeof getDatabase>): void {
     db.exec(`
       CREATE TABLE user_profiles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL UNIQUE,
         linked_contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
         is_public INTEGER DEFAULT 0,
         public_slug TEXT UNIQUE,
@@ -201,7 +221,7 @@ function ensureProfileTables(db: ReturnType<typeof getDatabase>): void {
 }
 
 // Get or create user profile
-function getOrCreateProfile(db: ReturnType<typeof getDatabase>, userId: number): ProfileRow {
+function getOrCreateProfile(db: DatabaseType, userId: number): ProfileRow {
   let profile = db.prepare(`
     SELECT id, user_id, linked_contact_id, is_public, public_slug, tagline, notes, visibility_json, created_at, updated_at
     FROM user_profiles WHERE user_id = ?
@@ -223,6 +243,9 @@ function getOrCreateProfile(db: ReturnType<typeof getDatabase>, userId: number):
       VALUES (?, ?, ?)
     `).run(userId, slug, JSON.stringify(getDefaultVisibility()));
 
+    // Sync slug to auth DB for public lookup
+    syncProfileSlug(userId, slug);
+
     profile = db.prepare(`
       SELECT id, user_id, linked_contact_id, is_public, public_slug, tagline, notes, visibility_json, created_at, updated_at
       FROM user_profiles WHERE user_id = ?
@@ -233,7 +256,7 @@ function getOrCreateProfile(db: ReturnType<typeof getDatabase>, userId: number):
 }
 
 // Get linked contact info
-function getLinkedContactInfo(db: ReturnType<typeof getDatabase>, contactId: number): LinkedContact | null {
+function getLinkedContactInfo(db: DatabaseType, contactId: number): LinkedContact | null {
   const contact = db.prepare(`
     SELECT id, display_name, photo_hash FROM contacts WHERE id = ?
   `).get(contactId) as { id: number; display_name: string; photo_hash: string | null } | undefined;
@@ -248,7 +271,7 @@ function getLinkedContactInfo(db: ReturnType<typeof getDatabase>, contactId: num
 }
 
 // Get contact details for profile
-function getContactData(db: ReturnType<typeof getDatabase>, contactId: number) {
+function getContactData(db: DatabaseType, contactId: number) {
   const contact = db.prepare(`
     SELECT id, first_name, last_name, display_name, company, title, notes, birthday, photo_hash
     FROM contacts WHERE id = ?
@@ -352,7 +375,7 @@ function getContactData(db: ReturnType<typeof getDatabase>, contactId: number) {
 
 // Build full profile response
 function buildProfileResponse(
-  db: ReturnType<typeof getDatabase>,
+  db: DatabaseType,
   profile: ProfileRow,
   baseUrl: string
 ): UserProfile {
@@ -428,8 +451,12 @@ export default async function profileRoutes(
   fastify: FastifyInstance,
   _opts: FastifyPluginOptions
 ): Promise<void> {
-  const db = getDatabase();
-  ensureProfileTables(db);
+  // Helper to get user DB with profile tables ensured
+  function getProfileDb(userId: number): DatabaseType {
+    const db = getUserDatabase(userId);
+    ensureProfileTables(db);
+    return db;
+  }
 
   // GET /api/profile - Get current user's profile
   fastify.get('/', {
@@ -440,10 +467,8 @@ export default async function profileRoutes(
       }
     }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
+    const userId = request.user!.id;
+    const db = getProfileDb(userId);
 
     const profile = getOrCreateProfile(db, userId);
     const baseUrl = `${request.protocol}://${request.hostname}`;
@@ -469,10 +494,8 @@ export default async function profileRoutes(
       }
     }
   }, async (request: FastifyRequest<{ Querystring: { q: string } }>, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
+    const userId = request.user!.id;
+    const db = getProfileDb(userId);
 
     const { q } = request.query;
     const escapedSearch = q.replace(/"/g, '""');
@@ -512,10 +535,8 @@ export default async function profileRoutes(
       }
     }
   }, async (request: FastifyRequest<{ Body: LinkProfileToContact }>, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
+    const userId = request.user!.id;
+    const db = getProfileDb(userId);
 
     const { contactId } = request.body;
 
@@ -553,10 +574,8 @@ export default async function profileRoutes(
       }
     }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
+    const userId = request.user!.id;
+    const db = getProfileDb(userId);
 
     const profile = getOrCreateProfile(db, userId);
 
@@ -593,10 +612,8 @@ export default async function profileRoutes(
       }
     }
   }, async (request: FastifyRequest<{ Body: { displayName: string } }>, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
+    const userId = request.user!.id;
+    const db = getProfileDb(userId);
 
     const { displayName } = request.body;
 
@@ -645,10 +662,8 @@ export default async function profileRoutes(
       }
     }
   }, async (request: FastifyRequest<{ Body: UpdateUserProfile }>, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
+    const userId = request.user!.id;
+    const db = getProfileDb(userId);
 
     const updates = request.body;
     const profile = getOrCreateProfile(db, userId);
@@ -690,6 +705,11 @@ export default async function profileRoutes(
       profileValues.push(profile.id);
       const sql = `UPDATE user_profiles SET ${profileFields.join(', ')} WHERE id = ?`;
       db.prepare(sql).run(...profileValues);
+    }
+
+    // Sync slug to auth DB if it changed
+    if (updates.publicSlug !== undefined) {
+      syncProfileSlug(userId, updates.publicSlug);
     }
 
     // If linked to a contact, update the contact directly
@@ -863,6 +883,14 @@ export default async function profileRoutes(
     }
   }, async (request: FastifyRequest<{ Params: { slug: string } }>, reply: FastifyReply) => {
     const { slug } = request.params;
+
+    // Look up user ID from auth DB slug mapping
+    const userId = lookupUserIdBySlug(slug);
+    if (!userId) {
+      return reply.status(404).send({ error: 'Profile not found' });
+    }
+
+    const db = getProfileDb(userId);
 
     const profile = db.prepare(`
       SELECT id, user_id, linked_contact_id, is_public, public_slug, tagline, notes, visibility_json, created_at, updated_at

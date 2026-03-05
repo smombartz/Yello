@@ -3,7 +3,10 @@ import Fastify from 'fastify';
 import fastifyMultipart from '@fastify/multipart';
 import FormData from 'form-data';
 import importRoutes from '../import.js';
-import { closeDatabase } from '../../services/database.js';
+import { closeAllUserDatabases } from '../../services/userDatabase.js';
+import os from 'os';
+import fs from 'fs';
+import path from 'path';
 
 // Mock the photo processor to avoid file system operations during tests
 vi.mock('../../services/photoProcessor.js', () => ({
@@ -12,9 +15,25 @@ vi.mock('../../services/photoProcessor.js', () => ({
 
 describe('POST /import', () => {
   const app = Fastify();
+  let tmpDir: string;
 
   beforeAll(async () => {
-    process.env.DATABASE_PATH = ':memory:';
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'yello-import-test-'));
+    process.env.USER_DATA_PATH = tmpDir;
+
+    // Mock request.user so getUserDatabase(request.user!.id) works
+    app.addHook('onRequest', async (request) => {
+      request.user = {
+        id: 1,
+        googleId: 'test-google-id',
+        email: 'test@test.com',
+        name: 'Test User',
+        avatarUrl: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
     await app.register(fastifyMultipart, { limits: { fileSize: 100 * 1024 * 1024 } });
     await app.register(importRoutes);
     await app.ready();
@@ -22,7 +41,8 @@ describe('POST /import', () => {
 
   afterAll(async () => {
     await app.close();
-    closeDatabase();
+    closeAllUserDatabases();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
   beforeEach(() => {

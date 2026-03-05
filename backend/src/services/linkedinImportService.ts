@@ -1,4 +1,5 @@
-import { getDatabase, rebuildContactSearch } from './database.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
+import { rebuildContactSearch } from './database.js';
 
 export interface LinkedInContact {
   firstName: string;
@@ -34,10 +35,10 @@ const LINKEDIN_CATEGORY = 'LinkedIn Connection';
  * Only adds missing data to existing contacts.
  */
 export async function importLinkedInContacts(
+  db: DatabaseType,
   contacts: LinkedInContact[],
   onProgress?: (progress: LinkedInProgressUpdate) => void
 ): Promise<LinkedInImportResult> {
-  const db = getDatabase();
 
   const result: LinkedInImportResult = {
     created: 0,

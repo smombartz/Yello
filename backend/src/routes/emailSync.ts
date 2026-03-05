@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { requireAuth } from '../middleware/auth.js';
+import { getUserDatabase } from '../services/userDatabase.js';
+
 import {
   fullSyncContact,
   incrementalSyncContact,
@@ -8,9 +9,6 @@ import {
 } from '../services/emailSyncService.js';
 
 export default async function emailSyncRoutes(fastify: FastifyInstance) {
-  // All routes require authentication
-  fastify.addHook('preHandler', requireAuth);
-
   // Full sync for a contact
   fastify.post<{ Params: { id: string } }>(
     '/:id/email-sync',
@@ -23,7 +21,8 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
       }
 
       try {
-        const result = await fullSyncContact(userId, contactId);
+        const db = getUserDatabase(userId);
+        const result = await fullSyncContact(db, userId, contactId);
 
         if (result.error === 'gmail_scope_required') {
           return reply.status(403).send({ error: 'gmail_scope_required' });
@@ -42,7 +41,7 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
       } catch (error) {
         fastify.log.error(error, 'Email sync failed');
         return reply.status(500).send({
-          error: error instanceof Error ? error.message : 'Email sync failed',
+          error: 'Email sync failed. Please try again.',
         });
       }
     }
@@ -60,7 +59,8 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
       }
 
       try {
-        const result = await incrementalSyncContact(userId, contactId);
+        const db = getUserDatabase(userId);
+        const result = await incrementalSyncContact(db, userId, contactId);
 
         if (result.error === 'gmail_scope_required') {
           return reply.status(403).send({ error: 'gmail_scope_required' });
@@ -76,7 +76,7 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
       } catch (error) {
         fastify.log.error(error, 'Email refresh failed');
         return reply.status(500).send({
-          error: error instanceof Error ? error.message : 'Email refresh failed',
+          error: 'Email refresh failed. Please try again.',
         });
       }
     }
@@ -95,7 +95,8 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
       const limit = request.query.limit ? parseInt(request.query.limit, 10) : 10;
       const cursor = request.query.cursor || undefined;
 
-      return getContactEmailHistory(contactId, limit, cursor);
+      const db = getUserDatabase(request.user!.id);
+      return getContactEmailHistory(db, contactId, limit, cursor);
     }
   );
 
@@ -106,7 +107,8 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
       const userId = request.user!.id;
 
       try {
-        const syncedIds = getSyncedContactIds();
+        const db = getUserDatabase(userId);
+        const syncedIds = getSyncedContactIds(db);
 
         // Limit to 50 contacts per refresh
         const idsToSync = syncedIds.slice(0, 50);
@@ -115,7 +117,7 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
 
         for (const contactId of idsToSync) {
           try {
-            const result = await incrementalSyncContact(userId, contactId);
+            const result = await incrementalSyncContact(db, userId, contactId);
             if (result.error === 'gmail_scope_required') {
               return reply.status(403).send({ error: 'gmail_scope_required' });
             }
@@ -133,7 +135,7 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
       } catch (error) {
         fastify.log.error(error, 'Bulk email refresh failed');
         return reply.status(500).send({
-          error: error instanceof Error ? error.message : 'Bulk refresh failed',
+          error: 'Bulk refresh failed. Please try again.',
         });
       }
     }

@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
-import { requireAuth } from '../middleware/auth.js';
-import { getDatabase } from '../services/database.js';
+
+import { getUserDatabase } from '../services/userDatabase.js';
 import {
   getGmailSyncSummary,
   discoverContacts,
@@ -12,12 +12,10 @@ import {
 } from '../services/emailSyncService.js';
 
 export default async function gmailEnrichRoutes(fastify: FastifyInstance) {
-  // All routes require authentication
-  fastify.addHook('preHandler', requireAuth);
-
   // GET /summary - sync status overview
-  fastify.get('/summary', async () => {
-    return getGmailSyncSummary();
+  fastify.get('/summary', async (request) => {
+    const db = getUserDatabase(request.user!.id);
+    return getGmailSyncSummary(db);
   });
 
   // POST /discover - scan Gmail to find and rank contacts
@@ -30,12 +28,14 @@ export default async function gmailEnrichRoutes(fastify: FastifyInstance) {
         scanDepth: Type.Optional(Type.Number({ minimum: 50, maximum: 5000, default: 500 })),
       }),
     },
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
   }, async (request: FastifyRequest<{ Body: { strategy: 'recent' | 'frequent'; scanDepth?: number } }>, reply: FastifyReply) => {
     const userId = request.user!.id;
+    const db = getUserDatabase(userId);
     const { strategy, scanDepth } = request.body;
 
     try {
-      const result = await discoverContacts(userId, strategy, scanDepth ?? 500);
+      const result = await discoverContacts(db, userId, strategy, scanDepth ?? 500);
       return result;
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -46,7 +46,7 @@ export default async function gmailEnrichRoutes(fastify: FastifyInstance) {
         return reply.status(403).send({ error: 'gmail_scope_required' });
       }
       fastify.log.error(error, 'Gmail discover failed');
-      return reply.status(500).send({ error: msg });
+      return reply.status(500).send({ error: 'Gmail discovery failed. Please try again.' });
     }
   });
 
@@ -65,8 +65,10 @@ export default async function gmailEnrichRoutes(fastify: FastifyInstance) {
         limit: Type.Number({ minimum: 1, maximum: 5000 }),
       }),
     },
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
   }, async (request: FastifyRequest<{ Body: { contactIds?: number[]; strategy?: 'all' | 'unsynced'; limit: number } }>, reply: FastifyReply) => {
     const userId = request.user!.id;
+    const db = getUserDatabase(userId);
     const { contactIds, strategy, limit } = request.body;
 
     // Set SSE headers
@@ -74,7 +76,6 @@ export default async function gmailEnrichRoutes(fastify: FastifyInstance) {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
     });
 
     const sendEvent = (event: string, data: unknown) => {
@@ -83,7 +84,6 @@ export default async function gmailEnrichRoutes(fastify: FastifyInstance) {
     };
 
     try {
-      const db = getDatabase();
       let idsToSync: number[];
 
       if (contactIds && contactIds.length > 0) {
@@ -140,9 +140,9 @@ export default async function gmailEnrichRoutes(fastify: FastifyInstance) {
 
           let result;
           if (syncInfo?.gmail_last_sync_at) {
-            result = await incrementalSyncContact(userId, contactId);
+            result = await incrementalSyncContact(db, userId, contactId);
           } else {
-            result = await fullSyncContact(userId, contactId);
+            result = await fullSyncContact(db, userId, contactId);
           }
 
           if (result.error === 'gmail_scope_required') {
@@ -167,8 +167,8 @@ export default async function gmailEnrichRoutes(fastify: FastifyInstance) {
 
       sendEvent('complete', { succeeded, failed });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Bulk sync failed';
-      sendEvent('error', { error: message });
+      fastify.log.error(error, 'Gmail bulk sync failed');
+      sendEvent('error', { error: 'Bulk sync failed. Please try again.' });
     } finally {
       reply.raw.end();
     }

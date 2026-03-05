@@ -1,5 +1,6 @@
-import { getDatabase, rebuildContactSearch, deleteContactsFromSearch } from './database.js';
+import { rebuildContactSearch, deleteContactsFromSearch } from './database.js';
 import { getPhotoUrl } from './photoProcessor.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
 import type { ContactDetail, ContactSocialProfile } from '../types/index.js';
 
 interface MergeResult {
@@ -35,8 +36,8 @@ const FIELD_DB_MAP: Record<ScalarField, string> = {
   birthday: 'birthday',
 };
 
-export function detectMergeConflicts(contactIds: number[]): MergePreviewResult {
-  const db = getDatabase();
+export function detectMergeConflicts(database: DatabaseType, contactIds: number[]): MergePreviewResult {
+  const db = database;
 
   if (contactIds.length < 2) {
     throw new Error('At least 2 contacts are required to merge');
@@ -106,7 +107,7 @@ export function detectMergeConflicts(contactIds: number[]): MergePreviewResult {
   }
 
   // Fetch full contact details for UI display
-  const contactDetails = contactIds.map(id => getContactDetail(id));
+  const contactDetails = contactIds.map(id => getContactDetail(db, id));
 
   return {
     conflicts,
@@ -115,11 +116,12 @@ export function detectMergeConflicts(contactIds: number[]): MergePreviewResult {
 }
 
 export function mergeContactsWithResolutions(
+  database: DatabaseType,
   contactIds: number[],
   primaryContactId: number,
   resolutions?: Record<string, string | null>
 ): MergeResult {
-  const db = getDatabase();
+  const db = database;
 
   // Validate inputs
   if (!contactIds.includes(primaryContactId)) {
@@ -153,11 +155,11 @@ export function mergeContactsWithResolutions(
   }
 
   // Now proceed with the regular merge
-  return mergeContacts(contactIds, primaryContactId);
+  return mergeContacts(db, contactIds, primaryContactId);
 }
 
-export function mergeContacts(contactIds: number[], primaryContactId: number): MergeResult {
-  const db = getDatabase();
+export function mergeContacts(database: DatabaseType, contactIds: number[], primaryContactId: number): MergeResult {
+  const db = database;
 
   // Validate inputs
   if (!contactIds.includes(primaryContactId)) {
@@ -440,7 +442,7 @@ export function mergeContacts(contactIds: number[], primaryContactId: number): M
   rebuildContactSearch(db, primaryContactId);
 
   // Fetch the merged contact to return
-  const mergedContact = getContactDetail(primaryContactId);
+  const mergedContact = getContactDetail(db, primaryContactId);
 
   return {
     mergedContact,
@@ -448,8 +450,8 @@ export function mergeContacts(contactIds: number[], primaryContactId: number): M
   };
 }
 
-function getContactDetail(contactId: number): ContactDetail {
-  const db = getDatabase();
+function getContactDetail(database: DatabaseType, contactId: number): ContactDetail {
+  const db = database;
 
   const contact = db.prepare(`
     SELECT

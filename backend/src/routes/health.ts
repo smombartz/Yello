@@ -1,11 +1,11 @@
 import { FastifyPluginAsync } from 'fastify';
-import { getDatabase } from '../services/database.js';
+import { getAuthDatabase } from '../services/authDatabase.js';
 
 const healthRoutes: FastifyPluginAsync = async (app) => {
   app.get('/health', async () => {
-    const db = getDatabase();
-    const result = db.prepare('SELECT COUNT(*) as total FROM contacts').get() as { total: number };
-    return { status: 'ok', contacts: result.total };
+    // Verify auth DB is accessible without leaking data
+    getAuthDatabase().prepare('SELECT 1').get();
+    return { status: 'ok' };
   });
 };
 

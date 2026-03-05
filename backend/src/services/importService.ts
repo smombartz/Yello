@@ -1,4 +1,5 @@
-import { getDatabase, rebuildContactSearch } from './database.js';
+import { rebuildContactSearch } from './database.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
 import { parseVcf, type ParsedContact } from './vcardParser.js';
 import { processPhoto } from './photoProcessor.js';
 
@@ -9,9 +10,9 @@ export interface ImportResult {
   errors: Array<{ line: number; reason: string }>;
 }
 
-export async function importVcf(vcfContent: string): Promise<ImportResult> {
+export async function importVcf(database: DatabaseType, vcfContent: string): Promise<ImportResult> {
   const { contacts, errors } = parseVcf(vcfContent);
-  const db = getDatabase();
+  const db = database;
 
   let imported = 0;
   let photosProcessed = 0;

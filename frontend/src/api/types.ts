@@ -856,3 +856,22 @@ export interface GmailBulkSyncResult {
   succeeded: number;
   failed: number;
 }
+
+// Admin types
+export interface AdminUserInfo {
+  id: number;
+  email: string;
+  name: string | null;
+  avatarUrl: string | null;
+  createdAt: string;
+  lastLogin: string | null;
+  contactCount: number;
+  dbSizeBytes: number;
+  photoCount: number;
+  photoSizeBytes: number;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUserInfo[];
+  totalUsers: number;
+}

@@ -1,26 +1,47 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
-import { getDatabase, closeDatabase, rebuildContactSearch } from '../../services/database.js';
+import { rebuildContactSearch } from '../../services/database.js';
+import { getUserDatabase, closeAllUserDatabases } from '../../services/userDatabase.js';
 import contactsRoutes from '../contacts.js';
+import os from 'os';
+import fs from 'fs';
+import path from 'path';
 
 describe('contacts routes', () => {
   let app: FastifyInstance;
+  let tmpDir: string;
 
   beforeAll(async () => {
-    process.env.DATABASE_PATH = ':memory:';
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'yello-contacts-test-'));
+    process.env.USER_DATA_PATH = tmpDir;
 
     app = Fastify();
+
+    // Mock request.user so getUserDatabase(request.user!.id) works
+    app.addHook('onRequest', async (request) => {
+      request.user = {
+        id: 1,
+        googleId: 'test-google-id',
+        email: 'test@test.com',
+        name: 'Test User',
+        avatarUrl: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
     await app.register(contactsRoutes, { prefix: '/api/contacts' });
     await app.ready();
   });
 
   afterAll(async () => {
     await app.close();
-    closeDatabase();
+    closeAllUserDatabases();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
   beforeEach(() => {
-    const db = getDatabase();
+    const db = getUserDatabase(1);
     // Clear tables before each test
     db.exec('DELETE FROM contact_addresses');
     db.exec('DELETE FROM contact_phones');
@@ -41,7 +62,7 @@ describe('contacts routes', () => {
     });
 
     it('should return correct count when contacts exist', async () => {
-      const db = getDatabase();
+      const db = getUserDatabase(1);
       db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('John Doe');
       db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Jane Smith');
 
@@ -71,7 +92,7 @@ describe('contacts routes', () => {
     });
 
     it('should return contacts with default pagination', async () => {
-      const db = getDatabase();
+      const db = getUserDatabase(1);
       db.prepare('INSERT INTO contacts (display_name, first_name, last_name) VALUES (?, ?, ?)').run('John Doe', 'John', 'Doe');
       db.prepare('INSERT INTO contacts (display_name, first_name, last_name, company) VALUES (?, ?, ?, ?)').run('Jane Smith', 'Jane', 'Smith', 'Acme Inc');
 
@@ -89,7 +110,7 @@ describe('contacts routes', () => {
     });
 
     it('should return contacts sorted by last_name, first_name, display_name', async () => {
-      const db = getDatabase();
+      const db = getUserDatabase(1);
       db.prepare('INSERT INTO contacts (display_name, first_name, last_name) VALUES (?, ?, ?)').run('John Doe', 'John', 'Doe');
       db.prepare('INSERT INTO contacts (display_name, first_name, last_name) VALUES (?, ?, ?)').run('Alice Smith', 'Alice', 'Smith');
       db.prepare('INSERT INTO contacts (display_name, first_name, last_name) VALUES (?, ?, ?)').run('Bob Smith', 'Bob', 'Smith');
@@ -106,7 +127,7 @@ describe('contacts routes', () => {
     });
 
     it('should paginate results', async () => {
-      const db = getDatabase();
+      const db = getUserDatabase(1);
       for (let i = 0; i < 5; i++) {
         db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run(`Contact ${i}`);
       }
@@ -125,7 +146,7 @@ describe('contacts routes', () => {
     });
 
     it('should include primary email and phone', async () => {
-      const db = getDatabase();
+      const db = getUserDatabase(1);
       const result = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('John Doe');
       const contactId = result.lastInsertRowid;
 
@@ -143,7 +164,7 @@ describe('contacts routes', () => {
     });
 
     it('should include photo URL when photo_hash exists', async () => {
-      const db = getDatabase();
+      const db = getUserDatabase(1);
       db.prepare('INSERT INTO contacts (display_name, photo_hash) VALUES (?, ?)').run('John Doe', 'abc123def456');
 
       const response = await app.inject({
@@ -156,7 +177,7 @@ describe('contacts routes', () => {
     });
 
     it('should search contacts using FTS', async () => {
-      const db = getDatabase();
+      const db = getUserDatabase(1);
       const result1 = db.prepare('INSERT INTO contacts (display_name, company) VALUES (?, ?)').run('John Doe', 'Apple Inc');
       rebuildContactSearch(db, result1.lastInsertRowid as number);
       const result2 = db.prepare('INSERT INTO contacts (display_name, company) VALUES (?, ?)').run('Jane Smith', 'Microsoft');
@@ -174,7 +195,7 @@ describe('contacts routes', () => {
     });
 
     it('should search with prefix matching', async () => {
-      const db = getDatabase();
+      const db = getUserDatabase(1);
       const result1 = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Smith Anderson');
       rebuildContactSearch(db, result1.lastInsertRowid as number);
       const result2 = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Smithson Jones');
@@ -205,7 +226,7 @@ describe('contacts routes', () => {
     });
 
     it('should return full contact detail', async () => {
-      const db = getDatabase();
+      const db = getUserDatabase(1);
       const result = db.prepare(`
         INSERT INTO contacts (display_name, first_name, last_name, company, title, notes, photo_hash)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -230,7 +251,7 @@ describe('contacts routes', () => {
     });
 
     it('should include emails in detail', async () => {
-      const db = getDatabase();
+      const db = getUserDatabase(1);
       const result = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('John Doe');
       const contactId = result.lastInsertRowid;
 
@@ -250,7 +271,7 @@ describe('contacts routes', () => {
     });
 
     it('should include phones in detail', async () => {
-      const db = getDatabase();
+      const db = getUserDatabase(1);
       const result = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('John Doe');
       const contactId = result.lastInsertRowid;
 
@@ -270,7 +291,7 @@ describe('contacts routes', () => {
     });
 
     it('should include addresses in detail', async () => {
-      const db = getDatabase();
+      const db = getUserDatabase(1);
       const result = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('John Doe');
       const contactId = result.lastInsertRowid;
 

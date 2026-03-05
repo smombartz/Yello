@@ -6,7 +6,7 @@
  * Batch processing: submits up to 1500 URLs per run, polls for completion
  */
 
-import { getDatabase } from './database.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
 import { downloadAndProcessImage } from './profileImageService.js';
 
 // ============================================================
@@ -241,8 +241,7 @@ export function isLinkedInEnrichmentConfigured(): boolean {
 /**
  * Get summary of contacts available for enrichment
  */
-export function getEnrichmentSummary(includeAlreadyEnriched: boolean): LinkedInEnrichmentSummary {
-  const db = getDatabase();
+export function getEnrichmentSummary(db: DatabaseType, includeAlreadyEnriched: boolean): LinkedInEnrichmentSummary {
 
   // Total non-archived contacts
   const totalContacts = (db.prepare(
@@ -299,8 +298,7 @@ export function getEnrichmentSummary(includeAlreadyEnriched: boolean): LinkedInE
 /**
  * Get contacts that need enrichment
  */
-export function getContactsForEnrichment(includeAlreadyEnriched: boolean): ContactForEnrichment[] {
-  const db = getDatabase();
+export function getContactsForEnrichment(db: DatabaseType, includeAlreadyEnriched: boolean): ContactForEnrichment[] {
 
   // Get LinkedIn URLs from social_profiles first, then from urls
   const contacts = db.prepare(`
@@ -346,16 +344,14 @@ function normalizeLinkedInUrl(url: string): string {
   }
 }
 
-function storeEnrichmentFailure(contactId: number, reason: string): void {
-  const db = getDatabase();
+function storeEnrichmentFailure(db: DatabaseType, contactId: number, reason: string): void {
   db.prepare(`
     INSERT OR REPLACE INTO linkedin_enrichment_failures (contact_id, error_reason, attempted_at)
     VALUES (?, ?, datetime('now'))
   `).run(contactId, reason);
 }
 
-function clearEnrichmentFailure(contactId: number): void {
-  const db = getDatabase();
+function clearEnrichmentFailure(db: DatabaseType, contactId: number): void {
   db.prepare('DELETE FROM linkedin_enrichment_failures WHERE contact_id = ?').run(contactId);
 }
 
@@ -363,12 +359,11 @@ function clearEnrichmentFailure(contactId: number): void {
  * Store enrichment data in database
  */
 function storeEnrichmentData(
+  db: DatabaseType,
   contactId: number,
   data: LinkedInEnrichmentData,
   rawResponse: string
 ): void {
-  const db = getDatabase();
-
   // Use INSERT OR REPLACE to handle re-enrichment
   db.prepare(`
     INSERT OR REPLACE INTO linkedin_enrichment (
@@ -421,8 +416,7 @@ function storeEnrichmentData(
 /**
  * Get enrichment data for a specific contact
  */
-function getEnrichmentDataForContact(contactId: number): LinkedInEnrichmentData | null {
-  const db = getDatabase();
+function getEnrichmentDataForContact(db: DatabaseType, contactId: number): LinkedInEnrichmentData | null {
 
   const row = db.prepare(`
     SELECT
@@ -806,6 +800,7 @@ function mapApifyToEnrichmentData(profile: ApifyProfileResult): LinkedInEnrichme
  *   Phase 3: Retrieve results, match by publicIdentifier, store enrichment data
  */
 export async function enrichContacts(
+  db: DatabaseType,
   includeAlreadyEnriched: boolean,
   onProgress?: (progress: EnrichmentProgress) => void,
   limit?: number
@@ -814,7 +809,7 @@ export async function enrichContacts(
     throw new Error('APIFY_API_TOKEN not configured');
   }
 
-  let contacts = getContactsForEnrichment(includeAlreadyEnriched);
+  let contacts = getContactsForEnrichment(db, includeAlreadyEnriched);
 
   // Apply limit if specified
   if (limit && limit > 0) {
@@ -864,7 +859,7 @@ export async function enrichContacts(
       contactName: contact.displayName,
       reason,
     });
-    storeEnrichmentFailure(contact.contactId, reason);
+    storeEnrichmentFailure(db, contact.contactId, reason);
     console.log(`[Enrich] FAILED ${contact.displayName}: invalid LinkedIn URL "${contact.linkedinUrl}"`);
   }
 
@@ -939,7 +934,7 @@ export async function enrichContacts(
       const results = await getApifyResults(datasetId);
       const batchState: ProcessResultsState = { succeeded, failed, errors, enrichedContacts };
       const matchedIdentifiers = await processApifyResults(
-        results, identifierToContacts, batchState, total, onProgress
+        db, results, identifierToContacts, batchState, total, onProgress
       );
       // Sync counters back from shared state
       succeeded = batchState.succeeded;
@@ -965,7 +960,7 @@ export async function enrichContacts(
               contactName: contact.displayName,
               reason: 'Profile not found in Apify results',
             });
-            storeEnrichmentFailure(contact.contactId, 'Profile not found in Apify results');
+            storeEnrichmentFailure(db, contact.contactId, 'Profile not found in Apify results');
             console.log(`[Enrich] FAILED ${contact.displayName}: not found in results (identifier: ${identifier})`);
           }
         }
@@ -988,7 +983,7 @@ export async function enrichContacts(
                 contactName: contact.displayName,
                 reason,
               });
-              storeEnrichmentFailure(contact.contactId, reason);
+              storeEnrichmentFailure(db, contact.contactId, reason);
             }
           }
         }
@@ -1032,6 +1027,7 @@ interface ProcessResultsState {
  * Shared by enrichContacts() batch processing and recoverFromDataset().
  */
 async function processApifyResults(
+  db: DatabaseType,
   results: ApifyProfileResult[],
   identifierToContacts: Map<string, ContactForEnrichment[]>,
   state: ProcessResultsState,
@@ -1081,19 +1077,18 @@ async function processApifyResults(
           contactName: contact.displayName,
           reason: 'No useful profile data returned',
         });
-        storeEnrichmentFailure(contact.contactId, 'No useful profile data returned');
+        storeEnrichmentFailure(db, contact.contactId, 'No useful profile data returned');
         console.log(`[Enrich] FAILED ${contact.displayName}: no useful data`);
         continue;
       }
 
-      storeEnrichmentData(contact.contactId, enrichmentData, JSON.stringify(profile));
-      clearEnrichmentFailure(contact.contactId);
+      storeEnrichmentData(db, contact.contactId, enrichmentData, JSON.stringify(profile));
+      clearEnrichmentFailure(db, contact.contactId);
       state.succeeded++;
 
       // Download LinkedIn photo if available (always download to collect all sources)
       if (profile.pictureUrl) {
         try {
-          const db = getDatabase();
           const hash = await downloadAndProcessImage(profile.pictureUrl, `linkedin-contact-${contact.contactId}`);
           if (hash) {
             // Only set contacts.photo_hash if it's currently NULL
@@ -1114,7 +1109,7 @@ async function processApifyResults(
         }
       }
 
-      const storedData = getEnrichmentDataForContact(contact.contactId);
+      const storedData = getEnrichmentDataForContact(db, contact.contactId);
       state.enrichedContacts.push({
         contactId: contact.contactId,
         contactName: contact.displayName,
@@ -1149,6 +1144,7 @@ async function processApifyResults(
  * Skips submit+poll phases — goes straight to fetching and processing results.
  */
 export async function recoverFromDataset(
+  db: DatabaseType,
   datasetId: string,
   onProgress?: (progress: EnrichmentProgress) => void
 ): Promise<EnrichmentComplete> {
@@ -1159,7 +1155,7 @@ export async function recoverFromDataset(
   console.log(`[Enrich] Recovering from dataset ${datasetId}`);
 
   // Build identifier->contact map from ALL contacts with LinkedIn URLs
-  const contacts = getContactsForEnrichment(true);
+  const contacts = getContactsForEnrichment(db, true);
   const identifierToContacts = new Map<string, ContactForEnrichment[]>();
 
   for (const contact of contacts) {
@@ -1186,7 +1182,7 @@ export async function recoverFromDataset(
   }
 
   const state: ProcessResultsState = { succeeded: 0, failed: 0, errors: [], enrichedContacts: [] };
-  await processApifyResults(results, identifierToContacts, state, total, onProgress);
+  await processApifyResults(db, results, identifierToContacts, state, total, onProgress);
 
   console.log(`[Enrich] Recovery complete: ${state.succeeded} succeeded, ${state.failed} failed`);
 

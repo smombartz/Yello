@@ -13,6 +13,7 @@ import { EnrichView } from './components/EnrichView';
 import { ImportView } from './components/ImportView';
 import { UserProfilePage } from './components/UserProfilePage';
 import { DashboardView } from './components/DashboardView';
+import { AdminView } from './components/AdminView';
 import { LoginPage } from './components/LoginPage';
 import { PublicContactCard } from './components/PublicContactCard';
 import { AuthProvider } from './contexts/AuthContext';
@@ -147,6 +148,7 @@ function AppRoutes() {
         <Route path="tools" element={<SettingsView />} />
         <Route path="enrich" element={<EnrichView />} />
         <Route path="profile" element={<UserProfilePage />} />
+        <Route path="admin" element={<AdminView />} />
       </Route>
 
       {/* Catch-all redirect to dashboard */}

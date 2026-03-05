@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { getUserDatabase } from '../services/userDatabase.js';
 import { findDuplicates, getDuplicateSummary, getAllDuplicateGroupIds } from '../services/deduplicationService.js';
 import { mergeContacts } from '../services/mergeService.js';
 import {
@@ -25,8 +26,9 @@ export default async function duplicatesRoutes(
         200: DuplicateSummarySchema
       }
     }
-  }, async (_request, _reply) => {
-    return getDuplicateSummary();
+  }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
+    return getDuplicateSummary(db);
   });
 
   // GET /api/duplicates/all-groups - lightweight endpoint for bulk operations
@@ -39,10 +41,11 @@ export default async function duplicatesRoutes(
     }
   }, async (request, _reply) => {
     const { mode, confidence } = request.query;
+    const db = getUserDatabase(request.user!.id);
     const confidenceLevels = confidence?.split(',').filter(c =>
       ['very_high', 'high', 'medium'].includes(c)
     );
-    return getAllDuplicateGroupIds(mode, confidenceLevels);
+    return getAllDuplicateGroupIds(db, mode, confidenceLevels);
   });
 
   // GET /api/duplicates
@@ -55,6 +58,7 @@ export default async function duplicatesRoutes(
     }
   }, async (request, _reply) => {
     const { mode, limit = 50, offset = 0, confidence } = request.query;
+    const db = getUserDatabase(request.user!.id);
 
     // Parse and validate confidence levels from comma-separated string if provided
     const validConfidenceLevels = ['very_high', 'high', 'medium'];
@@ -62,7 +66,7 @@ export default async function duplicatesRoutes(
       ? confidence.split(',').map(c => c.trim()).filter(c => validConfidenceLevels.includes(c))
       : undefined;
 
-    const { groups, totalGroups } = findDuplicates(mode, limit, offset, confidenceLevels);
+    const { groups, totalGroups } = findDuplicates(db, mode, limit, offset, confidenceLevels);
 
     return {
       groups,
@@ -82,13 +86,14 @@ export default async function duplicatesRoutes(
     }
   }, async (request, reply) => {
     const { contactIds, primaryContactId } = request.body;
+    const db = getUserDatabase(request.user!.id);
 
     try {
-      const result = mergeContacts(contactIds, primaryContactId);
+      const result = mergeContacts(db, contactIds, primaryContactId);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(400).send({ error: message });
+      fastify.log.error(error, 'Duplicate merge failed');
+      return reply.status(500).send({ error: 'Duplicate detection failed. Please try again.' });
     }
   });
 }

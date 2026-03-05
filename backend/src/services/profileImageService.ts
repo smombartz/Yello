@@ -1,4 +1,4 @@
-import { getDatabase } from './database.js';
+import { getAuthDatabase } from './authDatabase.js';
 import crypto from 'crypto';
 import sharp from 'sharp';
 import fs from 'fs/promises';
@@ -44,7 +44,7 @@ function rowToProfileImage(row: ProfileImageRow): ProfileImage {
 }
 
 export function getProfileImages(userId: number): ProfileImage[] {
-  const db = getDatabase();
+  const db = getAuthDatabase();
   const rows = db.prepare(`
     SELECT * FROM profile_images
     WHERE user_id = ?
@@ -55,7 +55,7 @@ export function getProfileImages(userId: number): ProfileImage[] {
 }
 
 export function getPrimaryProfileImage(userId: number): ProfileImage | null {
-  const db = getDatabase();
+  const db = getAuthDatabase();
   const row = db.prepare(`
     SELECT * FROM profile_images
     WHERE user_id = ? AND is_primary = 1
@@ -70,7 +70,7 @@ export function upsertProfileImage(
   originalUrl: string | null,
   localHash: string | null
 ): ProfileImage {
-  const db = getDatabase();
+  const db = getAuthDatabase();
 
   // Check if this is the first image for the user
   const existingCount = db.prepare(
@@ -99,7 +99,7 @@ export function upsertProfileImage(
 }
 
 export function setPrimaryImage(userId: number, imageId: number): void {
-  const db = getDatabase();
+  const db = getAuthDatabase();
 
   db.transaction(() => {
     // Remove primary from all user's images
@@ -230,7 +230,7 @@ export async function fetchAndStoreGravatar(
 }
 
 export async function enrichUsersFromGoogleContacts(accessToken: string): Promise<number> {
-  const db = getDatabase();
+  const db = getAuthDatabase();
   let enrichedCount = 0;
 
   try {

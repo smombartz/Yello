@@ -23,6 +23,6 @@ describe('GET /health', () => {
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.body);
     expect(body.status).toBe('ok');
-    expect(typeof body.contacts).toBe('number');
+    expect(body.contacts).toBeUndefined();
   });
 });

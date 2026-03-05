@@ -1,4 +1,4 @@
-import { getDatabase } from './database.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
 import type { ContactDetail, ContactSocialProfile, DuplicateGroup } from '../types/index.js';
 import { getPhotoUrl } from './photoProcessor.js';
 
@@ -104,8 +104,7 @@ interface SocialUrlEntry {
 /**
  * Get all social URLs from both tables
  */
-function getAllSocialUrls(): SocialUrlEntry[] {
-  const db = getDatabase();
+function getAllSocialUrls(db: DatabaseType): SocialUrlEntry[] {
   const entries: SocialUrlEntry[] = [];
 
   // Get from contact_social_profiles
@@ -177,8 +176,8 @@ function getAllSocialUrls(): SocialUrlEntry[] {
 /**
  * Count cross-contact duplicate groups
  */
-export function countCrossContactDuplicates(): number {
-  const entries = getAllSocialUrls();
+export function countCrossContactDuplicates(database: DatabaseType): number {
+  const entries = getAllSocialUrls(database);
 
   // Group by platform + username (normalized)
   const groups = new Map<string, Set<number>>();
@@ -206,11 +205,12 @@ export function countCrossContactDuplicates(): number {
  * Find cross-contact duplicates with pagination
  */
 export function findCrossContactDuplicates(
+  database: DatabaseType,
   limit: number,
   offset: number,
   platform?: string
 ): { groups: DuplicateGroup[]; totalGroups: number } {
-  const entries = getAllSocialUrls();
+  const entries = getAllSocialUrls(database);
 
   // Group by platform + username (normalized)
   const groupMap = new Map<string, {
@@ -255,7 +255,7 @@ export function findCrossContactDuplicates(
   // Convert to DuplicateGroup format with full contact details
   const groups: DuplicateGroup[] = paginatedGroups.map((group, index) => {
     const contactIds = Array.from(group.contactIds);
-    const contactDetails = getContactDetails(contactIds);
+    const contactDetails = getContactDetails(database, contactIds);
 
     return {
       id: `social-${offset + index}-${group.platform}-${group.username}`,
@@ -287,8 +287,8 @@ export interface WithinContactIssue {
 /**
  * Count contacts with social URLs in contact_urls
  */
-export function countWithinContactIssues(): number {
-  const db = getDatabase();
+export function countWithinContactIssues(database: DatabaseType): number {
+  const db = database;
 
   // Build pattern for all social platforms
   const patterns = Object.values(SOCIAL_PLATFORMS).map(p => p.source);
@@ -328,10 +328,11 @@ export function countWithinContactIssues(): number {
  * Find contacts with social URLs in contact_urls (for display)
  */
 export function findWithinContactIssues(
+  database: DatabaseType,
   limit: number,
   offset: number
 ): { contacts: WithinContactIssue[]; total: number } {
-  const db = getDatabase();
+  const db = database;
 
   const likePatterns = [
     '%linkedin.com/in/%',
@@ -409,8 +410,8 @@ export function findWithinContactIssues(
 /**
  * Fix all within-contact issues: migrate social URLs from contact_urls to contact_social_profiles
  */
-export function fixAllWithinContactIssues(): { migrated: number; deleted: number } {
-  const db = getDatabase();
+export function fixAllWithinContactIssues(database: DatabaseType): { migrated: number; deleted: number } {
+  const db = database;
 
   const likePatterns = [
     '%linkedin.com/in/%',
@@ -499,10 +500,10 @@ export interface SocialLinksSummary {
   withinContact: number;
 }
 
-export function getSocialLinksSummary(): SocialLinksSummary {
+export function getSocialLinksSummary(database: DatabaseType): SocialLinksSummary {
   return {
-    crossContact: countCrossContactDuplicates(),
-    withinContact: countWithinContactIssues(),
+    crossContact: countCrossContactDuplicates(database),
+    withinContact: countWithinContactIssues(database),
   };
 }
 
@@ -520,9 +521,10 @@ export interface SocialLinksCrossContactGroupLight {
  * Get all cross-contact duplicate groups in lightweight format for bulk operations
  */
 export function findAllCrossContactGroups(
+  database: DatabaseType,
   platform?: string
 ): { groups: SocialLinksCrossContactGroupLight[]; totalGroups: number } {
-  const entries = getAllSocialUrls();
+  const entries = getAllSocialUrls(database);
 
   // Group by platform + username (normalized)
   const groupMap = new Map<string, {
@@ -574,10 +576,9 @@ export function findAllCrossContactGroups(
 // Helper: Get Contact Details
 // ============================================================
 
-function getContactDetails(contactIds: number[]): ContactDetail[] {
+function getContactDetails(db: DatabaseType, contactIds: number[]): ContactDetail[] {
   if (contactIds.length === 0) return [];
 
-  const db = getDatabase();
   const placeholders = contactIds.map(() => '?').join(',');
 
   const contacts = db.prepare(`

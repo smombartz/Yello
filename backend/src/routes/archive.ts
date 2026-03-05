@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { getUserDatabase } from '../services/userDatabase.js';
 import {
   archiveContacts,
   unarchiveContacts,
@@ -38,14 +39,15 @@ export default async function archiveRoutes(
       }
     }
   }, async (request, reply) => {
+    const db = getUserDatabase(request.user!.id);
     const { contactIds } = request.body;
 
     try {
-      const result = archiveContacts(contactIds);
+      const result = archiveContacts(db, contactIds);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(400).send({ error: message });
+      fastify.log.error(error, 'Archive operation failed');
+      return reply.status(500).send({ error: 'Archive operation failed. Please try again.' });
     }
   });
 
@@ -58,8 +60,9 @@ export default async function archiveRoutes(
       }
     }
   }, async (request) => {
+    const db = getUserDatabase(request.user!.id);
     const { limit = 50, offset = 0 } = request.query;
-    const { contacts, total } = getArchivedContacts(limit, offset);
+    const { contacts, total } = getArchivedContacts(db, limit, offset);
 
     return {
       contacts,
@@ -76,8 +79,9 @@ export default async function archiveRoutes(
         200: ArchivedCountResponseSchema
       }
     }
-  }, async () => {
-    const count = getArchivedCount();
+  }, async (request) => {
+    const db = getUserDatabase(request.user!.id);
+    const count = getArchivedCount(db);
     return { count };
   });
 
@@ -91,14 +95,15 @@ export default async function archiveRoutes(
       }
     }
   }, async (request, reply) => {
+    const db = getUserDatabase(request.user!.id);
     const { contactIds } = request.body;
 
     try {
-      const result = unarchiveContacts(contactIds);
+      const result = unarchiveContacts(db, contactIds);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(400).send({ error: message });
+      fastify.log.error(error, 'Unarchive operation failed');
+      return reply.status(500).send({ error: 'Archive operation failed. Please try again.' });
     }
   });
 
@@ -112,20 +117,22 @@ export default async function archiveRoutes(
       }
     }
   }, async (request, reply) => {
+    const db = getUserDatabase(request.user!.id);
     const { contactIds } = request.body;
 
     try {
-      const result = deleteArchivedContacts(contactIds);
+      const result = deleteArchivedContacts(db, contactIds);
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return reply.status(400).send({ error: message });
+      fastify.log.error(error, 'Delete archived contacts failed');
+      return reply.status(500).send({ error: 'Archive operation failed. Please try again.' });
     }
   });
 
   // GET /api/archive/export - Export archived contacts as VCF
-  fastify.get('/export', async (_request, reply) => {
-    const vcfContent = exportArchivedContactsVcf();
+  fastify.get('/export', async (request, reply) => {
+    const db = getUserDatabase(request.user!.id);
+    const vcfContent = exportArchivedContactsVcf(db);
 
     return reply
       .header('Content-Type', 'text/vcard; charset=utf-8')

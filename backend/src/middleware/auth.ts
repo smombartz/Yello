@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { getDatabase } from '../services/database.js';
+import { getAuthDatabase } from '../services/authDatabase.js';
 
 // Database row types
 interface SessionRow {
@@ -44,7 +44,7 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply):
     return reply.status(401).send({ error: 'Unauthorized - no session' });
   }
 
-  const db = getDatabase();
+  const db = getAuthDatabase();
 
   // Get session and check if it's valid
   const session = db.prepare(`
@@ -87,7 +87,7 @@ export async function optionalAuth(request: FastifyRequest, _reply: FastifyReply
     return;
   }
 
-  const db = getDatabase();
+  const db = getAuthDatabase();
 
   // Get session and check if it's valid
   const session = db.prepare(`

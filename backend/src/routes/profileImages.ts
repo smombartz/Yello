@@ -5,22 +5,6 @@ import {
   setPrimaryImage,
   getProfileImageUrl,
 } from '../services/profileImageService.js';
-import { getDatabase } from '../services/database.js';
-
-// Get user from session helper
-function getUserIdFromSession(request: FastifyRequest): number | null {
-  const sessionId = request.cookies.session_id;
-  if (!sessionId) return null;
-
-  const db = getDatabase();
-
-  const session = db.prepare(`
-    SELECT user_id FROM sessions WHERE id = ? AND expires_at > datetime('now')
-  `).get(sessionId) as { user_id: number } | undefined;
-
-  return session?.user_id || null;
-}
-
 export default async function profileImagesRoutes(fastify: FastifyInstance) {
   // Get all profile images for current user
   fastify.get('/', {
@@ -36,10 +20,7 @@ export default async function profileImagesRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
+    const userId = request.user!.id;
 
     const images = getProfileImages(userId);
     return images.map(img => ({
@@ -63,10 +44,7 @@ export default async function profileImagesRoutes(fastify: FastifyInstance) {
       },
     },
   }, async (request: FastifyRequest<{ Params: { imageId: string } }>, reply: FastifyReply) => {
-    const userId = getUserIdFromSession(request);
-    if (!userId) {
-      return reply.status(401).send({ error: 'Not authenticated' });
-    }
+    const userId = request.user!.id;
 
     const imageId = parseInt(request.params.imageId, 10);
     if (isNaN(imageId)) {
