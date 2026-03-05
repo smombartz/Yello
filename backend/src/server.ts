@@ -30,6 +30,7 @@ import statsRoutes from './routes/stats.js';
 import enrichRoutes from './routes/enrich.js';
 import emailSyncRoutes from './routes/emailSync.js';
 import gmailEnrichRoutes from './routes/gmailEnrich.js';
+import adminRoutes from './routes/admin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -180,6 +181,7 @@ await app.register(statsRoutes, { prefix: '/api/stats' });
 await app.register(enrichRoutes, { prefix: '/api/enrich' });
 await app.register(emailSyncRoutes, { prefix: '/api/contacts' });
 await app.register(gmailEnrichRoutes, { prefix: '/api/enrich/gmail' });
+await app.register(adminRoutes, { prefix: '/api/admin' });
 
 const port = parseInt(process.env.PORT || '3456');
 app.listen({ port, host: '0.0.0.0' }).then(() => {

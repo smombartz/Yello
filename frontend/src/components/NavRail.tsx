@@ -42,6 +42,10 @@ export function NavRail() {
       <NavRailItem to="/groups" icon="users" label="Groups" />
       <NavRailItem to="/tools" icon="screwdriver-wrench" label="Tools" />
 
+      {user?.email === 's@mombartz.com' && (
+        <NavRailItem to="/admin" icon="shield-halved" label="Admin" />
+      )}
+
       <button
         type="button"
         className="nav-rail-item nav-rail-avatar-btn"
