@@ -3,7 +3,7 @@ import Fastify from 'fastify';
 import fastifyMultipart from '@fastify/multipart';
 import FormData from 'form-data';
 import importRoutes from '../import.js';
-import { closeDatabase } from '../../services/database.js';
+import { closeAllUserDatabases } from '../../services/userDatabase.js';
 
 // Mock the photo processor to avoid file system operations during tests
 vi.mock('../../services/photoProcessor.js', () => ({
@@ -22,7 +22,7 @@ describe('POST /import', () => {
 
   afterAll(async () => {
     await app.close();
-    closeDatabase();
+    closeAllUserDatabases();
   });
 
   beforeEach(() => {

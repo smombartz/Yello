@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { getDatabase, closeDatabase } from '../database.js';
+import { getAuthDatabase, closeAuthDatabase } from '../authDatabase.js';
 import {
   getProfileImages,
   getPrimaryProfileImage,
@@ -23,7 +23,7 @@ describe('profileImageService', () => {
     process.env.PHOTOS_PATH = TEST_PHOTOS_PATH;
     await fs.mkdir('./test-data', { recursive: true });
 
-    const db = getDatabase();
+    const db = getAuthDatabase();
     // Create test user
     const result = db.prepare(`
       INSERT INTO users (google_id, email, name, avatar_url)
@@ -33,12 +33,12 @@ describe('profileImageService', () => {
   });
 
   afterAll(async () => {
-    closeDatabase();
+    closeAuthDatabase();
     await fs.rm('./test-data', { recursive: true, force: true });
   });
 
   beforeEach(() => {
-    const db = getDatabase();
+    const db = getAuthDatabase();
     db.prepare('DELETE FROM profile_images').run();
   });
 
