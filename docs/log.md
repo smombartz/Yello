@@ -1,5 +1,33 @@
 # Change Log
 
+## 2026-03-04 21:30 — Multi-Tenancy: Database-Per-User Architecture
+
+- Converted from single-tenant to multi-tenant architecture supporting 100+ users
+- **Shared auth DB** (`data/auth.db`): users, sessions, profile_images tables
+- **Per-user contact DBs** (`data/users/{userId}/contacts.db`): all contact data, FTS indexes, linkedin enrichment, email history, user settings
+- **Per-user photo directories** (`data/users/{userId}/photos/`): contact photos isolated per user
+- Created `authDatabase.ts` with `getAuthDatabase()` singleton for auth data
+- Created `userDatabase.ts` with `getUserDatabase(userId)` and LRU cache (max 50 connections)
+- Updated all 15 route files to use `getUserDatabase(request.user!.id)`
+- Updated all ~15 service files to accept `database: DatabaseType` parameter instead of calling singleton
+- Refactored `database.ts` to utility-only module (buildSearchableText, rebuildContactSearch, etc.)
+- Updated photo serving in server.ts to resolve per-user photo directories from session
+- Created migration script (`scripts/migrateToMultiTenant.ts`) for single-tenant → multi-tenant conversion
+- Updated Dockerfile with `AUTH_DATABASE_PATH` and `USER_DATA_PATH` env vars
+- 45 new tests (14 auth DB + 22 user DB + 9 migration)
+- OAuth tokens remain encrypted at rest with AES-256-GCM
+- GDPR user deletion: just delete `data/users/{userId}/` directory + auth DB record
+
+## 2026-03-04 14:05 — Security Hardening Phase 2
+
+- Removed `Access-Control-Allow-Origin: *` from all 5 SSE endpoints (enrich.ts, gmailEnrich.ts, settings.ts)
+- Dockerfile now runs as non-root `node` user with `USER node` directive
+- Added `@fastify/helmet` for security headers (CSP in production, X-Content-Type-Options, X-Frame-Options, etc.)
+- Added `@fastify/rate-limit` with global 100/min limit and per-route overrides on expensive endpoints (auth: 20/min, import: 10/min, enrichment: 5/min)
+- Implemented AES-256-GCM encryption for OAuth tokens at rest using key derived from SESSION_SECRET
+- Added token encryption migration that auto-encrypts existing plaintext tokens on startup
+- Created tokenEncryption service with encrypt/decrypt/detect functions and test suite
+
 ## 2026-03-04 11:10 — Security Hardening
 
 - Added global `onRequest` auth hook in `server.ts` protecting all `/api/*` and `/photos/*` routes

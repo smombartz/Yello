@@ -20,7 +20,7 @@ npm run dev
 
 **Backend (`backend/`):**
 ```bash
-npm run dev          # Start dev server with tsx watch (port 3000)
+npm run dev          # Start dev server with tsx watch (port 3456)
 npm run build        # Compile TypeScript to dist/
 npm test             # Run tests with vitest
 npm run test:watch   # Run tests in watch mode
@@ -35,7 +35,7 @@ npm run lint         # Run ESLint
 
 **Testing servers:** Always shut down dev servers after testing:
 ```bash
-kill $(lsof -ti :3000) 2>/dev/null  # Stop backend
+kill $(lsof -ti :3456) 2>/dev/null  # Stop backend
 kill $(lsof -ti :5173) 2>/dev/null  # Stop frontend
 ```
 
@@ -46,10 +46,19 @@ This is a monorepo contact management application with separate frontend and bac
 ### Tech Stack
 - **Frontend:** React 19, TypeScript, Vite, TanStack Query (data fetching), TanStack Virtual (virtualized lists), React Router, Leaflet (maps), Pico CSS
 - **Backend:** Node.js 20, Fastify 5, better-sqlite3, Sharp (image processing), TypeBox (validation)
-- **Database:** SQLite with WAL mode and FTS5 full-text search
+- **Database:** SQLite with WAL mode and FTS5 full-text search (multi-tenant: database-per-user)
+
+### Multi-Tenancy Architecture
+- **Shared auth DB** (`data/auth.db`): users, sessions, profile_images
+- **Per-user contact DBs** (`data/users/{userId}/contacts.db`): contacts, FTS, enrichment, email history, settings
+- **Per-user photo dirs** (`data/users/{userId}/photos/`): contact photos isolated per user
+- `getAuthDatabase()` — singleton for auth data
+- `getUserDatabase(userId)` — per-user DB with LRU cache (max 50 connections)
+- Services accept `database: DatabaseType` parameter; routes pass `getUserDatabase(request.user!.id)`
+- Migration script: `npx tsx src/scripts/migrateToMultiTenant.ts`
 
 ### Communication Flow
-- Frontend (port 5173) proxies `/api`, `/photos`, `/health` to backend (port 3000)
+- Frontend (port 5173) proxies `/api`, `/photos`, `/health` to backend (port 3456)
 - Authentication via Google OAuth with session cookies
 - API uses JSON; file uploads use multipart/form-data (100MB limit)
 
@@ -57,7 +66,8 @@ This is a monorepo contact management application with separate frontend and bac
 
 **Backend (`backend/src/`):**
 - `routes/` - API endpoint handlers (contacts, duplicates, cleanup, import, auth, archive, map, settings)
-- `services/` - Business logic (database, vcardParser, photoProcessor, mergeService, nameMatchingService, geocoding)
+- `services/` - Business logic (authDatabase, userDatabase, database utilities, vcardParser, photoProcessor, mergeService, nameMatchingService, geocoding)
+- `scripts/` - Migration scripts (migrateToMultiTenant)
 - `schemas/` - TypeBox validation schemas
 - `middleware/auth.ts` - OAuth cookie validation
 
@@ -67,7 +77,10 @@ This is a monorepo contact management application with separate frontend and bac
 - `contexts/AuthContext.tsx` - Auth state management
 
 ### Database Schema
-Main tables: `contacts`, `contact_emails`, `contact_phones`, `contact_addresses`, `contact_social_profiles`, `contact_categories`, `users`
+
+**Auth DB** (`auth.db`): `users`, `sessions`, `profile_images`
+
+**Per-User DB** (`contacts.db`): `contacts`, `contact_emails`, `contact_phones`, `contact_addresses`, `contact_social_profiles`, `contact_categories`, `contact_instant_messages`, `contact_urls`, `contact_related_people`, `user_settings`, `linkedin_enrichment`, `contact_emails_history`, `contact_photos`
 
 FTS5 virtual tables for full-text search on display_name, company, email with prefix tokenization.
 
@@ -94,9 +107,9 @@ FTS5 virtual tables for full-text search on display_name, company, email with pr
 
 **Backend:**
 ```
-DATABASE_PATH=./data/contacts.db
-PHOTOS_PATH=./data/photos
-PORT=3000
+AUTH_DATABASE_PATH=./data/auth.db
+USER_DATA_PATH=./data/users
+PORT=3456
 SESSION_SECRET=<required for production>
 GOOGLE_CLIENT_ID=<OAuth>
 GOOGLE_CLIENT_SECRET=<OAuth>
