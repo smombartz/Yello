@@ -34,6 +34,26 @@ import adminRoutes from './routes/admin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Diagnostic logging for data directory setup
+const authDbPath = process.env.AUTH_DATABASE_PATH || './data/auth.db';
+const userDataPath = process.env.USER_DATA_PATH || './data/users';
+console.log('=== Data Directory Diagnostics ===');
+console.log('AUTH_DATABASE_PATH:', authDbPath);
+console.log('USER_DATA_PATH:', userDataPath);
+console.log('Resolved auth dir:', path.resolve(path.dirname(authDbPath)));
+console.log('CWD:', process.cwd());
+console.log('UID:', process.getuid?.(), 'GID:', process.getgid?.());
+try {
+  const authDir = path.dirname(authDbPath);
+  console.log('Auth dir exists:', fs.existsSync(authDir));
+  console.log('Auth dir stat:', fs.existsSync(authDir) ? fs.statSync(authDir) : 'N/A');
+  fs.accessSync(authDir, fs.constants.W_OK);
+  console.log('Auth dir writable: YES');
+} catch (e: any) {
+  console.log('Auth dir writable: NO -', e.message);
+}
+console.log('=================================');
+
 const app = Fastify({ logger: true });
 
 if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
