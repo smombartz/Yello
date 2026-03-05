@@ -3,12 +3,15 @@ import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyCors from '@fastify/cors';
+import fastifyHelmet from '@fastify/helmet';
+import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyCookie from '@fastify/cookie';
 import path from 'path';
 import fs, { createReadStream } from 'fs';
 import { fileURLToPath } from 'url';
 
 import { requireAuth } from './middleware/auth.js';
+import { getUserPhotosPath } from './services/userDatabase.js';
 import healthRoutes from './routes/health.js';
 import contactRoutes from './routes/contacts.js';
 import importRoutes from './routes/import.js';
@@ -44,6 +47,32 @@ await app.register(fastifyCors, {
   credentials: true, // Allow cookies in cross-origin requests
 });
 
+// Security headers
+await app.register(fastifyHelmet, {
+  contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https://*.googleusercontent.com", "https://*.gravatar.com", "https://tile.openstreetmap.org"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+    },
+  } : false,
+  crossOriginEmbedderPolicy: false,
+});
+
+// Rate limiting
+await app.register(fastifyRateLimit, {
+  max: 100,
+  timeWindow: '1 minute',
+  allowList: (request) => request.url === '/health',
+});
+
 // Register cookie plugin (required for @fastify/oauth2 and session management)
 await app.register(fastifyCookie, {
   secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
@@ -72,13 +101,6 @@ await app.register(fastifyMultipart, {
   limits: { fileSize: 100 * 1024 * 1024 }
 });
 
-// Setup photos path
-const photosPathEnv = process.env.PHOTOS_PATH || './data/photos';
-const photosPath = path.isAbsolute(photosPathEnv) ? photosPathEnv : path.resolve(__dirname, '..', photosPathEnv);
-if (!fs.existsSync(photosPath)) {
-  fs.mkdirSync(photosPath, { recursive: true });
-}
-
 // Serve static files
 if (process.env.NODE_ENV === 'production') {
   // In Docker, frontend is copied to /app/frontend/dist (see Dockerfile)
@@ -103,15 +125,22 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Authenticated photo serving
+// Authenticated photo serving (per-user photo directories)
 app.get('/photos/*', async (request, reply) => {
+  // request.user is set by the global auth hook
+  const userId = request.user?.id;
+  if (!userId) {
+    return reply.status(401).send({ error: 'Unauthorized' });
+  }
+
+  const userPhotosPath = getUserPhotosPath(userId);
   const url = request.url.replace(/\?.*$/, '');
   const relativePath = url.replace('/photos/', '');
-  const filePath = path.join(photosPath, relativePath);
+  const filePath = path.join(userPhotosPath, relativePath);
 
   // Prevent path traversal
   const resolved = path.resolve(filePath);
-  if (!resolved.startsWith(path.resolve(photosPath))) {
+  if (!resolved.startsWith(path.resolve(userPhotosPath))) {
     return reply.status(403).send({ error: 'Forbidden' });
   }
 
@@ -152,7 +181,7 @@ await app.register(enrichRoutes, { prefix: '/api/enrich' });
 await app.register(emailSyncRoutes, { prefix: '/api/contacts' });
 await app.register(gmailEnrichRoutes, { prefix: '/api/enrich/gmail' });
 
-const port = parseInt(process.env.PORT || '3000');
+const port = parseInt(process.env.PORT || '3456');
 app.listen({ port, host: '0.0.0.0' }).then(() => {
   console.log(`Server running on port ${port}`);
 });
