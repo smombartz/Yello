@@ -2,6 +2,7 @@ import sharp from 'sharp';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
+import { getUserPhotosPath } from './userDatabase.js';
 
 const SIZES = [
   { name: 'thumbnail', width: 48, height: 48, quality: 80 },
@@ -14,11 +15,11 @@ function getPhotosPath(): string {
   return process.env.PHOTOS_PATH || './data/photos';
 }
 
-export async function processPhoto(base64Data: string, contactId: number): Promise<string> {
+export async function processPhoto(base64Data: string, contactId: number, userId?: number): Promise<string> {
   const buffer = Buffer.from(base64Data, 'base64');
   const hash = crypto.createHash('md5').update(contactId.toString()).digest('hex');
   const prefix = hash.substring(0, 2);
-  const photosPath = getPhotosPath();
+  const photosPath = userId ? getUserPhotosPath(userId) : getPhotosPath();
 
   for (const size of SIZES) {
     const dirPath = path.join(photosPath, size.name, prefix);
