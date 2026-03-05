@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
+import { getUserDatabase } from '../services/userDatabase.js';
 import { fetchContactPhotos, ProgressUpdate } from '../services/contactPhotoService.js';
 import {
   importLinkedInContacts,
@@ -40,7 +41,7 @@ export default async function settingsRoutes(
   });
 
   // GET /api/settings/fetch-contact-photos-stream - Stream progress while fetching photos (SSE)
-  fastify.get('/fetch-contact-photos-stream', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/fetch-contact-photos-stream', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.user!.id;
 
     // Set SSE headers
@@ -48,7 +49,6 @@ export default async function settingsRoutes(
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
     });
 
     // Helper to send SSE events
@@ -74,7 +74,7 @@ export default async function settingsRoutes(
   // POST /api/settings/import-linkedin - Import LinkedIn contacts from CSV data (SSE)
   fastify.post<{
     Body: { contacts: LinkedInContact[] };
-  }>('/import-linkedin', async (request: FastifyRequest<{ Body: { contacts: LinkedInContact[] } }>, reply: FastifyReply) => {
+  }>('/import-linkedin', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request: FastifyRequest<{ Body: { contacts: LinkedInContact[] } }>, reply: FastifyReply) => {
     const { contacts } = request.body;
 
     if (!contacts || !Array.isArray(contacts)) {
@@ -90,7 +90,6 @@ export default async function settingsRoutes(
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
     });
 
     // Helper to send SSE events
@@ -100,7 +99,8 @@ export default async function settingsRoutes(
     };
 
     try {
-      const result = await importLinkedInContacts(contacts, (progress: LinkedInProgressUpdate) => {
+      const db = getUserDatabase(request.user!.id);
+      const result = await importLinkedInContacts(db, contacts, (progress: LinkedInProgressUpdate) => {
         sendEvent('progress', progress);
       });
 
