@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { getUserDatabase } from '../services/userDatabase.js';
 
 import {
   fullSyncContact,
@@ -20,7 +21,8 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
       }
 
       try {
-        const result = await fullSyncContact(userId, contactId);
+        const db = getUserDatabase(userId);
+        const result = await fullSyncContact(db, userId, contactId);
 
         if (result.error === 'gmail_scope_required') {
           return reply.status(403).send({ error: 'gmail_scope_required' });
@@ -57,7 +59,8 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
       }
 
       try {
-        const result = await incrementalSyncContact(userId, contactId);
+        const db = getUserDatabase(userId);
+        const result = await incrementalSyncContact(db, userId, contactId);
 
         if (result.error === 'gmail_scope_required') {
           return reply.status(403).send({ error: 'gmail_scope_required' });
@@ -92,7 +95,8 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
       const limit = request.query.limit ? parseInt(request.query.limit, 10) : 10;
       const cursor = request.query.cursor || undefined;
 
-      return getContactEmailHistory(contactId, limit, cursor);
+      const db = getUserDatabase(request.user!.id);
+      return getContactEmailHistory(db, contactId, limit, cursor);
     }
   );
 
@@ -103,7 +107,8 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
       const userId = request.user!.id;
 
       try {
-        const syncedIds = getSyncedContactIds();
+        const db = getUserDatabase(userId);
+        const syncedIds = getSyncedContactIds(db);
 
         // Limit to 50 contacts per refresh
         const idsToSync = syncedIds.slice(0, 50);
@@ -112,7 +117,7 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
 
         for (const contactId of idsToSync) {
           try {
-            const result = await incrementalSyncContact(userId, contactId);
+            const result = await incrementalSyncContact(db, userId, contactId);
             if (result.error === 'gmail_scope_required') {
               return reply.status(403).send({ error: 'gmail_scope_required' });
             }

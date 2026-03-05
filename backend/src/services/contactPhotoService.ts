@@ -1,4 +1,5 @@
-import { getDatabase } from './database.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
+import { getUserDatabase } from './userDatabase.js';
 import { getValidAccessToken, hasGoogleTokens } from './googleAuthService.js';
 import { fetchGoogleContactsPhotos } from './googlePeopleService.js';
 import { getGravatarUrl, downloadAndProcessImage } from './profileImageService.js';
@@ -53,7 +54,7 @@ export async function fetchContactPhotos(
     skipped: 0,
   };
 
-  const db = getDatabase();
+  const db = getUserDatabase(userId);
 
   // Check if user has Google tokens
   if (!hasGoogleTokens(userId)) {

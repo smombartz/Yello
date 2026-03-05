@@ -1,4 +1,5 @@
-import { getDatabase } from './database.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
+import { getAuthDatabase } from './authDatabase.js';
 import { getValidAccessToken } from './googleAuthService.js';
 import {
   gmailFetch,
@@ -30,8 +31,7 @@ export interface GmailSyncSummary {
 /**
  * Get summary of Gmail sync status across all contacts.
  */
-export function getGmailSyncSummary(): GmailSyncSummary {
-  const db = getDatabase();
+export function getGmailSyncSummary(db: DatabaseType): GmailSyncSummary {
 
   const totalWithEmail = (db.prepare(`
     SELECT COUNT(DISTINCT c.id) as count
@@ -59,6 +59,7 @@ export function getGmailSyncSummary(): GmailSyncSummary {
  * by scanning Gmail messages.
  */
 export async function discoverContacts(
+  db: DatabaseType,
   userId: number,
   strategy: 'recent' | 'frequent',
   scanDepth: number = 500
@@ -68,10 +69,9 @@ export async function discoverContacts(
     throw new Error('no_token');
   }
 
-  const db = getDatabase();
-
-  // Get user's own email to exclude from results
-  const userRow = db.prepare('SELECT email FROM users WHERE id = ?').get(userId) as { email: string } | undefined;
+  // Get user's own email to exclude from results (from auth DB)
+  const authDb = getAuthDatabase();
+  const userRow = authDb.prepare('SELECT email FROM users WHERE id = ?').get(userId) as { email: string } | undefined;
   if (!userRow) {
     throw new Error('user_not_found');
   }

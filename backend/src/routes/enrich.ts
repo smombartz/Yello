@@ -7,7 +7,7 @@ import {
   recoverFromDataset,
   EnrichmentProgress,
 } from '../services/apifyEnrichmentService.js';
-import { getDatabase } from '../services/database.js';
+import { getUserDatabase } from '../services/userDatabase.js';
 
 export default async function enrichRoutes(
   fastify: FastifyInstance,
@@ -37,9 +37,10 @@ export default async function enrichRoutes(
     request: FastifyRequest<{ Querystring: { includeAlreadyEnriched?: boolean } }>,
     _reply: FastifyReply
   ) => {
+    const db = getUserDatabase(request.user!.id);
     const includeAlreadyEnriched = request.query.includeAlreadyEnriched === true;
     const configured = isLinkedInEnrichmentConfigured();
-    const summary = getEnrichmentSummary(includeAlreadyEnriched);
+    const summary = getEnrichmentSummary(db, includeAlreadyEnriched);
 
     return {
       configured,
@@ -57,6 +58,7 @@ export default async function enrichRoutes(
         limit: Type.Optional(Type.Number({ minimum: 1 })),
       }),
     },
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
   }, async (request: FastifyRequest<{ Body: { includeAlreadyEnriched?: boolean; limit?: number } }>, reply: FastifyReply) => {
     if (!isLinkedInEnrichmentConfigured()) {
       return reply.status(400).send({
@@ -64,6 +66,7 @@ export default async function enrichRoutes(
       });
     }
 
+    const db = getUserDatabase(request.user!.id);
     const includeAlreadyEnriched = request.body.includeAlreadyEnriched === true;
     const limit = request.body.limit;
 
@@ -72,7 +75,6 @@ export default async function enrichRoutes(
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
     });
 
     // Helper to send SSE events
@@ -82,7 +84,7 @@ export default async function enrichRoutes(
     };
 
     try {
-      const result = await enrichContacts(includeAlreadyEnriched, (progress: EnrichmentProgress) => {
+      const result = await enrichContacts(db, includeAlreadyEnriched, (progress: EnrichmentProgress) => {
         sendEvent('progress', progress);
       }, limit);
 
@@ -106,7 +108,7 @@ export default async function enrichRoutes(
     },
   }, async (request: FastifyRequest<{ Querystring: { category: string } }>, reply: FastifyReply) => {
     const { category } = request.query;
-    const db = getDatabase();
+    const db = getUserDatabase(request.user!.id);
 
     interface CategoryContactRow {
       id: number;
@@ -201,6 +203,7 @@ export default async function enrichRoutes(
         datasetId: Type.String({ minLength: 1 }),
       }),
     },
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
   }, async (request: FastifyRequest<{ Body: { datasetId: string } }>, reply: FastifyReply) => {
     if (!isLinkedInEnrichmentConfigured()) {
       return reply.status(400).send({
@@ -208,6 +211,7 @@ export default async function enrichRoutes(
       });
     }
 
+    const db = getUserDatabase(request.user!.id);
     const { datasetId } = request.body;
 
     // Set SSE headers
@@ -215,7 +219,6 @@ export default async function enrichRoutes(
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
     });
 
     const sendEvent = (event: string, data: unknown) => {
@@ -224,7 +227,7 @@ export default async function enrichRoutes(
     };
 
     try {
-      const result = await recoverFromDataset(datasetId, (progress: EnrichmentProgress) => {
+      const result = await recoverFromDataset(db, datasetId, (progress: EnrichmentProgress) => {
         sendEvent('progress', progress);
       });
 
