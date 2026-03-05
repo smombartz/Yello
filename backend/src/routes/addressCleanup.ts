@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { getUserDatabase } from '../services/userDatabase.js';
 import {
   getAddressCleanupSummary,
   findAddressIssues,
@@ -72,8 +73,9 @@ export default async function addressCleanupRoutes(
         200: AddressCleanupSummaryResponseSchema
       }
     }
-  }, async (_request, _reply) => {
-    return getAddressCleanupSummary();
+  }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
+    return getAddressCleanupSummary(db);
   });
 
   // GET /api/cleanup/addresses
@@ -85,8 +87,9 @@ export default async function addressCleanupRoutes(
       }
     }
   }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
     const { limit = 50, offset = 0 } = request.query;
-    return findAddressIssues(limit, offset);
+    return findAddressIssues(db, limit, offset);
   });
 
   // GET /api/cleanup/addresses/all - get all contacts for bulk fix
@@ -96,8 +99,9 @@ export default async function addressCleanupRoutes(
         200: AddressCleanupBulkResponseSchema
       }
     }
-  }, async (_request, _reply) => {
-    return getAllAddressIssueContacts();
+  }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
+    return getAllAddressIssueContacts(db);
   });
 
   // POST /api/cleanup/addresses/fix
@@ -111,8 +115,9 @@ export default async function addressCleanupRoutes(
     }
   }, async (request, reply) => {
     try {
+      const db = getUserDatabase(request.user!.id);
       const { fixes } = request.body;
-      return applyAddressFixes(fixes);
+      return applyAddressFixes(db, fixes);
     } catch (error) {
       fastify.log.error(error, 'Address operation failed');
       return reply.status(500).send({ error: 'Address operation failed. Please try again.' });
@@ -130,8 +135,9 @@ export default async function addressCleanupRoutes(
         200: NormalizeSummaryResponseSchema
       }
     }
-  }, async (_request, _reply) => {
-    return getNormalizeSummary();
+  }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
+    return getNormalizeSummary(db);
   });
 
   // GET /api/cleanup/addresses/normalize
@@ -143,8 +149,9 @@ export default async function addressCleanupRoutes(
       }
     }
   }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
     const { limit = 50, offset = 0 } = request.query;
-    return findJunkAddresses(limit, offset);
+    return findJunkAddresses(db, limit, offset);
   });
 
   // GET /api/cleanup/addresses/normalize/all - get all junk address IDs
@@ -154,8 +161,9 @@ export default async function addressCleanupRoutes(
         200: NormalizeAllIdsResponseSchema
       }
     }
-  }, async (_request, _reply) => {
-    const addressIds = getAllJunkAddressIds();
+  }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
+    const addressIds = getAllJunkAddressIds(db);
     return { addressIds, total: addressIds.length };
   });
 
@@ -170,8 +178,9 @@ export default async function addressCleanupRoutes(
     }
   }, async (request, reply) => {
     try {
+      const db = getUserDatabase(request.user!.id);
       const { addressIds } = request.body;
-      return removeJunkAddresses(addressIds);
+      return removeJunkAddresses(db, addressIds);
     } catch (error) {
       fastify.log.error(error, 'Address operation failed');
       return reply.status(500).send({ error: 'Address operation failed. Please try again.' });
@@ -190,8 +199,9 @@ export default async function addressCleanupRoutes(
     }
   }, async (request, reply) => {
     try {
+      const db = getUserDatabase(request.user!.id);
       const { addressId, ...updates } = request.body;
-      const result = updateAddress(addressId, updates);
+      const result = updateAddress(db, addressId, updates);
 
       if (!result) {
         return reply.status(404).send({ error: 'Address not found' });
@@ -215,8 +225,9 @@ export default async function addressCleanupRoutes(
         200: DuplicatesSummaryResponseSchema
       }
     }
-  }, async (_request, _reply) => {
-    return getDuplicatesSummary();
+  }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
+    return getDuplicatesSummary(db);
   });
 
   // GET /api/cleanup/addresses/duplicates
@@ -228,8 +239,9 @@ export default async function addressCleanupRoutes(
       }
     }
   }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
     const { limit = 50, offset = 0, confidence } = request.query;
-    return findDuplicateAddresses(limit, offset, confidence);
+    return findDuplicateAddresses(db, limit, offset, confidence);
   });
 
   // GET /api/cleanup/addresses/duplicates/all - get all contacts for bulk fix
@@ -246,8 +258,9 @@ export default async function addressCleanupRoutes(
       }
     }
   }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
     const { confidence } = request.query;
-    return getAllDuplicateContacts(confidence);
+    return getAllDuplicateContacts(db, confidence);
   });
 
   // POST /api/cleanup/addresses/duplicates/fix - same as /fix
@@ -261,8 +274,9 @@ export default async function addressCleanupRoutes(
     }
   }, async (request, reply) => {
     try {
+      const db = getUserDatabase(request.user!.id);
       const { fixes } = request.body;
-      return applyAddressFixes(fixes);
+      return applyAddressFixes(db, fixes);
     } catch (error) {
       fastify.log.error(error, 'Address operation failed');
       return reply.status(500).send({ error: 'Address operation failed. Please try again.' });
@@ -280,8 +294,9 @@ export default async function addressCleanupRoutes(
         200: GeocodingSummaryResponseSchema
       }
     }
-  }, async (_request, _reply) => {
-    return getGeocodingSummary();
+  }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
+    return getGeocodingSummary(db);
   });
 
   // GET /api/cleanup/addresses/geocoding
@@ -293,8 +308,9 @@ export default async function addressCleanupRoutes(
       }
     }
   }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
     const { filter = 'all', limit = 50, offset = 0 } = request.query;
-    return findAddressesByGeoStatus(filter as GeocodingStatus | 'all', limit, offset);
+    return findAddressesByGeoStatus(db, filter as GeocodingStatus | 'all', limit, offset);
   });
 
   // POST /api/cleanup/addresses/geocoding/retry
@@ -312,8 +328,9 @@ export default async function addressCleanupRoutes(
     }
 
     try {
+      const db = getUserDatabase(request.user!.id);
       const { addressIds } = request.body;
-      return await retryGeocoding(addressIds);
+      return await retryGeocoding(db, addressIds);
     } catch (error) {
       fastify.log.error(error, 'Address operation failed');
       return reply.status(500).send({ error: 'Address operation failed. Please try again.' });
@@ -335,8 +352,9 @@ export default async function addressCleanupRoutes(
     }
 
     try {
+      const db = getUserDatabase(request.user!.id);
       const { limit = 50 } = request.body;
-      return await batchGeocode(limit);
+      return await batchGeocode(db, limit);
     } catch (error) {
       fastify.log.error(error, 'Address operation failed');
       return reply.status(500).send({ error: 'Address operation failed. Please try again.' });
@@ -359,8 +377,9 @@ export default async function addressCleanupRoutes(
     }
 
     try {
+      const db = getUserDatabase(request.user!.id);
       const { addressId, ...updates } = request.body;
-      const result = await updateAddressAndGeocode(addressId, updates);
+      const result = await updateAddressAndGeocode(db, addressId, updates);
 
       if (!result) {
         return reply.status(404).send({ error: 'Address not found' });

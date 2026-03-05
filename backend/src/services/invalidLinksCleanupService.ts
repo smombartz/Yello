@@ -1,4 +1,4 @@
-import { getDatabase } from './database.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
 
 // ============================================================
 // Types
@@ -31,12 +31,10 @@ export interface InvalidLinksRemoveResult {
 /**
  * Search for invalid links matching the given patterns
  */
-export function searchInvalidLinks(patterns: string[]): InvalidLinksSearchResult {
+export function searchInvalidLinks(db: DatabaseType, patterns: string[]): InvalidLinksSearchResult {
   if (patterns.length === 0) {
     return { matches: [], totalCount: 0 };
   }
-
-  const db = getDatabase();
   const matches: InvalidLinkMatch[] = [];
 
   // Normalize patterns: lowercase, trim
@@ -163,15 +161,13 @@ function extractPathSegments(url: string): string[] {
 /**
  * Remove all invalid links matching the given patterns
  */
-export function removeInvalidLinks(patterns: string[]): InvalidLinksRemoveResult {
+export function removeInvalidLinks(db: DatabaseType, patterns: string[]): InvalidLinksRemoveResult {
   if (patterns.length === 0) {
     return { deletedCount: 0, deletedFromSocialProfiles: 0, deletedFromUrls: 0 };
   }
 
-  const db = getDatabase();
-
   // First, find all matching records
-  const { matches } = searchInvalidLinks(patterns);
+  const { matches } = searchInvalidLinks(db, patterns);
 
   if (matches.length === 0) {
     return { deletedCount: 0, deletedFromSocialProfiles: 0, deletedFromUrls: 0 };

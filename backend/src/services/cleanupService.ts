@@ -1,4 +1,5 @@
-import { getDatabase, deleteContactsFromSearch } from './database.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
+import { deleteContactsFromSearch } from './database.js';
 import type { ContactDetail, ContactSocialProfile } from '../types/index.js';
 import { getPhotoUrl } from './photoProcessor.js';
 
@@ -31,8 +32,7 @@ export interface CleanupSummary {
 /**
  * Count truly empty contacts (no name AND no other data)
  */
-function countTrulyEmptyContacts(): number {
-  const db = getDatabase();
+function countTrulyEmptyContacts(db: DatabaseType): number {
   const result = db.prepare(`
     SELECT COUNT(*) as count
     FROM contacts c
@@ -53,8 +53,7 @@ function countTrulyEmptyContacts(): number {
 /**
  * Count name-only contacts (has name but no other useful info)
  */
-function countNameOnlyContacts(): number {
-  const db = getDatabase();
+function countNameOnlyContacts(db: DatabaseType): number {
   const result = db.prepare(`
     SELECT COUNT(*) as count
     FROM contacts c
@@ -78,8 +77,7 @@ function countNameOnlyContacts(): number {
 /**
  * Find truly empty contact IDs
  */
-function findTrulyEmptyContactIds(limit: number, offset: number): number[] {
-  const db = getDatabase();
+function findTrulyEmptyContactIds(db: DatabaseType, limit: number, offset: number): number[] {
   const rows = db.prepare(`
     SELECT c.id
     FROM contacts c
@@ -102,8 +100,7 @@ function findTrulyEmptyContactIds(limit: number, offset: number): number[] {
 /**
  * Find name-only contact IDs
  */
-function findNameOnlyContactIds(limit: number, offset: number): number[] {
-  const db = getDatabase();
+function findNameOnlyContactIds(db: DatabaseType, limit: number, offset: number): number[] {
   const rows = db.prepare(`
     SELECT c.id
     FROM contacts c
@@ -133,8 +130,7 @@ function findNameOnlyContactIds(limit: number, offset: number): number[] {
 /**
  * Count contacts with many different email domains
  */
-function countManyDomainsContacts(threshold: number): number {
-  const db = getDatabase();
+function countManyDomainsContacts(db: DatabaseType, threshold: number): number {
   const result = db.prepare(`
     SELECT COUNT(*) as count FROM (
       SELECT c.id
@@ -151,8 +147,7 @@ function countManyDomainsContacts(threshold: number): number {
 /**
  * Count contacts with same domain but multiple different usernames
  */
-function countSameDomainContacts(): number {
-  const db = getDatabase();
+function countSameDomainContacts(db: DatabaseType): number {
   // Count distinct contacts that have at least one domain with multiple usernames
   const result = db.prepare(`
     SELECT COUNT(DISTINCT contact_id) as count FROM (
@@ -170,8 +165,7 @@ function countSameDomainContacts(): number {
 /**
  * Find contact IDs with many different email domains
  */
-function findManyDomainsContactIds(threshold: number, limit: number, offset: number): Array<{ id: number; domainCount: number }> {
-  const db = getDatabase();
+function findManyDomainsContactIds(db: DatabaseType, threshold: number, limit: number, offset: number): Array<{ id: number; domainCount: number }> {
   return db.prepare(`
     SELECT c.id, COUNT(DISTINCT LOWER(SUBSTR(ce.email, INSTR(ce.email, '@') + 1))) as domainCount
     FROM contacts c
@@ -187,8 +181,7 @@ function findManyDomainsContactIds(threshold: number, limit: number, offset: num
 /**
  * Find contact IDs with same domain but multiple different usernames
  */
-function findSameDomainContactIds(limit: number, offset: number): Array<{ id: number; domain: string; usernameCount: number }> {
-  const db = getDatabase();
+function findSameDomainContactIds(db: DatabaseType, limit: number, offset: number): Array<{ id: number; domain: string; usernameCount: number }> {
   // Get contacts that have at least one domain with multiple usernames
   // For simplicity, we return the first problematic domain for each contact
   return db.prepare(`
@@ -213,10 +206,8 @@ function findSameDomainContactIds(limit: number, offset: number): Array<{ id: nu
 // Contact Details Helper
 // ============================================================
 
-function getContactDetails(contactIds: number[]): ContactDetail[] {
+function getContactDetails(db: DatabaseType, contactIds: number[]): ContactDetail[] {
   if (contactIds.length === 0) return [];
-
-  const db = getDatabase();
   const placeholders = contactIds.map(() => '?').join(',');
 
   const contacts = db.prepare(`
@@ -345,11 +336,11 @@ function getContactDetails(contactIds: number[]): ContactDetail[] {
 /**
  * Get summary counts for all cleanup categories
  */
-export function getCleanupSummary(threshold: number = 3): CleanupSummary {
-  const trulyEmpty = countTrulyEmptyContacts();
-  const nameOnly = countNameOnlyContacts();
-  const manyDomains = countManyDomainsContacts(threshold);
-  const sameDomain = countSameDomainContacts();
+export function getCleanupSummary(db: DatabaseType, threshold: number = 3): CleanupSummary {
+  const trulyEmpty = countTrulyEmptyContacts(db);
+  const nameOnly = countNameOnlyContacts(db);
+  const manyDomains = countManyDomainsContacts(db, threshold);
+  const sameDomain = countSameDomainContacts(db);
 
   return {
     empty: {
@@ -369,6 +360,7 @@ export function getCleanupSummary(threshold: number = 3): CleanupSummary {
  * Find empty contacts with pagination and optional type filtering
  */
 export function findEmptyContacts(
+  db: DatabaseType,
   limit: number,
   offset: number,
   types?: EmptyContactType[]
@@ -382,11 +374,11 @@ export function findEmptyContacts(
 
   // Calculate totals and gather contacts based on type filters
   if (includeTypes.includes('truly_empty')) {
-    const trulyEmptyTotal = countTrulyEmptyContacts();
+    const trulyEmptyTotal = countTrulyEmptyContacts(db);
     totalCount += trulyEmptyTotal;
   }
   if (includeTypes.includes('name_only')) {
-    const nameOnlyTotal = countNameOnlyContacts();
+    const nameOnlyTotal = countNameOnlyContacts(db);
     totalCount += nameOnlyTotal;
   }
 
@@ -396,10 +388,10 @@ export function findEmptyContacts(
   let currentOffset = offset;
 
   if (includeTypes.includes('truly_empty') && remaining > 0) {
-    const trulyEmptyCount = countTrulyEmptyContacts();
+    const trulyEmptyCount = countTrulyEmptyContacts(db);
     if (currentOffset < trulyEmptyCount) {
-      const ids = findTrulyEmptyContactIds(remaining, currentOffset);
-      const contacts = getContactDetails(ids);
+      const ids = findTrulyEmptyContactIds(db, remaining, currentOffset);
+      const contacts = getContactDetails(db, ids);
       for (const contact of contacts) {
         results.push({
           ...contact,
@@ -415,8 +407,8 @@ export function findEmptyContacts(
   }
 
   if (includeTypes.includes('name_only') && remaining > 0) {
-    const ids = findNameOnlyContactIds(remaining, currentOffset);
-    const contacts = getContactDetails(ids);
+    const ids = findNameOnlyContactIds(db, remaining, currentOffset);
+    const contacts = getContactDetails(db, ids);
     for (const contact of contacts) {
       results.push({
         ...contact,
@@ -433,6 +425,7 @@ export function findEmptyContacts(
  * Find problematic contacts with pagination and optional type filtering
  */
 export function findProblematicContacts(
+  db: DatabaseType,
   limit: number,
   offset: number,
   threshold: number = 3,
@@ -447,21 +440,21 @@ export function findProblematicContacts(
 
   // Calculate totals
   if (includeTypes.includes('many_domains')) {
-    totalCount += countManyDomainsContacts(threshold);
+    totalCount += countManyDomainsContacts(db, threshold);
   }
   if (includeTypes.includes('same_domain')) {
-    totalCount += countSameDomainContacts();
+    totalCount += countSameDomainContacts(db);
   }
 
   let remaining = limit;
   let currentOffset = offset;
 
   if (includeTypes.includes('many_domains') && remaining > 0) {
-    const manyDomainsCount = countManyDomainsContacts(threshold);
+    const manyDomainsCount = countManyDomainsContacts(db, threshold);
     if (currentOffset < manyDomainsCount) {
-      const rows = findManyDomainsContactIds(threshold, remaining, currentOffset);
+      const rows = findManyDomainsContactIds(db, threshold, remaining, currentOffset);
       const ids = rows.map(r => r.id);
-      const contacts = getContactDetails(ids);
+      const contacts = getContactDetails(db, ids);
 
       // Map domain counts to contacts
       const domainCountMap = new Map(rows.map(r => [r.id, r.domainCount]));
@@ -481,9 +474,9 @@ export function findProblematicContacts(
   }
 
   if (includeTypes.includes('same_domain') && remaining > 0) {
-    const rows = findSameDomainContactIds(remaining, currentOffset);
+    const rows = findSameDomainContactIds(db, remaining, currentOffset);
     const ids = rows.map(r => r.id);
-    const contacts = getContactDetails(ids);
+    const contacts = getContactDetails(db, ids);
 
     // Map domain info to contacts
     const domainInfoMap = new Map(rows.map(r => [r.id, { domain: r.domain, count: r.usernameCount }]));
@@ -503,7 +496,7 @@ export function findProblematicContacts(
 /**
  * Get all empty contact IDs (no pagination, for bulk selection)
  */
-export function getAllEmptyContactIds(types?: EmptyContactType[]): number[] {
+export function getAllEmptyContactIds(db: DatabaseType, types?: EmptyContactType[]): number[] {
   const includeTypes = types && types.length > 0
     ? types
     : ['truly_empty', 'name_only'] as EmptyContactType[];
@@ -511,7 +504,6 @@ export function getAllEmptyContactIds(types?: EmptyContactType[]): number[] {
   const results: number[] = [];
 
   if (includeTypes.includes('truly_empty')) {
-    const db = getDatabase();
     const rows = db.prepare(`
       SELECT c.id
       FROM contacts c
@@ -531,7 +523,6 @@ export function getAllEmptyContactIds(types?: EmptyContactType[]): number[] {
   }
 
   if (includeTypes.includes('name_only')) {
-    const db = getDatabase();
     const rows = db.prepare(`
       SELECT c.id
       FROM contacts c
@@ -560,6 +551,7 @@ export function getAllEmptyContactIds(types?: EmptyContactType[]): number[] {
  * Get all problematic contact IDs (no pagination, for bulk selection)
  */
 export function getAllProblematicContactIds(
+  db: DatabaseType,
   threshold: number = 3,
   types?: ProblematicContactType[]
 ): number[] {
@@ -570,7 +562,6 @@ export function getAllProblematicContactIds(
   const results: number[] = [];
 
   if (includeTypes.includes('many_domains')) {
-    const db = getDatabase();
     const rows = db.prepare(`
       SELECT c.id
       FROM contacts c
@@ -584,7 +575,6 @@ export function getAllProblematicContactIds(
   }
 
   if (includeTypes.includes('same_domain')) {
-    const db = getDatabase();
     const rows = db.prepare(`
       SELECT DISTINCT contact_id as id
       FROM (
@@ -607,12 +597,10 @@ export function getAllProblematicContactIds(
 /**
  * Delete contacts by IDs
  */
-export function deleteContacts(contactIds: number[]): { deletedCount: number } {
+export function deleteContacts(db: DatabaseType, contactIds: number[]): { deletedCount: number } {
   if (contactIds.length === 0) {
     return { deletedCount: 0 };
   }
-
-  const db = getDatabase();
   const placeholders = contactIds.map(() => '?').join(',');
 
   // Use transaction for atomicity

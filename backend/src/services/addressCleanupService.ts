@@ -1,4 +1,4 @@
-import { getDatabase } from './database.js';
+import type { Database as DatabaseType } from 'better-sqlite3';
 import { getPhotoUrl } from './photoProcessor.js';
 import { geocodeAddress, isGeocodingConfigured } from './geocoding.js';
 import { validatePostalCode } from './addressFormats.js';
@@ -397,8 +397,7 @@ function scoreAddress(address: AddressRecord): number {
 /**
  * Get all addresses grouped by contact
  */
-function getAddressesByContact(): Map<number, AddressRecord[]> {
-  const db = getDatabase();
+function getAddressesByContact(db: DatabaseType): Map<number, AddressRecord[]> {
 
   const addresses = db.prepare(`
     SELECT
@@ -431,11 +430,11 @@ function getAddressesByContact(): Map<number, AddressRecord[]> {
  * Find contacts with address issues (no street or duplicates)
  */
 export function findAddressIssues(
+  db: DatabaseType,
   limit: number,
   offset: number
 ): { contacts: AddressCleanupContact[]; total: number } {
-  const db = getDatabase();
-  const addressesByContact = getAddressesByContact();
+  const addressesByContact = getAddressesByContact(db);
 
   // Process each contact to find issues
   const contactsWithIssues: AddressCleanupContact[] = [];
@@ -521,11 +520,11 @@ export function findAddressIssues(
 /**
  * Get summary of address cleanup issues
  */
-export function getAddressCleanupSummary(): AddressCleanupSummary {
+export function getAddressCleanupSummary(db: DatabaseType): AddressCleanupSummary {
   // Aggregate counts from all sub-tabs
-  const normalizeSummary = getNormalizeSummary();
-  const duplicatesSummary = getDuplicatesSummary();
-  const geocodingSummary = getGeocodingSummary();
+  const normalizeSummary = getNormalizeSummary(db);
+  const duplicatesSummary = getDuplicatesSummary(db);
+  const geocodingSummary = getGeocodingSummary(db);
 
   return {
     noStreetCount: normalizeSummary.junkCount,
@@ -537,8 +536,7 @@ export function getAddressCleanupSummary(): AddressCleanupSummary {
 /**
  * Apply address fixes - keep selected addresses, remove others
  */
-export function applyAddressFixes(fixes: AddressFix[]): AddressFixResult {
-  const db = getDatabase();
+export function applyAddressFixes(db: DatabaseType, fixes: AddressFix[]): AddressFixResult {
 
   let fixed = 0;
   let removed = 0;
@@ -590,7 +588,7 @@ export function applyAddressFixes(fixes: AddressFix[]): AddressFixResult {
 /**
  * Get all contacts with address issues for bulk operations
  */
-export function getAllAddressIssueContacts(): {
+export function getAllAddressIssueContacts(db: DatabaseType): {
   contacts: Array<{
     id: number;
     keepAddressIds: number[];
@@ -598,7 +596,7 @@ export function getAllAddressIssueContacts(): {
   }>;
   total: number;
 } {
-  const addressesByContact = getAddressesByContact();
+  const addressesByContact = getAddressesByContact(db);
 
   const results: Array<{
     id: number;
@@ -666,8 +664,8 @@ export function getAllAddressIssueContacts(): {
 /**
  * Get summary of junk addresses for normalize tab
  */
-export function getNormalizeSummary(): NormalizeSummary {
-  const addressesByContact = getAddressesByContact();
+export function getNormalizeSummary(db: DatabaseType): NormalizeSummary {
+  const addressesByContact = getAddressesByContact(db);
 
   let junkCount = 0;
   const contactsWithJunk = new Set<number>();
@@ -692,11 +690,11 @@ export function getNormalizeSummary(): NormalizeSummary {
  * Find contacts with junk addresses
  */
 export function findJunkAddresses(
+  db: DatabaseType,
   limit: number,
   offset: number
 ): { contacts: NormalizeContact[]; total: number } {
-  const db = getDatabase();
-  const addressesByContact = getAddressesByContact();
+  const addressesByContact = getAddressesByContact(db);
 
   const contactsWithJunk: NormalizeContact[] = [];
 
@@ -747,8 +745,7 @@ export function findJunkAddresses(
 /**
  * Remove junk addresses by IDs
  */
-export function removeJunkAddresses(addressIds: number[]): NormalizeFixResult {
-  const db = getDatabase();
+export function removeJunkAddresses(db: DatabaseType, addressIds: number[]): NormalizeFixResult {
 
   let removed = 0;
   const deleteStmt = db.prepare('DELETE FROM contact_addresses WHERE id = ?');
@@ -768,8 +765,8 @@ export function removeJunkAddresses(addressIds: number[]): NormalizeFixResult {
 /**
  * Get all junk address IDs for bulk removal
  */
-export function getAllJunkAddressIds(): number[] {
-  const addressesByContact = getAddressesByContact();
+export function getAllJunkAddressIds(db: DatabaseType): number[] {
+  const addressesByContact = getAddressesByContact(db);
   const junkIds: number[] = [];
 
   for (const [, addresses] of addressesByContact) {
@@ -791,9 +788,9 @@ export function getAllJunkAddressIds(): number[] {
 /**
  * Get summary of duplicate addresses for duplicates tab
  */
-export function getDuplicatesSummary(): DuplicatesSummary {
+export function getDuplicatesSummary(db: DatabaseType): DuplicatesSummary {
   // Use the same logic as findDuplicateAddresses to get accurate counts
-  const result = findDuplicateAddresses(Number.MAX_SAFE_INTEGER, 0);
+  const result = findDuplicateAddresses(db, Number.MAX_SAFE_INTEGER, 0);
 
   let duplicateCount = 0;
   for (const contact of result.contacts) {
@@ -819,12 +816,12 @@ interface AddressWithFingerprint extends AddressWithIssues {
  * Find contacts with duplicate addresses (excluding junk)
  */
 export function findDuplicateAddresses(
+  db: DatabaseType,
   limit: number,
   offset: number,
   confidenceFilter?: 'all' | 'exact' | 'high' | 'medium'
 ): { contacts: DuplicatesContact[]; total: number } {
-  const db = getDatabase();
-  const addressesByContact = getAddressesByContact();
+  const addressesByContact = getAddressesByContact(db);
 
   const contactsWithDuplicates: DuplicatesContact[] = [];
 
@@ -992,6 +989,7 @@ export function findDuplicateAddresses(
  * Get all contacts with duplicate addresses for bulk operations
  */
 export function getAllDuplicateContacts(
+  db: DatabaseType,
   confidenceFilter?: 'all' | 'exact' | 'high' | 'medium'
 ): {
   contacts: Array<{
@@ -1002,7 +1000,7 @@ export function getAllDuplicateContacts(
   total: number;
 } {
   // Use findDuplicateAddresses to leverage the two-pass algorithm
-  const result = findDuplicateAddresses(Number.MAX_SAFE_INTEGER, 0, confidenceFilter);
+  const result = findDuplicateAddresses(db, Number.MAX_SAFE_INTEGER, 0, confidenceFilter);
 
   const results: Array<{
     id: number;
@@ -1099,8 +1097,7 @@ function getGeocodingStatus(geocodedAt: string | null, latitude: number | null, 
 /**
  * Get geocoding summary counts
  */
-export function getGeocodingSummary(): GeocodingSummary {
-  const db = getDatabase();
+export function getGeocodingSummary(db: DatabaseType): GeocodingSummary {
 
   const result = db.prepare(`
     SELECT
@@ -1120,11 +1117,11 @@ export function getGeocodingSummary(): GeocodingSummary {
  * Find addresses by geocoding status
  */
 export function findAddressesByGeoStatus(
+  db: DatabaseType,
   filter: GeocodingStatus | 'all',
   limit: number,
   offset: number
 ): { contacts: GeocodingContact[]; total: number } {
-  const db = getDatabase();
 
   // Build WHERE clause based on filter
   let statusCondition = '';
@@ -1220,8 +1217,7 @@ export function findAddressesByGeoStatus(
 /**
  * Retry geocoding for specific address IDs
  */
-export async function retryGeocoding(addressIds: number[]): Promise<GeocodingBatchResult> {
-  const db = getDatabase();
+export async function retryGeocoding(db: DatabaseType, addressIds: number[]): Promise<GeocodingBatchResult> {
   let successful = 0;
   let failed = 0;
 
@@ -1276,8 +1272,7 @@ export async function retryGeocoding(addressIds: number[]): Promise<GeocodingBat
 /**
  * Batch geocode pending addresses
  */
-export async function batchGeocode(limit: number = 50): Promise<GeocodingBatchResult> {
-  const db = getDatabase();
+export async function batchGeocode(db: DatabaseType, limit: number = 50): Promise<GeocodingBatchResult> {
 
   // Get pending addresses
   const pendingAddresses = db.prepare(`
@@ -1342,6 +1337,7 @@ export async function batchGeocode(limit: number = 50): Promise<GeocodingBatchRe
  * Update address fields and retry geocoding
  */
 export async function updateAddressAndGeocode(
+  db: DatabaseType,
   addressId: number,
   updates: {
     street?: string | null;
@@ -1351,7 +1347,6 @@ export async function updateAddressAndGeocode(
     country?: string | null;
   }
 ): Promise<GeocodingAddress | null> {
-  const db = getDatabase();
 
   // Get current address
   const current = db.prepare(`
@@ -1446,6 +1441,7 @@ export async function updateAddressAndGeocode(
  * Used by normalize/duplicates cleanup to fix addresses inline
  */
 export function updateAddress(
+  db: DatabaseType,
   addressId: number,
   updates: {
     street?: string | null;
@@ -1455,7 +1451,6 @@ export function updateAddress(
     country?: string | null;
   }
 ): AddressRecord | null {
-  const db = getDatabase();
 
   // Get current address
   const current = db.prepare(`
