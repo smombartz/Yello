@@ -364,8 +364,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
         // Clean up old sessions periodically
         cleanupExpiredSessions();
 
-        // Redirect to frontend
-        return reply.redirect('/');
+        // Redirect to frontend - send new users to onboarding
+        const redirectUrl = user.has_onboarded ? '/dashboard' : '/onboarding';
+        return reply.redirect(redirectUrl);
       } catch (error) {
         fastify.log.error(error, 'OAuth callback error');
         return reply.redirect('/?error=auth_failed');
