@@ -16,6 +16,7 @@ export interface User {
   name: string | null;
   avatarUrl: string | null;
   isDemo?: boolean;
+  hasOnboarded?: boolean;
   profileImages: ProfileImage[];
   createdAt: string;
   updatedAt: string;
@@ -42,6 +43,20 @@ export function useCurrentUser() {
     queryFn: () => fetchApi<AuthMeResponse>('/api/auth/me'),
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     retry: false, // Don't retry on auth errors
+  });
+}
+
+/**
+ * Mark the current user as having completed onboarding
+ */
+export function useCompleteOnboarding() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => fetchApi<{ success: boolean }>('/api/auth/onboarded', { method: 'PATCH' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authKeys.me });
+    },
   });
 }
 

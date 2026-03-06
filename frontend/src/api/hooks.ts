@@ -154,6 +154,17 @@ export function useMergeSelectedContacts() {
   });
 }
 
+export function useUploadProfileImage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (file: File) => uploadFile('/api/profile-images/upload', file) as Promise<{ success: boolean; url: string; hash: string }>,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+    },
+  });
+}
+
 // Set a contact photo as primary
 export function useSetContactPhotoPrimary() {
   const queryClient = useQueryClient();
