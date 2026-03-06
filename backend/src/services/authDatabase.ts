@@ -60,7 +60,6 @@ export function getAuthDatabase(): DatabaseType {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE INDEX IF NOT EXISTS idx_users_is_demo ON users(is_demo);
     CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
@@ -69,6 +68,13 @@ export function getAuthDatabase(): DatabaseType {
     CREATE INDEX IF NOT EXISTS idx_profile_images_source ON profile_images(source);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_profile_images_user_source ON profile_images(user_id, source);
   `);
+
+  // Migration: add is_demo column for existing databases
+  const columns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+  if (!columns.some(c => c.name === 'is_demo')) {
+    db.exec('ALTER TABLE users ADD COLUMN is_demo INTEGER DEFAULT 0');
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS idx_users_is_demo ON users(is_demo)');
 
   return db;
 }
