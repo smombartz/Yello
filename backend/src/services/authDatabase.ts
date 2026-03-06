@@ -38,7 +38,8 @@ export function getAuthDatabase(): DatabaseType {
       token_expires_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      is_demo INTEGER DEFAULT 0
+      is_demo INTEGER DEFAULT 0,
+      has_onboarded INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS sessions (
@@ -75,6 +76,11 @@ export function getAuthDatabase(): DatabaseType {
     db.exec('ALTER TABLE users ADD COLUMN is_demo INTEGER DEFAULT 0');
   }
   db.exec('CREATE INDEX IF NOT EXISTS idx_users_is_demo ON users(is_demo)');
+
+  // Migration: add has_onboarded column for existing databases
+  if (!columns.some(c => c.name === 'has_onboarded')) {
+    db.exec('ALTER TABLE users ADD COLUMN has_onboarded INTEGER DEFAULT 0');
+  }
 
   return db;
 }

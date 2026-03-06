@@ -166,6 +166,12 @@ describe('authDatabase', () => {
     }
   });
 
+  it('should add has_onboarded column via migration', () => {
+    const db = getAuthDatabase();
+    const columns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+    expect(columns.some(c => c.name === 'has_onboarded')).toBe(true);
+  });
+
   it('should have is_demo column on users table', () => {
     const db = getAuthDatabase();
     const columns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
