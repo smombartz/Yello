@@ -13,6 +13,10 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
   fastify.post<{ Params: { id: string } }>(
     '/:id/email-sync',
     async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+      if (request.user?.isDemo) {
+        return reply.status(403).send({ error: 'This feature is not available in demo mode. Sign in with Google to unlock all features.' });
+      }
+
       const contactId = parseInt(request.params.id, 10);
       const userId = request.user!.id;
 
@@ -51,6 +55,10 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
   fastify.post<{ Params: { id: string } }>(
     '/:id/email-sync/refresh',
     async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+      if (request.user?.isDemo) {
+        return reply.status(403).send({ error: 'This feature is not available in demo mode. Sign in with Google to unlock all features.' });
+      }
+
       const contactId = parseInt(request.params.id, 10);
       const userId = request.user!.id;
 
@@ -104,6 +112,10 @@ export default async function emailSyncRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/refresh-all',
     async (request: FastifyRequest, reply: FastifyReply) => {
+      if (request.user?.isDemo) {
+        return { synced: 0, errors: 0, message: 'Skipped for demo account' };
+      }
+
       const userId = request.user!.id;
 
       try {

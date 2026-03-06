@@ -60,6 +60,10 @@ export default async function enrichRoutes(
     },
     config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
   }, async (request: FastifyRequest<{ Body: { includeAlreadyEnriched?: boolean; limit?: number } }>, reply: FastifyReply) => {
+    if (request.user?.isDemo) {
+      return reply.status(403).send({ error: 'This feature is not available in demo mode. Sign in with Google to unlock all features.' });
+    }
+
     if (!isLinkedInEnrichmentConfigured()) {
       return reply.status(400).send({
         error: 'LinkedIn enrichment not configured. Set APIFY_API_TOKEN environment variable.',
@@ -205,6 +209,10 @@ export default async function enrichRoutes(
     },
     config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
   }, async (request: FastifyRequest<{ Body: { datasetId: string } }>, reply: FastifyReply) => {
+    if (request.user?.isDemo) {
+      return reply.status(403).send({ error: 'This feature is not available in demo mode. Sign in with Google to unlock all features.' });
+    }
+
     if (!isLinkedInEnrichmentConfigured()) {
       return reply.status(400).send({
         error: 'LinkedIn enrichment not configured. Set APIFY_API_TOKEN environment variable.',

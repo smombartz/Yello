@@ -30,6 +30,10 @@ export default async function gmailEnrichRoutes(fastify: FastifyInstance) {
     },
     config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
   }, async (request: FastifyRequest<{ Body: { strategy: 'recent' | 'frequent'; scanDepth?: number } }>, reply: FastifyReply) => {
+    if (request.user?.isDemo) {
+      return reply.status(403).send({ error: 'This feature is not available in demo mode. Sign in with Google to unlock all features.' });
+    }
+
     const userId = request.user!.id;
     const db = getUserDatabase(userId);
     const { strategy, scanDepth } = request.body;
@@ -67,6 +71,10 @@ export default async function gmailEnrichRoutes(fastify: FastifyInstance) {
     },
     config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
   }, async (request: FastifyRequest<{ Body: { contactIds?: number[]; strategy?: 'all' | 'unsynced'; limit: number } }>, reply: FastifyReply) => {
+    if (request.user?.isDemo) {
+      return reply.status(403).send({ error: 'This feature is not available in demo mode. Sign in with Google to unlock all features.' });
+    }
+
     const userId = request.user!.id;
     const db = getUserDatabase(userId);
     const { contactIds, strategy, limit } = request.body;
