@@ -73,11 +73,11 @@ await app.register(fastifyHelmet, {
   contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "https://kit.fontawesome.com", "https://ka-f.fontawesome.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://ka-f.fontawesome.com"],
       imgSrc: ["'self'", "data:", "https://*.googleusercontent.com", "https://*.gravatar.com", "https://tile.openstreetmap.org"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
+      connectSrc: ["'self'", "https://ka-f.fontawesome.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://ka-f.fontawesome.com"],
       objectSrc: ["'none'"],
       frameSrc: ["'none'"],
       baseUri: ["'self'"],
