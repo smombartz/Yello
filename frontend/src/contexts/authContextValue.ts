@@ -4,6 +4,7 @@ import type { User } from '../api/authHooks';
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isDemo: boolean;
   isLoading: boolean;
   error: Error | null;
   login: () => void;

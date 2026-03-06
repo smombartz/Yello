@@ -12,14 +12,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logoutMutation = useLogout();
   const hasRefreshedEmails = useRef(false);
 
-  // Auto-refresh email history for previously-synced contacts on login
+  // Auto-refresh email history for previously-synced contacts on login (skip for demo users)
   useEffect(() => {
-    if (data?.isAuthenticated && !hasRefreshedEmails.current) {
+    if (data?.isAuthenticated && !data?.user?.isDemo && !hasRefreshedEmails.current) {
       hasRefreshedEmails.current = true;
       fetch('/api/contacts/refresh-all', { method: 'POST', credentials: 'include' })
         .catch(() => { /* silent failure */ });
     }
-  }, [data?.isAuthenticated]);
+  }, [data?.isAuthenticated, data?.user?.isDemo]);
 
   const login = () => {
     // Redirect to Google OAuth
@@ -33,6 +33,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value: AuthContextType = {
     user: data?.user ?? null,
     isAuthenticated: data?.isAuthenticated ?? false,
+    isDemo: data?.user?.isDemo ?? false,
     isLoading,
     error: error as Error | null,
     login,

@@ -15,6 +15,7 @@ export interface User {
   email: string;
   name: string | null;
   avatarUrl: string | null;
+  isDemo?: boolean;
   profileImages: ProfileImage[];
   createdAt: string;
   updatedAt: string;
