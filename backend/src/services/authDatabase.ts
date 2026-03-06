@@ -37,7 +37,8 @@ export function getAuthDatabase(): DatabaseType {
       refresh_token TEXT,
       token_expires_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      is_demo INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS sessions (
@@ -59,6 +60,7 @@ export function getAuthDatabase(): DatabaseType {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE INDEX IF NOT EXISTS idx_users_is_demo ON users(is_demo);
     CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);

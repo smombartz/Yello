@@ -166,6 +166,13 @@ describe('authDatabase', () => {
     }
   });
 
+  it('should have is_demo column on users table', () => {
+    const db = getAuthDatabase();
+    const columns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+    const columnNames = columns.map((c) => c.name);
+    expect(columnNames).toContain('is_demo');
+  });
+
   it('should create relevant indexes', () => {
     const db = getAuthDatabase();
 
@@ -174,6 +181,7 @@ describe('authDatabase', () => {
       .all() as Array<{ name: string }>;
     const indexNames = indexes.map((i) => i.name);
 
+    expect(indexNames).toContain('idx_users_is_demo');
     expect(indexNames).toContain('idx_users_google_id');
     expect(indexNames).toContain('idx_users_email');
     expect(indexNames).toContain('idx_sessions_user_id');
