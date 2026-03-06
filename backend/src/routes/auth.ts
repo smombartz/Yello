@@ -13,6 +13,7 @@ const GOOGLE_CONFIGURATION = {
   tokenPath: '/oauth2/v4/token',
 };
 import { getAuthDatabase } from '../services/authDatabase.js';
+import { createDemoUser, cleanupExpiredDemoUsers, DEMO_SESSION_DURATION_MS } from '../services/demoService.js';
 import { AuthMeResponseSchema, AuthErrorSchema } from '../schemas/auth.js';
 import { fetchAndStoreGoogleAvatar, fetchAndStoreGravatar, getProfileImages, getProfileImageUrl, enrichUsersFromGoogleContacts } from '../services/profileImageService.js';
 
@@ -476,5 +477,25 @@ export default async function authRoutes(fastify: FastifyInstance) {
     }
 
     return { success: true };
+  });
+
+  // Demo account - create temporary demo user
+  fastify.post('/demo', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (_request, reply) => {
+    // Clean up expired demo users first
+    cleanupExpiredDemoUsers();
+
+    // Create new demo user with seeded data
+    const { sessionId } = createDemoUser();
+
+    // Set session cookie (2-hour expiry)
+    reply.setCookie('session_id', sessionId, {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: DEMO_SESSION_DURATION_MS / 1000,
+    });
+
+    return { success: true, isDemo: true };
   });
 }
