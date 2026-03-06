@@ -1,5 +1,17 @@
 # Change Log
 
+## 2026-03-06 15:00 — Onboarding Flow
+
+- Added `/onboarding` route with accordion-style guided setup
+- Profile photo upload via `POST /api/profile-images/upload` (Sharp pipeline, 4 sizes)
+- VCF import section with export instructions for iPhone, Google, Outlook
+- LinkedIn CSV import section with step-by-step export guide
+- `has_onboarded` flag on users table, `PATCH /api/auth/onboarded` endpoint
+- `hasOnboarded` included in `GET /api/auth/me` response
+- Auto-redirect to onboarding for new users (both frontend ProtectedRoute and OAuth callback)
+- Skippable at any time via "Skip to Dashboard" or "Go to Dashboard"
+- Auto-completion detection with redirect after all steps done
+
 ## 2026-03-04 21:30 — Multi-Tenancy: Database-Per-User Architecture
 
 - Converted from single-tenant to multi-tenant architecture supporting 100+ users
