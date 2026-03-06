@@ -4,6 +4,8 @@ import {
   getProfileImages,
   setPrimaryImage,
   getProfileImageUrl,
+  processUploadedImage,
+  upsertProfileImage,
 } from '../services/profileImageService.js';
 export default async function profileImagesRoutes(fastify: FastifyInstance) {
   // Get all profile images for current user
@@ -60,5 +62,47 @@ export default async function profileImagesRoutes(fastify: FastifyInstance) {
 
     setPrimaryImage(userId, imageId);
     return { success: true };
+  });
+
+  // POST /upload
+  fastify.post('/upload', async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = request.user!.id;
+    const data = await request.file();
+
+    if (!data) {
+      return reply.status(400).send({ error: 'No file uploaded' });
+    }
+
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedMimes.includes(data.mimetype)) {
+      return reply.status(400).send({ error: 'Invalid file type. Use JPEG, PNG, or WebP.' });
+    }
+
+    const buffer = await data.toBuffer();
+
+    if (buffer.length > 10 * 1024 * 1024) {
+      return reply.status(400).send({ error: 'File too large. Maximum 10MB.' });
+    }
+
+    const identifier = `user-uploaded-${userId}-${Date.now()}`;
+    const hash = await processUploadedImage(buffer, identifier);
+
+    if (!hash) {
+      return reply.status(500).send({ error: 'Failed to process image' });
+    }
+
+    upsertProfileImage(userId, 'user_uploaded', null, hash);
+
+    const images = getProfileImages(userId);
+    const uploaded = images.find(img => img.source === 'user_uploaded');
+    if (uploaded) {
+      setPrimaryImage(userId, uploaded.id);
+    }
+
+    return {
+      success: true,
+      url: getProfileImageUrl(hash),
+      hash,
+    };
   });
 }

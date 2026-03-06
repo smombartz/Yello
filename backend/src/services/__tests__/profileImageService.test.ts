@@ -9,6 +9,7 @@ import {
   getGravatarHash,
   getGravatarUrl,
   downloadAndProcessImage,
+  processUploadedImage,
 } from '../profileImageService.js';
 import fs from 'fs/promises';
 
@@ -127,4 +128,18 @@ describe('downloadAndProcessImage', () => {
 
   // Note: We can't easily test successful download without mocking
   // The function will be integration tested via OAuth flow
+});
+
+describe('processUploadedImage', () => {
+  it('should process an uploaded image buffer and return a hash', async () => {
+    const { default: sharp } = await import('sharp');
+    const testBuffer = await sharp({
+      create: { width: 10, height: 10, channels: 3, background: { r: 255, g: 0, b: 0 } }
+    }).jpeg().toBuffer();
+
+    const hash = await processUploadedImage(testBuffer, 'test-user-upload-1');
+    expect(hash).toBeTruthy();
+    expect(typeof hash).toBe('string');
+    expect(hash!.length).toBe(32); // md5 hex length
+  });
 });

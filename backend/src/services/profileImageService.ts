@@ -186,6 +186,40 @@ export async function downloadAndProcessImage(
   }
 }
 
+export async function processUploadedImage(
+  buffer: Buffer,
+  identifier: string
+): Promise<string | null> {
+  try {
+    const hash = crypto.createHash('md5').update(identifier).digest('hex');
+    const prefix = hash.substring(0, 2);
+    const photosPath = getPhotosPath();
+
+    for (const size of SIZES) {
+      const dirPath = path.join(photosPath, size.name, prefix);
+      await fs.mkdir(dirPath, { recursive: true });
+
+      await sharp(buffer)
+        .rotate()
+        .resize(size.width, size.height, {
+          fit: 'cover',
+          position: 'attention',
+        })
+        .jpeg({
+          quality: size.quality,
+          mozjpeg: true,
+          progressive: true,
+        })
+        .toFile(path.join(dirPath, `${hash}.jpg`));
+    }
+
+    return hash;
+  } catch (error) {
+    console.error('Error processing uploaded image:', error);
+    return null;
+  }
+}
+
 export async function fetchAndStoreGoogleAvatar(
   userId: number,
   googlePictureUrl: string | null,
