@@ -1,0 +1,114 @@
+.onboarding-container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.onboarding-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.onboarding-header h2 {
+  margin-bottom: 0.5rem;
+}
+
+.onboarding-header p {
+  color: var(--pico-muted-color);
+  margin-bottom: 0;
+}
+
+.skip-link {
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--pico-muted-color);
+}
+
+.skip-link:hover {
+  color: var(--pico-primary);
+}
+
+.onboarding-section {
+  padding: 1rem 0;
+}
+
+.onboarding-success {
+  text-align: center;
+  color: var(--pico-primary);
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.onboarding-footer {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.onboarding-footer button {
+  min-width: 200px;
+}
+
+.onboarding-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.profile-info strong {
+  font-size: 1.1rem;
+}
+
+.profile-info span {
+  color: var(--pico-muted-color);
+  font-size: 0.875rem;
+}
+
+.error-text {
+  color: var(--pico-del-color);
+  font-size: 0.875rem;
+}
+
+.onboarding-instructions {
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.onboarding-instructions ul {
+  margin-top: 0.5rem;
+}
+
+.import-result {
+  padding: 0.75rem;
+  background: var(--pico-card-background-color);
+  border-radius: var(--pico-border-radius);
+  text-align: center;
+}
+
+.muted-text {
+  color: var(--pico-muted-color);
+  font-size: 0.875rem;
+}
+
+.import-progress {
+  text-align: center;
+}
+
+.import-progress progress {
+  width: 100%;
+  margin-top: 0.5rem;
+}
