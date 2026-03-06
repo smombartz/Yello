@@ -25,6 +25,7 @@ describe('contacts routes', () => {
         email: 'test@test.com',
         name: 'Test User',
         avatarUrl: null,
+        isDemo: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
