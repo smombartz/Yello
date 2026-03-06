@@ -33,6 +33,7 @@ interface UserRow {
   name: string | null;
   avatar_url: string | null;
   is_demo: number;
+  has_onboarded: number;
   created_at: string;
   updated_at: string;
 }
@@ -449,6 +450,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         name: user.name,
         avatarUrl: user.avatar_url,
         isDemo: !!user.is_demo,
+        hasOnboarded: !!user.has_onboarded,
         profileImages: profileImages.map(img => ({
           id: img.id,
           source: img.source,
@@ -460,6 +462,24 @@ export default async function authRoutes(fastify: FastifyInstance) {
       },
       isAuthenticated: true,
     };
+  });
+
+  // Mark onboarding as complete
+  fastify.patch('/onboarded', async (request: FastifyRequest, reply: FastifyReply) => {
+    const sessionId = request.cookies.session_id;
+    if (!sessionId) {
+      return reply.status(401).send({ error: 'Not authenticated' });
+    }
+
+    const user = getUserFromSession(sessionId);
+    if (!user) {
+      return reply.status(401).send({ error: 'Invalid session' });
+    }
+
+    const db = getAuthDatabase();
+    db.prepare('UPDATE users SET has_onboarded = 1 WHERE id = ?').run(user.id);
+
+    return { success: true };
   });
 
   // Logout
