@@ -14,6 +14,7 @@ interface UserRow {
   email: string;
   name: string | null;
   avatar_url: string | null;
+  is_demo: number;
   created_at: string;
   updated_at: string;
 }
@@ -27,6 +28,7 @@ declare module 'fastify' {
       email: string;
       name: string | null;
       avatarUrl: string | null;
+      isDemo: boolean;
       createdAt: string;
       updatedAt: string;
     };
@@ -71,6 +73,7 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply):
     email: user.email,
     name: user.name,
     avatarUrl: user.avatar_url,
+    isDemo: !!user.is_demo,
     createdAt: user.created_at,
     updatedAt: user.updated_at,
   };
@@ -112,6 +115,7 @@ export async function optionalAuth(request: FastifyRequest, _reply: FastifyReply
     email: user.email,
     name: user.name,
     avatarUrl: user.avatar_url,
+    isDemo: !!user.is_demo,
     createdAt: user.created_at,
     updatedAt: user.updated_at,
   };

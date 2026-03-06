@@ -32,6 +32,7 @@ interface UserRow {
   email: string;
   name: string | null;
   avatar_url: string | null;
+  is_demo: number;
   created_at: string;
   updated_at: string;
 }
@@ -447,6 +448,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         email: user.email,
         name: user.name,
         avatarUrl: user.avatar_url,
+        isDemo: !!user.is_demo,
         profileImages: profileImages.map(img => ({
           id: img.id,
           source: img.source,

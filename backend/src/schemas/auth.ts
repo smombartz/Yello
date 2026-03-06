@@ -18,6 +18,7 @@ export const UserSchema = Type.Object({
   email: Type.String(),
   name: Type.Union([Type.String(), Type.Null()]),
   avatarUrl: Type.Union([Type.String(), Type.Null()]),
+  isDemo: Type.Optional(Type.Boolean()),
   profileImages: Type.Array(ProfileImageSchema),
   createdAt: Type.String(),
   updatedAt: Type.String(),
