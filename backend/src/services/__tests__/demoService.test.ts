@@ -35,8 +35,8 @@ describe('demoService', () => {
     }
   });
 
-  it('should create a demo user in auth.db with is_demo=1', () => {
-    const result = createDemoUser();
+  it('should create a demo user in auth.db with is_demo=1', async () => {
+    const result = await createDemoUser();
     const db = getAuthDatabase();
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.userId) as any;
     expect(user.is_demo).toBe(1);
@@ -44,8 +44,8 @@ describe('demoService', () => {
     expect(user.email).toMatch(/@demo\.yello\.app$/);
   });
 
-  it('should create a session that expires in ~2 hours', () => {
-    const result = createDemoUser();
+  it('should create a session that expires in ~2 hours', async () => {
+    const result = await createDemoUser();
     const db = getAuthDatabase();
     const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(result.sessionId) as any;
     const expiresAt = new Date(session.expires_at).getTime();
@@ -54,15 +54,15 @@ describe('demoService', () => {
     expect(Math.abs(expiresAt - twoHoursFromNow)).toBeLessThan(10000);
   });
 
-  it('should seed the demo user contacts.db with DEMO_CONTACT_COUNT contacts', () => {
-    const result = createDemoUser();
+  it('should seed the demo user contacts.db with DEMO_CONTACT_COUNT contacts', async () => {
+    const result = await createDemoUser();
     const userDb = getUserDatabase(result.userId);
     const count = userDb.prepare('SELECT COUNT(*) as count FROM contacts').get() as any;
     expect(count.count).toBe(DEMO_CONTACT_COUNT);
   });
 
-  it('should seed contacts with emails, phones, and addresses', () => {
-    const result = createDemoUser();
+  it('should seed contacts with emails, phones, and addresses', async () => {
+    const result = await createDemoUser();
     const userDb = getUserDatabase(result.userId);
     const emails = userDb.prepare('SELECT COUNT(*) as count FROM contact_emails').get() as any;
     const phones = userDb.prepare('SELECT COUNT(*) as count FROM contact_phones').get() as any;
@@ -72,16 +72,16 @@ describe('demoService', () => {
     expect(addresses.count).toBeGreaterThan(0);
   });
 
-  it('should seed some contacts with LinkedIn enrichment data', () => {
-    const result = createDemoUser();
+  it('should seed some contacts with LinkedIn enrichment data', async () => {
+    const result = await createDemoUser();
     const userDb = getUserDatabase(result.userId);
     const enriched = userDb.prepare('SELECT COUNT(*) as count FROM linkedin_enrichment').get() as any;
     expect(enriched.count).toBeGreaterThanOrEqual(10);
   });
 
-  it('should clean up expired demo users', () => {
+  it('should clean up expired demo users', async () => {
     // Create a demo user
-    const result = createDemoUser();
+    const result = await createDemoUser();
     const db = getAuthDatabase();
 
     // Manually expire the session
@@ -99,8 +99,8 @@ describe('demoService', () => {
     expect(fs.existsSync(userDir)).toBe(false);
   });
 
-  it('should NOT clean up non-expired demo users', () => {
-    const result = createDemoUser();
+  it('should NOT clean up non-expired demo users', async () => {
+    const result = await createDemoUser();
     cleanupExpiredDemoUsers();
 
     const db = getAuthDatabase();

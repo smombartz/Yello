@@ -266,7 +266,7 @@ function getLinkedContactInfo(db: DatabaseType, contactId: number): LinkedContac
   return {
     id: contact.id,
     displayName: contact.display_name,
-    photoUrl: getPhotoUrl(contact.photo_hash, 'thumbnail'),
+    photoUrl: getPhotoUrl(contact.photo_hash, 'small'),
   };
 }
 
@@ -517,7 +517,7 @@ export default async function profileRoutes(
     return contacts.map((c): ContactSearchResult => ({
       id: c.id,
       displayName: c.display_name,
-      photoUrl: getPhotoUrl(c.photo_hash, 'thumbnail'),
+      photoUrl: getPhotoUrl(c.photo_hash, 'small'),
       primaryEmail: c.primary_email,
       primaryPhone: c.primary_phone,
     }));

@@ -173,7 +173,7 @@ describe('contacts routes', () => {
       });
 
       const body = response.json();
-      expect(body.contacts[0].photoUrl).toBe('/photos/thumbnail/ab/abc123def456.jpg');
+      expect(body.contacts[0].photoUrl).toBe('/photos/small/ab/abc123def456.jpg');
     });
 
     it('should search contacts using FTS', async () => {

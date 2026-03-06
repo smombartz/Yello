@@ -147,7 +147,7 @@ export default async function mapRoutes(
       .map(a => ({
         contactId: a.contact_id,
         displayName: a.display_name,
-        photoUrl: getPhotoUrl(a.photo_hash, 'thumbnail'),
+        photoUrl: getPhotoUrl(a.photo_hash, 'small'),
         latitude: a.latitude!,
         longitude: a.longitude!,
         city: a.city,

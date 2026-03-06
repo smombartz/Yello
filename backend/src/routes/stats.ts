@@ -126,12 +126,13 @@ function getUpcomingBirthdays(db: DatabaseType): UpcomingBirthday[] {
     const diffTime = birthdayThisYear.getTime() - now.getTime();
     const daysUntil = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    // Only include if within next 7 days
-    if (daysUntil >= 0 && daysUntil <= 7) {
+    // Include if birthday is in current month or next month
+    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+    if (birthdayMonth === currentMonth || birthdayMonth === nextMonth) {
       upcomingBirthdays.push({
         id: contact.id,
         displayName: contact.display_name,
-        birthday: `${String(birthdayMonth).padStart(2, '0')}-${String(birthdayDay).padStart(2, '0')}`,
+        birthday: contact.birthday,
         daysUntil,
         photoHash: contact.photo_hash,
       });

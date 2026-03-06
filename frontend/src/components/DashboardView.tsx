@@ -6,7 +6,7 @@ import { Icon } from './Icon';
 
 function getPhotoUrl(photoHash: string | null): string | null {
   if (!photoHash) return null;
-  return `/photos/thumbnail/${photoHash.slice(0, 2)}/${photoHash}.jpg`;
+  return `/photos/small/${photoHash.slice(0, 2)}/${photoHash}.jpg`;
 }
 
 function formatDate(dateStr: string): string {
@@ -19,6 +19,61 @@ function formatDate(dateStr: string): string {
   if (diffDays === 1) return 'Yesterday';
   if (diffDays < 7) return `${diffDays} days ago`;
   return date.toLocaleDateString();
+}
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+function getOrdinalSuffix(n: number): string {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return 'th';
+  switch (n % 10) {
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
+}
+
+function formatBirthday(birthday: string): string {
+  let year: number | null = null;
+  let month: number;
+  let day: number;
+
+  if (birthday.startsWith('--')) {
+    const parts = birthday.slice(2).split('-');
+    month = parseInt(parts[0], 10);
+    day = parseInt(parts[1], 10);
+  } else if (birthday.includes('-')) {
+    const parts = birthday.split('-');
+    if (parts.length === 3) {
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10);
+      day = parseInt(parts[2], 10);
+    } else {
+      month = parseInt(parts[0], 10);
+      day = parseInt(parts[1], 10);
+    }
+  } else {
+    return birthday;
+  }
+
+  const monthName = MONTH_NAMES[month! - 1] || '';
+
+  if (year) {
+    const now = new Date();
+    const thisYear = now.getFullYear();
+    const birthdayThisYear = new Date(thisYear, month! - 1, day);
+    // Age they will turn on the next occurrence of this birthday
+    const age = birthdayThisYear >= new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      ? thisYear - year
+      : thisYear + 1 - year;
+    return `${monthName} ${day}, ${age}${getOrdinalSuffix(age)} Birthday`;
+  }
+
+  return `${day} ${monthName}`;
 }
 
 function formatBirthdayDays(daysUntil: number): string {
@@ -135,7 +190,7 @@ export function DashboardView() {
                 {data.upcomingBirthdays.length === 0 ? (
                   <div className="empty-state">
                     <Icon name="calendar-xmark" />
-                    <p>No birthdays in the next 7 days</p>
+                    <p>No birthdays this month or next</p>
                   </div>
                 ) : (
                   <ul className="contact-list">
@@ -156,7 +211,7 @@ export function DashboardView() {
                         </div>
                         <div className="contact-info">
                           <div className="contact-name">{contact.displayName}</div>
-                          <div className="contact-meta">{contact.birthday}</div>
+                          <div className="contact-meta">{formatBirthday(contact.birthday)}</div>
                         </div>
                         <div className="contact-badge birthday-badge">
                           {formatBirthdayDays(contact.daysUntil)}

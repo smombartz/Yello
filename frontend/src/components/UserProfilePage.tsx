@@ -638,8 +638,21 @@ export function UserProfilePage() {
   const [isEditMode, setIsEditMode] = useState(false);
 
   useEffect(() => {
-    setHeaderConfig({ title: 'Profile' });
-  }, [setHeaderConfig]);
+    setHeaderConfig({
+      title: 'Profile',
+      actions: (
+        <button
+          type="button"
+          className="logout-btn"
+          onClick={logout}
+          disabled={isLoggingOut}
+        >
+          <Icon name="right-from-bracket" />
+          {isLoggingOut ? 'Logging out...' : 'Logout'}
+        </button>
+      ),
+    });
+  }, [setHeaderConfig, logout, isLoggingOut]);
 
   // Sync form when profile data loads from server
   // This is a legitimate pattern for syncing external (server) data to local form state
@@ -1248,6 +1261,29 @@ export function UserProfilePage() {
 }
 
 const profileStyles = `
+  .logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: none;
+    border: 1px solid var(--ds-border-color);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--ds-text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .logout-btn:hover:not(:disabled) {
+    background: var(--ds-bg-secondary);
+    color: var(--ds-text-primary);
+    border-color: var(--ds-border-dark);
+  }
+  .logout-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   .profile-loading {
     display: flex;
     flex-direction: column;

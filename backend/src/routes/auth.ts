@@ -487,7 +487,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     cleanupExpiredDemoUsers();
 
     // Create new demo user with seeded data
-    const { sessionId } = createDemoUser();
+    const { sessionId } = await createDemoUser();
 
     // Set session cookie (2-hour expiry)
     reply.setCookie('session_id', sessionId, {

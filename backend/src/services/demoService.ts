@@ -1,9 +1,15 @@
 import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import { getAuthDatabase } from './authDatabase.js';
 import { getUserDatabase, closeUserDatabase } from './userDatabase.js';
+import { processPhoto } from './photoProcessor.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DEMO_PHOTOS_DIR = path.join(__dirname, '../assets/demo-photos');
 
 export const DEMO_CONTACT_COUNT = 20;
 export const DEMO_SESSION_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
@@ -67,7 +73,7 @@ const DEMO_CONTACTS: DemoContact[] = [
   {
     firstName: 'Elena', lastName: 'Rodriguez', company: 'Rodriguez & Partners', title: 'Immigration Attorney',
     notes: 'Handles all our H-1B cases. Very responsive and knowledgeable.',
-    birthday: null,
+    birthday: '1981-08-19',
     emails: [{ email: 'elena@rodriguezlaw.com', type: 'work' }, { email: 'erodriguez.esq@gmail.com', type: 'home' }],
     phones: [{ phone: '+13055551003', phoneDisplay: '(305) 555-1003', type: 'work' }],
     address: { street: '1200 Brickell Ave, Suite 800', city: 'Miami', state: 'FL', postalCode: '33131', country: 'United States', type: 'work' },
@@ -108,7 +114,7 @@ const DEMO_CONTACTS: DemoContact[] = [
   {
     firstName: 'James', lastName: "O'Brien", company: "O'Brien Construction", title: 'General Contractor',
     notes: 'Handled our office renovation. Quality work, on time and budget.',
-    birthday: null,
+    birthday: '1976-04-08',
     emails: [{ email: 'james@obrienconstruction.com', type: 'work' }],
     phones: [{ phone: '+17735551006', phoneDisplay: '(773) 555-1006', type: 'work' }],
     address: { street: '1550 N Damen Ave', city: 'Chicago', state: 'IL', postalCode: '60622', country: 'United States', type: 'work' },
@@ -190,7 +196,7 @@ const DEMO_CONTACTS: DemoContact[] = [
   {
     firstName: 'Omar', lastName: 'Hassan', company: 'Atlas Infrastructure', title: 'Civil Engineer',
     notes: 'Consulting on the new parking structure project. PE licensed in 3 states.',
-    birthday: null,
+    birthday: '1979-06-14',
     emails: [{ email: 'ohassan@atlasinfra.com', type: 'work' }],
     phones: [{ phone: '+12025551012', phoneDisplay: '(202) 555-1012', type: 'work' }],
     address: { street: '1750 K St NW, Suite 400', city: 'Washington', state: 'DC', postalCode: '20006', country: 'United States', type: 'work' },
@@ -217,7 +223,7 @@ const DEMO_CONTACTS: DemoContact[] = [
   {
     firstName: 'Hannah', lastName: 'Berg', company: 'Riverside Animal Care', title: 'Veterinarian',
     notes: 'Our family vet. Excellent with anxious pets. Open on Saturdays.',
-    birthday: null,
+    birthday: '1986-10-27',
     emails: [{ email: 'hberg@riversidevetcare.com', type: 'work' }],
     phones: [{ phone: '+16195551015', phoneDisplay: '(619) 555-1015', type: 'work' }],
     address: { street: '3800 Park Blvd', city: 'San Diego', state: 'CA', postalCode: '92103', country: 'United States', type: 'work' },
@@ -242,7 +248,7 @@ const DEMO_CONTACTS: DemoContact[] = [
   {
     firstName: 'Emma', lastName: 'Williams', company: 'The Morning Chronicle', title: 'Journalist',
     notes: 'Tech beat reporter. Has covered our product launches favorably.',
-    birthday: null,
+    birthday: '1993-02-17',
     emails: [{ email: 'ewilliams@morningchronicle.com', type: 'work' }],
     phones: [{ phone: '+14155551017', phoneDisplay: '(415) 555-1017', type: 'work' }],
     address: { street: '901 Mission St', city: 'San Francisco', state: 'CA', postalCode: '94103', country: 'United States', type: 'work' },
@@ -284,11 +290,35 @@ const DEMO_CONTACTS: DemoContact[] = [
   },
 ];
 
+// Photo file per demo contact (index matches DEMO_CONTACTS order, null = no photo)
+const DEMO_CONTACT_PHOTOS: (string | null)[] = [
+  'f-Mei.jpg',     // 1 Sarah Chen
+  'm-Marcus.jpg',  // 2 Marcus Johnson
+  'f-Elena.jpg',   // 3 Elena Rodriguez
+  'm-Chen.jpg',    // 4 David Kim
+  'f-Priya.jpg',   // 5 Priya Sharma
+  'm-Jack.jpg',    // 6 James O'Brien
+  'f-Fatima.jpg',  // 7 Aisha Patel
+  'm-Henrik.jpg',  // 8 Tom Andersson
+  'f-Hana.jpg',    // 9 Lisa Nakamura
+  'm-Carlos.jpg',  // 10 Carlos Mendez
+  'f-Rachel.jpg',  // 11 Rachel Green
+  'm-Hassan.jpg',  // 12 Omar Hassan
+  'f-Sophie.jpg',  // 13 Sophie Laurent
+  null,            // 14 Michael Torres
+  'f-Hannah.jpg',  // 15 Hannah Berg
+  'm-Raj.jpg',     // 16 Raj Kapoor
+  'f-Emma.jpg',    // 17 Emma Williams
+  'm-Kwame.jpg',   // 18 Daniel Okafor
+  null,            // 19 Julia Rossi
+  'm-Blake.jpg',   // 20 Ben Calloway
+];
+
 /**
  * Creates a temporary demo user with seeded contact data.
  * Returns the userId and sessionId for cookie management.
  */
-export function createDemoUser(): { userId: number; sessionId: string } {
+export async function createDemoUser(): Promise<{ userId: number; sessionId: string }> {
   const authDb = getAuthDatabase();
   const uuid = randomUUID();
   const googleId = `demo-${uuid}`;
@@ -312,8 +342,36 @@ export function createDemoUser(): { userId: number; sessionId: string } {
   // Initialize user database and seed contacts
   const userDb = getUserDatabase(userId);
   seedDemoContacts(userDb);
+  await seedDemoPhotos(userDb, userId);
 
   return { userId, sessionId };
+}
+
+/**
+ * Seeds profile photos for demo contacts by processing each photo through
+ * the standard photo pipeline (generates thumbnails, etc.).
+ */
+async function seedDemoPhotos(db: DatabaseType, userId: number): Promise<void> {
+  for (let i = 0; i < DEMO_CONTACT_PHOTOS.length; i++) {
+    const photoFile = DEMO_CONTACT_PHOTOS[i];
+    if (!photoFile) continue;
+
+    const contactId = i + 1;
+    const photoPath = path.join(DEMO_PHOTOS_DIR, photoFile);
+    if (!fs.existsSync(photoPath)) continue;
+
+    const base64Data = fs.readFileSync(photoPath).toString('base64');
+    const hash = await processPhoto(base64Data, contactId, userId);
+
+    db.prepare('UPDATE contacts SET photo_hash = ? WHERE id = ?').run(hash, contactId);
+    db.prepare(`
+      INSERT INTO contact_photos (contact_id, source, local_hash, is_primary)
+      VALUES (?, 'vcard', ?, 1)
+      ON CONFLICT(contact_id, source) DO UPDATE SET
+        local_hash = excluded.local_hash,
+        fetched_at = CURRENT_TIMESTAMP
+    `).run(contactId, hash);
+  }
 }
 
 /**

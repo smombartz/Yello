@@ -126,10 +126,10 @@ export function getGravatarUrl(email: string): string {
 }
 
 const SIZES = [
-  { name: 'thumbnail', width: 48, height: 48, quality: 80 },
-  { name: 'small', width: 96, height: 96, quality: 82 },
-  { name: 'medium', width: 200, height: 200, quality: 85 },
-  { name: 'large', width: 400, height: 400, quality: 88 },
+  { name: 'thumbnail', width: 96, height: 96, quality: 80 },
+  { name: 'small', width: 192, height: 192, quality: 82 },
+  { name: 'medium', width: 400, height: 400, quality: 85 },
+  { name: 'large', width: 800, height: 800, quality: 88 },
 ] as const;
 
 function getPhotosPath(): string {

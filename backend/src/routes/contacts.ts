@@ -324,7 +324,7 @@ export default async function contactsRoutes(
         primaryEmail: row.primary_email,
         primaryPhone: row.primary_phone,
         primaryPhoneCountryCode: row.primary_phone_country_code,
-        photoUrl: getPhotoUrl(row.photo_hash, 'thumbnail'),
+        photoUrl: getPhotoUrl(row.photo_hash, 'small'),
         linkedinUrl: row.linkedin_url,
         websiteUrl: row.website_url
       })),
