@@ -14,6 +14,7 @@ import { ImportView } from './components/ImportView';
 import { UserProfilePage } from './components/UserProfilePage';
 import { DashboardView } from './components/DashboardView';
 import { AdminView } from './components/AdminView';
+import OnboardingView from './components/OnboardingView';
 import { LoginPage } from './components/LoginPage';
 import { PublicContactCard } from './components/PublicContactCard';
 import { AuthProvider } from './contexts/AuthContext';
@@ -21,7 +22,7 @@ import { useAuth } from './hooks/useAuth';
 import { DemoPromptModal } from './components/DemoPromptModal';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -61,6 +62,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (isAuthenticated && user && user.hasOnboarded === false && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
   }
 
   return (
@@ -155,6 +160,7 @@ function AppRoutes() {
         <Route path="enrich" element={<EnrichView />} />
         <Route path="profile" element={<UserProfilePage />} />
         <Route path="admin" element={<AdminView />} />
+        <Route path="onboarding" element={<OnboardingView />} />
       </Route>
 
       {/* Catch-all redirect to dashboard */}
