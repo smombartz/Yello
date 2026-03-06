@@ -1,8 +1,23 @@
+import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useQueryClient } from '@tanstack/react-query';
+import { startDemo } from '../api/client';
 import logoSvg from '../assets/logo.svg';
 
 export function LoginPage() {
   const { login, isLoading } = useAuth();
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleDemo = async () => {
+    setIsDemoLoading(true);
+    try {
+      await startDemo();
+      await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+    } catch {
+      setIsDemoLoading(false);
+    }
+  };
 
   return (
     <div className="login-page">
@@ -43,6 +58,18 @@ export function LoginPage() {
               />
             </svg>
             <span>Sign in with Google</span>
+          </button>
+
+          <div className="login-divider">
+            <span>or</span>
+          </div>
+
+          <button
+            className="demo-btn"
+            onClick={handleDemo}
+            disabled={isDemoLoading}
+          >
+            {isDemoLoading ? 'Setting up demo...' : 'Try Demo'}
           </button>
         </div>
 
@@ -121,6 +148,46 @@ export function LoginPage() {
 
         .google-icon {
           flex-shrink: 0;
+        }
+
+        .login-divider {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin: 16px 0;
+          color: var(--ds-text-muted);
+          font-size: 13px;
+        }
+
+        .login-divider::before,
+        .login-divider::after {
+          content: '';
+          flex: 1;
+          height: 1px;
+          background: var(--ds-border-color);
+        }
+
+        .demo-btn {
+          width: 100%;
+          padding: 14px 24px;
+          background: linear-gradient(46deg, #7C3AED 7.03%, #273DE3 94.08%);
+          border: none;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: 500;
+          color: white;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .demo-btn:hover:not(:disabled) {
+          opacity: 0.9;
+          box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+        }
+
+        .demo-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         .login-footer {

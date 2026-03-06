@@ -49,3 +49,15 @@ export async function uploadFile(endpoint: string, file: File): Promise<unknown>
 export function getGoogleLoginUrl(): string {
   return `${API_BASE}/api/auth/google`;
 }
+
+// Start a demo session
+export async function startDemo(): Promise<{ success: boolean; isDemo: boolean }> {
+  const response = await fetch(`${API_BASE}/api/auth/demo`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to start demo');
+  }
+  return response.json();
+}
