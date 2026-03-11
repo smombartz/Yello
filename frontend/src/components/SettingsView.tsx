@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from './Icon';
 import {
   useDeleteAllContacts,
   exportAllContacts
 } from '../api/settingsHooks';
-import { useImportVcf } from '../api/hooks';
+import { uploadFileWithProgress } from '../api/client';
 import type { ImportResult } from '../api/types';
 import type { OutletContext } from './Layout';
 
@@ -22,11 +23,14 @@ export function SettingsView() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [toast, setToast] = useState<ToastState | null>(null);
+  const queryClient = useQueryClient();
   const [importExpanded, setImportExpanded] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [importPhase, setImportPhase] = useState<'uploading' | 'processing' | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
-  const importMutation = useImportVcf();
   const [exportExpanded, setExportExpanded] = useState(false);
   const [dangerExpanded, setDangerExpanded] = useState(false);
 
@@ -53,15 +57,26 @@ export function SettingsView() {
 
   const handleImport = useCallback(async () => {
     if (!importFile) return;
+    setImportError(null);
+    setImportPhase('uploading');
+    setUploadProgress(0);
     try {
-      const result = await importMutation.mutateAsync(importFile);
+      const result = await uploadFileWithProgress('/api/import', importFile, (pct) => {
+        setUploadProgress(pct);
+        if (pct === 100) setImportPhase('processing');
+      }) as ImportResult;
       setImportResult(result);
       setImportFile(null);
       if (importFileRef.current) importFileRef.current.value = '';
-    } catch {
-      showToast('Import failed', 'error');
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['contactCount'] });
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Import failed');
+    } finally {
+      setImportPhase(null);
+      setUploadProgress(null);
     }
-  }, [importFile, importMutation, showToast]);
+  }, [importFile, queryClient]);
 
   const handleExport = useCallback(() => {
     exportAllContacts();
@@ -141,28 +156,41 @@ export function SettingsView() {
                     ref={importFileRef}
                     type="file"
                     accept=".vcf,text/vcard"
-                    onChange={(e) => { setImportFile(e.target.files?.[0] || null); }}
-                    disabled={importMutation.isPending}
+                    onChange={(e) => { setImportFile(e.target.files?.[0] || null); setImportError(null); }}
+                    disabled={importPhase !== null}
                   />
                   {importFile && (
                     <p className="settings-description" style={{ marginTop: '0.5rem' }}>
                       {importFile.name} ({(importFile.size / 1024).toFixed(1)} KB)
                     </p>
                   )}
-                  {importMutation.error && (
-                    <p style={{ color: 'var(--ds-color-error)', marginTop: '0.5rem' }}>
-                      {importMutation.error.message}
+                  {importError && (
+                    <p style={{ color: 'var(--ds-color-error)', marginTop: '0.5rem', fontSize: '0.875rem' }}>
+                      {importError}
                     </p>
                   )}
-                  <button
-                    className="secondary-button"
-                    onClick={handleImport}
-                    disabled={!importFile || importMutation.isPending}
-                    style={{ marginTop: '1rem' }}
-                  >
-                    <Icon name="file-import" />
-                    {importMutation.isPending ? 'Importing...' : 'Import Contacts'}
-                  </button>
+                  {importPhase !== null ? (
+                    <div style={{ marginTop: '1rem' }}>
+                      {importPhase === 'uploading' ? (
+                        <>
+                          <p className="settings-description">Uploading… {uploadProgress}%</p>
+                          <progress value={uploadProgress ?? 0} max={100} style={{ width: '100%' }} />
+                        </>
+                      ) : (
+                        <p className="settings-description">Processing contacts — this may take a moment for large files…</p>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      className="secondary-button"
+                      onClick={handleImport}
+                      disabled={!importFile}
+                      style={{ marginTop: '1rem' }}
+                    >
+                      <Icon name="file-import" />
+                      Import Contacts
+                    </button>
+                  )}
                 </>
               ) : (
                 <>
