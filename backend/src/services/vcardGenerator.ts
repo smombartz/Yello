@@ -43,6 +43,7 @@ export interface ContactForVcard {
     profileUrl: string | null;
   }>;
   categories: string[];
+  photoBase64?: string;
 }
 
 /**
@@ -207,6 +208,11 @@ export function generateVcard(contact: ContactForVcard): string {
       const usernameParam = profile.username ? `;X-USER=${escapeVcardValue(profile.username)}` : '';
       lines.push(`X-SOCIALPROFILE${platformParam}${usernameParam}:${profile.profileUrl}`);
     }
+  }
+
+  // PHOTO (base64 JPEG)
+  if (contact.photoBase64) {
+    lines.push(`PHOTO;ENCODING=b;TYPE=JPEG:${contact.photoBase64}`);
   }
 
   // Required vCard footer

@@ -1,5 +1,23 @@
 # Change Log
 
+## 2026-03-11 16:00 — Drag-to-Reorder Contact Details
+
+- Added `DraggableArrayItem` wrapper component for HTML5 Drag & Drop
+- Added `useDragState` hook for managing drag state and reordering
+- Updated all detail sections (Phone, Email, Address, Social, URL, Related People, Categories, Instant Messages) with drag support in edit mode
+- Auto-updates `isPrimary` when item moved to first position
+- Added CSS styling for drag visual feedback (opacity on dragging, border highlight on drop zone)
+- Works with existing save flow — no backend changes needed
+
+## 2026-03-11 15:00 — Fix VCF Export: Missing Contacts & Photos
+
+- Fixed default export dropping ~505 contacts that had no raw_vcard (manually created / LinkedIn imports)
+- Default export now selects all non-archived contacts; generates vCard on the fly for contacts without raw_vcard
+- Added photo embedding: contacts with photo_hash get their medium JPEG read from disk and injected as base64 PHOTO property
+- Added `photoBase64` support to `vcardGenerator.ts` so generated vCards include photos
+- Existing raw vCards get their PHOTO property replaced with the current local photo (handles enrichment/manual uploads)
+- Refactored export route to share a `buildContactForVcard()` helper between default and regenerate modes
+
 ## 2026-03-06 15:00 — Onboarding Flow
 
 - Added `/onboarding` route with accordion-style guided setup

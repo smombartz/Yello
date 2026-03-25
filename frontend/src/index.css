@@ -4161,6 +4161,32 @@ a.nav-rail-item.active {
   flex-shrink: 0;
 }
 
+/* Drag-and-Drop Styling */
+.draggable-array-item {
+  transition: opacity 0.2s ease, border-color 0.2s ease;
+  border-top: 3px solid transparent;
+}
+
+.draggable-array-item.dragging {
+  opacity: 0.4;
+}
+
+.draggable-array-item.drag-over {
+  border-top-color: var(--ds-color-primary, #007bff);
+}
+
+.draggable-array-item[draggable="true"] {
+  cursor: grab;
+}
+
+.draggable-array-item.dragging {
+  cursor: grabbing;
+}
+
+.draggable-array-item .editable-array-item {
+  pointer-events: auto;
+}
+
 /* Edit field group */
 .edit-field-group {
   flex: 1;

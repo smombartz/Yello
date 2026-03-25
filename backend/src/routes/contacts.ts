@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { getUserDatabase } from '../services/userDatabase.js';
 import { rebuildContactSearch } from '../services/database.js';
@@ -5,6 +7,8 @@ import { getPhotoUrl } from '../services/photoProcessor.js';
 import { detectMergeConflicts, mergeContactsWithResolutions } from '../services/mergeService.js';
 import { geocodeAddress, isValidCoordinate } from '../services/geocoding.js';
 import { generateVcard, type ContactForVcard } from '../services/vcardGenerator.js';
+
+const USER_DATA_PATH = process.env.USER_DATA_PATH ?? './data/users';
 import {
   ContactListQuerySchema,
   ContactListQuery,
@@ -1426,15 +1430,112 @@ export default async function contactsRoutes(
     Querystring: { regenerate?: string }
   }>('/export/vcf', async (request, reply) => {
     const db = getUserDatabase(request.user!.id);
+    const userId = request.user!.id;
     const regenerate = request.query.regenerate === 'true';
+
+    // Helper: read photo from disk as base64, returns null if missing
+    function readPhotoBase64(photoHash: string): string | null {
+      try {
+        const photoPath = path.join(USER_DATA_PATH, String(userId), 'photos', 'medium', photoHash.slice(0, 2), `${photoHash}.jpg`);
+        return fs.readFileSync(photoPath).toString('base64');
+      } catch {
+        return null;
+      }
+    }
+
+    // Helper: inject or replace PHOTO property in existing vCard text
+    function injectPhotoIntoVcard(vcardText: string, base64jpeg: string): string {
+      const photoLine = `PHOTO;ENCODING=b;TYPE=JPEG:${base64jpeg}`;
+      // Remove any existing PHOTO property (may span multiple folded lines)
+      const withoutPhoto = vcardText.replace(/^PHOTO[^\r\n]*(\r?\n[ \t][^\r\n]*)*/gm, '');
+      // Inject before END:VCARD
+      return withoutPhoto.replace(/END:VCARD/i, `${photoLine}\r\nEND:VCARD`);
+    }
+
+    // Helper: fetch related data and build ContactForVcard
+    function buildContactForVcard(contact: {
+      id: number;
+      first_name: string | null;
+      last_name: string | null;
+      display_name: string;
+      company: string | null;
+      title: string | null;
+      notes: string | null;
+      birthday: string | null;
+      photo_hash: string | null;
+    }): ContactForVcard {
+      const emails = db.prepare(`
+        SELECT email, type, is_primary FROM contact_emails WHERE contact_id = ?
+      `).all(contact.id) as Array<{ email: string; type: string | null; is_primary: number }>;
+
+      const phones = db.prepare(`
+        SELECT phone, phone_display, type, is_primary FROM contact_phones WHERE contact_id = ?
+      `).all(contact.id) as Array<{ phone: string; phone_display: string; type: string | null; is_primary: number }>;
+
+      const addresses = db.prepare(`
+        SELECT street, city, state, postal_code, country, type FROM contact_addresses WHERE contact_id = ?
+      `).all(contact.id) as Array<{
+        street: string | null;
+        city: string | null;
+        state: string | null;
+        postal_code: string | null;
+        country: string | null;
+        type: string | null;
+      }>;
+
+      const socialProfiles = db.prepare(`
+        SELECT platform, username, profile_url FROM contact_social_profiles WHERE contact_id = ?
+      `).all(contact.id) as Array<{ platform: string; username: string | null; profile_url: string | null }>;
+
+      const categories = db.prepare(`
+        SELECT category FROM contact_categories WHERE contact_id = ?
+      `).all(contact.id) as Array<{ category: string }>;
+
+      const photoBase64 = contact.photo_hash ? readPhotoBase64(contact.photo_hash) : null;
+
+      return {
+        firstName: contact.first_name,
+        lastName: contact.last_name,
+        displayName: contact.display_name,
+        company: contact.company,
+        title: contact.title,
+        notes: contact.notes,
+        birthday: contact.birthday,
+        emails: emails.map(e => ({
+          email: e.email,
+          type: e.type,
+          isPrimary: e.is_primary === 1
+        })),
+        phones: phones.map(p => ({
+          phone: p.phone,
+          phoneDisplay: p.phone_display,
+          type: p.type,
+          isPrimary: p.is_primary === 1
+        })),
+        addresses: addresses.map(a => ({
+          street: a.street,
+          city: a.city,
+          state: a.state,
+          postalCode: a.postal_code,
+          country: a.country,
+          type: a.type
+        })),
+        socialProfiles: socialProfiles.map(s => ({
+          platform: s.platform,
+          username: s.username,
+          profileUrl: s.profile_url
+        })),
+        categories: categories.map(c => c.category),
+        ...(photoBase64 ? { photoBase64 } : {})
+      };
+    }
 
     let vcfContent: string;
 
     if (regenerate) {
-      // Regenerate vCards from database fields
+      // Regenerate vCards from database fields (all non-archived contacts)
       const contacts = db.prepare(`
-        SELECT
-          id, first_name, last_name, display_name, company, title, notes, birthday
+        SELECT id, first_name, last_name, display_name, company, title, notes, birthday, photo_hash
         FROM contacts
         WHERE archived_at IS NULL
       `).all() as Array<{
@@ -1446,85 +1547,54 @@ export default async function contactsRoutes(
         title: string | null;
         notes: string | null;
         birthday: string | null;
+        photo_hash: string | null;
       }>;
 
       const vcards: string[] = [];
-
       for (const contact of contacts) {
-        // Fetch related data
-        const emails = db.prepare(`
-          SELECT email, type, is_primary FROM contact_emails WHERE contact_id = ?
-        `).all(contact.id) as Array<{ email: string; type: string | null; is_primary: number }>;
-
-        const phones = db.prepare(`
-          SELECT phone, phone_display, type, is_primary FROM contact_phones WHERE contact_id = ?
-        `).all(contact.id) as Array<{ phone: string; phone_display: string; type: string | null; is_primary: number }>;
-
-        const addresses = db.prepare(`
-          SELECT street, city, state, postal_code, country, type FROM contact_addresses WHERE contact_id = ?
-        `).all(contact.id) as Array<{
-          street: string | null;
-          city: string | null;
-          state: string | null;
-          postal_code: string | null;
-          country: string | null;
-          type: string | null;
-        }>;
-
-        const socialProfiles = db.prepare(`
-          SELECT platform, username, profile_url FROM contact_social_profiles WHERE contact_id = ?
-        `).all(contact.id) as Array<{ platform: string; username: string | null; profile_url: string | null }>;
-
-        const categories = db.prepare(`
-          SELECT name FROM contact_categories WHERE contact_id = ?
-        `).all(contact.id) as Array<{ name: string }>;
-
-        const contactForVcard: ContactForVcard = {
-          firstName: contact.first_name,
-          lastName: contact.last_name,
-          displayName: contact.display_name,
-          company: contact.company,
-          title: contact.title,
-          notes: contact.notes,
-          birthday: contact.birthday,
-          emails: emails.map(e => ({
-            email: e.email,
-            type: e.type,
-            isPrimary: e.is_primary === 1
-          })),
-          phones: phones.map(p => ({
-            phone: p.phone,
-            phoneDisplay: p.phone_display,
-            type: p.type,
-            isPrimary: p.is_primary === 1
-          })),
-          addresses: addresses.map(a => ({
-            street: a.street,
-            city: a.city,
-            state: a.state,
-            postalCode: a.postal_code,
-            country: a.country,
-            type: a.type
-          })),
-          socialProfiles: socialProfiles.map(s => ({
-            platform: s.platform,
-            username: s.username,
-            profileUrl: s.profile_url
-          })),
-          categories: categories.map(c => c.name)
-        };
-
-        vcards.push(generateVcard(contactForVcard));
+        vcards.push(generateVcard(buildContactForVcard(contact)));
       }
-
       vcfContent = vcards.join('\r\n');
     } else {
-      // Return original raw_vcard data (existing behavior)
+      // Default export: all non-archived contacts with photo injection
       const contacts = db.prepare(`
-        SELECT raw_vcard FROM contacts WHERE raw_vcard IS NOT NULL AND archived_at IS NULL
-      `).all() as Array<{ raw_vcard: string }>;
+        SELECT id, first_name, last_name, display_name, company, title, notes, birthday, raw_vcard, photo_hash
+        FROM contacts
+        WHERE archived_at IS NULL
+      `).all() as Array<{
+        id: number;
+        first_name: string | null;
+        last_name: string | null;
+        display_name: string;
+        company: string | null;
+        title: string | null;
+        notes: string | null;
+        birthday: string | null;
+        raw_vcard: string | null;
+        photo_hash: string | null;
+      }>;
 
-      vcfContent = contacts.map(c => c.raw_vcard).join('\n');
+      const vcards: string[] = [];
+      for (const contact of contacts) {
+        let vcard: string;
+
+        if (contact.raw_vcard) {
+          // Use existing raw vCard, inject current photo
+          vcard = contact.raw_vcard;
+          if (contact.photo_hash) {
+            const base64 = readPhotoBase64(contact.photo_hash);
+            if (base64) {
+              vcard = injectPhotoIntoVcard(vcard, base64);
+            }
+          }
+        } else {
+          // No raw vCard (manually created / LinkedIn import) — generate from DB
+          vcard = generateVcard(buildContactForVcard(contact));
+        }
+
+        vcards.push(vcard);
+      }
+      vcfContent = vcards.join('\r\n');
     }
 
     reply.header('Content-Type', 'text/vcard');
