@@ -5,21 +5,29 @@ import { spawn, ChildProcess } from 'child_process';
 import * as crypto from 'crypto';
 import * as dotenv from 'dotenv';
 
-// Load .env from user data directory
+// Load .env from multiple locations with fallback
 const userDataDir = app.getPath('userData');
-const envPath = path.join(userDataDir, '.env');
-if (fs.existsSync(envPath)) {
-  dotenv.config({ path: envPath });
+const isDev = !app.isPackaged;
+const resourcesBase = isDev
+  ? path.join(__dirname, '..', '..')
+  : process.resourcesPath;
+
+const userEnvPath = path.join(userDataDir, '.env');
+const backendEnvPath = path.join(resourcesBase, 'backend', '.env');
+
+if (fs.existsSync(userEnvPath)) {
+  console.log('[Electron] Loading .env from user data:', userEnvPath);
+  dotenv.config({ path: userEnvPath });
+} else if (fs.existsSync(backendEnvPath)) {
+  console.log('[Electron] Loading .env from backend:', backendEnvPath);
+  dotenv.config({ path: backendEnvPath });
+} else {
+  console.log('[Electron] No .env file found (checked:', userEnvPath, 'and', backendEnvPath, ')');
 }
 
 let mainWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
 let backendProcess: ChildProcess | null = null;
-
-const isDev = !app.isPackaged;
-const resourcesBase = isDev
-  ? path.join(__dirname, '..', '..')
-  : process.resourcesPath;
 
 const serverPath = path.join(resourcesBase, 'backend', 'dist', 'server.js');
 const appUrl = 'http://localhost:3456';
