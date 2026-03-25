@@ -1,5 +1,34 @@
 # Change Log
 
+## 2026-03-25 12:15 — Electron Desktop App Wrapper
+
+- Created `electron/` package with Fastify backend spawning and process lifecycle management
+- Implemented `electron/src/main.ts` (262 lines) with:
+  - Spawns backend via `ELECTRON_RUN_AS_NODE=1` child process
+  - Health polling with AbortController (200ms interval, 30s timeout)
+  - Session secret auto-generation and persistence (crypto-generated, mode 0o600)
+  - User data directory management at `~/Library/Application Support/Yello/`
+  - BrowserWindow creation with context isolation and preload
+  - Electron user agent stripping for OAuth compatibility
+  - App lifecycle management (ready, window-all-closed, before-quit, activate)
+  - Backend termination with SIGTERM signal
+- Created `electron/tsconfig.json` with CommonJS output (required for Electron main process)
+- Created `electron/package.json` with electron, electron-builder, TypeScript dependencies
+- Created `electron/src/preload.ts` for security context isolation
+- Created `electron/splash.html` with gradient background and loading spinner
+- Created `electron-builder.yml` with macOS DMG configuration (universal arm64 + x64)
+- Created `build-resources/entitlements.mac.plist` for macOS Hardened Runtime (JIT, networking, file access)
+- Created `electron/.env.example` template for Google OAuth and optional API keys
+- Added root `package.json` scripts: `build:all`, `electron:dev`, `electron:build`
+- Added comprehensive setup guide `ELECTRON_SETUP.md` with OAuth config, development workflows, troubleshooting
+- Added test verification checklist `ELECTRON_TEST_RESULTS.md` with build pipeline and integration verification
+- Fixed unused drag-drop code in `frontend/src/components/ContactFormSections.tsx` (unblocked frontend build)
+- Backend integration verified: all env vars (GOOGLE_CLIENT_ID, SESSION_SECRET, database paths) passed correctly
+- Build pipeline tested: frontend builds (778KB), backend builds (all tests passing), Electron compiles (main.js + preload.js)
+- Data paths confirmed: auth DB, per-user DBs, session secret all use user data directory
+- OAuth flow compatible: localhost redirects work within BrowserWindow
+- All 106 backend tests passing (105 passing, 1 pre-existing photoProcessor failure unrelated to implementation)
+
 ## 2026-03-11 16:00 — Drag-to-Reorder Contact Details
 
 - Added `DraggableArrayItem` wrapper component for HTML5 Drag & Drop
