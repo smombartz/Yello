@@ -14,56 +14,6 @@ import {
   getRelationshipIcon
 } from '../utils/contactFormatters';
 
-// ─── Drag & Drop State Hook ─────────────────────────────────────
-
-function useDragState() {
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dropZoneIndex, setDropZoneIndex] = useState<number | null>(null);
-
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
-    setDropZoneIndex(null);
-  };
-
-  const handleDragOver = (index: number) => {
-    setDropZoneIndex(index);
-  };
-
-  const handleDrop = <T extends { isPrimary?: boolean }>(
-    fromIndex: number,
-    toIndex: number,
-    items: T[],
-    onItemsChange: (items: T[]) => void
-  ) => {
-    const updated = [...items];
-    const [movedItem] = updated.splice(fromIndex, 1);
-    updated.splice(toIndex, 0, movedItem);
-
-    // Update isPrimary: first item is always primary
-    updated.forEach((item, idx) => {
-      if ('isPrimary' in item) {
-        item.isPrimary = idx === 0;
-      }
-    });
-
-    onItemsChange(updated);
-    handleDragEnd();
-  };
-
-  return {
-    draggedIndex,
-    dropZoneIndex,
-    handleDragStart,
-    handleDragEnd,
-    handleDragOver,
-    handleDrop,
-  };
-}
-
 // ─── Shared helpers ──────────────────────────────────────────────
 
 function SectionHeading({ icon, label, iconStyle, zodiacSign }: {
@@ -159,68 +109,6 @@ export function EditableArrayItem({
       <button type="button" className="remove-item-btn" onClick={onRemove} title="Remove">
         <Icon name="xmark" />
       </button>
-    </div>
-  );
-}
-
-// ─── Draggable Array Item ───────────────────────────────────────
-
-interface DraggableArrayItemProps {
-  index: number;
-  itemKey: string;
-  isDragging: boolean;
-  draggedIndex: number | null;
-  dropZoneIndex: number | null;
-  onDragStart: (index: number) => void;
-  onDragEnd: () => void;
-  onDragOver: (index: number) => void;
-  onDrop: (fromIndex: number, toIndex: number) => void;
-  onRemove: () => void;
-  children: React.ReactNode;
-}
-
-function DraggableArrayItem({
-  index,
-  itemKey,
-  isDragging,
-  draggedIndex,
-  dropZoneIndex,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
-  onDrop,
-  onRemove,
-  children,
-}: DraggableArrayItemProps) {
-  const isCurrentlyDragging = draggedIndex === index;
-  const isDropZone = dropZoneIndex === index;
-
-  return (
-    <div
-      draggable
-      key={itemKey}
-      className={`draggable-array-item ${isCurrentlyDragging ? 'dragging' : ''} ${isDropZone ? 'drag-over' : ''}`}
-      onDragStart={() => onDragStart(index)}
-      onDragEnd={onDragEnd}
-      onDragOver={(e) => {
-        e.preventDefault(); // Allow drop
-        onDragOver(index);
-      }}
-      onDrop={() => {
-        if (draggedIndex !== null && draggedIndex !== index) {
-          onDrop(draggedIndex, index);
-        }
-      }}
-      onDragLeave={(e) => {
-        // Only clear if leaving the entire item
-        if (e.currentTarget === e.target) {
-          onDragOver(-1);
-        }
-      }}
-    >
-      <EditableArrayItem onRemove={onRemove}>
-        {children}
-      </EditableArrayItem>
     </div>
   );
 }

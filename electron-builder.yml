@@ -1,0 +1,27 @@
+appId: com.yello.crm
+productName: Yello
+directories:
+  output: dist-electron
+files:
+  - electron/dist/**/*
+  - electron/splash.html
+  - electron/node_modules/**/*
+extraResources:
+  - from: backend/dist
+    to: backend/dist
+  - from: backend/node_modules
+    to: backend/node_modules
+  - from: frontend/dist
+    to: frontend/dist
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  category: public.app-category.productivity
+  icon: build-resources/icon.icns
+  hardenedRuntime: true
+  entitlements: build-resources/entitlements.mac.plist
+  entitlementsInherit: build-resources/entitlements.mac.plist
+publish: null

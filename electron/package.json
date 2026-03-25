@@ -1,0 +1,21 @@
+{
+  "name": "yello-electron",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "npm run build && electron .",
+    "rebuild": "electron-rebuild --module-dir ../backend"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0",
+    "typescript": "^5.9.3",
+    "@types/node": "^20.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0"
+  }
+}
