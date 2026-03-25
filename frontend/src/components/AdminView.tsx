@@ -79,6 +79,7 @@ export function AdminView() {
                 <th>Created</th>
                 <th className="num">DB Size</th>
                 <th className="num">Photos</th>
+                <th>User ID</th>
               </tr>
             </thead>
             <tbody>
@@ -114,6 +115,7 @@ export function AdminView() {
                       <span className="admin-photo-size"> ({formatBytes(user.photoSizeBytes)})</span>
                     )}
                   </td>
+                  <td>{user.id}</td>
                 </tr>
               ))}
             </tbody>
