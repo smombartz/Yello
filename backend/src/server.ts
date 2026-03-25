@@ -122,15 +122,15 @@ await app.register(fastifyMultipart, {
   limits: { fileSize: 100 * 1024 * 1024 }
 });
 
-// Serve static files
-if (process.env.NODE_ENV === 'production') {
-  // In Docker, frontend is copied to /app/frontend/dist (see Dockerfile)
-  const frontendPath = path.join(__dirname, '../frontend/dist');
+// Serve static files (production or Electron dev with built frontend)
+// Path is relative to compiled server.js in backend/dist/
+const frontendPath = path.join(__dirname, '../../frontend/dist');
+const frontendExists = fs.existsSync(frontendPath);
 
-  // Log for debugging
-  console.log('Frontend path:', frontendPath);
-  console.log('Frontend exists:', fs.existsSync(frontendPath));
+console.log('[Server] Frontend path:', frontendPath);
+console.log('[Server] Frontend exists:', frontendExists);
 
+if (frontendExists) {
   // Register frontend FIRST with decorateReply enabled (needed for sendFile)
   await app.register(fastifyStatic, {
     root: frontendPath,
