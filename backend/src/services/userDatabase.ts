@@ -225,6 +225,8 @@ export function getUserDatabase(userId: number): DatabaseType {
       avatar_url TEXT,
       website TEXT,
       linkedin_url TEXT,
+      icloud_email TEXT,
+      icloud_app_password TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -299,6 +301,14 @@ export function getUserDatabase(userId: number): DatabaseType {
     CREATE INDEX IF NOT EXISTS idx_contact_photos_contact_id ON contact_photos(contact_id);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_contact_photos_contact_source ON contact_photos(contact_id, source);
   `);
+
+  // iCloud credentials migration (for existing databases)
+  try {
+    db.exec(`ALTER TABLE user_settings ADD COLUMN icloud_email TEXT`);
+  } catch { /* column already exists */ }
+  try {
+    db.exec(`ALTER TABLE user_settings ADD COLUMN icloud_app_password TEXT`);
+  } catch { /* column already exists */ }
 
   cache.set(userId, db);
   return db;
