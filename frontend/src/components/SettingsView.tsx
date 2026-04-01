@@ -7,6 +7,7 @@ import {
   exportAllContacts
 } from '../api/settingsHooks';
 import { uploadFileWithProgress } from '../api/client';
+import { useICloudSettings, useSaveICloudSettings, useDeleteICloudSettings } from '../api/icloudHooks';
 import type { ImportResult } from '../api/types';
 import type { OutletContext } from './Layout';
 
@@ -33,6 +34,12 @@ export function SettingsView() {
   const importFileRef = useRef<HTMLInputElement>(null);
   const [exportExpanded, setExportExpanded] = useState(false);
   const [dangerExpanded, setDangerExpanded] = useState(false);
+  const [icloudExpanded, setIcloudExpanded] = useState(false);
+  const [icloudEmail, setIcloudEmail] = useState('');
+  const [icloudPassword, setIcloudPassword] = useState('');
+  const icloudSettings = useICloudSettings();
+  const saveICloudSettings = useSaveICloudSettings();
+  const deleteICloudSettings = useDeleteICloudSettings();
 
   useEffect(() => {
     setHeaderConfig({ title: 'Tools' });
@@ -131,6 +138,15 @@ export function SettingsView() {
             </div>
             <Icon name="chevron-right" className="nav-link-arrow" />
           </Link>
+          {icloudSettings.data?.connected && (
+            <Link to="/icloud-import" className="collapsible-card settings-nav-link">
+              <div className="settings-section-header">
+                <Icon name="apple" style="brands" />
+                <h2>Import from iCloud</h2>
+              </div>
+              <Icon name="chevron-right" className="nav-link-arrow" />
+            </Link>
+          )}
         </nav>
 
         {/* Import VCF Section */}
@@ -223,6 +239,93 @@ export function SettingsView() {
                   >
                     Import Another File
                   </button>
+                </>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* Apple Contacts Section */}
+        <section className={`settings-section collapsible-card${icloudExpanded ? ' expanded' : ''}`}>
+          <button
+            className="collapsible-header"
+            onClick={() => setIcloudExpanded(!icloudExpanded)}
+          >
+            <div className="settings-section-header">
+              <Icon name="apple" style="brands" />
+              <h2>Apple Contacts</h2>
+            </div>
+            <Icon name="chevron-down" className={`expand-icon${icloudExpanded ? ' rotated' : ''}`} />
+          </button>
+          {icloudExpanded && (
+            <div className="collapsible-content">
+              {icloudSettings.data?.connected ? (
+                <>
+                  <p className="settings-description">
+                    Connected as <strong>{icloudSettings.data.email}</strong>
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                    <Link to="/icloud-import" className="secondary-button" style={{ textDecoration: 'none' }}>
+                      <Icon name="cloud-arrow-down" />
+                      Import from iCloud
+                    </Link>
+                    <button
+                      className="secondary-button"
+                      onClick={() => deleteICloudSettings.mutate(undefined, {
+                        onSuccess: () => showToast('iCloud disconnected', 'success'),
+                        onError: () => showToast('Failed to disconnect', 'error'),
+                      })}
+                      disabled={deleteICloudSettings.isPending}
+                    >
+                      <Icon name="link-slash" />
+                      {deleteICloudSettings.isPending ? 'Disconnecting...' : 'Disconnect'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="settings-description">
+                    Connect your iCloud account to import contacts. You need an app-specific password
+                    — generate one at <a href="https://appleid.apple.com" target="_blank" rel="noopener noreferrer">appleid.apple.com</a> &rarr; Sign-In and Security &rarr; App-Specific Passwords.
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
+                    <input
+                      type="email"
+                      placeholder="Apple ID email"
+                      value={icloudEmail}
+                      onChange={(e) => setIcloudEmail(e.target.value)}
+                      disabled={saveICloudSettings.isPending}
+                    />
+                    <input
+                      type="password"
+                      placeholder="App-specific password"
+                      value={icloudPassword}
+                      onChange={(e) => setIcloudPassword(e.target.value)}
+                      disabled={saveICloudSettings.isPending}
+                    />
+                    {saveICloudSettings.isError && (
+                      <p style={{ color: 'var(--ds-color-error)', fontSize: '0.875rem', margin: 0 }}>
+                        {saveICloudSettings.error?.message || 'Connection failed'}
+                      </p>
+                    )}
+                    <button
+                      className="secondary-button"
+                      onClick={() => saveICloudSettings.mutate(
+                        { email: icloudEmail, appPassword: icloudPassword },
+                        {
+                          onSuccess: () => {
+                            showToast('iCloud connected successfully', 'success');
+                            setIcloudEmail('');
+                            setIcloudPassword('');
+                          },
+                        }
+                      )}
+                      disabled={!icloudEmail || !icloudPassword || saveICloudSettings.isPending}
+                    >
+                      <Icon name="plug" />
+                      {saveICloudSettings.isPending ? 'Connecting...' : 'Connect'}
+                    </button>
+                  </div>
                 </>
               )}
             </div>

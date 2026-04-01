@@ -1,6 +1,6 @@
 # iCloud Contacts Sync — Design
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-03-31
 **Direction:** One-way (iCloud → Yello)
 **Protocol:** CardDAV via `tsdav` library
