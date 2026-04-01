@@ -44,12 +44,10 @@ export function GroupsView() {
   if (selectedCategory) {
     return (
       <div className="groups-view groups-filtered">
-        <div className="groups-content">
-          <ContactList
-            categoryFilter={selectedCategory}
-            viewMode={viewMode}
-          />
-        </div>
+        <ContactList
+          categoryFilter={selectedCategory}
+          viewMode={viewMode}
+        />
       </div>
     );
   }
@@ -57,46 +55,44 @@ export function GroupsView() {
   // Show the groups list
   return (
     <div className="groups-view">
-      <div className="groups-content">
-        {isLoading ? (
-          <div className="groups-loading">
-            <Icon name="arrows-rotate" className="spinning" />
-            <p>Loading groups...</p>
-          </div>
-        ) : error ? (
-          <div className="groups-error">
-            <Icon name="circle-exclamation" />
-            <p>Error loading groups: {error.message}</p>
-          </div>
-        ) : !data?.groups.length ? (
-          <div className="groups-empty">
-            <Icon name="folder-minus" />
-            <h3>No Groups</h3>
-            <p>Your contacts don't have any categories assigned yet.</p>
-          </div>
-        ) : (
-          <div className="groups-grid">
-            {data.groups.map((group) => (
-              <div
-                key={group.category}
-                className="card group-card"
-                onClick={() => handleGroupClick(group.category)}
-              >
-                <div className="group-card-icon">
-                  <Icon name="users" />
-                </div>
-                <div className="group-card-info">
-                  <span className="group-name">{group.category}</span>
-                  <span className="group-count">
-                    {group.contactCount} contact{group.contactCount !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                <Icon name="chevron-right" className="group-card-arrow" />
+      {isLoading ? (
+        <div className="groups-loading">
+          <Icon name="arrows-rotate" className="spinning" />
+          <p>Loading groups...</p>
+        </div>
+      ) : error ? (
+        <div className="groups-error">
+          <Icon name="circle-exclamation" />
+          <p>Error loading groups: {error.message}</p>
+        </div>
+      ) : !data?.groups.length ? (
+        <div className="groups-empty">
+          <Icon name="folder-minus" />
+          <h3>No Groups</h3>
+          <p>Your contacts don't have any categories assigned yet.</p>
+        </div>
+      ) : (
+        <div className="groups-grid">
+          {data.groups.map((group) => (
+            <div
+              key={group.category}
+              className="card group-card"
+              onClick={() => handleGroupClick(group.category)}
+            >
+              <div className="group-card-icon">
+                <Icon name="users" />
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <div className="group-card-info">
+                <span className="group-name">{group.category}</span>
+                <span className="group-count">
+                  {group.contactCount} contact{group.contactCount !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <Icon name="chevron-right" className="group-card-arrow" />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

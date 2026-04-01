@@ -113,6 +113,82 @@ export function EditableArrayItem({
   );
 }
 
+// ─── Drag-and-drop support ───────────────────────────────────────
+
+function useDragState() {
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dropZoneIndex, setDropZoneIndex] = useState<number | null>(null);
+
+  const handleDragStart = (index: number) => setDraggedIndex(index);
+  const handleDragEnd = () => { setDraggedIndex(null); setDropZoneIndex(null); };
+  const handleDragOver = (index: number) => setDropZoneIndex(index);
+
+  const handleDrop = <T,>(
+    fromIndex: number,
+    toIndex: number,
+    items: T[],
+    onItemsChange: (items: T[]) => void
+  ) => {
+    const updated = [...items];
+    const [movedItem] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, movedItem);
+
+    const result = updated.map((item, idx) => {
+      if (item && typeof item === 'object' && 'isPrimary' in item) {
+        return { ...item, isPrimary: idx === 0 };
+      }
+      return item;
+    });
+
+    onItemsChange(result);
+    setDraggedIndex(null);
+    setDropZoneIndex(null);
+  };
+
+  return { draggedIndex, dropZoneIndex, handleDragStart, handleDragEnd, handleDragOver, handleDrop };
+}
+
+function DraggableArrayItem({
+  index,
+  draggedIndex,
+  dropZoneIndex,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDrop,
+  onRemove,
+  children,
+}: {
+  index: number;
+  draggedIndex: number | null;
+  dropZoneIndex: number | null;
+  onDragStart: (index: number) => void;
+  onDragEnd: () => void;
+  onDragOver: (index: number) => void;
+  onDrop: (fromIndex: number, toIndex: number) => void;
+  onRemove: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      draggable
+      className={`draggable-array-item${draggedIndex === index ? ' dragging' : ''}${dropZoneIndex === index ? ' drag-over' : ''}`}
+      onDragStart={() => onDragStart(index)}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => { e.preventDefault(); onDragOver(index); }}
+      onDrop={() => {
+        if (draggedIndex !== null && draggedIndex !== index) {
+          onDrop(draggedIndex, index);
+        }
+      }}
+    >
+      <EditableArrayItem onRemove={onRemove}>
+        {children}
+      </EditableArrayItem>
+    </div>
+  );
+}
+
 // ─── PhoneSection (new, for expanded card view mode) ─────────────
 
 export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit = 3, renderItemSuffix }: {
@@ -149,6 +225,8 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
     }
   };
 
+  const dragState = useDragState();
+
   if (isEditMode) {
     return (
       <div className="expanded-section">
@@ -156,7 +234,16 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
         <div className="section-content edit-section-content">
           {phones.map((phone, i) => (
             <div key={`phone-${i}`} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
-              <EditableArrayItem onRemove={() => removePhone(i)}>
+              <DraggableArrayItem
+                index={i}
+                draggedIndex={dragState.draggedIndex}
+                dropZoneIndex={dragState.dropZoneIndex}
+                onDragStart={dragState.handleDragStart}
+                onDragEnd={dragState.handleDragEnd}
+                onDragOver={dragState.handleDragOver}
+                onDrop={(from, to) => dragState.handleDrop(from, to, phones, onPhonesChange || (() => {}))}
+                onRemove={() => removePhone(i)}
+              >
                 <Icon name="phone" />
                 <div className="edit-field-group">
                   <EditableField
@@ -170,7 +257,7 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
                     placeholder="Type (home, work...)"
                   />
                 </div>
-              </EditableArrayItem>
+              </DraggableArrayItem>
               {renderItemSuffix?.(i)}
             </div>
           ))}
@@ -243,6 +330,8 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
     }
   };
 
+  const dragState = useDragState();
+
   if (isEditMode) {
     return (
       <div className="expanded-section">
@@ -250,7 +339,16 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
         <div className="section-content edit-section-content">
           {emails.map((email, i) => (
             <div key={`email-${i}`} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
-              <EditableArrayItem onRemove={() => removeEmail(i)}>
+              <DraggableArrayItem
+                index={i}
+                draggedIndex={dragState.draggedIndex}
+                dropZoneIndex={dragState.dropZoneIndex}
+                onDragStart={dragState.handleDragStart}
+                onDragEnd={dragState.handleDragEnd}
+                onDragOver={dragState.handleDragOver}
+                onDrop={(from, to) => dragState.handleDrop(from, to, emails, onEmailsChange || (() => {}))}
+                onRemove={() => removeEmail(i)}
+              >
                 <Icon name="envelope" />
                 <div className="edit-field-group">
                   <EditableField
@@ -265,7 +363,7 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
                     placeholder="Type (home, work...)"
                   />
                 </div>
-              </EditableArrayItem>
+              </DraggableArrayItem>
               {renderItemSuffix?.(i)}
             </div>
           ))}
@@ -475,6 +573,8 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange, ren
     }
   };
 
+  const dragState = useDragState();
+
   if (isEditMode) {
     return (
       <div className="expanded-section">
@@ -482,7 +582,16 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange, ren
         <div className="section-content edit-section-content">
           {addresses.map((addr, i) => (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
-              <EditableArrayItem onRemove={() => removeAddress(i)}>
+              <DraggableArrayItem
+                index={i}
+                draggedIndex={dragState.draggedIndex}
+                dropZoneIndex={dragState.dropZoneIndex}
+                onDragStart={dragState.handleDragStart}
+                onDragEnd={dragState.handleDragEnd}
+                onDragOver={dragState.handleDragOver}
+                onDrop={(from, to) => dragState.handleDrop(from, to, addresses, onAddressesChange || (() => {}))}
+                onRemove={() => removeAddress(i)}
+              >
                 <Icon name="location-dot" />
                 <div className="edit-field-group address-fields">
                   <EditableField
@@ -520,7 +629,7 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange, ren
                     placeholder="Type (home, work...)"
                   />
                 </div>
-              </EditableArrayItem>
+              </DraggableArrayItem>
               {renderItemSuffix?.(i)}
             </div>
           ))}
@@ -587,6 +696,8 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
     }
   };
 
+  const dragState = useDragState();
+
   if (isEditMode) {
     return (
       <div className="expanded-section">
@@ -594,7 +705,16 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
         <div className="section-content edit-section-content">
           {socialProfiles.map((profile, i) => (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
-              <EditableArrayItem onRemove={() => removeProfile(i)}>
+              <DraggableArrayItem
+                index={i}
+                draggedIndex={dragState.draggedIndex}
+                dropZoneIndex={dragState.dropZoneIndex}
+                onDragStart={dragState.handleDragStart}
+                onDragEnd={dragState.handleDragEnd}
+                onDragOver={dragState.handleDragOver}
+                onDrop={(from, to) => dragState.handleDrop(from, to, socialProfiles, onSocialProfilesChange || (() => {}))}
+                onRemove={() => removeProfile(i)}
+              >
                 <Icon name={getPlatformIcon(profile.platform)} style={getPlatformIconStyle(profile.platform)} />
                 <div className="edit-field-group">
                   <EditableField
@@ -613,7 +733,7 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
                     placeholder="Profile URL"
                   />
                 </div>
-              </EditableArrayItem>
+              </DraggableArrayItem>
               {renderItemSuffix?.(i)}
             </div>
           ))}
@@ -720,6 +840,8 @@ export function CategoriesSection({ categories, isEditMode, onCategoriesChange, 
     }
   };
 
+  const dragState = useDragState();
+
   if (isEditMode) {
     return (
       <div className="expanded-section">
@@ -727,13 +849,22 @@ export function CategoriesSection({ categories, isEditMode, onCategoriesChange, 
         <div className="section-content edit-section-content">
           {categories.map((cat, i) => (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
-              <EditableArrayItem onRemove={() => removeCategory(i)}>
+              <DraggableArrayItem
+                index={i}
+                draggedIndex={dragState.draggedIndex}
+                dropZoneIndex={dragState.dropZoneIndex}
+                onDragStart={dragState.handleDragStart}
+                onDragEnd={dragState.handleDragEnd}
+                onDragOver={dragState.handleDragOver}
+                onDrop={(from, to) => dragState.handleDrop(from, to, categories, onCategoriesChange || (() => {}))}
+                onRemove={() => removeCategory(i)}
+              >
                 <EditableField
                   value={cat.category}
                   onChange={(v) => updateCategory(i, v)}
                   placeholder="Category name"
                 />
-              </EditableArrayItem>
+              </DraggableArrayItem>
               {renderItemSuffix?.(i)}
             </div>
           ))}
@@ -792,6 +923,8 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
     }
   };
 
+  const dragState = useDragState();
+
   if (isEditMode) {
     return (
       <div className="expanded-section">
@@ -799,7 +932,16 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
         <div className="section-content edit-section-content">
           {instantMessages.map((im, i) => (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
-              <EditableArrayItem onRemove={() => removeIM(i)}>
+              <DraggableArrayItem
+                index={i}
+                draggedIndex={dragState.draggedIndex}
+                dropZoneIndex={dragState.dropZoneIndex}
+                onDragStart={dragState.handleDragStart}
+                onDragEnd={dragState.handleDragEnd}
+                onDragOver={dragState.handleDragOver}
+                onDrop={(from, to) => dragState.handleDrop(from, to, instantMessages, onInstantMessagesChange || (() => {}))}
+                onRemove={() => removeIM(i)}
+              >
                 <Icon name={getServiceIcon(im.service)} />
                 <div className="edit-field-group">
                   <EditableField
@@ -813,7 +955,7 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
                     placeholder="Handle"
                   />
                 </div>
-              </EditableArrayItem>
+              </DraggableArrayItem>
               {renderItemSuffix?.(i)}
             </div>
           ))}
@@ -868,6 +1010,8 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange, renderItemSuffix }
     }
   };
 
+  const dragState = useDragState();
+
   if (isEditMode) {
     return (
       <div className="expanded-section">
@@ -875,7 +1019,16 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange, renderItemSuffix }
         <div className="section-content edit-section-content">
           {urls.map((u, i) => (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
-              <EditableArrayItem onRemove={() => removeUrl(i)}>
+              <DraggableArrayItem
+                index={i}
+                draggedIndex={dragState.draggedIndex}
+                dropZoneIndex={dragState.dropZoneIndex}
+                onDragStart={dragState.handleDragStart}
+                onDragEnd={dragState.handleDragEnd}
+                onDragOver={dragState.handleDragOver}
+                onDrop={(from, to) => dragState.handleDrop(from, to, urls, onUrlsChange || (() => {}))}
+                onRemove={() => removeUrl(i)}
+              >
                 <Icon name={getUrlIcon(u.url, u.label)} />
                 <div className="edit-field-group">
                   <EditableField
@@ -889,7 +1042,7 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange, renderItemSuffix }
                     placeholder="Label"
                   />
                 </div>
-              </EditableArrayItem>
+              </DraggableArrayItem>
               {renderItemSuffix?.(i)}
             </div>
           ))}
@@ -946,6 +1099,8 @@ export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopl
     }
   };
 
+  const dragState = useDragState();
+
   if (isEditMode) {
     return (
       <div className="expanded-section">
@@ -953,7 +1108,16 @@ export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopl
         <div className="section-content edit-section-content">
           {relatedPeople.map((person, i) => (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
-              <EditableArrayItem onRemove={() => removePerson(i)}>
+              <DraggableArrayItem
+                index={i}
+                draggedIndex={dragState.draggedIndex}
+                dropZoneIndex={dragState.dropZoneIndex}
+                onDragStart={dragState.handleDragStart}
+                onDragEnd={dragState.handleDragEnd}
+                onDragOver={dragState.handleDragOver}
+                onDrop={(from, to) => dragState.handleDrop(from, to, relatedPeople, onRelatedPeopleChange || (() => {}))}
+                onRemove={() => removePerson(i)}
+              >
                 <Icon name={getRelationshipIcon(person.relationship)} />
                 <div className="edit-field-group">
                   <EditableField
@@ -967,7 +1131,7 @@ export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopl
                     placeholder="Relationship"
                   />
                 </div>
-              </EditableArrayItem>
+              </DraggableArrayItem>
               {renderItemSuffix?.(i)}
             </div>
           ))}

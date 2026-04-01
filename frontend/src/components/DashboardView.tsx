@@ -342,7 +342,7 @@ const dashboardStyles = `
   .dashboard-content {
     flex: 1;
     overflow-y: auto;
-    padding: 24px 32px;
+    padding: 24px 0;
   }
 
   .dashboard-section {
@@ -617,7 +617,7 @@ const dashboardStyles = `
   /* Mobile adjustments */
   @media (max-width: 768px) {
     .dashboard-content {
-      padding: 16px;
+      padding: 16px 0;
     }
 
     .stat-cards-grid {
