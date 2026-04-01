@@ -1,5 +1,18 @@
 # Change Log
 
+## 2026-04-01 12:30 — iCloud Contacts Sync
+
+- Added `tsdav` CardDAV client dependency for iCloud connectivity
+- Added `icloud_email` and `icloud_app_password` columns to `user_settings` (with ALTER TABLE migration for existing DBs)
+- Created `icloudService.ts` — builds DAVClient, tests connection, fetches all contacts from iCloud address books
+- Created `icloudMatchingService.ts` — matches incoming ParsedContacts against DB using inverted indexes on email/phone/social with confidence scoring (very_high/high/medium)
+- Created `backend/src/routes/icloud.ts` — 5 endpoints: GET/POST/DELETE settings, POST fetch, POST preview-import, POST import (with merge logic for scalar fields, union for multi-value fields)
+- Created `frontend/src/api/icloudHooks.ts` — 6 TanStack Query hooks for all iCloud API endpoints
+- Added Apple Contacts section to SettingsView with credential form, connect/disconnect, and nav link
+- Created `ICloudImportView` component with 5 states: not-connected, idle, fetching, reviewing (match cards with merge/skip/import-as-new decisions), and import complete
+- Added responsive CSS styles for iCloud import view (match cards, confidence badges, summary bars, bulk actions)
+- Design doc status updated to Implemented
+
 ## 2026-03-25 12:15 — Electron Desktop App Wrapper
 
 - Created `electron/` package with Fastify backend spawning and process lifecycle management
