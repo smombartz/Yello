@@ -1,5 +1,17 @@
 # Change Log
 
+## 2026-04-02 11:30 — Google Contacts Import
+
+- Extended `googlePeopleService.ts` with `mapGooglePersonToParsedContact`, `fetchGoogleContacts`, and `downloadGooglePhoto` (11 tests)
+- Created `googleAuthService.ts` — reusable `getValidAccessToken(userId)` with token refresh, exposed via Fastify decorator
+- Added OAuth scope upgrade flow (`/google/contacts`) and contacts-status endpoint in `auth.ts`, following existing Gmail re-auth pattern
+- Added `google_resource_name` column on contacts and `google_contacts_last_synced` on `user_settings` (migration for existing DBs)
+- Created `backend/src/routes/googleContacts.ts` — 3 endpoints: POST fetch (with batched photo download), POST preview-import, POST import (reuses icloudMatchingService)
+- Created `frontend/src/api/googleContactsHooks.ts` — 4 TanStack Query hooks, re-exports shared types from icloudHooks
+- Created `frontend/src/components/GoogleContactsImportView.tsx` — mirrors ICloudImportView (fetch → preview duplicates → merge/skip/import → complete)
+- Added route in `App.tsx` and Google Contacts section in `SettingsView.tsx` (collapsible card + quick-access nav link)
+- Stores `google_resource_name` per contact for future two-way sync capability
+
 ## 2026-04-01 12:30 — iCloud Contacts Sync
 
 - Added `tsdav` CardDAV client dependency for iCloud connectivity
