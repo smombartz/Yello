@@ -4,7 +4,7 @@ import type {
   ParsedPhone,
   ParsedAddress,
   ParsedUrl,
-} from './vcardParser';
+} from './vcardParser.js';
 
 // ─── Types for Google People API ────────────────────────────────────────────
 
