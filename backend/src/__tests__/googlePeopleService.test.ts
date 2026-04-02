@@ -4,7 +4,7 @@ import {
   fetchGoogleContacts,
   downloadGooglePhoto,
   type GoogleParsedContact,
-} from '../services/googlePeopleService';
+} from '../services/googlePeopleService.js';
 
 describe('mapGooglePersonToParsedContact', () => {
   it('maps a fully populated Google person to GoogleParsedContact', () => {

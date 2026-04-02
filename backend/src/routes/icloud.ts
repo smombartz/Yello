@@ -84,7 +84,7 @@ export default async function icloudRoutes(
   });
 
   // POST /api/icloud/preview-import — match fetched contacts against existing DB
-  fastify.post<{ Body: { contacts: ParsedContact[] } }>('/preview-import', async (request, reply) => {
+  fastify.post<{ Body: { contacts: ParsedContact[] } }>('/preview-import', { bodyLimit: 100 * 1024 * 1024 }, async (request, reply) => {
     const { contacts } = request.body;
     if (!contacts || !Array.isArray(contacts)) {
       return reply.status(400).send({ error: 'contacts array is required' });
@@ -106,7 +106,7 @@ export default async function icloudRoutes(
       }>;
       skipped: number;
     };
-  }>('/import', async (request, reply) => {
+  }>('/import', { bodyLimit: 100 * 1024 * 1024 }, async (request, reply) => {
     const { newContacts, merges, skipped } = request.body;
     const userId = request.user!.id;
     const db = getUserDatabase(userId);

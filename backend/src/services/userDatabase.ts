@@ -310,6 +310,17 @@ export function getUserDatabase(userId: number): DatabaseType {
     db.exec(`ALTER TABLE user_settings ADD COLUMN icloud_app_password TEXT`);
   } catch { /* column already exists */ }
 
+  // Google Contacts sync migration (for existing databases)
+  try {
+    db.exec(`ALTER TABLE contacts ADD COLUMN google_resource_name TEXT`);
+  } catch { /* column already exists */ }
+  try {
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_contacts_google_resource ON contacts(google_resource_name) WHERE google_resource_name IS NOT NULL`);
+  } catch { /* index already exists */ }
+  try {
+    db.exec(`ALTER TABLE user_settings ADD COLUMN google_contacts_last_synced DATETIME`);
+  } catch { /* column already exists */ }
+
   cache.set(userId, db);
   return db;
 }
