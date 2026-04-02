@@ -3,6 +3,7 @@ import oauthPlugin from '@fastify/oauth2';
 import type { OAuth2Namespace } from '@fastify/oauth2';
 import { randomBytes } from 'crypto';
 import { encryptToken } from '../services/tokenEncryption.js';
+import { getValidAccessToken } from '../services/googleAuthService.js';
 
 // Google OAuth2 configuration - manually defined since types don't export it
 // See: https://github.com/fastify/fastify-oauth2
@@ -163,18 +164,25 @@ function cleanupExpiredSessions(): void {
   db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')").run();
 }
 
-// Extend Fastify instance type to include googleOAuth2
+// Extend Fastify instance type to include googleOAuth2 and getValidAccessToken
 declare module 'fastify' {
   interface FastifyInstance {
     googleOAuth2: OAuth2Namespace;
+    getValidAccessToken: (userId: number) => Promise<string | null>;
   }
 }
 
 export default async function authRoutes(fastify: FastifyInstance) {
+  // Decorate fastify with token refresh helper so other route files can use it
+  if (!fastify.hasDecorator('getValidAccessToken')) {
+    fastify.decorate('getValidAccessToken', getValidAccessToken);
+  }
+
   // Check if Google OAuth is configured
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const appUrl = process.env.APP_URL || 'http://localhost:3456';
+  const frontendUrl = process.env.FRONTEND_URL || appUrl;
 
   if (!googleClientId || !googleClientSecret) {
     // Register placeholder routes that return helpful errors
@@ -302,6 +310,95 @@ export default async function authRoutes(fastify: FastifyInstance) {
           return reply.redirect('/');
         }
 
+        const isContactsFlow = request.cookies.google_contacts_oauth_flow === '1';
+
+        if (isContactsFlow) {
+          // --- Google Contacts re-auth flow (manual token exchange) ---
+          reply.clearCookie('google_contacts_oauth_flow', { path: '/' });
+
+          const { code, state, error: oauthError } = request.query;
+
+          if (oauthError) {
+            fastify.log.error(`Contacts OAuth error: ${oauthError}`);
+            return reply.redirect(`${frontendUrl}/?error=auth_failed`);
+          }
+
+          if (!code) {
+            return reply.redirect(`${frontendUrl}/?error=auth_failed`);
+          }
+
+          // Verify state to prevent CSRF
+          const savedState = request.cookies.google_contacts_oauth_state;
+          if (!savedState || savedState !== state) {
+            fastify.log.error('Contacts OAuth state mismatch');
+            return reply.redirect(`${frontendUrl}/?error=auth_failed`);
+          }
+          reply.clearCookie('google_contacts_oauth_state', { path: '/' });
+
+          // Exchange authorization code for tokens
+          const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              code,
+              client_id: googleClientId,
+              client_secret: googleClientSecret,
+              redirect_uri: `${appUrl}/api/auth/google/callback`,
+              grant_type: 'authorization_code',
+            }),
+          });
+
+          if (!tokenResponse.ok) {
+            const errorBody = await tokenResponse.text();
+            fastify.log.error(`Contacts token exchange failed: ${errorBody}`);
+            return reply.redirect(`${frontendUrl}/?error=auth_failed`);
+          }
+
+          const tokenData = await tokenResponse.json() as {
+            access_token: string;
+            refresh_token?: string;
+            expires_in?: number;
+          };
+
+          // Fetch user profile from Google
+          const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` },
+          });
+
+          if (!userInfoResponse.ok) {
+            throw new Error('Failed to fetch user info from Google');
+          }
+
+          const userInfo = await userInfoResponse.json() as GoogleUserInfo;
+
+          // Create or update user with new tokens (now including Contacts scope)
+          const user = upsertUser(
+            userInfo.id,
+            userInfo.email,
+            userInfo.name || null,
+            userInfo.picture || null,
+            {
+              accessToken: tokenData.access_token,
+              refreshToken: tokenData.refresh_token,
+              expiresIn: tokenData.expires_in,
+            }
+          );
+
+          // Create session
+          const sessionId = createSession(user.id);
+
+          reply.setCookie('session_id', sessionId, {
+            path: '/',
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: SESSION_DURATION_MS / 1000,
+          });
+
+          cleanupExpiredSessions();
+          return reply.redirect(`${frontendUrl}/google-contacts-import`);
+        }
+
         // --- Normal login flow (uses @fastify/oauth2 plugin) ---
         const tokenResponse = await fastify.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
         const accessToken = tokenResponse.token.access_token as string;
@@ -416,6 +513,92 @@ export default async function authRoutes(fastify: FastifyInstance) {
     });
 
     return reply.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  });
+
+  // Google Contacts re-auth: redirect to Google OAuth with contacts scopes
+  fastify.get('/google/contacts', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!googleClientId || !googleClientSecret) {
+      return reply.status(503).send({ error: 'Google OAuth not configured' });
+    }
+
+    const scopes = [
+      'profile',
+      'email',
+      'https://www.googleapis.com/auth/contacts.other.readonly',
+      'https://www.googleapis.com/auth/contacts.readonly',
+    ].join(' ');
+
+    const state = randomBytes(16).toString('hex');
+    reply.setCookie('google_contacts_oauth_state', state, {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 600, // 10 minutes
+    });
+
+    // Flag this as a Contacts re-auth flow so the shared callback can differentiate
+    reply.setCookie('google_contacts_oauth_flow', '1', {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 600, // 10 minutes
+    });
+
+    const params = new URLSearchParams({
+      client_id: googleClientId,
+      redirect_uri: `${appUrl}/api/auth/google/callback`,
+      response_type: 'code',
+      scope: scopes,
+      access_type: 'offline',
+      prompt: 'consent',
+      state,
+    });
+
+    return reply.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  });
+
+  // Google Contacts scope status check
+  fastify.get('/google/contacts-status', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const sessionId = request.cookies.session_id;
+    if (!sessionId) {
+      return reply.status(401).send({ error: 'Not authenticated' });
+    }
+
+    const user = getUserFromSession(sessionId);
+    if (!user) {
+      return reply.status(401).send({ error: 'Invalid session' });
+    }
+
+    // Try to get a valid access token
+    const accessToken = await getValidAccessToken(user.id);
+    if (!accessToken) {
+      return { hasContactsScope: false, needsReauth: true };
+    }
+
+    // Test if the token has contacts scope by making a minimal API call
+    try {
+      const testResponse = await fetch(
+        'https://people.googleapis.com/v1/people/me/connections?personFields=names&pageSize=1',
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+
+      if (testResponse.ok) {
+        return { hasContactsScope: true, needsReauth: false };
+      }
+
+      // 403 means the token doesn't have the contacts scope
+      if (testResponse.status === 403) {
+        return { hasContactsScope: false, needsReauth: true };
+      }
+
+      // Other errors - treat as needing reauth
+      return { hasContactsScope: false, needsReauth: true };
+    } catch (error) {
+      fastify.log.error(error, 'Error checking contacts scope');
+      return { hasContactsScope: false, needsReauth: true };
+    }
   });
 
   // Get current user
