@@ -35,6 +35,7 @@ export function SettingsView() {
   const [exportExpanded, setExportExpanded] = useState(false);
   const [dangerExpanded, setDangerExpanded] = useState(false);
   const [icloudExpanded, setIcloudExpanded] = useState(false);
+  const [googleContactsExpanded, setGoogleContactsExpanded] = useState(false);
   const [icloudEmail, setIcloudEmail] = useState('');
   const [icloudPassword, setIcloudPassword] = useState('');
   const icloudSettings = useICloudSettings();
@@ -147,6 +148,13 @@ export function SettingsView() {
               <Icon name="chevron-right" className="nav-link-arrow" />
             </Link>
           )}
+          <Link to="/google-contacts-import" className="collapsible-card settings-nav-link">
+            <div className="settings-section-header">
+              <Icon name="google" style="brands" />
+              <h2>Import from Google Contacts</h2>
+            </div>
+            <Icon name="chevron-right" className="nav-link-arrow" />
+          </Link>
         </nav>
 
         {/* Import VCF Section */}
@@ -328,6 +336,31 @@ export function SettingsView() {
                   </div>
                 </>
               )}
+            </div>
+          )}
+        </section>
+
+        {/* Google Contacts Section */}
+        <section className={`settings-section collapsible-card${googleContactsExpanded ? ' expanded' : ''}`}>
+          <button
+            className="collapsible-header"
+            onClick={() => setGoogleContactsExpanded(!googleContactsExpanded)}
+          >
+            <div className="settings-section-header">
+              <Icon name="google" style="brands" />
+              <h2>Google Contacts</h2>
+            </div>
+            <Icon name="chevron-down" className={`expand-icon${googleContactsExpanded ? ' rotated' : ''}`} />
+          </button>
+          {googleContactsExpanded && (
+            <div className="collapsible-content">
+              <p className="settings-description">
+                Import contacts from your Google account. Since you're already signed in with Google, you may just need to grant additional permission to access your contacts.
+              </p>
+              <Link to="/google-contacts-import" className="secondary-button" style={{ textDecoration: 'none', marginTop: '1rem', display: 'inline-flex' }}>
+                <Icon name="cloud-arrow-down" />
+                Import from Google Contacts
+              </Link>
             </div>
           )}
         </section>

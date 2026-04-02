@@ -16,6 +16,7 @@ import { DashboardView } from './components/DashboardView';
 import { AdminView } from './components/AdminView';
 import OnboardingView from './components/OnboardingView';
 import { ICloudImportView } from './components/ICloudImportView';
+import { GoogleContactsImportView } from './components/GoogleContactsImportView';
 import { LoginPage } from './components/LoginPage';
 import { PublicContactCard } from './components/PublicContactCard';
 import { AuthProvider } from './contexts/AuthContext';
@@ -163,6 +164,7 @@ function AppRoutes() {
         <Route path="admin" element={<AdminView />} />
         <Route path="onboarding" element={<OnboardingView />} />
         <Route path="icloud-import" element={<ICloudImportView />} />
+        <Route path="google-contacts-import" element={<GoogleContactsImportView />} />
       </Route>
 
       {/* Catch-all redirect to dashboard */}
