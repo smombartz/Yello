@@ -18,12 +18,12 @@ RUN npm run build
 FROM node:20-alpine AS production
 WORKDIR /app
 
-# Install production dependencies only
-COPY backend/package*.json ./
-RUN npm ci --only=production
+# Install production dependencies only (under backend/ so paths match dev layout)
+COPY backend/package*.json ./backend/
+RUN cd backend && npm ci --only=production
 
-# Copy built backend
-COPY --from=backend-builder /app/backend/dist ./dist
+# Copy built backend (preserve backend/dist path so server.ts's ../../frontend/dist resolves correctly)
+COPY --from=backend-builder /app/backend/dist ./backend/dist
 
 # Copy built frontend
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
@@ -37,4 +37,4 @@ ENV USER_DATA_PATH=/data/users
 EXPOSE 3456
 
 # Create data directories at runtime (handles Railway volume mounts)
-CMD ["sh", "-c", "mkdir -p /data/users && node dist/server.js"]
+CMD ["sh", "-c", "mkdir -p /data/users && node backend/dist/server.js"]
