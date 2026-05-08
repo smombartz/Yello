@@ -182,7 +182,6 @@ export default async function authRoutes(fastify: FastifyInstance) {
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const appUrl = process.env.APP_URL || 'http://localhost:3456';
-  const frontendUrl = process.env.FRONTEND_URL || appUrl;
 
   if (!googleClientId || !googleClientSecret) {
     // Register placeholder routes that return helpful errors
@@ -320,18 +319,18 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
           if (oauthError) {
             fastify.log.error(`Contacts OAuth error: ${oauthError}`);
-            return reply.redirect(`${frontendUrl}/?error=auth_failed`);
+            return reply.redirect('/?error=auth_failed');
           }
 
           if (!code) {
-            return reply.redirect(`${frontendUrl}/?error=auth_failed`);
+            return reply.redirect('/?error=auth_failed');
           }
 
           // Verify state to prevent CSRF
           const savedState = request.cookies.google_contacts_oauth_state;
           if (!savedState || savedState !== state) {
             fastify.log.error('Contacts OAuth state mismatch');
-            return reply.redirect(`${frontendUrl}/?error=auth_failed`);
+            return reply.redirect('/?error=auth_failed');
           }
           reply.clearCookie('google_contacts_oauth_state', { path: '/' });
 
@@ -351,7 +350,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
           if (!tokenResponse.ok) {
             const errorBody = await tokenResponse.text();
             fastify.log.error(`Contacts token exchange failed: ${errorBody}`);
-            return reply.redirect(`${frontendUrl}/?error=auth_failed`);
+            return reply.redirect('/?error=auth_failed');
           }
 
           const tokenData = await tokenResponse.json() as {
@@ -396,7 +395,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
           });
 
           cleanupExpiredSessions();
-          return reply.redirect(`${frontendUrl}/google-contacts-import`);
+          return reply.redirect('/google-contacts-import');
         }
 
         // --- Normal login flow (uses @fastify/oauth2 plugin) ---
