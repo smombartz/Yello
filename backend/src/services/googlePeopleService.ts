@@ -1,4 +1,4 @@
-import { parsePhoneNumber } from 'libphonenumber-js';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import type {
   ParsedEmail,
   ParsedPhone,
@@ -97,10 +97,10 @@ export function mapGooglePersonToParsedContact(person: GooglePerson): GooglePars
 
   // Phones (normalize with libphonenumber-js)
   const phones: ParsedPhone[] = (person.phoneNumbers || []).map((p, i) => {
-    const parsed = parsePhoneNumber(p.value, 'US');
+    const parsed = parsePhoneNumberFromString(p.value, 'US');
     return {
-      phone: parsed ? parsed.format('E.164') : p.value,
-      phoneDisplay: parsed ? parsed.formatInternational() : p.value,
+      phone: parsed?.isValid() ? parsed.format('E.164') : p.value,
+      phoneDisplay: parsed?.isValid() ? parsed.formatInternational() : p.value,
       countryCode: parsed?.country || null,
       type: p.type || null,
       isPrimary: i === 0,

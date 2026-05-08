@@ -5,6 +5,7 @@ import { matchIncomingContacts } from '../services/icloudMatchingService.js';
 import type { ParsedContact } from '../services/vcardParser.js';
 import { processPhoto } from '../services/photoProcessor.js';
 import { rebuildContactSearch } from '../services/database.js';
+import { getValidAccessToken } from '../services/googleAuthService.js';
 
 export default async function googleContactsRoutes(
   fastify: FastifyInstance,
@@ -18,7 +19,7 @@ export default async function googleContactsRoutes(
     const userId = request.user!.id;
 
     // Get a valid access token
-    const accessToken = await fastify.getValidAccessToken(userId);
+    const accessToken = await getValidAccessToken(userId);
     if (!accessToken) {
       return reply.status(401).send({ error: 'GOOGLE_TOKEN_EXPIRED' });
     }

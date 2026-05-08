@@ -1,5 +1,22 @@
 # Change Log
 
+## 2026-05-07 — Fix: Production 404 on `/` (Railway)
+
+- Railway-deployed site returned `{"message":"Route GET:/ not found"}` because the static-frontend block in `backend/src/server.ts` never registered. `server.ts` resolves the frontend as `path.join(__dirname, '../../frontend/dist')` (correct for the dev layout `backend/dist/server.js`), but the Dockerfile copied the backend build to `/app/dist`, so the resolved path became `/frontend/dist` (nonexistent), `frontendExists` was false, and neither `fastifyStatic` nor the SPA fallback was registered.
+- Updated `Dockerfile` production stage to preserve the dev layout: backend lives at `/app/backend/dist`, prod deps installed at `/app/backend/node_modules`, CMD changed to `node backend/dist/server.js`. Frontend remains at `/app/frontend/dist`, so `../../frontend/dist` now resolves correctly.
+
+## 2026-04-03 — Fix: Dev server redirect to wrong port
+
+- Fixed backend OAuth redirects using absolute `${frontendUrl}` URLs (defaulting to `localhost:3456`) instead of relative paths — caused browser to navigate to backend port instead of staying on Vite dev server (port 5173)
+- Changed all `reply.redirect()` calls in Google Contacts OAuth flow to use relative paths (matching the existing Gmail and login flows)
+- Removed unused `frontendUrl` variable from `auth.ts`
+
+## 2026-04-03 — Bugfixes: Google Contacts Import
+
+- Fixed `fastify.getValidAccessToken is not a function` — imported `getValidAccessToken` directly from `googleAuthService.ts` instead of relying on Fastify decorator (encapsulation issue)
+- Fixed `ParseError: NOT_A_NUMBER` crash — switched from `parsePhoneNumber` (throws on invalid input) to `parsePhoneNumberFromString` (returns undefined) in `googlePeopleService.ts`, added `.isValid()` check
+- Fixed bulk action buttons (Merge All, Skip All, Select All, Deselect All) not responding to clicks in both `GoogleContactsImportView.tsx` and `ICloudImportView.tsx` — added `type="button"` to all `<button>` elements
+
 ## 2026-04-02 11:30 — Google Contacts Import
 
 - Extended `googlePeopleService.ts` with `mapGooglePersonToParsedContact`, `fetchGoogleContacts`, and `downloadGooglePhoto` (11 tests)

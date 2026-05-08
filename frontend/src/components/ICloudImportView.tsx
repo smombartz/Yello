@@ -70,18 +70,21 @@ function MatchCard({
       </div>
       <div className="icloud-match-actions">
         <button
+          type="button"
           className={`icloud-action-btn ${decision === 'merge' ? 'active' : ''}`}
           onClick={() => onDecisionChange(index, 'merge')}
         >
           <Icon name="code-merge" /> Merge
         </button>
         <button
+          type="button"
           className={`icloud-action-btn ${decision === 'new' ? 'active' : ''}`}
           onClick={() => onDecisionChange(index, 'new')}
         >
           <Icon name="plus" /> Import as New
         </button>
         <button
+          type="button"
           className={`icloud-action-btn ${decision === 'skip' ? 'active' : ''}`}
           onClick={() => onDecisionChange(index, 'skip')}
         >
@@ -224,7 +227,7 @@ export function ICloudImportView() {
           <Icon name="apple" style="brands" />
           <h3>iCloud Not Connected</h3>
           <p>Go to Tools to connect your iCloud account first.</p>
-          <button className="secondary-button" onClick={() => navigate('/tools')}>
+          <button type="button" className="secondary-button" onClick={() => navigate('/tools')}>
             <Icon name="gear" /> Go to Tools
           </button>
         </div>
@@ -245,7 +248,7 @@ export function ICloudImportView() {
               {fetchContacts.error?.message || 'Failed to fetch contacts'}
             </p>
           )}
-          <button className="secondary-button" onClick={handleFetch}>
+          <button type="button" className="secondary-button" onClick={handleFetch}>
             <Icon name="cloud-arrow-down" /> Fetch from iCloud
           </button>
         </div>
@@ -316,7 +319,7 @@ export function ICloudImportView() {
               </ul>
             </details>
           )}
-          <button className="secondary-button" onClick={() => navigate('/contacts')} style={{ marginTop: '1rem' }}>
+          <button type="button" className="secondary-button" onClick={() => navigate('/contacts')} style={{ marginTop: '1rem' }}>
             <Icon name="address-book" /> Go to Contacts
           </button>
         </div>
@@ -364,10 +367,10 @@ export function ICloudImportView() {
           <div className="icloud-section-header">
             <h3>Potential Duplicates ({matchResult.matches.length})</h3>
             <div className="icloud-bulk-actions">
-              <button className="icloud-bulk-btn" onClick={() => handleSetAllMatches('merge')}>
+              <button type="button" className="icloud-bulk-btn" onClick={() => handleSetAllMatches('merge')}>
                 Merge All
               </button>
-              <button className="icloud-bulk-btn" onClick={() => handleSetAllMatches('skip')}>
+              <button type="button" className="icloud-bulk-btn" onClick={() => handleSetAllMatches('skip')}>
                 Skip All
               </button>
             </div>
@@ -392,10 +395,10 @@ export function ICloudImportView() {
           <div className="icloud-section-header">
             <h3>New Contacts ({matchResult.newContacts.length})</h3>
             <div className="icloud-bulk-actions">
-              <button className="icloud-bulk-btn" onClick={() => handleSelectAllNew(true)}>
+              <button type="button" className="icloud-bulk-btn" onClick={() => handleSelectAllNew(true)}>
                 Select All
               </button>
-              <button className="icloud-bulk-btn" onClick={() => handleSelectAllNew(false)}>
+              <button type="button" className="icloud-bulk-btn" onClick={() => handleSelectAllNew(false)}>
                 Deselect All
               </button>
             </div>
@@ -419,6 +422,7 @@ export function ICloudImportView() {
           {totalToImport} to import ({selectedNewCount} new, {mergeCount} merge, {importAsNewCount} as new) &middot; {skipCount + (matchResult.newContacts.length - selectedNewCount)} skipped
         </div>
         <button
+          type="button"
           className="secondary-button"
           onClick={handleImport}
           disabled={totalToImport === 0}
