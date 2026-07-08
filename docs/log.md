@@ -1,5 +1,14 @@
 # Change Log
 
+## 2026-07-07 22:25 — UI unification Phase 5: canonical Button system
+
+- Added `components/ui/Button.tsx` (`variant: primary|secondary|danger|ghost|icon`, `icon`, extends button attrs) rendering `.btn .btn--{variant}` built on `--ds-btn-*` tokens
+- Added a canonical `.btn` CSS system and folded the common legacy button classes into it via grouped selectors, so `primary-button`/`confirm-button` → brand primary, `secondary-button`/`cancel-button`/`back-button` → bordered neutral, `confirm-button.danger` → solid danger — unifying every button's look app-wide with no call-site churn
+- Fixed a cross-app inconsistency: confirm buttons were blue (`--ds-color-info`) while primary buttons were purple (`--ds-color-primary`) — both are now the brand primary
+- Removed the redundant/duplicate standalone CSS blocks for `.primary-button`, `.secondary-button` (×2), `.cancel-button`, `.confirm-button`, and `.confirm-button.danger` (×2)
+- Migrated `ConfirmDialog` to `<Button>` (covers all 14 dialogs)
+- Note: took a CSS-consolidation approach (unify appearance) rather than churning ~30 button classes at every call site — meets the consistency bar without the regression risk; remaining ad-hoc action-button classes stay and can migrate to `<Button>` incrementally
+
 ## 2026-07-07 22:10 — UI unification Phase 4: LoadingSpinner adoption + EmptyState
 
 - Moved `LoadingSpinner` to `components/ui/` and made it the canonical loader; added a `fullscreen` variant

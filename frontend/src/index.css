@@ -112,6 +112,7 @@ select:focus-visible {
  * ============================================ */
 
 /* Buttons */
+.btn,
 .header-action-btn,
 .primary-button,
 .secondary-button,
@@ -172,10 +173,140 @@ select:focus-visible {
 }
 
 /* Square icon buttons: equal width */
+.btn--icon,
 .icon-button,
 .merge-modal-header .close-button,
 .remove-item-btn {
   width: var(--ds-control-height);
+}
+
+/* ============================================
+ * CANONICAL BUTTON SYSTEM (components/ui/Button.tsx)
+ * `.btn` + variant modifiers. Common legacy button
+ * classes are grouped in so the whole app shares one look.
+ * ============================================ */
+
+.btn,
+.primary-button,
+.secondary-button,
+.danger-button,
+.cancel-button,
+.confirm-button,
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+  padding: 0 var(--ds-btn-padding-x);
+  border: 1px solid transparent;
+  border-radius: var(--ds-btn-radius);
+  font-size: var(--ds-btn-font-size);
+  font-weight: var(--ds-btn-font-weight);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--ds-duration-fast) var(--ds-easing-default),
+    border-color var(--ds-duration-fast) var(--ds-easing-default),
+    color var(--ds-duration-fast) var(--ds-easing-default),
+    opacity var(--ds-duration-fast) var(--ds-easing-default);
+}
+
+.btn [class*="fa-"],
+.primary-button [class*="fa-"],
+.secondary-button [class*="fa-"],
+.danger-button [class*="fa-"],
+.cancel-button [class*="fa-"],
+.confirm-button [class*="fa-"],
+.back-button [class*="fa-"] {
+  font-size: 1.125rem;
+}
+
+.btn:disabled,
+.btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Primary — brand-filled */
+.btn--primary,
+.primary-button,
+.confirm-button {
+  background-color: var(--ds-color-primary);
+  color: var(--ds-text-inverse);
+  border-color: transparent;
+}
+
+.btn--primary:hover:not(:disabled),
+.primary-button:hover:not(:disabled),
+.confirm-button:hover:not(:disabled) {
+  background-color: var(--ds-color-primary-hover);
+}
+
+/* Secondary — bordered neutral */
+.btn--secondary,
+.secondary-button,
+.cancel-button,
+.back-button {
+  background-color: var(--ds-bg-primary);
+  color: var(--ds-text-primary);
+  border-color: var(--ds-border-color);
+}
+
+.btn--secondary:hover:not(:disabled),
+.secondary-button:hover:not(:disabled),
+.cancel-button:hover:not(:disabled),
+.back-button:hover:not(:disabled) {
+  background-color: var(--ds-bg-secondary);
+  border-color: var(--ds-border-dark);
+}
+
+/* Danger — solid red */
+.btn--danger,
+.confirm-button.danger {
+  background-color: var(--ds-color-error);
+  color: var(--ds-text-inverse);
+  border-color: transparent;
+}
+
+.btn--danger:hover:not(:disabled),
+.confirm-button.danger:hover:not(:disabled) {
+  background-color: var(--ds-color-error-hover);
+}
+
+/* Ghost — text-only */
+.btn--ghost {
+  background-color: transparent;
+  color: var(--ds-text-secondary);
+  border-color: transparent;
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background-color: var(--ds-bg-hover);
+  color: var(--ds-text-primary);
+}
+
+/* Icon — square, bordered */
+.btn--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--ds-border-color);
+  border-radius: var(--ds-radius-md);
+  background-color: var(--ds-bg-primary);
+  color: var(--ds-text-secondary);
+  cursor: pointer;
+  transition: background-color var(--ds-duration-fast) var(--ds-easing-default),
+    border-color var(--ds-duration-fast) var(--ds-easing-default);
+}
+
+.btn--icon:hover:not(:disabled) {
+  background-color: var(--ds-bg-secondary);
+  border-color: var(--ds-border-dark);
+}
+
+.btn--icon [class*="fa-"] {
+  font-size: 1.125rem;
 }
 
 /* ============================================
@@ -553,7 +684,7 @@ a.nav-rail-item.active {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0.5rem;
+  border-radius: var(--ds-radius-md);
   border: 1px solid var(--ds-border-color);
   background-color: var(--ds-bg-primary);
   color: var(--ds-text-secondary);
@@ -563,34 +694,11 @@ a.nav-rail-item.active {
 
 .icon-button:hover {
   background-color: var(--ds-bg-secondary);
-  border-color: var(--ds-text-secondary);
+  border-color: var(--ds-border-dark);
 }
 
 .icon-button [class*="fa-"] {
-  font-size: 1.25rem;
-}
-
-.primary-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0 1rem;
-  border-radius: 0.5rem;
-  border: none;
-  background-color: var(--ds-color-primary);
-  color: white;
-  font-weight: 600;
-  font-size: 0.9375rem;
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-
-.primary-button:hover {
-  opacity: 0.9;
-}
-
-.primary-button [class*="fa-"] {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
 }
 
 /* Page Content */
@@ -898,31 +1006,6 @@ a.nav-rail-item.active {
 }
 
 /* Virtual scroll — handled by useWindowVirtualizer (body scroll) */
-
-/* Secondary Button */
-.secondary-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0 1rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--ds-border-color);
-  background-color: var(--ds-bg-primary);
-  color: var(--ds-text-primary);
-  font-weight: 600;
-  font-size: 0.9375rem;
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
-}
-
-.secondary-button:hover {
-  background-color: var(--ds-bg-secondary);
-  border-color: var(--ds-text-secondary);
-}
-
-.secondary-button [class*="fa-"] {
-  font-size: 1.25rem;
-}
 
 /* Deduplication View */
 .dedup-view {
@@ -1467,35 +1550,6 @@ a.nav-rail-item.active {
 .confirm-actions {
   display: flex;
   justify-content: space-between;
-}
-
-.cancel-button {
-  padding: 0 1.25rem;
-  background: var(--ds-bg-tertiary);
-  color: var(--ds-text-primary);
-  border: 1px solid var(--ds-border-dark);
-  border-radius: var(--ds-radius-md);
-  font-size: var(--ds-font-sm);
-  cursor: pointer;
-}
-
-.cancel-button:hover {
-  background: var(--ds-border-color);
-}
-
-.confirm-button {
-  padding: 0 1.25rem;
-  background: var(--ds-color-info);
-  color: var(--ds-text-inverse);
-  border: none;
-  border-radius: var(--ds-radius-md);
-  font-size: var(--ds-font-sm);
-  font-weight: var(--ds-weight-medium);
-  cursor: pointer;
-}
-
-.confirm-button:hover {
-  opacity: 0.9;
 }
 
 /* Import Modal */
@@ -2688,15 +2742,6 @@ a.nav-rail-item.active {
 
 .cleanup-card-field.empty {
   font-style: italic;
-}
-
-/* Danger confirm button */
-.confirm-button.danger {
-  background: var(--ds-color-error);
-}
-
-.confirm-button.danger:hover {
-  background: var(--ds-color-error-hover);
 }
 
 /* Category tags */
@@ -4730,16 +4775,7 @@ a.nav-rail-item.active {
   box-shadow: var(--ds-shadow-focus-error);
 }
 
-.confirm-button.danger {
-  background: var(--ds-color-error);
-  border-color: var(--ds-color-error);
-}
-
-.confirm-button.danger:hover:not(:disabled) {
-  background: var(--ds-color-error-hover);
-}
-
-.confirm-button.danger:disabled {
+.confirm-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -6389,25 +6425,6 @@ a.nav-rail-item.active {
   font-size: 1.5rem;
 }
 
-.secondary-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0 1rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--ds-border-color);
-  background-color: var(--ds-bg-primary);
-  color: var(--ds-text-primary);
-  font-weight: 500;
-  font-size: 0.9375rem;
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
-}
-
-.secondary-button:hover {
-  background-color: var(--ds-bg-secondary);
-  border-color: var(--ds-text-secondary);
-}
 
 /* Contact Detail Page */
 .contact-detail-back {

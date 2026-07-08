@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useLayoutModal } from '../../hooks/useLayoutModal';
+import { Button } from './Button';
 
 interface ConfirmDialogProps {
   title: string;
@@ -65,17 +66,16 @@ export function ConfirmDialog({
         {message && <p>{message}</p>}
         {children}
         <div className="confirm-actions">
-          <button type="button" className="cancel-button" onClick={onCancel} autoFocus>
+          <Button variant="secondary" onClick={onCancel} autoFocus>
             {cancelLabel}
-          </button>
-          <button
-            type="button"
-            className={`confirm-button${danger ? ' danger' : ''}`}
+          </Button>
+          <Button
+            variant={danger ? 'danger' : 'primary'}
             onClick={onConfirm}
             disabled={confirmDisabled}
           >
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
