@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(46deg, #7C3AED 7.03%, #273DE3 94.08%);
+  background: linear-gradient(46deg, var(--ds-gradient-brand-from) 7.03%, var(--ds-gradient-brand-to) 94.08%);
   padding: 20px;
 }
 
@@ -48,7 +48,7 @@
   padding: 14px 24px;
   background: white;
   border: 1px solid var(--ds-border-color);
-  border-radius: 8px;
+  border-radius: var(--ds-radius-lg);
   font-size: 16px;
   font-weight: 500;
   color: var(--ds-text-primary);
@@ -91,9 +91,9 @@
 .demo-btn {
   width: 100%;
   padding: 14px 24px;
-  background: linear-gradient(46deg, #7C3AED 7.03%, #273DE3 94.08%);
+  background: linear-gradient(46deg, var(--ds-gradient-brand-from) 7.03%, var(--ds-gradient-brand-to) 94.08%);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--ds-radius-lg);
   font-size: 16px;
   font-weight: 500;
   color: white;

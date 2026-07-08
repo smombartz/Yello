@@ -1,5 +1,14 @@
 # Change Log
 
+## 2026-07-07 23:30 — UI unification Phase 8: token normalization + brand convergence
+
+- Converged all 5 competing brand purples/gradients onto tokens: raw `#5f27e3`/`rgba(95,39,227,…)`, the `#667eea/#764ba2` gradient + its alpha tints/shadows, and the `#7C3AED/#273DE3` hero gradient all now reference `--ds-color-primary`, `--ds-color-primary-light`, `--ds-gradient-brand`, or `color-mix(...)`. Zero raw brand hexes remain in CSS
+- Set the canonical brand values in `design-system.css` (the user's choice): `--ds-color-primary` #7C3AED / hover #6D28D9 / dark #5B21B6 / light rgba(124,58,237,.1); `--ds-gradient-brand` #7C3AED→#273DE3. (The solid-brand flip lands here rather than Phase 9 so gradient and solid stay in sync.)
+- Fixed a latent broken token: `--ds-text-tertiary` was used in index.css + enrich.css but never defined — added it
+- Normalized border-radius to tokens: the three competing pill radii (99/999/9999px) → `--ds-radius-full`; single-value px/rem radii → `--ds-radius-sm/md/lg/xl`
+- **Fixed 10 global class collisions the Phase 7 extraction created** (mount-scoped styles became always-loaded): dashboard's `.contact-list/-info/-name` (were overriding the main ContactList) → `.dash-activity-*`; enrich's `.contact-name` → `.enrich-contact-name`; UserProfilePage's `.action-button/.confirm-actions/.danger-button/.edit-button-primary/.secondary-button` → `.profile-*`; PublicContactCard's `.contact-info` → `.public-card-contact-info` (renamed in both CSS and TSX)
+- Deferred as lower-value code hygiene (per the quality bar): exhaustive grey/spacing/font-size → token conversion and retiring static inline `style={{}}`
+
 ## 2026-07-07 23:05 — UI unification Phase 7: CSS-in-JS → stylesheets
 
 - Extracted all 7 remaining component `<style>` blocks into `src/styles/pages/*.css` (login, dashboard, admin, enrich, public-contact-card, user-profile, demo-prompt-modal), aggregated by `src/styles/pages.css`, imported after `index.css` in `main.tsx` so page rules cascade over the base as before

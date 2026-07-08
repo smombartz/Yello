@@ -556,7 +556,7 @@ function UnlinkedProfileState({
               }}
             />
             <div className="create-actions">
-              <button type="button" className="secondary-button" onClick={() => setShowCreateInput(false)}>
+              <button type="button" className="profile-secondary-button" onClick={() => setShowCreateInput(false)}>
                 Cancel
               </button>
               <button
@@ -606,11 +606,11 @@ function LinkedProfileHeader({
       ) : (
         <div className="unlink-confirm">
           <p>Unlink this contact?</p>
-          <div className="confirm-actions">
-            <button type="button" className="secondary-button" onClick={() => setShowConfirmUnlink(false)}>
+          <div className="profile-confirm-actions">
+            <button type="button" className="profile-secondary-button" onClick={() => setShowConfirmUnlink(false)}>
               Cancel
             </button>
-            <button type="button" className="danger-button" onClick={onUnlink}>
+            <button type="button" className="profile-danger-button" onClick={onUnlink}>
               Unlink
             </button>
           </div>
@@ -1093,7 +1093,7 @@ export function UserProfilePage() {
                   <ContactCardView data={mapProfileToCardData(form)} showMetadata={false} />
                 </div>
                 <div className="expanded-bottom-actions">
-                  <button className="edit-button-primary" onClick={() => setIsEditMode(true)}>
+                  <button className="profile-edit-button-primary" onClick={() => setIsEditMode(true)}>
                     <Icon name="pen-to-square" />
                     Edit Profile
                   </button>
@@ -1166,14 +1166,14 @@ export function UserProfilePage() {
                   </div>
                   <div className="expanded-actions">
                     <button
-                      className="action-button secondary"
+                      className="profile-action-button secondary"
                       onClick={handleCancelEdit}
                       disabled={updateProfileMutation.isPending}
                     >
                       Cancel
                     </button>
                     <button
-                      className="action-button primary"
+                      className="profile-action-button primary"
                       onClick={handleSave}
                       disabled={updateProfileMutation.isPending}
                     >

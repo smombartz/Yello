@@ -7,7 +7,7 @@
     padding: 8px 16px;
     background: none;
     border: 1px solid var(--ds-border-color);
-    border-radius: 8px;
+    border-radius: var(--ds-radius-lg);
     font-size: 13px;
     color: var(--ds-text-secondary);
     cursor: pointer;
@@ -48,7 +48,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea20, #764ba220);
+    background: var(--ds-color-primary-light);
     border-radius: 50%;
   }
 
@@ -80,7 +80,7 @@
     padding: 20px;
     background: var(--ds-bg-primary);
     border: 1px solid var(--ds-border-color);
-    border-radius: 12px;
+    border-radius: var(--ds-radius-xl);
     cursor: pointer;
     text-align: left;
     transition: all 0.2s;
@@ -88,7 +88,7 @@
 
   .setup-option:hover {
     border-color: var(--ds-color-primary);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--ds-color-primary) 15%, transparent);
   }
 
   .option-icon {
@@ -98,7 +98,7 @@
     align-items: center;
     justify-content: center;
     background: var(--ds-border-color);
-    border-radius: 12px;
+    border-radius: var(--ds-radius-xl);
     flex-shrink: 0;
   }
 
@@ -126,14 +126,14 @@
     padding: 20px;
     background: var(--ds-bg-primary);
     border: 1px solid var(--ds-color-primary);
-    border-radius: 12px;
+    border-radius: var(--ds-radius-xl);
   }
 
   .create-name-input {
     width: 100%;
     padding: 12px 16px;
     border: 1px solid var(--ds-border-color);
-    border-radius: 8px;
+    border-radius: var(--ds-radius-lg);
     font-size: 16px;
     margin-bottom: 16px;
   }
@@ -150,9 +150,9 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 20px;
-    background: linear-gradient(135deg, #667eea10, #764ba210);
-    border: 1px solid #667eea30;
-    border-radius: 12px;
+    background: var(--ds-color-primary-light);
+    border: 1px solid color-mix(in srgb, var(--ds-color-primary) 20%, transparent);
+    border-radius: var(--ds-radius-xl);
     margin-bottom: 24px;
   }
 
@@ -180,7 +180,7 @@
     padding: 8px 16px;
     background: transparent;
     border: 1px solid var(--ds-border-color);
-    border-radius: 8px;
+    border-radius: var(--ds-radius-lg);
     cursor: pointer;
     color: var(--ds-text-secondary);
     font-size: 14px;
@@ -204,22 +204,22 @@
     color: var(--ds-text-secondary);
   }
 
-  .confirm-actions {
+  .profile-confirm-actions {
     display: flex;
     gap: 8px;
   }
 
-  .danger-button {
+  .profile-danger-button {
     padding: 8px 16px;
     background: var(--ds-color-error);
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--ds-radius-md);
     cursor: pointer;
     font-size: 14px;
   }
 
-  .danger-button:hover {
+  .profile-danger-button:hover {
     background: var(--ds-color-error-hover);
   }
 
@@ -229,7 +229,7 @@
     margin: 24px auto;
     background: var(--ds-bg-primary);
     border: 1px solid var(--ds-border-color);
-    border-radius: 12px;
+    border-radius: var(--ds-radius-xl);
     overflow: hidden;
   }
 
@@ -259,7 +259,7 @@
     border: none;
     cursor: pointer;
     color: var(--ds-text-secondary);
-    border-radius: 6px;
+    border-radius: var(--ds-radius-md);
     transition: all 0.2s;
   }
 
@@ -373,7 +373,7 @@
   .profile-contact-details .contact-detail-content {
     background: var(--ds-bg-primary);
     border: 1px solid var(--ds-border-color);
-    border-radius: 12px;
+    border-radius: var(--ds-radius-xl);
     padding: 20px;
   }
 
@@ -388,7 +388,7 @@
     gap: 8px;
   }
 
-  .edit-button-primary {
+  .profile-edit-button-primary {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -396,51 +396,51 @@
     background: var(--ds-color-primary);
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--ds-radius-lg);
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
     transition: all 0.2s;
   }
 
-  .edit-button-primary:hover {
+  .profile-edit-button-primary:hover {
     background: var(--ds-color-primary-hover);
   }
 
-  .action-button {
+  .profile-action-button {
     display: flex;
     align-items: center;
     gap: 6px;
     padding: 10px 20px;
-    border-radius: 8px;
+    border-radius: var(--ds-radius-lg);
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
     transition: all 0.2s;
   }
 
-  .action-button.primary {
+  .profile-action-button.primary {
     background: var(--ds-color-primary);
     color: white;
     border: none;
   }
 
-  .action-button.primary:hover:not(:disabled) {
+  .profile-action-button.primary:hover:not(:disabled) {
     background: var(--ds-color-primary-hover);
   }
 
-  .action-button.primary:disabled {
+  .profile-action-button.primary:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
 
-  .action-button.secondary {
+  .profile-action-button.secondary {
     background: transparent;
     color: var(--ds-text-secondary);
     border: 1px solid var(--ds-border-color);
   }
 
-  .action-button.secondary:hover {
+  .profile-action-button.secondary:hover {
     background: var(--ds-border-color);
   }
 
@@ -452,7 +452,7 @@
   .profile-section {
     background: var(--ds-bg-primary);
     border: 1px solid var(--ds-border-color);
-    border-radius: 12px;
+    border-radius: var(--ds-radius-xl);
     padding: 20px;
   }
 
@@ -464,8 +464,8 @@
   }
 
   .public-card-controls {
-    background: linear-gradient(135deg, #667eea15, #764ba215);
-    border-color: #667eea30;
+    background: var(--ds-color-primary-light);
+    border-color: color-mix(in srgb, var(--ds-color-primary) 20%, transparent);
   }
 
   .public-toggle-row {
@@ -505,7 +505,7 @@
     padding: 8px 16px;
     background: transparent;
     border: 1px solid var(--ds-border-color);
-    border-radius: 8px;
+    border-radius: var(--ds-radius-lg);
     cursor: pointer;
     color: var(--ds-text-secondary);
     font-size: 14px;
@@ -515,7 +515,7 @@
   .hide-all-btn:hover {
     border-color: var(--ds-color-primary);
     color: var(--ds-color-primary);
-    background: rgba(102, 126, 234, 0.05);
+    background: color-mix(in srgb, var(--ds-color-primary) 5%, transparent);
   }
 
   .hide-all-btn i {
@@ -580,7 +580,7 @@
     gap: 8px;
     padding: 8px 12px;
     background: var(--ds-bg-primary);
-    border-radius: 8px;
+    border-radius: var(--ds-radius-lg);
     overflow: hidden;
   }
 
@@ -602,7 +602,7 @@
     padding: 8px;
     background: var(--ds-bg-primary);
     border: 1px solid var(--ds-border-color);
-    border-radius: 8px;
+    border-radius: var(--ds-radius-lg);
     cursor: pointer;
     color: var(--ds-text-secondary);
     transition: all 0.2s;
@@ -627,14 +627,14 @@
     align-items: center;
     justify-content: center;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--ds-radius-lg);
     cursor: pointer;
     transition: all 0.2s;
     margin-top: 20px;
   }
 
   .visibility-toggle.visible {
-    background: #667eea20;
+    background: var(--ds-color-primary-light);
     color: var(--ds-color-primary);
   }
 
@@ -825,7 +825,7 @@
     background: var(--ds-color-primary);
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--ds-radius-lg);
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
@@ -841,18 +841,18 @@
     cursor: not-allowed;
   }
 
-  .secondary-button {
+  .profile-secondary-button {
     padding: 8px 16px;
     background: transparent;
     border: 1px solid var(--ds-border-color);
-    border-radius: 6px;
+    border-radius: var(--ds-radius-md);
     cursor: pointer;
     font-size: 14px;
     color: var(--ds-text-secondary);
     transition: all 0.2s;
   }
 
-  .secondary-button:hover {
+  .profile-secondary-button:hover {
     background: var(--ds-border-color);
   }
 
@@ -883,7 +883,7 @@
     padding: 10px 20px;
     background: transparent;
     border: 1px solid var(--ds-border-color);
-    border-radius: 8px;
+    border-radius: var(--ds-radius-lg);
     cursor: pointer;
     font-size: 14px;
     color: var(--ds-text-secondary);

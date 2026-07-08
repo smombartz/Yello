@@ -191,7 +191,7 @@ export function DashboardView() {
                     <p>No birthdays this month or next</p>
                   </div>
                 ) : (
-                  <ul className="contact-list">
+                  <ul className="dash-activity-list">
                     {data.upcomingBirthdays.map((contact) => (
                       <li
                         key={contact.id}
@@ -207,8 +207,8 @@ export function DashboardView() {
                             </span>
                           )}
                         </div>
-                        <div className="contact-info">
-                          <div className="contact-name">{contact.displayName}</div>
+                        <div className="dash-activity-info">
+                          <div className="dash-activity-name">{contact.displayName}</div>
                           <div className="contact-meta">{formatBirthday(contact.birthday)}</div>
                         </div>
                         <div className="contact-badge birthday-badge">
@@ -234,7 +234,7 @@ export function DashboardView() {
                     <p>No new contacts in the last 7 days</p>
                   </div>
                 ) : (
-                  <ul className="contact-list">
+                  <ul className="dash-activity-list">
                     {data.recentlyAdded.map((contact) => (
                       <li
                         key={contact.id}
@@ -250,8 +250,8 @@ export function DashboardView() {
                             </span>
                           )}
                         </div>
-                        <div className="contact-info">
-                          <div className="contact-name">{contact.displayName}</div>
+                        <div className="dash-activity-info">
+                          <div className="dash-activity-name">{contact.displayName}</div>
                           <div className="contact-meta">{formatDate(contact.createdAt)}</div>
                         </div>
                       </li>

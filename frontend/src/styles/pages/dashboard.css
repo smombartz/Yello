@@ -39,7 +39,7 @@
     width: 48px;
     height: 48px;
     background: var(--ds-color-primary);
-    border-radius: 12px;
+    border-radius: var(--ds-radius-xl);
     color: var(--ds-text-inverse);
   }
 
@@ -107,7 +107,7 @@
   }
 
   /* Contact List */
-  .contact-list {
+  .dash-activity-list {
     list-style: none;
     margin: 0;
     padding: 0;
@@ -153,12 +153,12 @@
     font-size: 16px;
   }
 
-  .contact-info {
+  .dash-activity-info {
     flex: 1;
     min-width: 0;
   }
 
-  .contact-name {
+  .dash-activity-name {
     font-size: 14px;
     font-weight: 500;
     color: var(--ds-text-primary);
@@ -176,7 +176,7 @@
   .contact-badge {
     font-size: 11px;
     padding: 4px 8px;
-    border-radius: 12px;
+    border-radius: var(--ds-radius-xl);
     white-space: nowrap;
   }
 

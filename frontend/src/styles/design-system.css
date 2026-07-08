@@ -12,16 +12,15 @@
   /* ============================================
    * COLORS - Primary Brand
    * ============================================ */
-  --ds-color-primary: #5f27e3;
-  --ds-color-primary-hover: #4a1db3;
-  --ds-color-primary-light: rgba(95, 39, 227, 0.1);
-  --ds-color-primary-dark: #3a1580;
+  --ds-color-primary: #7c3aed;
+  --ds-color-primary-hover: #6d28d9;
+  --ds-color-primary-light: rgba(124, 58, 237, 0.1);
+  --ds-color-primary-dark: #5b21b6;
 
   /* Brand gradient — single source for decorative brand gradients.
-   * Currently the most-common in-app pair; Phase 9 flips these to the
-   * canonical brand once call sites reference the token. */
-  --ds-gradient-brand-from: #667eea;
-  --ds-gradient-brand-to: #764ba2;
+   * Canonical brand pair; all in-app gradients reference these. */
+  --ds-gradient-brand-from: #7c3aed;
+  --ds-gradient-brand-to: #273de3;
   --ds-gradient-brand: linear-gradient(135deg, var(--ds-gradient-brand-from), var(--ds-gradient-brand-to));
 
   /* ============================================
@@ -62,6 +61,7 @@
    * ============================================ */
   --ds-text-primary: #1a202c;
   --ds-text-secondary: #6b7280;
+  --ds-text-tertiary: #9ca3af;
   --ds-text-muted: #9ca3af;
   --ds-text-disabled: #d1d5db;
   --ds-text-inverse: #ffffff;

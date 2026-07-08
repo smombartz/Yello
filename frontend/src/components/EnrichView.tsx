@@ -397,7 +397,7 @@ export function EnrichView() {
                           <div className="enriched-contacts-list">
                             {result.enrichedContacts.map((contact) => (
                               <div key={contact.contactId} className="enriched-contact-card">
-                                <Link to={`/contacts/${contact.contactId}`} className="contact-name">
+                                <Link to={`/contacts/${contact.contactId}`} className="enrich-contact-name">
                                   {contact.contactName}
                                 </Link>
                                 <div className="contact-details">

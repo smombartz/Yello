@@ -384,7 +384,7 @@ export function PublicContactCard() {
           )}
 
           {/* Contact Information */}
-          <div className="contact-info">
+          <div className="public-card-contact-info">
             {primaryEmail && (
               <a href={`mailto:${primaryEmail}`} className="contact-item">
                 <MailIcon />
