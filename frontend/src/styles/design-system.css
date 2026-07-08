@@ -17,6 +17,13 @@
   --ds-color-primary-light: rgba(95, 39, 227, 0.1);
   --ds-color-primary-dark: #3a1580;
 
+  /* Brand gradient — single source for decorative brand gradients.
+   * Currently the most-common in-app pair; Phase 9 flips these to the
+   * canonical brand once call sites reference the token. */
+  --ds-gradient-brand-from: #667eea;
+  --ds-gradient-brand-to: #764ba2;
+  --ds-gradient-brand: linear-gradient(135deg, var(--ds-gradient-brand-from), var(--ds-gradient-brand-to));
+
   /* ============================================
    * COLORS - Semantic States
    * ============================================ */

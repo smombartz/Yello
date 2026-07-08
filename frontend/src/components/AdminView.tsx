@@ -45,7 +45,6 @@ export function AdminView() {
           <div className="loading-spinner" />
           <p>Loading users...</p>
         </div>
-        <style>{adminStyles}</style>
       </div>
     );
   }
@@ -57,7 +56,6 @@ export function AdminView() {
           <Icon name="circle-exclamation" />
           <p>{error?.message || 'Failed to load admin data'}</p>
         </div>
-        <style>{adminStyles}</style>
       </div>
     );
   }
@@ -122,112 +120,7 @@ export function AdminView() {
           </table>
         </div>
       </div>
-      <style>{adminStyles}</style>
     </div>
   );
 }
 
-const adminStyles = `
-  .admin-view {
-    padding: 24px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  .admin-loading,
-  .admin-error {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 64px 0;
-    color: var(--ds-text-secondary);
-  }
-  .admin-error i {
-    font-size: 24px;
-    color: var(--ds-color-error);
-  }
-  .admin-summary {
-    margin-bottom: 16px;
-    font-size: 14px;
-    color: var(--ds-text-secondary);
-  }
-  .admin-summary-count {
-    font-weight: 600;
-    color: var(--ds-text-primary);
-  }
-  .admin-table-wrapper {
-    overflow-x: auto;
-  }
-  .admin-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-  }
-  .admin-table th {
-    text-align: left;
-    padding: 10px 12px;
-    font-weight: 600;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--ds-text-secondary);
-    border-bottom: 1px solid var(--ds-border-color);
-    white-space: nowrap;
-  }
-  .admin-table th.num,
-  .admin-table td.num {
-    text-align: right;
-  }
-  .admin-table td {
-    padding: 12px;
-    border-bottom: 1px solid var(--ds-border-color);
-    white-space: nowrap;
-    color: var(--ds-text-primary);
-  }
-  .admin-table tbody tr:hover {
-    background: var(--ds-bg-secondary);
-  }
-  .admin-user-cell {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .admin-user-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    object-fit: cover;
-    flex-shrink: 0;
-  }
-  .admin-user-avatar-placeholder {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--ds-bg-secondary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--ds-text-secondary);
-    flex-shrink: 0;
-  }
-  .admin-user-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-  .admin-user-name {
-    font-weight: 500;
-  }
-  .admin-user-email {
-    font-size: 12px;
-    color: var(--ds-text-secondary);
-  }
-  .admin-photo-size {
-    color: var(--ds-text-secondary);
-    font-size: 12px;
-  }
-`;

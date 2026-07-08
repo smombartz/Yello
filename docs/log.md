@@ -1,5 +1,13 @@
 # Change Log
 
+## 2026-07-07 23:05 — UI unification Phase 7: CSS-in-JS → stylesheets
+
+- Extracted all 7 remaining component `<style>` blocks into `src/styles/pages/*.css` (login, dashboard, admin, enrich, public-contact-card, user-profile, demo-prompt-modal), aggregated by `src/styles/pages.css`, imported after `index.css` in `main.tsx` so page rules cascade over the base as before
+- Removed the 4 local `@keyframes spin` copies — one global keyframes in `index.css` now serves all
+- Fixed three real global collisions surfaced by making these previously mount-only styles always-loaded: EnrichView's gradient `.primary-button`/`.secondary-button` were overriding the canonical brand buttons app-wide (removed — EnrichView now uses the canonical `.btn` system); the off-brand `.progress-bar-fill` gradient was overriding ImportView's brand-solid bar (removed the duplicate); and duplicate `.spinning` definitions (removed)
+- Also dropped Dashboard's `.empty-state i`/`.empty-state p` (would have overridden the shared EmptyState primitive) and scoped EnrichView's mobile full-width button rule to `.enrichment-actions`
+- Added `--ds-gradient-brand-from/-to` + `--ds-gradient-brand` tokens (currently the in-app pair) as the single plug-in point for Phase 9
+
 ## 2026-07-07 22:40 — UI unification Phase 6: structural dedupe & UX fixes
 
 - Extracted `components/ImportMatchCards.tsx` (`MatchCard` with a `sourceLabel` prop + `NewContactCard`), replacing the ~200 lines of verbatim-duplicated card components in `ICloudImportView` and `GoogleContactsImportView`; both now pass `sourceLabel="iCloud"|"Google"`

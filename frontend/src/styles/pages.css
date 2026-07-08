@@ -1,0 +1,15 @@
+/**
+ * Page styles
+ *
+ * CSS extracted from per-component `<style>` blocks (previously CSS-in-JS).
+ * Loaded after index.css so page rules cascade over the base, matching the
+ * previous mount-time injection order. One section per page; no `<style>` in TSX.
+ */
+
+@import './pages/login.css';
+@import './pages/dashboard.css';
+@import './pages/admin.css';
+@import './pages/enrich.css';
+@import './pages/public-contact-card.css';
+@import './pages/user-profile.css';
+@import './pages/demo-prompt-modal.css';
