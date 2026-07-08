@@ -1,5 +1,11 @@
 # Change Log
 
+## 2026-07-07 21:19 — UI unification: audit + plan + docs scaffolding (Phase 0)
+
+- Audited frontend for reusable components and UI consistency; plan saved to `docs/plans/2026-07-07-ui-unification-refresh.md`
+- Created `.impeccable.md` design-context file (clean & utilitarian direction, token/primitive conventions)
+- Corrected CLAUDE.md: app does not use Pico CSS (never installed) and the design-token prefix is `--ds-*`, not `--stitch-*`
+
 ## 2026-05-07 — Fix: Production 404 on `/` (Railway)
 
 - Railway-deployed site returned `{"message":"Route GET:/ not found"}` because the static-frontend block in `backend/src/server.ts` never registered. `server.ts` resolves the frontend as `path.join(__dirname, '../../frontend/dist')` (correct for the dev layout `backend/dist/server.js`), but the Dockerfile copied the backend build to `/app/dist`, so the resolved path became `/frontend/dist` (nonexistent), `frontendExists` was false, and neither `fastifyStatic` nor the SPA fallback was registered.

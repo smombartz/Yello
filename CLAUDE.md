@@ -44,7 +44,7 @@ kill $(lsof -ti :5173) 2>/dev/null  # Stop frontend
 This is a monorepo contact management application with separate frontend and backend packages.
 
 ### Tech Stack
-- **Frontend:** React 19, TypeScript, Vite, TanStack Query (data fetching), TanStack Virtual (virtualized lists), React Router, Leaflet (maps), Pico CSS
+- **Frontend:** React 19, TypeScript, Vite, TanStack Query (data fetching), TanStack Virtual (virtualized lists), React Router, Leaflet (maps), hand-rolled CSS with `--ds-*` design tokens
 - **Backend:** Node.js 20, Fastify 5, better-sqlite3, Sharp (image processing), TypeBox (validation)
 - **Database:** SQLite with WAL mode and FTS5 full-text search (multi-tenant: database-per-user)
 
@@ -95,7 +95,7 @@ FTS5 virtual tables for full-text search on display_name, company, email with pr
 ### Frontend
 - Virtualized lists for 10K+ contacts performance
 - `ProtectedRoute`/`PublicRoute` wrappers for auth
-- CSS variables with `--stitch-*` prefix for design system
+- CSS variables with `--ds-*` prefix for design system (`frontend/src/styles/design-system.css`); shared UI primitives in `frontend/src/components/ui/`; design context in `.impeccable.md`
 
 ### Backend
 - Fastify plugins for modularity
