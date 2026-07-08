@@ -13,6 +13,7 @@ import { useCleanupSummary, useCleanupContacts, useDeleteContacts, fetchAllClean
 import { useSocialLinksSummary } from '../api/socialLinksHooks';
 import { useAddressCleanupSummary } from '../api/addressCleanupHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
+import { ConfirmDialog } from './ui/ConfirmDialog';
 import type {
   CleanupMode,
   EmptyContactType,
@@ -321,47 +322,24 @@ export function CleanupView() {
       )}
 
       {showDeleteConfirm && (
-        <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Delete {selectedIds.size} Contact{selectedIds.size !== 1 ? 's' : ''}?</h3>
-            <p>
-              This action cannot be undone. The selected contacts will be permanently deleted.
-            </p>
-            <div className="confirm-actions">
-              <button className="cancel-button" onClick={() => setShowDeleteConfirm(false)}>
-                Cancel
-              </button>
-              <button
-                className="confirm-button danger"
-                onClick={handleDelete}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title={`Delete ${selectedIds.size} Contact${selectedIds.size !== 1 ? 's' : ''}?`}
+          message="This action cannot be undone. The selected contacts will be permanently deleted."
+          confirmLabel="Delete"
+          danger
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
       )}
 
       {showArchiveConfirm && (
-        <div className="modal-overlay" onClick={() => setShowArchiveConfirm(false)}>
-          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Archive {selectedIds.size} Contact{selectedIds.size !== 1 ? 's' : ''}?</h3>
-            <p>
-              Archived contacts will be moved to the Archive section. You can restore them later or permanently delete them.
-            </p>
-            <div className="confirm-actions">
-              <button className="cancel-button" onClick={() => setShowArchiveConfirm(false)}>
-                Cancel
-              </button>
-              <button
-                className="confirm-button"
-                onClick={handleArchive}
-              >
-                Archive
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title={`Archive ${selectedIds.size} Contact${selectedIds.size !== 1 ? 's' : ''}?`}
+          message="Archived contacts will be moved to the Archive section. You can restore them later or permanently delete them."
+          confirmLabel="Archive"
+          onConfirm={handleArchive}
+          onCancel={() => setShowArchiveConfirm(false)}
+        />
       )}
     </div>
   );

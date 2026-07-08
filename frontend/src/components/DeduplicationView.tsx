@@ -9,6 +9,7 @@ import { useDeleteContacts } from '../api/cleanupHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
 import type { ConfidenceLevel, DeduplicationMode, DuplicateGroup } from '../api/types';
 import type { OutletContext } from './Layout';
+import { ConfirmDialog } from './ui/ConfirmDialog';
 
 interface UndoState {
   groupId: string;
@@ -424,104 +425,61 @@ export function DeduplicationView() {
       )}
 
       {showMergeAllConfirm && (
-        <div className="modal-overlay" onClick={() => setShowMergeAllConfirm(false)}>
-          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Merge All on This Page?</h3>
-            <p>
-              This will merge {visibleCount} duplicate group{visibleCount !== 1 ? 's' : ''} on this page.
-              The first contact in each group will be kept as the primary.
-            </p>
-            <div className="confirm-actions">
-              <button className="cancel-button" onClick={() => setShowMergeAllConfirm(false)}>
-                Cancel
-              </button>
-              <button
-                className="confirm-button"
-                onClick={() => {
-                  setShowMergeAllConfirm(false);
-                  handleMergeAll();
-                }}
-              >
-                Merge All
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="Merge All on This Page?"
+          message={`This will merge ${visibleCount} duplicate group${visibleCount !== 1 ? 's' : ''} on this page. The first contact in each group will be kept as the primary.`}
+          confirmLabel="Merge All"
+          onConfirm={() => {
+            setShowMergeAllConfirm(false);
+            handleMergeAll();
+          }}
+          onCancel={() => setShowMergeAllConfirm(false)}
+        />
       )}
 
       {showMergeAllGlobalConfirm && (
-        <div className="modal-overlay" onClick={() => setShowMergeAllGlobalConfirm(false)}>
-          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Merge All Duplicates?</h3>
-            <p>
+        <ConfirmDialog
+          title="Merge All Duplicates?"
+          message={
+            <>
               This will merge all {totalGroups} duplicate group{totalGroups !== 1 ? 's' : ''}
               {selectedMode === 'recommended' && confidenceFilter.size < 3 &&
                 ' matching the selected confidence levels'}.
               The first contact in each group will be kept as the primary.
-            </p>
-            <p className="warning-text">This action cannot be undone.</p>
-            <div className="confirm-actions">
-              <button className="cancel-button" onClick={() => setShowMergeAllGlobalConfirm(false)}>
-                Cancel
-              </button>
-              <button
-                className="confirm-button"
-                onClick={() => {
-                  setShowMergeAllGlobalConfirm(false);
-                  handleMergeAllGlobal();
-                }}
-              >
-                Merge All
-              </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+          confirmLabel="Merge All"
+          onConfirm={() => {
+            setShowMergeAllGlobalConfirm(false);
+            handleMergeAllGlobal();
+          }}
+          onCancel={() => setShowMergeAllGlobalConfirm(false)}
+        >
+          <p className="warning-text">This action cannot be undone.</p>
+        </ConfirmDialog>
       )}
 
       {/* Delete confirmation modal */}
       {showDeleteConfirm && (
-        <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Delete {selectedContactIds.size} Contact{selectedContactIds.size !== 1 ? 's' : ''}?</h3>
-            <p>
-              This action cannot be undone. The selected contacts will be permanently deleted.
-            </p>
-            <div className="confirm-actions">
-              <button className="cancel-button" onClick={() => setShowDeleteConfirm(false)}>
-                Cancel
-              </button>
-              <button
-                className="confirm-button danger"
-                onClick={handleDeleteSelected}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title={`Delete ${selectedContactIds.size} Contact${selectedContactIds.size !== 1 ? 's' : ''}?`}
+          message="This action cannot be undone. The selected contacts will be permanently deleted."
+          confirmLabel="Delete"
+          danger
+          onConfirm={handleDeleteSelected}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
       )}
 
       {/* Archive confirmation modal */}
       {showArchiveConfirm && (
-        <div className="modal-overlay" onClick={() => setShowArchiveConfirm(false)}>
-          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Archive {selectedContactIds.size} Contact{selectedContactIds.size !== 1 ? 's' : ''}?</h3>
-            <p>
-              Archived contacts will be moved to the Archive section. You can restore them later or permanently delete them.
-            </p>
-            <div className="confirm-actions">
-              <button className="cancel-button" onClick={() => setShowArchiveConfirm(false)}>
-                Cancel
-              </button>
-              <button
-                className="confirm-button"
-                onClick={handleArchiveSelected}
-              >
-                Archive
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title={`Archive ${selectedContactIds.size} Contact${selectedContactIds.size !== 1 ? 's' : ''}?`}
+          message="Archived contacts will be moved to the Archive section. You can restore them later or permanently delete them."
+          confirmLabel="Archive"
+          onConfirm={handleArchiveSelected}
+          onCancel={() => setShowArchiveConfirm(false)}
+        />
       )}
     </div>
   );

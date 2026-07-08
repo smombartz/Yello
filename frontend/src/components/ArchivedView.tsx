@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
 import { Icon } from './Icon';
+import { ConfirmDialog } from './ui/ConfirmDialog';
 import {
   useArchivedContacts,
   useArchivedCount,
@@ -311,47 +312,24 @@ export function ArchivedView() {
       )}
 
       {showRestoreConfirm && (
-        <div className="modal-overlay" onClick={() => setShowRestoreConfirm(false)}>
-          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Restore {selectedIds.size} Contact{selectedIds.size !== 1 ? 's' : ''}?</h3>
-            <p>
-              The selected contacts will be restored and will appear in your contact list again.
-            </p>
-            <div className="confirm-actions">
-              <button className="cancel-button" onClick={() => setShowRestoreConfirm(false)}>
-                Cancel
-              </button>
-              <button
-                className="confirm-button"
-                onClick={handleRestore}
-              >
-                Restore
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title={`Restore ${selectedIds.size} Contact${selectedIds.size !== 1 ? 's' : ''}?`}
+          message="The selected contacts will be restored and will appear in your contact list again."
+          confirmLabel="Restore"
+          onConfirm={handleRestore}
+          onCancel={() => setShowRestoreConfirm(false)}
+        />
       )}
 
       {showDeleteConfirm && (
-        <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Permanently Delete {selectedIds.size} Contact{selectedIds.size !== 1 ? 's' : ''}?</h3>
-            <p>
-              This action cannot be undone. The selected contacts will be permanently deleted.
-            </p>
-            <div className="confirm-actions">
-              <button className="cancel-button" onClick={() => setShowDeleteConfirm(false)}>
-                Cancel
-              </button>
-              <button
-                className="confirm-button danger"
-                onClick={handleDelete}
-              >
-                Delete Permanently
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title={`Permanently Delete ${selectedIds.size} Contact${selectedIds.size !== 1 ? 's' : ''}?`}
+          message="This action cannot be undone. The selected contacts will be permanently deleted."
+          confirmLabel="Delete Permanently"
+          danger
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
       )}
     </div>
   );

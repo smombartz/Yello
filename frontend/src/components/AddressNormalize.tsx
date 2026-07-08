@@ -9,6 +9,7 @@ import {
 } from '../api/addressCleanupHooks';
 import type { JunkIssueType, NormalizeContact, JunkAddress } from '../api/types';
 import { formatAddress } from '../lib/addressUtils';
+import { ConfirmDialog } from './ui/ConfirmDialog';
 
 interface ToastState {
   message: string;
@@ -429,31 +430,21 @@ export function AddressNormalize() {
       )}
 
       {showFixAllConfirm && (
-        <div className="modal-overlay" onClick={() => setShowFixAllConfirm(false)}>
-          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Remove All Junk Addresses?</h3>
-            <p>
-              This will remove junk addresses from {total} contact{total !== 1 ? 's' : ''}:
-            </p>
-            <ul className="fix-all-details">
-              <li>Addresses with "No street" artifacts</li>
-              <li>Empty addresses</li>
-              <li>Addresses with only placeholder values</li>
-              <li>Addresses missing street (only city/state/country)</li>
-            </ul>
-            <div className="confirm-actions">
-              <button className="cancel-button" onClick={() => setShowFixAllConfirm(false)}>
-                Cancel
-              </button>
-              <button
-                className="confirm-button danger"
-                onClick={handleFixAll}
-              >
-                Remove All
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="Remove All Junk Addresses?"
+          message={`This will remove junk addresses from ${total} contact${total !== 1 ? 's' : ''}:`}
+          confirmLabel="Remove All"
+          danger
+          onConfirm={handleFixAll}
+          onCancel={() => setShowFixAllConfirm(false)}
+        >
+          <ul className="fix-all-details">
+            <li>Addresses with "No street" artifacts</li>
+            <li>Empty addresses</li>
+            <li>Addresses with only placeholder values</li>
+            <li>Addresses missing street (only city/state/country)</li>
+          </ul>
+        </ConfirmDialog>
       )}
     </div>
   );

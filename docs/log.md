@@ -1,5 +1,11 @@
 # Change Log
 
+## 2026-07-07 21:40 — UI unification Phase 2: shared ConfirmDialog + Escape bug fix
+
+- Added `components/ui/ConfirmDialog.tsx` — shared confirmation dialog (title/message/danger/confirmDisabled/children), replacing 14 hand-rolled modal copies across 8 files (ContactList, DeduplicationView ×4, CleanupView, ArchivedView, AddressNormalize, AddressDuplicates, SettingsView, SocialLinksWithinContact)
+- ConfirmDialog signals `useLayoutModal().setModalOpen` on mount/unmount, fixing the bug where Layout's global Escape handler navigated to /contacts while a modal was open; Escape now closes the dialog (capture-phase listener)
+- SettingsView's type-DELETE danger dialog migrated via `children` + `confirmDisabled`
+
 ## 2026-07-07 21:25 — UI unification Phase 1: dead code & broken refs
 
 - Deleted `ImportModal.tsx` (138 lines, zero importers)

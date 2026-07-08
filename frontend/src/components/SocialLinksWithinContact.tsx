@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Icon } from './Icon';
 import { Pagination } from './Pagination';
+import { ConfirmDialog } from './ui/ConfirmDialog';
 import { useSocialLinksWithinContact, useFixAllSocialLinks } from '../api/socialLinksHooks';
 
 interface ToastState {
@@ -161,29 +162,17 @@ export function SocialLinksWithinContact() {
       )}
 
       {showConfirm && (
-        <div className="modal-overlay" onClick={() => setShowConfirm(false)}>
-          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Fix All Social Links?</h3>
-            <p>
-              This will migrate {total} social link{total !== 1 ? 's' : ''} from the URLs table
-              to the Social Profiles table, where they belong.
-            </p>
-            <p className="note-text">
-              Links already in Social Profiles will be deduplicated.
-            </p>
-            <div className="confirm-actions">
-              <button className="cancel-button" onClick={() => setShowConfirm(false)}>
-                Cancel
-              </button>
-              <button
-                className="confirm-button"
-                onClick={handleFixAll}
-              >
-                Fix All
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="Fix All Social Links?"
+          message={`This will migrate ${total} social link${total !== 1 ? 's' : ''} from the URLs table to the Social Profiles table, where they belong.`}
+          confirmLabel="Fix All"
+          onConfirm={handleFixAll}
+          onCancel={() => setShowConfirm(false)}
+        >
+          <p className="note-text">
+            Links already in Social Profiles will be deduplicated.
+          </p>
+        </ConfirmDialog>
       )}
     </div>
   );

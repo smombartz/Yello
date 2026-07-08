@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Icon } from './Icon';
 import { Pagination } from './Pagination';
 import { AddressCleanupCard } from './AddressCleanupCard';
+import { ConfirmDialog } from './ui/ConfirmDialog';
 import {
   useDuplicatesContacts,
   useFixDuplicateAddresses,
@@ -207,29 +208,18 @@ export function AddressDuplicates() {
       )}
 
       {showFixAllConfirm && (
-        <div className="modal-overlay" onClick={() => setShowFixAllConfirm(false)}>
-          <div className="modal-content confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Fix All Duplicate Addresses?</h3>
-            <p>
-              This will automatically fix {total} contact{total !== 1 ? 's' : ''}:
-            </p>
-            <ul className="fix-all-details">
-              <li>Keep the best address when duplicates exist (prefers addresses with postal codes and more detail)</li>
-              <li>Remove duplicate addresses</li>
-            </ul>
-            <div className="confirm-actions">
-              <button className="cancel-button" onClick={() => setShowFixAllConfirm(false)}>
-                Cancel
-              </button>
-              <button
-                className="confirm-button"
-                onClick={handleFixAll}
-              >
-                Fix All
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="Fix All Duplicate Addresses?"
+          message={`This will automatically fix ${total} contact${total !== 1 ? 's' : ''}:`}
+          confirmLabel="Fix All"
+          onConfirm={handleFixAll}
+          onCancel={() => setShowFixAllConfirm(false)}
+        >
+          <ul className="fix-all-details">
+            <li>Keep the best address when duplicates exist (prefers addresses with postal codes and more detail)</li>
+            <li>Remove duplicate addresses</li>
+          </ul>
+        </ConfirmDialog>
       )}
     </div>
   );

@@ -10,6 +10,7 @@ import { uploadFileWithProgress } from '../api/client';
 import { useICloudSettings, useSaveICloudSettings, useDeleteICloudSettings } from '../api/icloudHooks';
 import type { ImportResult } from '../api/types';
 import type { OutletContext } from './Layout';
+import { ConfirmDialog } from './ui/ConfirmDialog';
 
 interface ToastState {
   message: string;
@@ -438,43 +439,34 @@ export function SettingsView() {
       )}
 
       {showDeleteConfirm && (
-        <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="modal-content confirm-dialog danger" onClick={(e) => e.stopPropagation()}>
-            <h3>Delete All Contacts?</h3>
-            <p>
+        <ConfirmDialog
+          title="Delete All Contacts?"
+          message={
+            <>
               This will permanently delete <strong>all contacts</strong> from the database.
               This action cannot be undone.
-            </p>
-            <p className="confirm-instruction">
-              Type <strong>DELETE</strong> to confirm:
-            </p>
-            <input
-              type="text"
-              value={deleteConfirmText}
-              onChange={(e) => setDeleteConfirmText(e.target.value)}
-              placeholder="Type DELETE"
-              className="confirm-input"
-            />
-            <div className="confirm-actions">
-              <button
-                className="cancel-button"
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  setDeleteConfirmText('');
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="confirm-button danger"
-                onClick={handleDeleteAll}
-                disabled={deleteConfirmText !== 'DELETE' || deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete All Contacts'}
-              </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+          confirmLabel={deleteMutation.isPending ? 'Deleting...' : 'Delete All Contacts'}
+          danger
+          confirmDisabled={deleteConfirmText !== 'DELETE' || deleteMutation.isPending}
+          onConfirm={handleDeleteAll}
+          onCancel={() => {
+            setShowDeleteConfirm(false);
+            setDeleteConfirmText('');
+          }}
+        >
+          <p className="confirm-instruction">
+            Type <strong>DELETE</strong> to confirm:
+          </p>
+          <input
+            type="text"
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            placeholder="Type DELETE"
+            className="confirm-input"
+          />
+        </ConfirmDialog>
       )}
     </div>
   );
