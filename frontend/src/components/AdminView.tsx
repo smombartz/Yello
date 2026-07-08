@@ -145,7 +145,7 @@ const adminStyles = `
   }
   .admin-error i {
     font-size: 24px;
-    color: var(--ds-color-danger, #dc3545);
+    color: var(--ds-color-error);
   }
   .admin-summary {
     margin-bottom: 16px;

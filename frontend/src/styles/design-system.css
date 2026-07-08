@@ -104,6 +104,11 @@
   --ds-space-xl: var(--ds-space-8);
 
   /* ============================================
+   * TYPOGRAPHY - Font Family
+   * ============================================ */
+  --ds-font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* ============================================
    * TYPOGRAPHY - Font Sizes
    * ============================================ */
   --ds-font-xs: 0.75rem;   /* 12px */

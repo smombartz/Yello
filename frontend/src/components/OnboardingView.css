@@ -15,18 +15,18 @@
 }
 
 .onboarding-header p {
-  color: var(--pico-muted-color);
+  color: var(--ds-text-secondary);
   margin-bottom: 0;
 }
 
 .skip-link {
   cursor: pointer;
   font-size: 0.875rem;
-  color: var(--pico-muted-color);
+  color: var(--ds-text-secondary);
 }
 
 .skip-link:hover {
-  color: var(--pico-primary);
+  color: var(--ds-color-primary);
 }
 
 .onboarding-section {
@@ -35,7 +35,7 @@
 
 .onboarding-success {
   text-align: center;
-  color: var(--pico-primary);
+  color: var(--ds-color-success);
   font-weight: 600;
   margin-bottom: 1rem;
 }
@@ -74,12 +74,12 @@
 }
 
 .profile-info span {
-  color: var(--pico-muted-color);
+  color: var(--ds-text-secondary);
   font-size: 0.875rem;
 }
 
 .error-text {
-  color: var(--pico-del-color);
+  color: var(--ds-color-error);
   font-size: 0.875rem;
 }
 
@@ -94,13 +94,13 @@
 
 .import-result {
   padding: 0.75rem;
-  background: var(--pico-card-background-color);
-  border-radius: var(--pico-border-radius);
+  background: var(--ds-bg-secondary);
+  border-radius: var(--ds-radius-md);
   text-align: center;
 }
 
 .muted-text {
-  color: var(--pico-muted-color);
+  color: var(--ds-text-secondary);
   font-size: 0.875rem;
 }
 

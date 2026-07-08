@@ -1,5 +1,14 @@
 # Change Log
 
+## 2026-07-07 21:25 — UI unification Phase 1: dead code & broken refs
+
+- Deleted `ImportModal.tsx` (138 lines, zero importers)
+- Fixed `AdminView.tsx` referencing nonexistent `--ds-color-danger` → `--ds-color-error`
+- Replaced 9 dead `var(--pico-*)` references in `OnboardingView.css` with `--ds-*` tokens (Pico CSS was never installed)
+- Removed dead Inter font download from `index.html` (no CSS ever referenced it)
+- Added `--ds-font-family` token to `design-system.css` and pointed `body` at it (single plug-in point for the font refresh)
+- Note: 15 pre-existing lint errors (ContactFormSections conditional hooks, ContactList/Layout ref-in-render) are unrelated and untouched
+
 ## 2026-07-07 21:19 — UI unification: audit + plan + docs scaffolding (Phase 0)
 
 - Audited frontend for reusable components and UI consistency; plan saved to `docs/plans/2026-07-07-ui-unification-refresh.md`
