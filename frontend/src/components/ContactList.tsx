@@ -9,6 +9,7 @@ import { ContactGridCard } from './ContactGridCard';
 import { ContactFilters, getFilterLabel } from './ContactFilters';
 import { Icon } from './Icon';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { useToast } from './ui/Toast';
 import type { MergeConflict, ContactDetail } from '../api/types';
 
 interface ContactListProps {
@@ -24,11 +25,6 @@ interface ContactListProps {
   filterString?: string;
 }
 
-interface ToastState {
-  message: string;
-  timeout: ReturnType<typeof setTimeout>;
-}
-
 const COLLAPSED_HEIGHT = 76;   // 74px content + 2px border
 const EXPANDED_HEIGHT = 450;   // expanded card height
 const ROW_GAP = 8;             // space between cards
@@ -36,6 +32,7 @@ const PAGE_SIZE = 100;
 
 export function ContactList({ search = '', categoryFilter, viewMode, onViewModeChange, onTotalChange, sort, onSortChange, filters, onFiltersChange, filterString }: ContactListProps) {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const listRef = useRef<HTMLDivElement>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
@@ -43,8 +40,6 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
-  const [toast, setToast] = useState<ToastState | null>(null);
-
 
   // Merge state
   const [showMergeModal, setShowMergeModal] = useState(false);
@@ -70,15 +65,6 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
       onTotalChange(data.total);
     }
   }, [data?.total, onTotalChange]);
-
-  // Cleanup toast timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (toast?.timeout) {
-        clearTimeout(toast.timeout);
-      }
-    };
-  }, [toast]);
 
   const handleToggle = useCallback((id: number) => {
     setExpandedId(prev => prev === id ? null : id);
@@ -120,19 +106,13 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
         // Clear selection
         setSelectedIds(new Set());
 
-        // Clear any existing toast timeout
-        if (toast?.timeout) {
-          clearTimeout(toast.timeout);
-        }
-
         // Show success toast
-        const timeout = setTimeout(() => setToast(null), 5000);
-        setToast({ message, timeout });
+        showToast(message);
       },
     });
 
     setShowDeleteConfirm(false);
-  }, [selectedIds, deleteMutation, toast]);
+  }, [selectedIds, deleteMutation, showToast]);
 
   const handleArchive = useCallback(() => {
     if (selectedIds.size === 0) return;
@@ -144,19 +124,13 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
         // Clear selection
         setSelectedIds(new Set());
 
-        // Clear any existing toast timeout
-        if (toast?.timeout) {
-          clearTimeout(toast.timeout);
-        }
-
         // Show success toast
-        const timeout = setTimeout(() => setToast(null), 5000);
-        setToast({ message, timeout });
+        showToast(message);
       },
     });
 
     setShowArchiveConfirm(false);
-  }, [selectedIds, archiveMutation, toast]);
+  }, [selectedIds, archiveMutation, showToast]);
 
   const handleMergeClick = useCallback(() => {
     if (selectedIds.size < 2) return;
@@ -203,18 +177,12 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
           setMergePrimaryId(null);
           setMergeResolutions({});
 
-          // Clear any existing toast timeout
-          if (toast?.timeout) {
-            clearTimeout(toast.timeout);
-          }
-
           // Show success toast
-          const timeout = setTimeout(() => setToast(null), 5000);
-          setToast({ message, timeout });
+          showToast(message);
         },
       }
     );
-  }, [mergePrimaryId, mergeContacts, mergeConflicts, mergeResolutions, mergeMutation, toast]);
+  }, [mergePrimaryId, mergeContacts, mergeConflicts, mergeResolutions, mergeMutation, showToast]);
 
   const handleMergeCancel = useCallback(() => {
     setShowMergeModal(false);
@@ -428,23 +396,6 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
               selectionEnabled={selectionEnabled}
             />
           ))}
-        </div>
-      )}
-
-      {/* Toast notification */}
-      {toast && (
-        <div className="undo-toast">
-          <Icon name="circle-check" />
-          <span className="message">{toast.message}</span>
-          <button
-            className="dismiss"
-            onClick={() => {
-              if (toast.timeout) clearTimeout(toast.timeout);
-              setToast(null);
-            }}
-          >
-            <Icon name="xmark" />
-          </button>
         </div>
       )}
 

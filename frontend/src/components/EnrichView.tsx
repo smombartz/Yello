@@ -7,19 +7,14 @@ import type { GmailDiscoveredContact } from '../api/types';
 import type { OutletContext } from './Layout';
 import { LoadingSpinner } from './LoadingSpinner';
 import { Icon } from './Icon';
-
-interface ToastState {
-  message: string;
-  type: 'success' | 'error';
-  timeout: ReturnType<typeof setTimeout>;
-}
+import { useToast } from './ui/Toast';
 
 export function EnrichView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
   const navigate = useNavigate();
   const [includeAlreadyEnriched, setIncludeAlreadyEnriched] = useState(false);
   const [limit, setLimit] = useState<number | undefined>(undefined);
-  const [toast, setToast] = useState<ToastState | null>(null);
+  const { showToast } = useToast();
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [enrichExpanded, setEnrichExpanded] = useState(false);
   const [photosExpanded, setPhotosExpanded] = useState(false);
@@ -72,39 +67,22 @@ export function EnrichView() {
     setHeaderConfig({ title: 'Enrich' });
   }, [setHeaderConfig]);
 
-  // Cleanup toast timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (toast?.timeout) {
-        clearTimeout(toast.timeout);
-      }
-    };
-  }, [toast]);
-
-  const showToast = useCallback((message: string, type: 'success' | 'error') => {
-    if (toast?.timeout) {
-      clearTimeout(toast.timeout);
-    }
-    const timeout = setTimeout(() => setToast(null), 5000);
-    setToast({ message, type, timeout });
-  }, [toast]);
-
   const handleStartEnrichment = useCallback(() => {
     reset();
     startEnrichment(
       includeAlreadyEnriched,
       (enrichResult) => {
         if (enrichResult.succeeded > 0) {
-          showToast(`Enriched ${enrichResult.succeeded} contact${enrichResult.succeeded !== 1 ? 's' : ''} with LinkedIn data`, 'success');
+          showToast(`Enriched ${enrichResult.succeeded} contact${enrichResult.succeeded !== 1 ? 's' : ''} with LinkedIn data`);
         } else if (enrichResult.failed > 0) {
-          showToast('All enrichment attempts failed. Check error details below.', 'error');
+          showToast('All enrichment attempts failed. Check error details below.', { type: 'error' });
         } else {
-          showToast('No contacts to enrich', 'success');
+          showToast('No contacts to enrich');
         }
         refetchSummary();
       },
       (errorMsg) => {
-        showToast(errorMsg, 'error');
+        showToast(errorMsg, { type: 'error' });
       },
       limit
     );
@@ -131,15 +109,15 @@ export function EnrichView() {
     startFetching(
       (result) => {
         if (result.downloaded > 0) {
-          showToast(`Downloaded ${result.downloaded} photo${result.downloaded !== 1 ? 's' : ''} for your contacts`, 'success');
+          showToast(`Downloaded ${result.downloaded} photo${result.downloaded !== 1 ? 's' : ''} for your contacts`);
         } else if (result.matched > 0) {
-          showToast('Photos found but failed to download. Please try again.', 'error');
+          showToast('Photos found but failed to download. Please try again.', { type: 'error' });
         } else {
-          showToast('No new photos found for contacts', 'success');
+          showToast('No new photos found for contacts');
         }
       },
       (error) => {
-        showToast(error, 'error');
+        showToast(error, { type: 'error' });
       }
     );
   }, [startFetching, showToast]);
@@ -154,7 +132,7 @@ export function EnrichView() {
           setDiscoveryPhase('discovered');
         },
         onError: (err) => {
-          showToast(err instanceof Error ? err.message : 'Discovery failed', 'error');
+          showToast(err instanceof Error ? err.message : 'Discovery failed', { type: 'error' });
           setDiscoveryPhase('idle');
         },
       }
@@ -177,15 +155,15 @@ export function EnrichView() {
       params,
       (syncResult) => {
         if (syncResult.succeeded > 0) {
-          showToast(`Synced email history for ${syncResult.succeeded} contact${syncResult.succeeded !== 1 ? 's' : ''}`, 'success');
+          showToast(`Synced email history for ${syncResult.succeeded} contact${syncResult.succeeded !== 1 ? 's' : ''}`);
         } else {
-          showToast('No contacts synced', 'success');
+          showToast('No contacts synced');
         }
         refetchGmailSummary();
         setDiscoveryPhase('idle');
       },
       (errorMsg) => {
-        showToast(errorMsg, 'error');
+        showToast(errorMsg, { type: 'error' });
         setDiscoveryPhase('idle');
       }
     );
@@ -497,10 +475,10 @@ export function EnrichView() {
                           startRecovery(
                             datasetId.trim(),
                             (r) => {
-                              showToast(`Recovered ${r.succeeded} contact${r.succeeded !== 1 ? 's' : ''}`, 'success');
+                              showToast(`Recovered ${r.succeeded} contact${r.succeeded !== 1 ? 's' : ''}`);
                               refetchSummary();
                             },
-                            (err) => showToast(err, 'error')
+                            (err) => showToast(err, { type: 'error' })
                           );
                         }}
                         disabled={!datasetId.trim() || isRecovering || isEnriching}
@@ -852,22 +830,6 @@ export function EnrichView() {
           )}
         </section>
       </div>
-
-      {toast && (
-        <div className={`undo-toast ${toast.type === 'error' ? 'error' : ''}`}>
-          <Icon name={toast.type === 'success' ? 'circle-check' : 'circle-exclamation'} />
-          <span className="message">{toast.message}</span>
-          <button
-            className="dismiss"
-            onClick={() => {
-              if (toast.timeout) clearTimeout(toast.timeout);
-              setToast(null);
-            }}
-          >
-            <Icon name="xmark" />
-          </button>
-        </div>
-      )}
 
       <style>{`
         .enrich-view {

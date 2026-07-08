@@ -14,21 +14,18 @@ import { useSocialLinksSummary } from '../api/socialLinksHooks';
 import { useAddressCleanupSummary } from '../api/addressCleanupHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { useToast } from './ui/Toast';
 import type {
   CleanupMode,
   EmptyContactType,
   ProblematicContactType
 } from '../api/types';
 
-interface ToastState {
-  message: string;
-  timeout: ReturnType<typeof setTimeout>;
-}
-
 const PAGE_SIZE = 50;
 
 export function CleanupView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
+  const { showToast } = useToast();
   const [selectedMode, setSelectedMode] = useState<CleanupMode>('empty');
   const [currentPage, setCurrentPage] = useState(1);
   const [threshold, setThreshold] = useState(3);
@@ -36,7 +33,6 @@ export function CleanupView() {
   const [selectedTypes, setSelectedTypes] = useState<Set<EmptyContactType | ProblematicContactType>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
-  const [toast, setToast] = useState<ToastState | null>(null);
   const [isSelectingAll, setIsSelectingAll] = useState(false);
 
   const { data: summary, isLoading: isSummaryLoading } = useCleanupSummary(threshold);
@@ -77,15 +73,6 @@ export function CleanupView() {
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedTypes, threshold]);
-
-  // Cleanup toast timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (toast?.timeout) {
-        clearTimeout(toast.timeout);
-      }
-    };
-  }, [toast]);
 
   const handleModeChange = useCallback((mode: CleanupMode) => {
     setSelectedMode(mode);
@@ -159,19 +146,13 @@ export function CleanupView() {
         // Clear selection
         setSelectedIds(new Set());
 
-        // Clear any existing toast timeout
-        if (toast?.timeout) {
-          clearTimeout(toast.timeout);
-        }
-
         // Show success toast
-        const timeout = setTimeout(() => setToast(null), 5000);
-        setToast({ message, timeout });
+        showToast(message);
       },
     });
 
     setShowDeleteConfirm(false);
-  }, [selectedIds, deleteMutation, toast]);
+  }, [selectedIds, deleteMutation, showToast]);
 
   const handleArchive = useCallback(() => {
     if (selectedIds.size === 0) return;
@@ -183,19 +164,13 @@ export function CleanupView() {
         // Clear selection
         setSelectedIds(new Set());
 
-        // Clear any existing toast timeout
-        if (toast?.timeout) {
-          clearTimeout(toast.timeout);
-        }
-
         // Show success toast
-        const timeout = setTimeout(() => setToast(null), 5000);
-        setToast({ message, timeout });
+        showToast(message);
       },
     });
 
     setShowArchiveConfirm(false);
-  }, [selectedIds, archiveMutation, toast]);
+  }, [selectedIds, archiveMutation, showToast]);
 
   const contacts = contactsData?.contacts ?? [];
   const total = contactsData?.total ?? 0;
@@ -304,22 +279,6 @@ export function CleanupView() {
           />
         )}
       </div>
-
-      {toast && (
-        <div className="undo-toast">
-          <Icon name="circle-check" />
-          <span className="message">{toast.message}</span>
-          <button
-            className="dismiss"
-            onClick={() => {
-              if (toast.timeout) clearTimeout(toast.timeout);
-              setToast(null);
-            }}
-          >
-            <Icon name="xmark" />
-          </button>
-        </div>
-      )}
 
       {showDeleteConfirm && (
         <ConfirmDialog

@@ -1,13 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Icon } from './Icon';
 import { Pagination } from './Pagination';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { useToast } from './ui/Toast';
 import { useSocialLinksWithinContact, useFixAllSocialLinks } from '../api/socialLinksHooks';
-
-interface ToastState {
-  message: string;
-  timeout: ReturnType<typeof setTimeout>;
-}
 
 const PAGE_SIZE = 50;
 
@@ -28,8 +24,8 @@ const PLATFORM_ICONS: Record<string, { name: string; style?: 'solid' | 'regular'
 
 export function SocialLinksWithinContact() {
   const [currentPage, setCurrentPage] = useState(1);
-  const [toast, setToast] = useState<ToastState | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const { showToast } = useToast();
 
   const {
     data,
@@ -39,28 +35,10 @@ export function SocialLinksWithinContact() {
 
   const fixAllMutation = useFixAllSocialLinks();
 
-  // Cleanup toast timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (toast?.timeout) {
-        clearTimeout(toast.timeout);
-      }
-    };
-  }, [toast]);
-
   const handleFixAll = () => {
     fixAllMutation.mutate(undefined, {
       onSuccess: (result) => {
-        const message = `Migrated ${result.migrated} social link${result.migrated !== 1 ? 's' : ''}, removed ${result.deleted} duplicate${result.deleted !== 1 ? 's' : ''}`;
-
-        // Clear any existing toast timeout
-        if (toast?.timeout) {
-          clearTimeout(toast.timeout);
-        }
-
-        // Show success toast
-        const timeout = setTimeout(() => setToast(null), 5000);
-        setToast({ message, timeout });
+        showToast(`Migrated ${result.migrated} social link${result.migrated !== 1 ? 's' : ''}, removed ${result.deleted} duplicate${result.deleted !== 1 ? 's' : ''}`);
       },
     });
 
@@ -144,22 +122,6 @@ export function SocialLinksWithinContact() {
         onPageChange={setCurrentPage}
         isLoading={isFetching}
       />
-
-      {toast && (
-        <div className="undo-toast">
-          <Icon name="circle-check" />
-          <span className="message">{toast.message}</span>
-          <button
-            className="dismiss"
-            onClick={() => {
-              if (toast.timeout) clearTimeout(toast.timeout);
-              setToast(null);
-            }}
-          >
-            <Icon name="xmark" />
-          </button>
-        </div>
-      )}
 
       {showConfirm && (
         <ConfirmDialog

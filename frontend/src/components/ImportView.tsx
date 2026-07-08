@@ -3,16 +3,11 @@ import { useOutletContext } from 'react-router-dom';
 import { useImportLinkedInStream, parseLinkedInCsv } from '../api/settingsHooks';
 import type { OutletContext } from './Layout';
 import { Icon } from './Icon';
-
-interface ToastState {
-  message: string;
-  type: 'success' | 'error';
-  timeout: ReturnType<typeof setTimeout>;
-}
+import { useToast } from './ui/Toast';
 
 export function ImportView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
-  const [toast, setToast] = useState<ToastState | null>(null);
+  const { showToast } = useToast();
   const [linkedInFile, setLinkedInFile] = useState<File | null>(null);
 
   const {
@@ -29,22 +24,6 @@ export function ImportView() {
     setHeaderConfig({ title: 'Import' });
   }, [setHeaderConfig]);
 
-  useEffect(() => {
-    return () => {
-      if (toast?.timeout) {
-        clearTimeout(toast.timeout);
-      }
-    };
-  }, [toast]);
-
-  const showToast = useCallback((message: string, type: 'success' | 'error') => {
-    if (toast?.timeout) {
-      clearTimeout(toast.timeout);
-    }
-    const timeout = setTimeout(() => setToast(null), 5000);
-    setToast({ message, type, timeout });
-  }, [toast]);
-
   const handleLinkedInFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setLinkedInFile(file);
@@ -57,12 +36,12 @@ export function ImportView() {
       const content = await linkedInFile.text();
       const contacts = parseLinkedInCsv(content);
       if (contacts.length === 0) {
-        showToast('No valid contacts found in CSV file', 'error');
+        showToast('No valid contacts found in CSV file', { type: 'error' });
         return;
       }
       startLinkedInImport(contacts);
     } catch {
-      showToast('Failed to read CSV file', 'error');
+      showToast('Failed to read CSV file', { type: 'error' });
     }
   }, [linkedInFile, startLinkedInImport, showToast]);
 
@@ -173,22 +152,6 @@ export function ImportView() {
           </div>
         </section>
       </div>
-
-      {toast && (
-        <div className={`undo-toast ${toast.type === 'error' ? 'error' : ''}`}>
-          <Icon name={toast.type === 'success' ? 'circle-check' : 'circle-exclamation'} />
-          <span className="message">{toast.message}</span>
-          <button
-            className="dismiss"
-            onClick={() => {
-              if (toast.timeout) clearTimeout(toast.timeout);
-              setToast(null);
-            }}
-          >
-            <Icon name="xmark" />
-          </button>
-        </div>
-      )}
     </div>
   );
 }

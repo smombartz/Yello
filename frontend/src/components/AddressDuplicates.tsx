@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { Icon } from './Icon';
 import { Pagination } from './Pagination';
 import { AddressCleanupCard } from './AddressCleanupCard';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { useToast } from './ui/Toast';
 import {
   useDuplicatesContacts,
   useFixDuplicateAddresses,
@@ -11,20 +12,15 @@ import {
 } from '../api/addressCleanupHooks';
 import type { AddressFix, AddressCleanupContact } from '../api/types';
 
-interface ToastState {
-  message: string;
-  timeout: ReturnType<typeof setTimeout>;
-}
-
 const PAGE_SIZE = 20;
 
 export function AddressDuplicates() {
   const [currentPage, setCurrentPage] = useState(1);
-  const [toast, setToast] = useState<ToastState | null>(null);
   const [showFixAllConfirm, setShowFixAllConfirm] = useState(false);
   const [skippedIds, setSkippedIds] = useState<Set<number>>(new Set());
   const [isFixingAll, setIsFixingAll] = useState(false);
   const [confidenceFilter, setConfidenceFilter] = useState<DuplicatesConfidenceFilter>('all');
+  const { showToast } = useToast();
 
   const {
     data,
@@ -33,23 +29,6 @@ export function AddressDuplicates() {
   } = useDuplicatesContacts(currentPage, PAGE_SIZE, confidenceFilter);
 
   const fixMutation = useFixDuplicateAddresses();
-
-  // Cleanup toast timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (toast?.timeout) {
-        clearTimeout(toast.timeout);
-      }
-    };
-  }, [toast]);
-
-  const showToast = useCallback((message: string) => {
-    if (toast?.timeout) {
-      clearTimeout(toast.timeout);
-    }
-    const timeout = setTimeout(() => setToast(null), 5000);
-    setToast({ message, timeout });
-  }, [toast]);
 
   const handleApplyFix = useCallback((fix: AddressFix) => {
     fixMutation.mutate([fix], {
@@ -95,7 +74,7 @@ export function AddressDuplicates() {
     } catch (error) {
       console.error('Failed to fix all addresses:', error);
       setIsFixingAll(false);
-      showToast('Failed to fix addresses');
+      showToast('Failed to fix addresses', { type: 'error' });
     }
   }, [fixMutation, showToast, confidenceFilter]);
 
@@ -189,22 +168,6 @@ export function AddressDuplicates() {
           onPageChange={setCurrentPage}
           isLoading={isFetching}
         />
-      )}
-
-      {toast && (
-        <div className="undo-toast">
-          <Icon name="circle-check" />
-          <span className="message">{toast.message}</span>
-          <button
-            className="dismiss"
-            onClick={() => {
-              if (toast.timeout) clearTimeout(toast.timeout);
-              setToast(null);
-            }}
-          >
-            <Icon name="xmark" />
-          </button>
-        </div>
       )}
 
       {showFixAllConfirm && (

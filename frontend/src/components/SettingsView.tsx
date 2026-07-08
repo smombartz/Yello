@@ -11,12 +11,7 @@ import { useICloudSettings, useSaveICloudSettings, useDeleteICloudSettings } fro
 import type { ImportResult } from '../api/types';
 import type { OutletContext } from './Layout';
 import { ConfirmDialog } from './ui/ConfirmDialog';
-
-interface ToastState {
-  message: string;
-  type: 'success' | 'error';
-  timeout: ReturnType<typeof setTimeout>;
-}
+import { useToast } from './ui/Toast';
 
 export function SettingsView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
@@ -24,7 +19,7 @@ export function SettingsView() {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
-  const [toast, setToast] = useState<ToastState | null>(null);
+  const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [importExpanded, setImportExpanded] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -46,23 +41,6 @@ export function SettingsView() {
   useEffect(() => {
     setHeaderConfig({ title: 'Tools' });
   }, [setHeaderConfig]);
-
-  // Cleanup toast timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (toast?.timeout) {
-        clearTimeout(toast.timeout);
-      }
-    };
-  }, [toast]);
-
-  const showToast = useCallback((message: string, type: 'success' | 'error') => {
-    if (toast?.timeout) {
-      clearTimeout(toast.timeout);
-    }
-    const timeout = setTimeout(() => setToast(null), 5000);
-    setToast({ message, type, timeout });
-  }, [toast]);
 
   const handleImport = useCallback(async () => {
     if (!importFile) return;
@@ -89,7 +67,7 @@ export function SettingsView() {
 
   const handleExport = useCallback(() => {
     exportAllContacts();
-    showToast('Export started - check your downloads', 'success');
+    showToast('Export started - check your downloads');
   }, [showToast]);
 
   const handleDeleteAll = useCallback(() => {
@@ -97,12 +75,12 @@ export function SettingsView() {
 
     deleteMutation.mutate(undefined, {
       onSuccess: (result) => {
-        showToast(`Deleted ${result.deletedCount} contacts`, 'success');
+        showToast(`Deleted ${result.deletedCount} contacts`);
         setShowDeleteConfirm(false);
         setDeleteConfirmText('');
       },
       onError: () => {
-        showToast('Failed to delete contacts', 'error');
+        showToast('Failed to delete contacts', { type: 'error' });
       }
     });
   }, [deleteConfirmText, deleteMutation, showToast]);
@@ -281,8 +259,8 @@ export function SettingsView() {
                     <button
                       className="secondary-button"
                       onClick={() => deleteICloudSettings.mutate(undefined, {
-                        onSuccess: () => showToast('iCloud disconnected', 'success'),
-                        onError: () => showToast('Failed to disconnect', 'error'),
+                        onSuccess: () => showToast('iCloud disconnected'),
+                        onError: () => showToast('Failed to disconnect', { type: 'error' }),
                       })}
                       disabled={deleteICloudSettings.isPending}
                     >
@@ -323,7 +301,7 @@ export function SettingsView() {
                         { email: icloudEmail, appPassword: icloudPassword },
                         {
                           onSuccess: () => {
-                            showToast('iCloud connected successfully', 'success');
+                            showToast('iCloud connected successfully');
                             setIcloudEmail('');
                             setIcloudPassword('');
                           },
@@ -421,22 +399,6 @@ export function SettingsView() {
           )}
         </section>
       </div>
-
-      {toast && (
-        <div className={`undo-toast ${toast.type === 'error' ? 'error' : ''}`}>
-          <Icon name={toast.type === 'success' ? 'circle-check' : 'circle-exclamation'} />
-          <span className="message">{toast.message}</span>
-          <button
-            className="dismiss"
-            onClick={() => {
-              if (toast.timeout) clearTimeout(toast.timeout);
-              setToast(null);
-            }}
-          >
-            <Icon name="xmark" />
-          </button>
-        </div>
-      )}
 
       {showDeleteConfirm && (
         <ConfirmDialog

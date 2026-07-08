@@ -9,6 +9,7 @@ import 'leaflet.markercluster';
 import { useMapMarkers, useMapStats, useGeocode } from '../api/mapHooks';
 import type { MapMarker } from '../api/mapHooks';
 import type { OutletContext } from './Layout';
+import { useToast } from './ui/Toast';
 
 // Fix for default marker icons in Leaflet with Vite
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -140,6 +141,7 @@ function LeafletMap({ markers }: { markers: MapMarker[] }) {
 
 export function MapView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
+  const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const { data: mapData, isLoading, error } = useMapMarkers(debouncedSearch || undefined);
@@ -157,8 +159,18 @@ export function MapView() {
   const markers = useMemo(() => mapData?.markers || [], [mapData]);
 
   const handleGeocode = useCallback(() => {
-    geocodeMutation.mutate(25);
-  }, [geocodeMutation.mutate]);
+    geocodeMutation.mutate(25, {
+      onSuccess: (result) => {
+        showToast(
+          `Geocoded ${result.successful} of ${result.processed} addresses` +
+            (result.remaining > 0 ? ` (${result.remaining} remaining)` : '')
+        );
+      },
+      onError: (error) => {
+        showToast(`Geocoding failed: ${error.message}`, { type: 'error' });
+      },
+    });
+  }, [geocodeMutation.mutate, showToast]);
 
   // Configure page header
   useEffect(() => {
@@ -217,14 +229,6 @@ export function MapView() {
           <LeafletMap markers={markers} />
         )}
       </div>
-
-      {geocodeMutation.isSuccess && geocodeMutation.data && (
-        <div className="geocode-result">
-          <Icon name="circle-check" />
-          Geocoded {geocodeMutation.data.successful} of {geocodeMutation.data.processed} addresses
-          {geocodeMutation.data.remaining > 0 && ` (${geocodeMutation.data.remaining} remaining)`}
-        </div>
-      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
 import { Icon } from './Icon';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { useToast } from './ui/Toast';
 import {
   useArchivedContacts,
   useArchivedCount,
@@ -11,20 +12,15 @@ import {
   exportArchivedContacts
 } from '../api/archiveHooks';
 
-interface ToastState {
-  message: string;
-  timeout: ReturnType<typeof setTimeout>;
-}
-
 const PAGE_SIZE = 50;
 
 export function ArchivedView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
+  const { showToast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [toast, setToast] = useState<ToastState | null>(null);
 
   const { data: countData } = useArchivedCount();
   const {
@@ -35,15 +31,6 @@ export function ArchivedView() {
 
   const unarchiveMutation = useUnarchiveContacts();
   const deleteMutation = useDeleteArchivedContacts();
-
-  // Cleanup toast timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (toast?.timeout) {
-        clearTimeout(toast.timeout);
-      }
-    };
-  }, [toast]);
 
   const handleToggleSelect = useCallback((contactId: number) => {
     setSelectedIds(prev => {
@@ -79,17 +66,12 @@ export function ArchivedView() {
 
         setSelectedIds(new Set());
 
-        if (toast?.timeout) {
-          clearTimeout(toast.timeout);
-        }
-
-        const timeout = setTimeout(() => setToast(null), 5000);
-        setToast({ message, timeout });
+        showToast(message);
       },
     });
 
     setShowRestoreConfirm(false);
-  }, [selectedIds, unarchiveMutation, toast]);
+  }, [selectedIds, unarchiveMutation, showToast]);
 
   const handleDelete = useCallback(() => {
     if (selectedIds.size === 0) return;
@@ -100,17 +82,12 @@ export function ArchivedView() {
 
         setSelectedIds(new Set());
 
-        if (toast?.timeout) {
-          clearTimeout(toast.timeout);
-        }
-
-        const timeout = setTimeout(() => setToast(null), 5000);
-        setToast({ message, timeout });
+        showToast(message);
       },
     });
 
     setShowDeleteConfirm(false);
-  }, [selectedIds, deleteMutation, toast]);
+  }, [selectedIds, deleteMutation, showToast]);
 
   const handleExport = useCallback(() => {
     exportArchivedContacts();
@@ -294,22 +271,6 @@ export function ArchivedView() {
           </div>
         )}
       </div>
-
-      {toast && (
-        <div className="undo-toast">
-          <Icon name="circle-check" />
-          <span className="message">{toast.message}</span>
-          <button
-            className="dismiss"
-            onClick={() => {
-              if (toast.timeout) clearTimeout(toast.timeout);
-              setToast(null);
-            }}
-          >
-            <Icon name="xmark" />
-          </button>
-        </div>
-      )}
 
       {showRestoreConfirm && (
         <ConfirmDialog

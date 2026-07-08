@@ -1305,7 +1305,7 @@ a.nav-rail-item.active {
 }
 
 /* Undo Toast */
-.undo-toast {
+.toast {
   position: fixed;
   bottom: 1.5rem;
   left: 50%;
@@ -1333,16 +1333,16 @@ a.nav-rail-item.active {
   }
 }
 
-.undo-toast [class*="fa-"] {
+.toast [class*="fa-"] {
   font-size: 1.25rem;
   color: var(--ds-color-success);
 }
 
-.undo-toast .message {
+.toast .message {
   font-size: 0.9375rem;
 }
 
-.undo-toast .dismiss {
+.toast .dismiss {
   background: transparent;
   border: none;
   color: rgba(255, 255, 255, 0.7);
@@ -1355,14 +1355,34 @@ a.nav-rail-item.active {
   transition: background-color 0.15s, color 0.15s;
 }
 
-.undo-toast .dismiss:hover {
+.toast .dismiss:hover {
   background-color: rgba(255, 255, 255, 0.1);
   color: white;
 }
 
-.undo-toast .dismiss [class*="fa-"] {
+.toast .dismiss [class*="fa-"] {
   font-size: 1.125rem;
   color: inherit;
+}
+
+.toast .toast-action {
+  background: transparent;
+  border: none;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.15s;
+}
+
+.toast .toast-action:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.toast.error [class*="fa-"] {
+  color: var(--ds-color-error);
 }
 
 /* Modal Overlay */
@@ -4686,10 +4706,9 @@ a.nav-rail-item.active {
   cursor: not-allowed;
 }
 
-.undo-toast.error {
-  background: var(--ds-color-error-light);
-  border-color: var(--ds-color-error-light);
-  color: var(--ds-color-error);
+.toast.error {
+  background-color: #2a1215;
+  border: 1px solid var(--ds-color-error);
 }
 
 /* ================================
@@ -5181,42 +5200,6 @@ a.nav-rail-item.active {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
-
-/* Geocode result toast */
-.geocode-result {
-  position: fixed;
-  bottom: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  background: var(--ds-color-success-light);
-  border: 1px solid #86efac;
-  border-radius: 0.5rem;
-  color: var(--ds-color-success-dark);
-  font-size: 0.875rem;
-  font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  animation: slideUp 0.3s ease;
-}
-
-.geocode-result [class*="fa-"] {
-  font-size: 1.25rem;
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateX(-50%) translateY(1rem);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(-50%) translateY(0);
-    opacity: 1;
-  }
-}
 
 /* Invalid Links Cleanup */
 .invalid-links-cleanup {

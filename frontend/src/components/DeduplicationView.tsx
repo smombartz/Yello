@@ -10,20 +10,15 @@ import { useArchiveContacts } from '../api/archiveHooks';
 import type { ConfidenceLevel, DeduplicationMode, DuplicateGroup } from '../api/types';
 import type { OutletContext } from './Layout';
 import { ConfirmDialog } from './ui/ConfirmDialog';
-
-interface UndoState {
-  groupId: string;
-  message: string;
-  timeout: ReturnType<typeof setTimeout>;
-}
+import { useToast } from './ui/Toast';
 
 const ALL_CONFIDENCE_LEVELS: Set<ConfidenceLevel> = new Set(['very_high', 'high', 'medium']);
 
 export function DeduplicationView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
+  const { showToast } = useToast();
   const [selectedMode, setSelectedMode] = useState<DeduplicationMode>('email');
   const [hiddenGroupIds, setHiddenGroupIds] = useState<Set<string>>(new Set());
-  const [undoState, setUndoState] = useState<UndoState | null>(null);
   const [mergeAllProgress, setMergeAllProgress] = useState<{ current: number; total: number } | null>(null);
   const [showMergeAllConfirm, setShowMergeAllConfirm] = useState(false);
   const [showMergeAllGlobalConfirm, setShowMergeAllGlobalConfirm] = useState(false);
@@ -55,43 +50,19 @@ export function DeduplicationView() {
   const deleteMutation = useDeleteContacts();
   const archiveMutation = useArchiveContacts();
 
-  // Cleanup undo timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (undoState?.timeout) {
-        clearTimeout(undoState.timeout);
-      }
-    };
-  }, [undoState]);
-
   const handleMerge = useCallback(
     (contactIds: number[], primaryContactId: number) => {
       mergeMutation.mutate(
         { contactIds, primaryContactId },
         {
           onSuccess: (result) => {
-            const message = `Merged ${contactIds.length} contacts into "${result.mergedContact.displayName}"`;
-
-            // Clear any existing undo timeout
-            if (undoState?.timeout) {
-              clearTimeout(undoState.timeout);
-            }
-
-            // Show undo toast (note: actual undo is not implemented - session only)
-            const timeout = setTimeout(() => {
-              setUndoState(null);
-            }, 5000);
-
-            setUndoState({
-              groupId: '',
-              message,
-              timeout,
-            });
+            // Show confirmation toast
+            showToast(`Merged ${contactIds.length} contacts into "${result.mergedContact.displayName}"`);
           },
         }
       );
     },
-    [mergeMutation, undoState]
+    [mergeMutation, showToast]
   );
 
   const handleKeepSeparate = useCallback((groupId: string) => {
@@ -144,23 +115,13 @@ export function DeduplicationView() {
         // Clear selection
         setSelectedContactIds(new Set());
 
-        // Clear any existing undo timeout
-        if (undoState?.timeout) {
-          clearTimeout(undoState.timeout);
-        }
-
         // Show success toast
-        const timeout = setTimeout(() => setUndoState(null), 5000);
-        setUndoState({
-          groupId: '',
-          message,
-          timeout,
-        });
+        showToast(message);
       },
     });
 
     setShowDeleteConfirm(false);
-  }, [selectedContactIds, deleteMutation, undoState]);
+  }, [selectedContactIds, deleteMutation, showToast]);
 
   const handleArchiveSelected = useCallback(() => {
     if (selectedContactIds.size === 0) return;
@@ -172,23 +133,13 @@ export function DeduplicationView() {
         // Clear selection
         setSelectedContactIds(new Set());
 
-        // Clear any existing undo timeout
-        if (undoState?.timeout) {
-          clearTimeout(undoState.timeout);
-        }
-
         // Show success toast
-        const timeout = setTimeout(() => setUndoState(null), 5000);
-        setUndoState({
-          groupId: '',
-          message,
-          timeout,
-        });
+        showToast(message);
       },
     });
 
     setShowArchiveConfirm(false);
-  }, [selectedContactIds, archiveMutation, undoState]);
+  }, [selectedContactIds, archiveMutation, showToast]);
 
   const groups = useMemo<DuplicateGroup[]>(
     () => duplicatesData?.groups ?? [],
@@ -229,19 +180,9 @@ export function DeduplicationView() {
 
     setMergeAllProgress(null);
 
-    // Clear any existing undo timeout
-    if (undoState?.timeout) {
-      clearTimeout(undoState.timeout);
-    }
-
     // Show completion toast
-    const timeout = setTimeout(() => setUndoState(null), 5000);
-    setUndoState({
-      groupId: '',
-      message: `Merged ${groupsToMerge.length} duplicate groups`,
-      timeout,
-    });
-  }, [groups, hiddenGroupIds, mergeMutation, undoState]);
+    showToast(`Merged ${groupsToMerge.length} duplicate groups`);
+  }, [groups, hiddenGroupIds, mergeMutation, showToast]);
 
   const handleMergeAllGlobal = useCallback(async () => {
     setMergeAllGlobalProgress({ current: 0, total: 0 });
@@ -275,23 +216,13 @@ export function DeduplicationView() {
 
       setMergeAllGlobalProgress(null);
 
-      // Clear any existing undo timeout
-      if (undoState?.timeout) {
-        clearTimeout(undoState.timeout);
-      }
-
       // Show completion toast
-      const timeout = setTimeout(() => setUndoState(null), 5000);
-      setUndoState({
-        groupId: '',
-        message: `Merged all ${allGroups.length} duplicate groups`,
-        timeout,
-      });
+      showToast(`Merged all ${allGroups.length} duplicate groups`);
     } catch (error) {
       console.error('Failed to fetch all groups:', error);
       setMergeAllGlobalProgress(null);
     }
-  }, [selectedMode, confidenceFilter, mergeMutation, undoState]);
+  }, [selectedMode, confidenceFilter, mergeMutation, showToast]);
 
   return (
     <div className="dedup-view">
@@ -407,22 +338,6 @@ export function DeduplicationView() {
           />
         )}
       </div>
-
-      {undoState && (
-        <div className="undo-toast">
-          <Icon name="circle-check" />
-          <span className="message">{undoState.message}</span>
-          <button
-            className="dismiss"
-            onClick={() => {
-              if (undoState.timeout) clearTimeout(undoState.timeout);
-              setUndoState(null);
-            }}
-          >
-            <Icon name="xmark" />
-          </button>
-        </div>
-      )}
 
       {showMergeAllConfirm && (
         <ConfirmDialog

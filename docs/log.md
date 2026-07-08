@@ -1,5 +1,13 @@
 # Change Log
 
+## 2026-07-07 21:55 — UI unification Phase 3: shared Toast system
+
+- Added `components/ui/Toast.tsx` — `ToastProvider` (mounted in `App.tsx`) + `useToast()` hook: `showToast(message, { type?: 'success'|'error'|'info', duration?, action? })`, single toast, last-wins, centralized timer cleanup
+- Migrated all 11 hand-rolled toast implementations (ContactList, ArchivedView, DeduplicationView, CleanupView, SettingsView, ImportView, EnrichView, AddressNormalize, AddressDuplicates, AddressGeocoding, SocialLinksWithinContact) — deleted per-file `ToastState`/`UndoState` interfaces, `useState`, `setTimeout` cleanup effects, and duplicated `.undo-toast` JSX
+- Renamed `.undo-toast` CSS to `.toast`; added `.toast-action` styling and error-type icon color; removed the dead `.geocode-result` banner CSS + its duplicate `@keyframes slideUp`
+- MapView's inline geocode-result banner replaced with success/error toasts in the mutation callbacks
+- Removed DeduplicationView's stale "undo not implemented" toast — merge toasts are now plain confirmations
+
 ## 2026-07-07 21:40 — UI unification Phase 2: shared ConfirmDialog + Escape bug fix
 
 - Added `components/ui/ConfirmDialog.tsx` — shared confirmation dialog (title/message/danger/confirmDisabled/children), replacing 14 hand-rolled modal copies across 8 files (ContactList, DeduplicationView ×4, CleanupView, ArchivedView, AddressNormalize, AddressDuplicates, SettingsView, SocialLinksWithinContact)

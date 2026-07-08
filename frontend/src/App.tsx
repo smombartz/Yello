@@ -20,6 +20,7 @@ import { GoogleContactsImportView } from './components/GoogleContactsImportView'
 import { LoginPage } from './components/LoginPage';
 import { PublicContactCard } from './components/PublicContactCard';
 import { AuthProvider } from './contexts/AuthContext';
+import { ToastProvider } from './components/ui/Toast';
 import { useAuth } from './hooks/useAuth';
 import { DemoPromptModal } from './components/DemoPromptModal';
 
@@ -176,7 +177,9 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <ToastProvider>
+        <AppRoutes />
+      </ToastProvider>
     </AuthProvider>
   );
 }

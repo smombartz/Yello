@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { Icon } from './Icon';
 import { Pagination } from './Pagination';
 import {
@@ -10,11 +10,7 @@ import {
 import type { JunkIssueType, NormalizeContact, JunkAddress } from '../api/types';
 import { formatAddress } from '../lib/addressUtils';
 import { ConfirmDialog } from './ui/ConfirmDialog';
-
-interface ToastState {
-  message: string;
-  timeout: ReturnType<typeof setTimeout>;
-}
+import { useToast } from './ui/Toast';
 
 const PAGE_SIZE = 20;
 
@@ -257,10 +253,10 @@ function NormalizeCard({ contact, onRemove, onSkip, onEdit, isRemoving, isEditin
 
 export function AddressNormalize() {
   const [currentPage, setCurrentPage] = useState(1);
-  const [toast, setToast] = useState<ToastState | null>(null);
   const [showFixAllConfirm, setShowFixAllConfirm] = useState(false);
   const [skippedIds, setSkippedIds] = useState<Set<number>>(new Set());
   const [isFixingAll, setIsFixingAll] = useState(false);
+  const { showToast } = useToast();
 
   const {
     data,
@@ -270,23 +266,6 @@ export function AddressNormalize() {
 
   const removeMutation = useRemoveJunkAddresses();
   const updateMutation = useUpdateAddress();
-
-  // Cleanup toast timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (toast?.timeout) {
-        clearTimeout(toast.timeout);
-      }
-    };
-  }, [toast]);
-
-  const showToast = useCallback((message: string) => {
-    if (toast?.timeout) {
-      clearTimeout(toast.timeout);
-    }
-    const timeout = setTimeout(() => setToast(null), 5000);
-    setToast({ message, timeout });
-  }, [toast]);
 
   const handleRemove = useCallback((addressIds: number[]) => {
     removeMutation.mutate(addressIds, {
@@ -340,7 +319,7 @@ export function AddressNormalize() {
     } catch (error) {
       console.error('Failed to remove all junk addresses:', error);
       setIsFixingAll(false);
-      showToast('Failed to remove addresses');
+      showToast('Failed to remove addresses', { type: 'error' });
     }
   }, [removeMutation, showToast]);
 
@@ -411,22 +390,6 @@ export function AddressNormalize() {
           onPageChange={setCurrentPage}
           isLoading={isFetching}
         />
-      )}
-
-      {toast && (
-        <div className="undo-toast">
-          <Icon name="circle-check" />
-          <span className="message">{toast.message}</span>
-          <button
-            className="dismiss"
-            onClick={() => {
-              if (toast.timeout) clearTimeout(toast.timeout);
-              setToast(null);
-            }}
-          >
-            <Icon name="xmark" />
-          </button>
-        </div>
       )}
 
       {showFixAllConfirm && (

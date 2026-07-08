@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from './Icon';
 import { Pagination } from './Pagination';
@@ -11,11 +11,7 @@ import {
 } from '../api/addressCleanupHooks';
 import type { GeocodingFilter, GeocodingContact, GeocodingAddress } from '../api/types';
 import { formatAddress } from '../lib/addressUtils';
-
-interface ToastState {
-  message: string;
-  timeout: ReturnType<typeof setTimeout>;
-}
+import { useToast } from './ui/Toast';
 
 interface BulkProgress {
   processed: number;
@@ -334,10 +330,10 @@ export function AddressGeocoding() {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [filter, setFilter] = useState<GeocodingFilter>('all');
-  const [toast, setToast] = useState<ToastState | null>(null);
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
   const [bulkProgress, setBulkProgress] = useState<BulkProgress | null>(null);
   const [isBulkCancelled, setIsBulkCancelled] = useState(false);
+  const { showToast } = useToast();
 
   const { data: summary, refetch: refetchSummary } = useGeocodingSummary();
   const { data, isLoading, isFetching, refetch: refetchContacts } = useGeocodingContacts(filter, currentPage, PAGE_SIZE);
@@ -346,30 +342,13 @@ export function AddressGeocoding() {
   const batchMutation = useBatchGeocode();
   const updateMutation = useUpdateAndGeocode();
 
-  // Cleanup toast timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (toast?.timeout) {
-        clearTimeout(toast.timeout);
-      }
-    };
-  }, [toast]);
-
-  const showToast = useCallback((message: string) => {
-    if (toast?.timeout) {
-      clearTimeout(toast.timeout);
-    }
-    const timeout = setTimeout(() => setToast(null), 5000);
-    setToast({ message, timeout });
-  }, [toast]);
-
   const handleRetry = useCallback((addressId: number) => {
     retryMutation.mutate([addressId], {
       onSuccess: (result) => {
         if (result.successful > 0) {
           showToast('Address geocoded successfully');
         } else {
-          showToast('Could not geocode address');
+          showToast('Could not geocode address', { type: 'error' });
         }
       },
     });
@@ -396,11 +375,11 @@ export function AddressGeocoding() {
         if (result.address.status === 'geocoded') {
           showToast('Address updated and geocoded successfully');
         } else {
-          showToast('Address updated but geocoding failed');
+          showToast('Address updated but geocoding failed', { type: 'error' });
         }
       },
       onError: () => {
-        showToast('Failed to update address');
+        showToast('Failed to update address', { type: 'error' });
       }
     });
   }, [updateMutation, showToast]);
@@ -586,22 +565,6 @@ export function AddressGeocoding() {
             />
           )}
         </>
-      )}
-
-      {toast && (
-        <div className="undo-toast">
-          <Icon name="circle-check" />
-          <span className="message">{toast.message}</span>
-          <button
-            className="dismiss"
-            onClick={() => {
-              if (toast.timeout) clearTimeout(toast.timeout);
-              setToast(null);
-            }}
-          >
-            <Icon name="xmark" />
-          </button>
-        </div>
       )}
 
       {bulkProgress && (
