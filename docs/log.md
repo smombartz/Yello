@@ -1,5 +1,11 @@
 # Change Log
 
+## 2026-07-07 23:50 — UI unification Phase 10: consistency pass + doc closeout
+
+- Documented the design system + `components/ui/` primitives in CLAUDE.md (Button, ConfirmDialog, Toast/useToast, LoadingSpinner, EmptyState; token/stylesheet conventions; "no `<style>` blocks / no static inline styles" rule)
+- Marked the plan Implemented and moved it to `docs/plans/completed/`
+- Scoped-out (noted as future work, per the quality bar): the 3 search-bar and 3 tab implementations are genuinely distinct UI (page-filter vs form autocomplete; mobile nav vs sub-nav vs admin), so not force-unified; a canonical `.badge`, PublicContactCard's inline-SVG→Icon migration, and the exhaustive grey/spacing token sweep remain incremental follow-ups
+
 ## 2026-07-07 23:40 — UI unification Phase 9: visual refresh (font)
 
 - Adopted **Geist** (400/500/600/700) as the app typeface: loaded via Google Fonts in `index.html` and set `--ds-font-family` to Geist with a system fallback stack. Form controls already inherit the font (`index.css:16`), so it propagates to buttons/inputs everywhere

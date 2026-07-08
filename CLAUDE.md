@@ -95,7 +95,17 @@ FTS5 virtual tables for full-text search on display_name, company, email with pr
 ### Frontend
 - Virtualized lists for 10K+ contacts performance
 - `ProtectedRoute`/`PublicRoute` wrappers for auth
-- CSS variables with `--ds-*` prefix for design system (`frontend/src/styles/design-system.css`); shared UI primitives in `frontend/src/components/ui/`; design context in `.impeccable.md`
+
+### Design System & UI Primitives
+- **Tokens** (`frontend/src/styles/design-system.css`, `--ds-*` prefix): colors, spacing scale, type scale, radius, shadows, z-index, transitions, component tokens. **All styling goes through tokens** — no hard-coded hex/px in new CSS. Brand color is `--ds-color-primary` (#7C3AED); one brand gradient via `--ds-gradient-brand`. Typeface is Geist via `--ds-font-family`.
+- **Shared primitives** (`frontend/src/components/ui/`) — use these, don't hand-roll:
+  - `Button` (`variant: primary|secondary|danger|ghost|icon`) — or the canonical `.btn`/`.btn--*` classes
+  - `ConfirmDialog` (handles the Escape/`useLayoutModal` contract) — never build modals inline
+  - `Toast` + `useToast()` (mounted once via `ToastProvider` in `App.tsx`)
+  - `LoadingSpinner` (canonical loader; `fullscreen` variant) and `EmptyState` (`icon/title/description/action`)
+- **Stylesheets**: global base in `index.css`; per-page CSS in `styles/pages/*.css` (aggregated by `styles/pages.css`, imported after `index.css`). **No `<style>` blocks in TSX, no static inline `style={{}}`.** Page CSS is global — scope page-specific rules with a page prefix to avoid collisions with `index.css`.
+- Icons: Font Awesome via `components/Icon.tsx`. Page headers via the `setHeaderConfig` outlet contract (`Layout.tsx`).
+- Design context (audience, tone, conventions) lives in `.impeccable.md`.
 
 ### Backend
 - Fastify plugins for modularity

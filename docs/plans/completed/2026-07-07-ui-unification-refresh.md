@@ -1,6 +1,13 @@
 # UI Audit & Unification Plan — Yello CRM
 
-**Status:** In progress
+**Status:** Implemented (2026-07-07)
+
+**Outcome:** Built the missing shared UI layer (`components/ui/`: Button, ConfirmDialog, Toast, LoadingSpinner, EmptyState) and funneled the app through it — replacing 14 hand-rolled dialogs, 11 toasts, ~20 loaders, and ~16 empty states, and fixing the Escape-under-modal bug. Converged 5 competing brand purples onto one token (#7C3AED), adopted Geist, extracted all 7 CSS-in-JS `<style>` blocks to stylesheets (fixing 10 global class collisions that surfaced), and deduped the import cards / pagination / back button. Build + lint green throughout.
+
+**Deferred (noted for future work):** exhaustive grey/spacing/font-size token conversion and static inline-style retirement; unifying the 3 search bars / 3 tab implementations / badge classes (largely distinct UI); routing PublicContactCard's inline SVGs through `Icon`; mobile nav parity (Dashboard/Profile) and Settings-VCF consolidation (owner IA decisions); visual sign-off of the refresh.
+
+---
+
 
 ## Context
 
