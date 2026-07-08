@@ -12,7 +12,7 @@
 .demo-prompt-modal {
   background: white;
   border-radius: var(--ds-radius-xl);
-  padding: 32px;
+  padding: var(--ds-space-8);
   max-width: 400px;
   width: 90%;
   text-align: center;
@@ -20,35 +20,35 @@
 }
 .demo-prompt-modal h3 {
   margin: 0 0 8px;
-  font-size: 20px;
+  font-size: var(--ds-font-xl);
 }
 .demo-prompt-modal p {
   margin: 0 0 24px;
   color: var(--ds-text-secondary);
-  font-size: 14px;
+  font-size: var(--ds-font-sm);
 }
 .demo-prompt-actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--ds-space-2);
 }
 .demo-prompt-primary {
-  padding: 12px;
+  padding: var(--ds-space-3);
   background: linear-gradient(46deg, var(--ds-gradient-brand-from) 7.03%, var(--ds-gradient-brand-to) 94.08%);
   color: white;
   border: none;
   border-radius: var(--ds-radius-lg);
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 0.9375rem;
+  font-weight: var(--ds-weight-medium);
   cursor: pointer;
 }
 .demo-prompt-primary:hover { opacity: 0.9; }
 .demo-prompt-secondary {
-  padding: 12px;
+  padding: var(--ds-space-3);
   background: none;
   border: none;
   color: var(--ds-text-muted);
-  font-size: 14px;
+  font-size: var(--ds-font-sm);
   cursor: pointer;
 }
 .demo-prompt-secondary:hover { color: var(--ds-text-primary); }

@@ -118,8 +118,11 @@
   /* ============================================
    * TYPOGRAPHY - Font Sizes
    * ============================================ */
+  --ds-font-2xs: 0.6875rem; /* 11px */
   --ds-font-xs: 0.75rem;   /* 12px */
   --ds-font-sm: 0.875rem;  /* 14px */
+  /* Note: 0.8125rem (13px) and 0.9375rem (15px) are intentional compact
+   * densities kept as literals — not part of the t-shirt scale. */
   --ds-font-md: 1rem;      /* 16px */
   --ds-font-lg: 1.125rem;  /* 18px */
   --ds-font-xl: 1.25rem;   /* 20px */

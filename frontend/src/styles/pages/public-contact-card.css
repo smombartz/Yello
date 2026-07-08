@@ -6,7 +6,7 @@
     align-items: center;
     justify-content: center;
     background: var(--ds-gradient-brand);
-    padding: 24px;
+    padding: var(--ds-space-6);
     box-sizing: border-box;
   }
 
@@ -49,7 +49,7 @@
   }
 
   .public-card-error h1 {
-    font-size: 24px;
+    font-size: var(--ds-font-2xl);
     color: var(--ds-text-primary);
     margin: 0 0 12px 0;
   }
@@ -63,7 +63,7 @@
   .profile-avatar-container {
     position: relative;
     display: inline-block;
-    margin-bottom: 20px;
+    margin-bottom: var(--ds-space-5);
   }
 
   .profile-avatar {
@@ -78,7 +78,7 @@
     justify-content: center;
     font-size: 48px;
     color: var(--ds-text-inverse);
-    font-weight: 600;
+    font-weight: var(--ds-weight-semibold);
     border: 4px solid var(--ds-bg-primary);
     box-shadow: var(--ds-shadow-md);
   }
@@ -118,35 +118,35 @@
     flex-direction: column;
     align-items: center;
     gap: 2px;
-    margin-bottom: 8px;
+    margin-bottom: var(--ds-space-2);
   }
 
   .profile-name .first-name {
     font-size: 28px;
-    font-weight: 700;
+    font-weight: var(--ds-weight-bold);
     color: var(--ds-text-primary);
     line-height: 1.2;
   }
 
   .profile-name .last-name {
     font-size: 28px;
-    font-weight: 700;
+    font-weight: var(--ds-weight-bold);
     color: var(--ds-text-primary);
     line-height: 1.2;
   }
 
   /* Tagline */
   .profile-tagline {
-    font-size: 16px;
+    font-size: var(--ds-font-md);
     color: var(--ds-color-primary);
     font-style: italic;
     margin: 0 0 8px 0;
-    font-weight: 500;
+    font-weight: var(--ds-weight-medium);
   }
 
   /* Location */
   .profile-location {
-    font-size: 14px;
+    font-size: var(--ds-font-sm);
     color: var(--ds-text-muted);
     margin: 0 0 24px 0;
   }
@@ -155,20 +155,20 @@
   .public-card-contact-info {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-bottom: 24px;
+    gap: var(--ds-space-3);
+    margin-bottom: var(--ds-space-6);
   }
 
   .contact-item {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--ds-space-3);
     padding: 12px 16px;
     background: var(--ds-bg-secondary);
     border-radius: var(--ds-radius-xl);
     text-decoration: none;
     color: var(--ds-text-primary);
-    font-size: 14px;
+    font-size: var(--ds-font-sm);
     transition: background 0.2s ease;
   }
 
@@ -195,7 +195,7 @@
   .social-links {
     display: flex;
     justify-content: center;
-    gap: 16px;
+    gap: var(--ds-space-4);
     margin-bottom: 28px;
   }
 
@@ -248,8 +248,8 @@
     color: var(--ds-text-inverse);
     border: none;
     border-radius: var(--ds-radius-xl);
-    font-size: 16px;
-    font-weight: 600;
+    font-size: var(--ds-font-md);
+    font-weight: var(--ds-weight-semibold);
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 4px 14px color-mix(in srgb, var(--ds-color-primary) 40%, transparent);
@@ -272,7 +272,7 @@
   /* Responsive adjustments */
   @media (max-width: 440px) {
     .public-card-page {
-      padding: 16px;
+      padding: var(--ds-space-4);
     }
 
     .public-card {
@@ -287,6 +287,6 @@
 
     .profile-name .first-name,
     .profile-name .last-name {
-      font-size: 24px;
+      font-size: var(--ds-font-2xl);
     }
   }

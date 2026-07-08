@@ -15,14 +15,14 @@
 
 .enrich-header h1 {
   margin: 0 0 4px 0;
-  font-size: 24px;
-  font-weight: 600;
+  font-size: var(--ds-font-2xl);
+  font-weight: var(--ds-weight-semibold);
   color: var(--ds-text-primary);
 }
 
 .enrich-subtitle {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--ds-font-sm);
   color: var(--ds-text-secondary);
 }
 
@@ -32,34 +32,34 @@
   padding: 24px 32px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--ds-space-4);
 }
 
 
 .config-warning {
   display: flex;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4);
   background: rgba(251, 191, 36, 0.1);
   border: 1px solid rgba(251, 191, 36, 0.3);
   border-radius: var(--ds-radius-lg);
-  margin-bottom: 20px;
+  margin-bottom: var(--ds-space-5);
 }
 
 .config-warning i {
   color: #f59e0b;
-  font-size: 24px;
+  font-size: var(--ds-font-2xl);
 }
 
 .config-warning strong {
   display: block;
   color: var(--ds-text-primary);
-  margin-bottom: 4px;
+  margin-bottom: var(--ds-space-1);
 }
 
 .config-warning p {
   margin: 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--ds-text-secondary);
 }
 
@@ -68,22 +68,22 @@
   padding: 2px 6px;
   border-radius: var(--ds-radius-sm);
   font-family: monospace;
-  font-size: 12px;
+  font-size: var(--ds-font-xs);
 }
 
 .enrich-stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: var(--ds-space-3);
+  margin-bottom: var(--ds-space-5);
 }
 
 .enrich-stat-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 16px;
+  gap: var(--ds-space-1);
+  padding: var(--ds-space-4);
   border-radius: var(--ds-radius-lg);
   border: 1px solid var(--ds-border-color);
   background: var(--ds-bg-primary);
@@ -102,13 +102,13 @@
 }
 
 .enrich-stat-count {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: var(--ds-font-2xl);
+  font-weight: var(--ds-weight-bold);
   line-height: 1;
 }
 
 .enrich-stat-label {
-  font-size: 11px;
+  font-size: var(--ds-font-2xs);
   color: var(--ds-text-secondary);
 }
 
@@ -120,7 +120,7 @@
 .enrich-category-panel {
   border: 1px solid var(--ds-border-color);
   border-radius: var(--ds-radius-lg);
-  margin-bottom: 20px;
+  margin-bottom: var(--ds-space-5);
   overflow: hidden;
 }
 
@@ -135,7 +135,7 @@
 
 .enrich-category-header h4 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--ds-font-sm);
 }
 
 .enrich-category-close {
@@ -143,7 +143,7 @@
   border: none;
   color: var(--ds-text-tertiary);
   cursor: pointer;
-  padding: 4px;
+  padding: var(--ds-space-1);
 }
 
 .enrich-category-close:hover {
@@ -151,7 +151,7 @@
 }
 
 .enrich-category-loading {
-  padding: 24px;
+  padding: var(--ds-space-6);
   display: flex;
   justify-content: center;
 }
@@ -164,7 +164,7 @@
 .enrich-category-contact {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ds-space-2);
   width: 100%;
   padding: 10px 16px;
   border: none;
@@ -173,7 +173,7 @@
   text-align: left;
   cursor: pointer;
   transition: background 0.1s;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--ds-text-primary);
 }
 
@@ -186,7 +186,7 @@
 }
 
 .enrich-category-contact-name {
-  font-weight: 500;
+  font-weight: var(--ds-weight-medium);
 }
 
 .enrich-category-contact-company {
@@ -195,31 +195,31 @@
 
 .enrich-category-contact-error {
   color: var(--ds-color-error);
-  font-size: 12px;
+  font-size: var(--ds-font-xs);
   margin-left: auto;
 }
 
 .enrich-category-contact-date {
   color: var(--ds-text-tertiary);
-  font-size: 12px;
+  font-size: var(--ds-font-xs);
   margin-left: auto;
 }
 
 .enrich-category-contact-arrow {
   color: var(--ds-text-tertiary);
-  font-size: 12px;
+  font-size: var(--ds-font-xs);
   flex-shrink: 0;
 }
 
 .enrich-category-empty {
-  padding: 32px;
+  padding: var(--ds-space-8);
   text-align: center;
   color: var(--ds-text-tertiary);
-  font-size: 14px;
+  font-size: var(--ds-font-sm);
 }
 
 .enrichment-options {
-  margin-bottom: 20px;
+  margin-bottom: var(--ds-space-5);
 }
 
 .checkbox-label {
@@ -227,7 +227,7 @@
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--ds-font-sm);
   color: var(--ds-text-primary);
 }
 
@@ -240,9 +240,9 @@
 .limit-input-group {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  font-size: 14px;
+  gap: var(--ds-space-2);
+  margin-top: var(--ds-space-3);
+  font-size: var(--ds-font-sm);
   color: var(--ds-text-primary);
 }
 
@@ -251,7 +251,7 @@
   padding: 6px 10px;
   border: 1px solid var(--ds-border-color);
   border-radius: var(--ds-radius-md);
-  font-size: 14px;
+  font-size: var(--ds-font-sm);
   background: var(--ds-bg-primary);
   color: var(--ds-text-primary);
 }
@@ -273,34 +273,34 @@
 
 .limit-hint {
   color: var(--ds-text-secondary);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .enrichment-progress {
   background: var(--ds-bg-secondary);
   border-radius: var(--ds-radius-lg);
-  padding: 16px;
-  margin-bottom: 20px;
+  padding: var(--ds-space-4);
+  margin-bottom: var(--ds-space-5);
 }
 
 .progress-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--ds-space-3);
 }
 
 .progress-status {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
+  gap: var(--ds-space-2);
+  font-size: var(--ds-font-sm);
+  font-weight: var(--ds-weight-medium);
   color: var(--ds-text-primary);
 }
 
 .progress-count {
-  font-size: 14px;
+  font-size: var(--ds-font-sm);
   color: var(--ds-text-secondary);
 }
 
@@ -308,9 +308,9 @@
  * definitions in index.css (previously duplicated here with an off-brand gradient). */
 
 .progress-current {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--ds-text-secondary);
-  margin-bottom: 12px;
+  margin-bottom: var(--ds-space-3);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -318,18 +318,18 @@
 
 .progress-stats {
   display: flex;
-  gap: 16px;
+  gap: var(--ds-space-4);
 }
 
 .progress-stats .stat {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
+  gap: var(--ds-space-1);
+  font-size: 0.8125rem;
 }
 
 .progress-stats .stat i {
-  font-size: 16px;
+  font-size: var(--ds-font-md);
 }
 
 .progress-stats .stat.success {
@@ -344,28 +344,28 @@
   background: rgba(22, 163, 74, 0.1);
   border: 1px solid rgba(22, 163, 74, 0.2);
   border-radius: var(--ds-radius-lg);
-  padding: 16px;
-  margin-bottom: 20px;
+  padding: var(--ds-space-4);
+  margin-bottom: var(--ds-space-5);
 }
 
 .result-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
+  gap: var(--ds-space-2);
+  font-size: var(--ds-font-md);
+  font-weight: var(--ds-weight-semibold);
   color: var(--ds-color-success);
-  margin-bottom: 16px;
+  margin-bottom: var(--ds-space-4);
 }
 
 .result-header .success-icon {
-  font-size: 24px;
+  font-size: var(--ds-font-2xl);
 }
 
 .result-stats {
   display: flex;
-  gap: 24px;
-  margin-bottom: 16px;
+  gap: var(--ds-space-6);
+  margin-bottom: var(--ds-space-4);
 }
 
 .result-stats .stat-item {
@@ -375,8 +375,8 @@
 }
 
 .result-stats .stat-item .stat-value {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: var(--ds-font-2xl);
+  font-weight: var(--ds-weight-bold);
 }
 
 .result-stats .stat-item.success .stat-value {
@@ -388,31 +388,31 @@
 }
 
 .result-stats .stat-item .stat-label {
-  font-size: 12px;
+  font-size: var(--ds-font-xs);
   color: var(--ds-text-secondary);
 }
 
 .result-errors {
-  margin-top: 16px;
+  margin-top: var(--ds-space-4);
   padding-top: 16px;
   border-top: 1px solid rgba(22, 163, 74, 0.2);
 }
 
 .result-errors h4 {
   margin: 0 0 8px 0;
-  font-size: 14px;
+  font-size: var(--ds-font-sm);
   color: var(--ds-text-primary);
 }
 
 .result-errors ul {
   margin: 0;
   padding: 0 0 0 20px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--ds-text-secondary);
 }
 
 .result-errors li {
-  margin-bottom: 4px;
+  margin-bottom: var(--ds-space-1);
 }
 
 .result-errors .more-errors {
@@ -421,21 +421,21 @@
 }
 
 .enriched-contacts-section {
-  margin-top: 16px;
+  margin-top: var(--ds-space-4);
   padding-top: 16px;
   border-top: 1px solid rgba(22, 163, 74, 0.2);
 }
 
 .enriched-contacts-section h4 {
   margin: 0 0 12px 0;
-  font-size: 14px;
+  font-size: var(--ds-font-sm);
   color: var(--ds-text-primary);
 }
 
 .enriched-contacts-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--ds-space-2);
 }
 
 .enriched-contact-card {
@@ -447,11 +447,11 @@
 
 .enriched-contact-card .enrich-contact-name {
   display: block;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--ds-font-sm);
+  font-weight: var(--ds-weight-semibold);
   color: var(--ds-color-primary);
   text-decoration: none;
-  margin-bottom: 4px;
+  margin-bottom: var(--ds-space-1);
 }
 
 .enriched-contact-card .enrich-contact-name:hover {
@@ -459,26 +459,26 @@
 }
 
 .enriched-contact-card .contact-details {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--ds-text-secondary);
 }
 
 .enrichment-error {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ds-space-2);
   padding: 12px 16px;
   background: rgba(220, 38, 38, 0.1);
   border: 1px solid rgba(220, 38, 38, 0.2);
   border-radius: var(--ds-radius-lg);
-  margin-bottom: 20px;
+  margin-bottom: var(--ds-space-5);
   color: var(--ds-color-error);
-  font-size: 14px;
+  font-size: var(--ds-font-sm);
 }
 
 .enrichment-actions {
   display: flex;
-  gap: 12px;
+  gap: var(--ds-space-3);
 }
 
 /* Count badge inside a primary button (buttons themselves use the canonical .btn system) */
@@ -486,25 +486,25 @@
   background: rgba(255, 255, 255, 0.3);
   padding: 2px 8px;
   border-radius: var(--ds-radius-xl);
-  font-size: 12px;
+  font-size: var(--ds-font-xs);
 }
 
 .recovery-section {
-  margin-top: 24px;
+  margin-top: var(--ds-space-6);
   padding-top: 24px;
   border-top: 1px solid var(--ds-border-color);
 }
 
 .recovery-heading {
   margin: 0 0 8px 0;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 0.9375rem;
+  font-weight: var(--ds-weight-semibold);
   color: var(--ds-text-primary);
 }
 
 .recovery-description {
   margin: 0 0 12px 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--ds-text-secondary);
   line-height: 1.4;
 }
@@ -515,7 +515,7 @@
 
 .recovery-input-row {
   display: flex;
-  gap: 8px;
+  gap: var(--ds-space-2);
   align-items: center;
 }
 
@@ -528,7 +528,7 @@
   padding: 6px 10px;
   border: 1px solid var(--ds-border-color);
   border-radius: var(--ds-radius-md);
-  font-size: 14px;
+  font-size: var(--ds-font-sm);
   background: var(--ds-bg-primary);
   color: var(--ds-text-primary);
   cursor: pointer;
@@ -549,21 +549,21 @@
 .gmail-discovery-results {
   background: var(--ds-bg-secondary);
   border-radius: var(--ds-radius-lg);
-  padding: 16px;
-  margin-bottom: 20px;
+  padding: var(--ds-space-4);
+  margin-bottom: var(--ds-space-5);
 }
 
 .gmail-discovery-header {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--ds-font-sm);
+  font-weight: var(--ds-weight-medium);
   color: var(--ds-text-primary);
-  margin-bottom: 12px;
+  margin-bottom: var(--ds-space-3);
 }
 
 .gmail-discovery-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--ds-space-1);
 }
 
 .gmail-discovery-item {
@@ -571,7 +571,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 6px 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
   border-bottom: 1px solid var(--ds-border-color);
 }
 
@@ -581,16 +581,16 @@
 
 .gmail-discovery-name {
   color: var(--ds-text-primary);
-  font-weight: 500;
+  font-weight: var(--ds-weight-medium);
 }
 
 .gmail-discovery-detail {
   color: var(--ds-text-secondary);
-  font-size: 12px;
+  font-size: var(--ds-font-xs);
 }
 
 .gmail-discovery-more {
-  font-size: 12px;
+  font-size: var(--ds-font-xs);
   color: var(--ds-text-tertiary);
   font-style: italic;
   padding-top: 8px;

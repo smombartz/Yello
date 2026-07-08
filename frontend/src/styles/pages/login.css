@@ -6,13 +6,13 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(46deg, var(--ds-gradient-brand-from) 7.03%, var(--ds-gradient-brand-to) 94.08%);
-  padding: 20px;
+  padding: var(--ds-space-5);
 }
 
 .login-container {
   background: white;
   border-radius: 16px;
-  padding: 48px;
+  padding: var(--ds-space-12);
   max-width: 400px;
   width: 100%;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -20,37 +20,37 @@
 }
 
 .login-header {
-  margin-bottom: 32px;
+  margin-bottom: var(--ds-space-8);
 }
 
 .login-logo {
   height: 40px;
   width: auto;
-  margin-bottom: 8px;
+  margin-bottom: var(--ds-space-2);
 }
 
 .login-header p {
   color: var(--ds-text-secondary);
   margin: 0;
-  font-size: 14px;
+  font-size: var(--ds-font-sm);
 }
 
 .login-content {
-  margin-bottom: 32px;
+  margin-bottom: var(--ds-space-8);
 }
 
 .google-login-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: var(--ds-space-3);
   width: 100%;
   padding: 14px 24px;
   background: white;
   border: 1px solid var(--ds-border-color);
   border-radius: var(--ds-radius-lg);
-  font-size: 16px;
-  font-weight: 500;
+  font-size: var(--ds-font-md);
+  font-weight: var(--ds-weight-medium);
   color: var(--ds-text-primary);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -74,10 +74,10 @@
 .login-divider {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--ds-space-3);
   margin: 16px 0;
   color: var(--ds-text-muted);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .login-divider::before,
@@ -94,8 +94,8 @@
   background: linear-gradient(46deg, var(--ds-gradient-brand-from) 7.03%, var(--ds-gradient-brand-to) 94.08%);
   border: none;
   border-radius: var(--ds-radius-lg);
-  font-size: 16px;
-  font-weight: 500;
+  font-size: var(--ds-font-md);
+  font-weight: var(--ds-weight-medium);
   color: white;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -113,7 +113,7 @@
 
 .login-footer {
   color: var(--ds-text-muted);
-  font-size: 12px;
+  font-size: var(--ds-font-xs);
 }
 
 .login-footer p {

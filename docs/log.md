@@ -1,5 +1,12 @@
 # Change Log
 
+## 2026-07-08 — UI unification follow-up: grey/spacing/typography token conversion
+
+- **Colors:** converted the remaining raw grey/neutral hexes (`#e5e7eb`→`--ds-border-color`, `#f9fafb`→`--ds-bg-secondary`, `#9ca3af`→`--ds-text-muted`, `#d1d5db`→`--ds-border-dark`) property-aware, and stripped ~20 dead `var(--ds-*, #hex)` fallbacks (all tokens are defined). One-offs with no exact token (scrollbar `#c1c1c9`, toast `#333`, `#616189`, `#111118`) left as-is
+- **Typography:** added `--ds-font-2xs` (11px); tokenized every font-weight (500/600/700 → `--ds-weight-*`) and every font-size that exactly matches the scale (rem + px forms → `--ds-font-*`); fixed the `8.2px` typo. The two off-scale compact densities (13px/0.8125rem, 15px/0.9375rem) are kept as documented literals (normalized to one rem form) rather than snapped, to avoid a blind size shift
+- **Spacing:** converted single-value `gap`/`padding`/`margin*` on clean 4px multiples to `--ds-space-*` (shorthand and the bespoke 6px/`0.375rem` left alone). index.css now has 300+ spacing-token, 240 font-token, and 100+ weight-token references
+- All property-scoped and value-preserving → no visual change; build + lint green (baseline unchanged)
+
 ## 2026-07-08 — UI unification follow-up: badge unification
 
 - Added a canonical `.badge` system to `index.css` (`.badge` base + `--neutral/brand/success/warning/error/info` variants + a `.badge--count` round-pill base) and a `components/ui/Badge.tsx` component

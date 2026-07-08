@@ -1,7 +1,7 @@
 /* Admin view (extracted from AdminView.tsx) */
 
   .admin-view {
-    padding: 24px;
+    padding: var(--ds-space-6);
     max-width: 1200px;
     margin: 0 auto;
   }
@@ -11,21 +11,21 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: var(--ds-space-3);
     padding: 64px 0;
     color: var(--ds-text-secondary);
   }
   .admin-error i {
-    font-size: 24px;
+    font-size: var(--ds-font-2xl);
     color: var(--ds-color-error);
   }
   .admin-summary {
-    margin-bottom: 16px;
-    font-size: 14px;
+    margin-bottom: var(--ds-space-4);
+    font-size: var(--ds-font-sm);
     color: var(--ds-text-secondary);
   }
   .admin-summary-count {
-    font-weight: 600;
+    font-weight: var(--ds-weight-semibold);
     color: var(--ds-text-primary);
   }
   .admin-table-wrapper {
@@ -34,13 +34,13 @@
   .admin-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
+    font-size: var(--ds-font-sm);
   }
   .admin-table th {
     text-align: left;
     padding: 10px 12px;
-    font-weight: 600;
-    font-size: 12px;
+    font-weight: var(--ds-weight-semibold);
+    font-size: var(--ds-font-xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--ds-text-secondary);
@@ -52,7 +52,7 @@
     text-align: right;
   }
   .admin-table td {
-    padding: 12px;
+    padding: var(--ds-space-3);
     border-bottom: 1px solid var(--ds-border-color);
     white-space: nowrap;
     color: var(--ds-text-primary);
@@ -63,7 +63,7 @@
   .admin-user-cell {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--ds-space-3);
   }
   .admin-user-avatar {
     width: 36px;
@@ -80,8 +80,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
-    font-size: 14px;
+    font-weight: var(--ds-weight-semibold);
+    font-size: var(--ds-font-sm);
     color: var(--ds-text-secondary);
     flex-shrink: 0;
   }
@@ -92,13 +92,13 @@
     min-width: 0;
   }
   .admin-user-name {
-    font-weight: 500;
+    font-weight: var(--ds-weight-medium);
   }
   .admin-user-email {
-    font-size: 12px;
+    font-size: var(--ds-font-xs);
     color: var(--ds-text-secondary);
   }
   .admin-photo-size {
     color: var(--ds-text-secondary);
-    font-size: 12px;
+    font-size: var(--ds-font-xs);
   }
