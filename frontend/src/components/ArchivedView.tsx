@@ -5,6 +5,7 @@ import { Icon } from './Icon';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { EmptyState } from './ui/EmptyState';
+import { Pagination } from './Pagination';
 import { useToast } from './ui/Toast';
 import {
   useArchivedContacts,
@@ -244,29 +245,12 @@ export function ArchivedView() {
               ))}
             </div>
 
-            {totalPages > 1 && (
-              <div className="pagination">
-                <button
-                  className="pagination-button"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1 || isFetching}
-                >
-                  <Icon name="chevron-left" />
-                  Previous
-                </button>
-                <span className="pagination-indicator">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  className="pagination-button"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages || isFetching}
-                >
-                  Next
-                  <Icon name="chevron-right" />
-                </button>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              isLoading={isFetching}
+            />
           </div>
         )}
       </div>

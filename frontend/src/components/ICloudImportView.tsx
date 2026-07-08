@@ -7,114 +7,10 @@ import {
   useExecuteICloudImport,
   useICloudSettings,
   type ParsedContact,
-  type IncomingMatch,
   type MatchResult,
 } from '../api/icloudHooks';
 import type { OutletContext } from './Layout';
-
-type MatchDecision = 'merge' | 'new' | 'skip';
-
-function MatchCard({
-  match,
-  index,
-  decision,
-  onDecisionChange,
-}: {
-  match: IncomingMatch;
-  index: number;
-  decision: MatchDecision;
-  onDecisionChange: (index: number, decision: MatchDecision) => void;
-}) {
-  const confidenceColors: Record<string, string> = {
-    very_high: 'var(--ds-color-success, #22c55e)',
-    high: 'var(--ds-color-warning, #f59e0b)',
-    medium: 'var(--ds-color-info, #3b82f6)',
-  };
-
-  return (
-    <div className={`icloud-match-card ${decision === 'skip' ? 'skipped' : ''}`}>
-      <div className="icloud-match-header">
-        <span
-          className="icloud-confidence-badge"
-          style={{ backgroundColor: confidenceColors[match.confidence] }}
-        >
-          {match.confidence.replace('_', ' ')}
-        </span>
-        <div className="icloud-match-reasons">
-          {match.matchReasons.map((reason, i) => (
-            <span key={i} className="icloud-reason-tag">{reason}</span>
-          ))}
-        </div>
-      </div>
-      <div className="icloud-match-comparison">
-        <div className="icloud-match-side">
-          <div className="icloud-match-label">iCloud</div>
-          <div className="icloud-match-name">{match.incoming.displayName}</div>
-          {match.incoming.emails[0] && (
-            <div className="icloud-match-detail">{match.incoming.emails[0].email}</div>
-          )}
-          {match.incoming.phones[0] && (
-            <div className="icloud-match-detail">{match.incoming.phones[0].phoneDisplay || match.incoming.phones[0].phone}</div>
-          )}
-          {match.incoming.company && (
-            <div className="icloud-match-detail">{match.incoming.company}</div>
-          )}
-        </div>
-        <div className="icloud-match-divider">
-          <Icon name="arrows-left-right" />
-        </div>
-        <div className="icloud-match-side">
-          <div className="icloud-match-label">Existing</div>
-          <div className="icloud-match-name">{match.existingDisplayName}</div>
-        </div>
-      </div>
-      <div className="icloud-match-actions">
-        <button
-          type="button"
-          className={`icloud-action-btn ${decision === 'merge' ? 'active' : ''}`}
-          onClick={() => onDecisionChange(index, 'merge')}
-        >
-          <Icon name="code-merge" /> Merge
-        </button>
-        <button
-          type="button"
-          className={`icloud-action-btn ${decision === 'new' ? 'active' : ''}`}
-          onClick={() => onDecisionChange(index, 'new')}
-        >
-          <Icon name="plus" /> Import as New
-        </button>
-        <button
-          type="button"
-          className={`icloud-action-btn ${decision === 'skip' ? 'active' : ''}`}
-          onClick={() => onDecisionChange(index, 'skip')}
-        >
-          <Icon name="forward" /> Skip
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function NewContactCard({ contact, selected, onToggle }: {
-  contact: ParsedContact;
-  selected: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div className={`icloud-new-contact-card ${selected ? '' : 'deselected'}`} onClick={onToggle}>
-      <input type="checkbox" checked={selected} onChange={onToggle} />
-      <div className="icloud-new-contact-info">
-        <div className="icloud-match-name">{contact.displayName}</div>
-        {contact.emails[0] && (
-          <div className="icloud-match-detail">{contact.emails[0].email}</div>
-        )}
-        {contact.company && (
-          <div className="icloud-match-detail">{contact.company}</div>
-        )}
-      </div>
-    </div>
-  );
-}
+import { MatchCard, NewContactCard, type MatchDecision } from './ImportMatchCards';
 
 export function ICloudImportView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
@@ -383,6 +279,7 @@ export function ICloudImportView() {
                 index={i}
                 decision={matchDecisions.get(i) || 'skip'}
                 onDecisionChange={handleDecisionChange}
+                sourceLabel="iCloud"
               />
             ))}
           </div>

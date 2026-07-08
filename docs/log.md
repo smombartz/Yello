@@ -1,5 +1,13 @@
 # Change Log
 
+## 2026-07-07 22:40 — UI unification Phase 6: structural dedupe & UX fixes
+
+- Extracted `components/ImportMatchCards.tsx` (`MatchCard` with a `sourceLabel` prop + `NewContactCard`), replacing the ~200 lines of verbatim-duplicated card components in `ICloudImportView` and `GoogleContactsImportView`; both now pass `sourceLabel="iCloud"|"Google"`
+- `ArchivedView` now uses the shared `Pagination` component instead of its hand-rolled prev/next markup
+- Removed `ContactDetailPage`'s redundant in-body "Back to Contacts" button (the header already has a Back action)
+- Deferred (flagged for owner decision, not changed): mobile nav parity (Dashboard/Profile unreachable from `BottomTabBar`) and consolidating the Settings VCF-import section into `ImportView` — both are IA/behavior changes rather than refactors
+- Kept the shared cards' `.icloud-*` class names for now (functional dedup done; the cosmetic rename to `.import-*` is deferred to avoid a risky 40-class sweep)
+
 ## 2026-07-07 22:25 — UI unification Phase 5: canonical Button system
 
 - Added `components/ui/Button.tsx` (`variant: primary|secondary|danger|ghost|icon`, `icon`, extends button attrs) rendering `.btn .btn--{variant}` built on `--ds-btn-*` tokens

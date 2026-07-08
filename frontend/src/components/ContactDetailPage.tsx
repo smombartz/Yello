@@ -57,10 +57,6 @@ export function ContactDetailPage() {
   return (
     <>
       <div className="page-content">
-        <button className="contact-detail-back" onClick={handleBack}>
-          <Icon name="arrow-left" />
-          Back to Contacts
-        </button>
         <div className="contact-detail-content">
           <div className="contact-detail-identity">
             <Avatar photoUrl={contact.photoUrl || contact.linkedinEnrichment?.photoLinkedin || null} name={contact.displayName} size={96} />
