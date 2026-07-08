@@ -1,5 +1,12 @@
 # Change Log
 
+## 2026-07-07 23:40 — UI unification Phase 9: visual refresh (font)
+
+- Adopted **Geist** (400/500/600/700) as the app typeface: loaded via Google Fonts in `index.html` and set `--ds-font-family` to Geist with a system fallback stack. Form controls already inherit the font (`index.css:16`), so it propagates to buttons/inputs everywhere
+- Brand color (#7C3AED) and gradient (#7C3AED→#273DE3) already landed in Phase 8, so this phase is font-only
+- Density/finish left as-is (32px control height is already tight for the clean/utilitarian direction) — no over-tuning per the quality bar
+- Visual sign-off pending: browser automation was unavailable this session; the running app (localhost:5173) is ready for the owner to review
+
 ## 2026-07-07 23:30 — UI unification Phase 8: token normalization + brand convergence
 
 - Converged all 5 competing brand purples/gradients onto tokens: raw `#5f27e3`/`rgba(95,39,227,…)`, the `#667eea/#764ba2` gradient + its alpha tints/shadows, and the `#7C3AED/#273DE3` hero gradient all now reference `--ds-color-primary`, `--ds-color-primary-light`, `--ds-gradient-brand`, or `color-mix(...)`. Zero raw brand hexes remain in CSS

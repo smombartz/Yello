@@ -113,7 +113,7 @@
   /* ============================================
    * TYPOGRAPHY - Font Family
    * ============================================ */
-  --ds-font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --ds-font-family: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
   /* ============================================
    * TYPOGRAPHY - Font Sizes
