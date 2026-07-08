@@ -29,6 +29,7 @@ import type {
   ContactSearchResult,
 } from '../api/types';
 import { Avatar } from './Avatar';
+import { SearchBar } from './ui/SearchBar';
 import type { OutletContext } from './Layout';
 import { EditableField } from './ContactFormSections';
 import { formatBirthday } from '../utils/contactFormatters';
@@ -445,20 +446,16 @@ function ContactSearchAutocomplete({
 
   return (
     <div className="contact-search-autocomplete">
-      <div className="search-input-wrapper">
-        <Icon name="magnifying-glass" />
-        <input
-          ref={inputRef}
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search your contacts..."
-          className="search-input"
-        />
-        <button type="button" onClick={onCancel} className="cancel-btn">
-          <Icon name="xmark" />
-        </button>
-      </div>
+      <SearchBar
+        variant="plain"
+        trailing="cancel"
+        value={searchQuery}
+        onChange={setSearchQuery}
+        onCancel={onCancel}
+        placeholder="Search your contacts..."
+        inputRef={inputRef}
+        autoFocus
+      />
 
       <div className="search-results">
         {isLoading && searchQuery && (

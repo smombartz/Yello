@@ -1,5 +1,17 @@
 # Change Log
 
+## 2026-07-08 — UI unification follow-up: badge unification
+
+- Added a canonical `.badge` system to `index.css` (`.badge` base + `--neutral/brand/success/warning/error/info` variants + a `.badge--count` round-pill base) and a `components/ui/Badge.tsx` component
+- Consolidated ~13 one-off badge classes onto the canonical base via grouped selectors (same low-risk approach as the button unification): status badges (`confidence-badge` ×2 deduped, `cleanup-badge`, `normalize-badge`, `geocoding-badge`, `geocoding-status-badge`, `address-cleanup-badge`) and count badges (`subtab-badge`, `groups-count-badge`, `archived-count-badge`) now share one base; each keeps only its distinctive color. Status badges unified to `radius-sm`; count badges to a round pill
+- Left genuinely-distinct badges alone: the absolute-positioned `primary-badge`, the JS-colored `icloud-confidence-badge`, the brand `filter-badge`, and the interactive chip/tag controls (`filter-chip`, `mode-pill`, `category-tag`, etc.)
+
+## 2026-07-08 — UI unification follow-up: shared SearchBar
+
+- Added `components/ui/SearchBar.tsx` (magnifying-glass icon + input + clear/cancel button) with `boxed`/`plain` variants and `clear`/`cancel` trailing modes
+- Migrated PageHeader's search (`.page-header-search*` → `SearchBar` with `search-bar--header`) and UserProfilePage's contact-search autocomplete (`.search-input-wrapper` → `SearchBar variant="plain" trailing="cancel"`); removed the old per-view search CSS
+- InvalidLinksCleanup's pattern input is intentionally left as-is — it's a submit-style form (labeled Search button, no live filter/clear), a distinct pattern from the two icon+input+clear search boxes
+
 ## 2026-07-07 23:50 — UI unification Phase 10: consistency pass + doc closeout
 
 - Documented the design system + `components/ui/` primitives in CLAUDE.md (Button, ConfirmDialog, Toast/useToast, LoadingSpinner, EmptyState; token/stylesheet conventions; "no `<style>` blocks / no static inline styles" rule)

@@ -233,39 +233,7 @@
     overflow: hidden;
   }
 
-  .search-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px;
-    border-bottom: 1px solid var(--ds-border-color);
-  }
-
-  .search-input-wrapper i {
-    color: var(--ds-text-secondary);
-  }
-
-  .search-input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    font-size: 16px;
-    outline: none;
-  }
-
-  .cancel-btn {
-    padding: 8px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: var(--ds-text-secondary);
-    border-radius: var(--ds-radius-md);
-    transition: all 0.2s;
-  }
-
-  .cancel-btn:hover {
-    background: var(--ds-border-color);
-  }
+  /* Contact-search input now uses the shared SearchBar (variant="plain") */
 
   .search-results {
     max-height: 400px;

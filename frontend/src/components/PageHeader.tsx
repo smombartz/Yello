@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import logoSvg from '../assets/logo.svg';
-import { Icon } from './Icon';
+import { SearchBar } from './ui/SearchBar';
 
 interface PageHeaderProps {
   title: string;
@@ -35,26 +35,12 @@ export function PageHeader({
             <h1 className="page-header-title">{title}</h1>
 
             {showSearch && (
-              <div className="page-header-search">
-                <Icon name="magnifying-glass" className="page-header-search-icon" />
-                <input
-                  type="text"
-                  value={search ?? ''}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder={searchPlaceholder}
-                  className="page-header-search-input"
-                />
-                {search && (
-                  <button
-                    type="button"
-                    className="page-header-search-clear"
-                    onClick={() => onSearchChange('')}
-                    aria-label="Clear search"
-                  >
-                    <Icon name="xmark" />
-                  </button>
-                )}
-              </div>
+              <SearchBar
+                value={search ?? ''}
+                onChange={onSearchChange}
+                placeholder={searchPlaceholder}
+                className="search-bar--header"
+              />
             )}
 
             {info && <div className="page-header-info">{info}</div>}

@@ -103,6 +103,7 @@ FTS5 virtual tables for full-text search on display_name, company, email with pr
   - `ConfirmDialog` (handles the Escape/`useLayoutModal` contract) — never build modals inline
   - `Toast` + `useToast()` (mounted once via `ToastProvider` in `App.tsx`)
   - `LoadingSpinner` (canonical loader; `fullscreen` variant) and `EmptyState` (`icon/title/description/action`)
+  - `SearchBar` (icon + input + clear/cancel; `boxed`/`plain` variants) and `Badge` (`variant: neutral|brand|success|warning|error|info|count`) — or the canonical `.badge`/`.badge--*` classes
 - **Stylesheets**: global base in `index.css`; per-page CSS in `styles/pages/*.css` (aggregated by `styles/pages.css`, imported after `index.css`). **No `<style>` blocks in TSX, no static inline `style={{}}`.** Page CSS is global — scope page-specific rules with a page prefix to avoid collisions with `index.css`.
 - Icons: Font Awesome via `components/Icon.tsx`. Page headers via the `setHeaderConfig` outlet contract (`Layout.tsx`).
 - Design context (audience, tone, conventions) lives in `.impeccable.md`.
