@@ -14,6 +14,7 @@ import { useSocialLinksSummary } from '../api/socialLinksHooks';
 import { useAddressCleanupSummary } from '../api/addressCleanupHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { LoadingSpinner } from './ui/LoadingSpinner';
 import { useToast } from './ui/Toast';
 import type {
   CleanupMode,
@@ -257,10 +258,7 @@ export function CleanupView() {
         ) : selectedMode === 'addresses' ? (
           <AddressCleanup />
         ) : isContactsLoading ? (
-          <div className="cleanup-loading">
-            <Icon name="arrows-rotate" className="spinning" />
-            <p>Finding contacts...</p>
-          </div>
+          <LoadingSpinner message="Finding contacts..." />
         ) : (
           <CleanupContactList
             contacts={contacts}

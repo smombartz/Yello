@@ -12,6 +12,7 @@ import {
 import type { GeocodingFilter, GeocodingContact, GeocodingAddress } from '../api/types';
 import { formatAddress } from '../lib/addressUtils';
 import { useToast } from './ui/Toast';
+import { EmptyState } from './ui/EmptyState';
 
 interface BulkProgress {
   processed: number;
@@ -528,15 +529,15 @@ export function AddressGeocoding() {
       </div>
 
       {total === 0 && !isFetching ? (
-        <div className="geocoding-empty">
-          <Icon name="location-pin-slash" />
-          <p>
-            {filter === 'all' ? 'No addresses found' :
-             filter === 'pending' ? 'No pending addresses' :
-             filter === 'failed' ? 'No failed addresses' :
-             'No geocoded addresses'}
-          </p>
-        </div>
+        <EmptyState
+          icon="location-pin-slash"
+          title={
+            filter === 'all' ? 'No addresses found' :
+            filter === 'pending' ? 'No pending addresses' :
+            filter === 'failed' ? 'No failed addresses' :
+            'No geocoded addresses'
+          }
+        />
       ) : (
         <>
           <div className="geocoding-list">

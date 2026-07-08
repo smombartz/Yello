@@ -9,6 +9,8 @@ import 'leaflet.markercluster';
 import { useMapMarkers, useMapStats, useGeocode } from '../api/mapHooks';
 import type { MapMarker } from '../api/mapHooks';
 import type { OutletContext } from './Layout';
+import { LoadingSpinner } from './ui/LoadingSpinner';
+import { EmptyState } from './ui/EmptyState';
 import { useToast } from './ui/Toast';
 
 // Fix for default marker icons in Leaflet with Vite
@@ -200,31 +202,30 @@ export function MapView() {
 
       <div className="map-container">
         {isLoading ? (
-          <div className="map-loading">
-            <Icon name="arrows-rotate" className="spinning" />
-            <p>Loading map data...</p>
-          </div>
+          <LoadingSpinner message="Loading map data..." />
         ) : error ? (
           <div className="map-error">
             <Icon name="circle-exclamation" />
             <p>Error loading map: {error.message}</p>
           </div>
         ) : markers.length === 0 ? (
-          <div className="map-empty">
-            <Icon name="location-pin-slash" />
-            <h3>No Locations Found</h3>
-            <p>
-              {debouncedSearch
+          <EmptyState
+            icon="location-pin-slash"
+            title="No Locations Found"
+            description={
+              debouncedSearch
                 ? 'No contacts matching your search have geocoded addresses.'
-                : 'No contacts have geocoded addresses yet.'}
-            </p>
-            {statsData && statsData.pendingAddresses > 0 && (
-              <button className="geocode-button primary" onClick={handleGeocode}>
-                <Icon name="location-crosshairs" />
-                Geocode {statsData.pendingAddresses} addresses
-              </button>
-            )}
-          </div>
+                : 'No contacts have geocoded addresses yet.'
+            }
+            action={
+              statsData && statsData.pendingAddresses > 0 ? (
+                <button className="geocode-button primary" onClick={handleGeocode}>
+                  <Icon name="location-crosshairs" />
+                  Geocode {statsData.pendingAddresses} addresses
+                </button>
+              ) : undefined
+            }
+          />
         ) : (
           <LeafletMap markers={markers} />
         )}

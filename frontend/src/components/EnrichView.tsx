@@ -5,7 +5,7 @@ import { useFetchContactPhotosStream } from '../api/settingsHooks';
 import { useGmailSyncSummary, useGmailDiscover, useGmailBulkSync } from '../api/gmailEnrichHooks';
 import type { GmailDiscoveredContact } from '../api/types';
 import type { OutletContext } from './Layout';
-import { LoadingSpinner } from './LoadingSpinner';
+import { LoadingSpinner } from './ui/LoadingSpinner';
 import { Icon } from './Icon';
 import { useToast } from './ui/Toast';
 

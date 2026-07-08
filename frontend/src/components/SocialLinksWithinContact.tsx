@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
 import { Pagination } from './Pagination';
+import { LoadingSpinner } from './ui/LoadingSpinner';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { EmptyState } from './ui/EmptyState';
 import { useToast } from './ui/Toast';
 import { useSocialLinksWithinContact, useFixAllSocialLinks } from '../api/socialLinksHooks';
 
@@ -51,19 +53,13 @@ export function SocialLinksWithinContact() {
 
   if (isLoading) {
     return (
-      <div className="social-links-loading">
-        <Icon name="arrows-rotate" className="spinning" />
-        <p>Finding social URLs in the wrong table...</p>
-      </div>
+      <LoadingSpinner message="Finding social URLs in the wrong table..." />
     );
   }
 
   if (total === 0) {
     return (
-      <div className="social-links-empty">
-        <Icon name="circle-check" />
-        <p>All social links are properly stored</p>
-      </div>
+      <EmptyState icon="circle-check" title="All social links are properly stored" />
     );
   }
 

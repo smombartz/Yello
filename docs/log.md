@@ -1,5 +1,13 @@
 # Change Log
 
+## 2026-07-07 22:10 — UI unification Phase 4: LoadingSpinner adoption + EmptyState
+
+- Moved `LoadingSpinner` to `components/ui/` and made it the canonical loader; added a `fullscreen` variant
+- Collapsed App.tsx's two byte-identical auth-loading blocks (each with its own `<style>`) into a single `<LoadingSpinner fullscreen />`
+- Swept 8 page-level `*-loading` blocks (Groups, Archived, Dedup, Cleanup, Map, AddressNormalize, AddressDuplicates, SocialLinks) onto `LoadingSpinner`; inline button spinners left as-is
+- Added `components/ui/EmptyState.tsx` (icon/title/description/action) and migrated 8 empty states (ContactList, Groups, Archived, Map w/ CTA, DuplicateGroupList, AddressGeocoding, AddressNormalize, AddressDuplicates, SocialLinks); restyled the shared `.empty-state` CSS on the `.map-empty` model
+- Small inline empties (email-history, enrich-category, cleanup-list) intentionally left as compact text
+
 ## 2026-07-07 21:55 — UI unification Phase 3: shared Toast system
 
 - Added `components/ui/Toast.tsx` — `ToastProvider` (mounted in `App.tsx`) + `useToast()` hook: `showToast(message, { type?: 'success'|'error'|'info', duration?, action? })`, single toast, last-wins, centralized timer cleanup

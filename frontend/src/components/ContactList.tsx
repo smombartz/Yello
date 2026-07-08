@@ -9,6 +9,7 @@ import { ContactGridCard } from './ContactGridCard';
 import { ContactFilters, getFilterLabel } from './ContactFilters';
 import { Icon } from './Icon';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { EmptyState } from './ui/EmptyState';
 import { useToast } from './ui/Toast';
 import type { MergeConflict, ContactDetail } from '../api/types';
 
@@ -228,10 +229,18 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
   }
 
   if (!data?.contacts.length) {
-    return (
-      <div className="empty-state">
-        {search ? `No contacts match "${search}"` : 'No contacts yet. Import a VCF file to get started.'}
-      </div>
+    return search ? (
+      <EmptyState
+        icon="magnifying-glass"
+        title="No matches"
+        description={`No contacts match "${search}"`}
+      />
+    ) : (
+      <EmptyState
+        icon="address-book"
+        title="No contacts yet"
+        description="Import a VCF file to get started."
+      />
     );
   }
 

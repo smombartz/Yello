@@ -9,7 +9,9 @@ import {
 } from '../api/addressCleanupHooks';
 import type { JunkIssueType, NormalizeContact, JunkAddress } from '../api/types';
 import { formatAddress } from '../lib/addressUtils';
+import { LoadingSpinner } from './ui/LoadingSpinner';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { EmptyState } from './ui/EmptyState';
 import { useToast } from './ui/Toast';
 
 const PAGE_SIZE = 20;
@@ -330,19 +332,13 @@ export function AddressNormalize() {
 
   if (isLoading) {
     return (
-      <div className="normalize-loading">
-        <Icon name="arrows-rotate" className="spinning" />
-        <p>Finding junk addresses...</p>
-      </div>
+      <LoadingSpinner message="Finding junk addresses..." />
     );
   }
 
   if (total === 0 && !isFetching) {
     return (
-      <div className="normalize-empty">
-        <Icon name="circle-check" />
-        <p>No junk addresses found</p>
-      </div>
+      <EmptyState icon="circle-check" title="No junk addresses found" />
     );
   }
 

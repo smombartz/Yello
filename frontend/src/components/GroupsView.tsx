@@ -4,6 +4,8 @@ import type { OutletContext } from './Layout';
 import { useGroups } from '../api/hooks';
 import { ContactList } from './ContactList';
 import { Icon } from './Icon';
+import { LoadingSpinner } from './ui/LoadingSpinner';
+import { EmptyState } from './ui/EmptyState';
 
 export function GroupsView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
@@ -56,21 +58,18 @@ export function GroupsView() {
   return (
     <div className="groups-view">
       {isLoading ? (
-        <div className="groups-loading">
-          <Icon name="arrows-rotate" className="spinning" />
-          <p>Loading groups...</p>
-        </div>
+        <LoadingSpinner message="Loading groups..." />
       ) : error ? (
         <div className="groups-error">
           <Icon name="circle-exclamation" />
           <p>Error loading groups: {error.message}</p>
         </div>
       ) : !data?.groups.length ? (
-        <div className="groups-empty">
-          <Icon name="folder-minus" />
-          <h3>No Groups</h3>
-          <p>Your contacts don't have any categories assigned yet.</p>
-        </div>
+        <EmptyState
+          icon="folder-minus"
+          title="No Groups"
+          description="Your contacts don't have any categories assigned yet."
+        />
       ) : (
         <div className="groups-grid">
           {data.groups.map((group) => (

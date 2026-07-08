@@ -2,7 +2,9 @@ import { useState, useCallback } from 'react';
 import { Icon } from './Icon';
 import { Pagination } from './Pagination';
 import { AddressCleanupCard } from './AddressCleanupCard';
+import { LoadingSpinner } from './ui/LoadingSpinner';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { EmptyState } from './ui/EmptyState';
 import { useToast } from './ui/Toast';
 import {
   useDuplicatesContacts,
@@ -91,10 +93,7 @@ export function AddressDuplicates() {
 
   if (isLoading) {
     return (
-      <div className="duplicates-loading">
-        <Icon name="arrows-rotate" className="spinning" />
-        <p>Finding duplicate addresses...</p>
-      </div>
+      <LoadingSpinner message="Finding duplicate addresses..." />
     );
   }
 
@@ -143,10 +142,10 @@ export function AddressDuplicates() {
       </div>
 
       {isEmpty ? (
-        <div className="duplicates-empty">
-          <Icon name="circle-check" />
-          <p>No duplicate addresses found{confidenceFilter !== 'all' ? ` for "${confidenceFilter}" confidence` : ''}</p>
-        </div>
+        <EmptyState
+          icon="circle-check"
+          title={`No duplicate addresses found${confidenceFilter !== 'all' ? ` for "${confidenceFilter}" confidence` : ''}`}
+        />
       ) : (
       <div className="duplicates-list">
         {contacts.map((contact) => (

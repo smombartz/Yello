@@ -1,6 +1,6 @@
-import { Icon } from './Icon';
 import { DuplicateGroup } from './DuplicateGroup';
 import { Pagination } from './Pagination';
+import { EmptyState } from './ui/EmptyState';
 import type { DuplicateGroup as DuplicateGroupType, DeduplicationMode } from '../api/types';
 
 interface DuplicateGroupListProps {
@@ -35,10 +35,7 @@ export function DuplicateGroupList({
 
   if (visibleGroups.length === 0 && !isLoading) {
     return (
-      <div className="duplicate-group-list-empty">
-        <Icon name="circle-check" />
-        <p>No duplicates found for this mode</p>
-      </div>
+      <EmptyState icon="circle-check" title="No duplicates found for this mode" />
     );
   }
 

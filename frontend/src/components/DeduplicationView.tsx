@@ -10,6 +10,7 @@ import { useArchiveContacts } from '../api/archiveHooks';
 import type { ConfidenceLevel, DeduplicationMode, DuplicateGroup } from '../api/types';
 import type { OutletContext } from './Layout';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { LoadingSpinner } from './ui/LoadingSpinner';
 import { useToast } from './ui/Toast';
 
 const ALL_CONFIDENCE_LEVELS: Set<ConfidenceLevel> = new Set(['very_high', 'high', 'medium']);
@@ -317,10 +318,7 @@ export function DeduplicationView() {
 
       <div className="dedup-content">
         {isDuplicatesLoading ? (
-          <div className="dedup-loading">
-            <Icon name="arrows-rotate" className="spinning" />
-            <p>Finding duplicates...</p>
-          </div>
+          <LoadingSpinner message="Finding duplicates..." />
         ) : (
           <DuplicateGroupList
             groups={groups}

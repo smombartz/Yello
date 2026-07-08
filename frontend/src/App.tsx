@@ -21,6 +21,7 @@ import { LoginPage } from './components/LoginPage';
 import { PublicContactCard } from './components/PublicContactCard';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
+import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { useAuth } from './hooks/useAuth';
 import { DemoPromptModal } from './components/DemoPromptModal';
 
@@ -29,38 +30,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
 
   if (isLoading) {
-    return (
-      <div className="auth-loading">
-        <div className="auth-loading-spinner" />
-        <p>Loading...</p>
-        <style>{`
-          .auth-loading {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            background: var(--ds-bg-secondary);
-          }
-          .auth-loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid var(--ds-border-color);
-            border-top-color: var(--ds-color-primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-          .auth-loading p {
-            color: var(--ds-text-secondary);
-            margin: 0;
-          }
-        `}</style>
-      </div>
-    );
+    return <LoadingSpinner fullscreen message="Loading..." />;
   }
 
   if (!isAuthenticated) {
@@ -83,38 +53,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="auth-loading">
-        <div className="auth-loading-spinner" />
-        <p>Loading...</p>
-        <style>{`
-          .auth-loading {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            background: var(--ds-bg-secondary);
-          }
-          .auth-loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid var(--ds-border-color);
-            border-top-color: var(--ds-color-primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-          .auth-loading p {
-            color: var(--ds-text-secondary);
-            margin: 0;
-          }
-        `}</style>
-      </div>
-    );
+    return <LoadingSpinner fullscreen message="Loading..." />;
   }
 
   // If already authenticated, redirect to dashboard

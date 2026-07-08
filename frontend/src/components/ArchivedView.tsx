@@ -2,7 +2,9 @@ import { useState, useCallback, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
 import { Icon } from './Icon';
+import { LoadingSpinner } from './ui/LoadingSpinner';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { EmptyState } from './ui/EmptyState';
 import { useToast } from './ui/Toast';
 import {
   useArchivedContacts,
@@ -149,16 +151,13 @@ export function ArchivedView() {
 
       <div className="archived-content">
         {isContactsLoading ? (
-          <div className="archived-loading">
-            <Icon name="arrows-rotate" className="spinning" />
-            <p>Loading archived contacts...</p>
-          </div>
+          <LoadingSpinner message="Loading archived contacts..." />
         ) : contacts.length === 0 ? (
-          <div className="archived-empty">
-            <Icon name="boxes-stacked" />
-            <h3>No Archived Contacts</h3>
-            <p>Contacts you archive will appear here.</p>
-          </div>
+          <EmptyState
+            icon="boxes-stacked"
+            title="No Archived Contacts"
+            description="Contacts you archive will appear here."
+          />
         ) : (
           <div className="archived-list">
             <div className="archived-list-actions">

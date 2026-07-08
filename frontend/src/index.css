@@ -189,6 +189,12 @@ select:focus-visible {
   align-items: center;
   justify-content: center;
   gap: var(--ds-space-4);
+  padding: 3rem;
+}
+
+.loading-spinner-fullscreen {
+  min-height: 100vh;
+  background: var(--ds-bg-secondary);
 }
 
 .loading-spinner {
@@ -847,7 +853,6 @@ a.nav-rail-item.active {
 }
 
 /* Empty and loading states */
-.empty-state,
 .loading-state,
 .error-state {
   padding: 3rem;
@@ -857,6 +862,39 @@ a.nav-rail-item.active {
 
 .error-state {
   color: var(--ds-color-error);
+}
+
+/* Shared EmptyState primitive (components/ui/EmptyState.tsx) */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem;
+  text-align: center;
+  color: var(--ds-text-secondary);
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  color: var(--ds-text-muted);
+}
+
+.empty-state-title {
+  margin: 0;
+  color: var(--ds-text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.empty-state-description {
+  margin: 0;
+  max-width: 340px;
+}
+
+.empty-state-action {
+  margin-top: 0.5rem;
 }
 
 /* Virtual scroll — handled by useWindowVirtualizer (body scroll) */
