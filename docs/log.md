@@ -1,5 +1,11 @@
 # Change Log
 
+## 2026-07-08 — Fix: creating a contact returned 500 (missing `linkedinEnrichment`)
+
+- **Bug:** `POST /api/contacts` threw `"linkedinEnrichment" is required!` during response serialization. `ContactDetailSchema` (the 201 response schema) requires `linkedinEnrichment`, but the create handler's returned object omitted it. The GET and PUT handlers already include it; only the POST handler was missing the field.
+- **Fix:** `backend/src/routes/contacts.ts` — the create handler now returns `linkedinEnrichment: null` (a freshly created contact has no enrichment). Backend typecheck passes.
+- Investigated the paired "Cancel does nothing" report: the Cancel button (`AddContactPage` → `navigate('/contacts')`) and the header-action rendering are correct and unchanged. The Save button's `onClick` is the only path that could have fired the logged POST (no `<form>`/Enter-submit exists), which confirms the header buttons and their handlers work. Fixing the 500 also restores Save's post-success `navigate('/contacts')` — the identical call Cancel uses.
+
 ## 2026-07-08 — UI unification follow-up: grey/spacing/typography token conversion
 
 - **Colors:** converted the remaining raw grey/neutral hexes (`#e5e7eb`→`--ds-border-color`, `#f9fafb`→`--ds-bg-secondary`, `#9ca3af`→`--ds-text-muted`, `#d1d5db`→`--ds-border-dark`) property-aware, and stripped ~20 dead `var(--ds-*, #hex)` fallbacks (all tokens are defined). One-offs with no exact token (scrollbar `#c1c1c9`, toast `#333`, `#616189`, `#111118`) left as-is

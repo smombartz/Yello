@@ -612,7 +612,8 @@ export default async function contactsRoutes(
         name: rp.name,
         relationship: rp.relationship
       })),
-      photoUrl: getPhotoUrl(contact.photo_hash, 'medium')
+      photoUrl: getPhotoUrl(contact.photo_hash, 'medium'),
+      linkedinEnrichment: null
     };
   });
 
