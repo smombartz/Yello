@@ -1860,6 +1860,21 @@ a.nav-rail-item.active {
   text-decoration: underline;
 }
 
+/* WhatsApp quick-link next to phone numbers */
+a.whatsapp-link {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--ds-space-2);
+  color: var(--ds-color-whatsapp);
+  font-size: var(--ds-font-md);
+  vertical-align: middle;
+}
+
+a.whatsapp-link:hover {
+  color: var(--ds-color-whatsapp-hover);
+  text-decoration: none;
+}
+
 .info-field-value .address-lines {
   display: flex;
   flex-direction: column;

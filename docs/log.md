@@ -281,3 +281,10 @@
 - `ContactsPage`: now seeds its search state from the `?q=` URL param via `useSearchParams`, so the Dashboard query arrives pre-filled
 - Groups (`GroupsView`): added a header search bar that filters the groups grid by category name (with a "No matching groups" empty state); when a group is open, the search filters contacts within that group via `ContactList`'s `search` prop. Search resets when entering/leaving a group.
 
+## 2026-07-08 — WhatsApp quick-link next to phone numbers
+
+- Added `--ds-color-whatsapp` / `--ds-color-whatsapp-hover` brand tokens to `design-system.css`
+- Added a `WhatsAppLink` helper in `ContactFormSections.tsx` that renders a WhatsApp brand icon linking to `https://wa.me/<digits>` (phone stripped to digits via `.replace(/\D/g, '')`, opens in a new tab)
+- Rendered `WhatsAppLink` next to each phone in both view-mode phone displays (`PhoneSection` — used by the contact card/detail + expanded row + profile preview; and `ContactInfoSection` — used by the add-contact page)
+- Added `.whatsapp-link` styling in `index.css` (uses the new WhatsApp token)
+

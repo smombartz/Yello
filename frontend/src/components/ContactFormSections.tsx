@@ -63,6 +63,25 @@ function InfoField({ icon, iconStyle, children, flagEmoji }: {
   );
 }
 
+/** WhatsApp quick-link shown next to a phone number. wa.me wants a digits-only number. */
+function WhatsAppLink({ phone }: { phone: string }) {
+  const number = phone.replace(/\D/g, '');
+  if (!number) return null;
+  return (
+    <a
+      href={`https://wa.me/${number}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="whatsapp-link"
+      title="Message on WhatsApp"
+      aria-label="Message on WhatsApp"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <Icon name="whatsapp" style="brands" />
+    </a>
+  );
+}
+
 function getEmailIcon(email: string): { icon: string; style?: 'solid' | 'regular' | 'brands' } {
   const lower = email.toLowerCase();
   if (lower.includes('@gmail') || lower.includes('@googlemail')) return { icon: 'google', style: 'brands' };
@@ -283,6 +302,7 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
             <a href={`tel:${phone.phone}`} title={getCountryName(phone.countryCode) || undefined}>
               {phone.phoneDisplay}
             </a>
+            <WhatsAppLink phone={phone.phone} />
           </InfoField>
         );
       })}
@@ -524,6 +544,7 @@ export function ContactInfoSection({ emails, phones, isEditMode, onEmailsChange,
                   {flag && <span className="phone-flag" title={countryName}>{flag}</span>}
                   <span>{phone.phoneDisplay}</span>
                 </a>
+                <WhatsAppLink phone={phone.phone} />
                 {phone.type && <span className="item-type">{phone.type}</span>}
               </div>
             </div>

@@ -56,6 +56,10 @@
   --ds-color-purple-light: #e9d8fd;
   --ds-color-purple-dark: #6b46c1;
 
+  /* Third-party brand colors */
+  --ds-color-whatsapp: #25d366;
+  --ds-color-whatsapp-hover: #1da851;
+
   /* ============================================
    * COLORS - Text
    * ============================================ */
