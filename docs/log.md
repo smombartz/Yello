@@ -305,3 +305,15 @@
 - `backend/src/routes/__tests__/contacts.test.ts` — added tests for LinkedIn (headline/company/skill/position), email-domain, and URL-fragment search.
 - Verified: backend `npm run build` clean; full suite 126/126 pass; against real reindexed data, LinkedIn field terms (BlackRock, Spotify, skills, positions), email domains, and existing name search all resolve to the correct contacts.
 
+## 2026-07-08 21:23 — Tools page reorganized into grouped sections
+
+- **`frontend/src/components/SettingsView.tsx`** — replaced the flat mix of a top nav-link list + standalone collapsible cards with four labeled groups, each wrapped in `<section className="settings-group">` with a `settings-group-title` heading:
+  - **Import** — Import VCF (collapsible upload), LinkedIn Contacts (→ `/import`), Import from Google Contacts (→ `/google-contacts-import`)
+  - **Sync** — Apple Contacts (iCloud connect/import), Google Contacts
+  - **Tools** — Cleanup (→ `/cleanup`), Merge (→ `/merge`), Enrich (→ `/enrich`)
+  - **Export** — Export Data
+  - **Danger Zone** — kept standalone underneath the groups
+- Relabeled the old "Import LinkedIn Connections" nav link to "LinkedIn Contacts" with the `linkedin` brand icon (was `download`).
+- Dropped the redundant conditional "Import from iCloud" top nav link — that action is already reachable from the Apple Contacts sync card when connected.
+- **`frontend/src/index.css`** — added `.settings-group` (flex column, `--ds-space-3` gap) and `.settings-group-title` (uppercase `--ds-font-xs` secondary-color label); bumped `.settings-content` inter-group gap from `--ds-space-6` to `--ds-space-8`.
+- All existing inline logic (VCF upload/progress/results, iCloud connect/disconnect, export, delete-all confirm) preserved verbatim. `tsc --noEmit` and ESLint both clean.

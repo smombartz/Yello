@@ -88,53 +88,9 @@ export function SettingsView() {
   return (
     <div className="settings-view">
       <div className="settings-content">
-        {/* Page Links */}
-        <nav className="settings-nav">
-          <Link to="/import" className="collapsible-card settings-nav-link">
-            <div className="settings-section-header">
-              <Icon name="download" />
-              <h2>Import LinkedIn Connections</h2>
-            </div>
-            <Icon name="chevron-right" className="nav-link-arrow" />
-          </Link>
-          <Link to="/merge" className="collapsible-card settings-nav-link">
-            <div className="settings-section-header">
-              <Icon name="code-merge" />
-              <h2>Merge</h2>
-            </div>
-            <Icon name="chevron-right" className="nav-link-arrow" />
-          </Link>
-          <Link to="/cleanup" className="collapsible-card settings-nav-link">
-            <div className="settings-section-header">
-              <Icon name="broom" />
-              <h2>Cleanup</h2>
-            </div>
-            <Icon name="chevron-right" className="nav-link-arrow" />
-          </Link>
-          <Link to="/enrich" className="collapsible-card settings-nav-link">
-            <div className="settings-section-header">
-              <Icon name="wand-magic-sparkles" />
-              <h2>Enrich</h2>
-            </div>
-            <Icon name="chevron-right" className="nav-link-arrow" />
-          </Link>
-          {icloudSettings.data?.connected && (
-            <Link to="/icloud-import" className="collapsible-card settings-nav-link">
-              <div className="settings-section-header">
-                <Icon name="apple" style="brands" />
-                <h2>Import from iCloud</h2>
-              </div>
-              <Icon name="chevron-right" className="nav-link-arrow" />
-            </Link>
-          )}
-          <Link to="/google-contacts-import" className="collapsible-card settings-nav-link">
-            <div className="settings-section-header">
-              <Icon name="google" style="brands" />
-              <h2>Import from Google Contacts</h2>
-            </div>
-            <Icon name="chevron-right" className="nav-link-arrow" />
-          </Link>
-        </nav>
+        {/* ===== Import ===== */}
+        <section className="settings-group">
+          <h2 className="settings-group-title">Import</h2>
 
         {/* Import VCF Section */}
         <section className={`settings-section collapsible-card${importExpanded ? ' expanded' : ''}`}>
@@ -232,6 +188,29 @@ export function SettingsView() {
           )}
         </section>
 
+        {/* Import LinkedIn Connections */}
+        <Link to="/import" className="collapsible-card settings-nav-link">
+          <div className="settings-section-header">
+            <Icon name="linkedin" style="brands" />
+            <h2>Import LinkedIn Connections</h2>
+          </div>
+          <Icon name="chevron-right" className="nav-link-arrow" />
+        </Link>
+
+        {/* Import Google Contacts */}
+        <Link to="/google-contacts-import" className="collapsible-card settings-nav-link">
+          <div className="settings-section-header">
+            <Icon name="google" style="brands" />
+            <h2>Import Google Contacts</h2>
+          </div>
+          <Icon name="chevron-right" className="nav-link-arrow" />
+        </Link>
+        </section>
+
+        {/* ===== Sync ===== */}
+        <section className="settings-group">
+          <h2 className="settings-group-title">Sync</h2>
+
         {/* Apple Contacts Section */}
         <section className={`settings-section collapsible-card${icloudExpanded ? ' expanded' : ''}`}>
           <button
@@ -240,7 +219,7 @@ export function SettingsView() {
           >
             <div className="settings-section-header">
               <Icon name="apple" style="brands" />
-              <h2>Apple Contacts</h2>
+              <h2>Sync Apple Contacts</h2>
             </div>
             <Icon name="chevron-down" className={`expand-icon${icloudExpanded ? ' rotated' : ''}`} />
           </button>
@@ -327,7 +306,7 @@ export function SettingsView() {
           >
             <div className="settings-section-header">
               <Icon name="google" style="brands" />
-              <h2>Google Contacts</h2>
+              <h2>Sync Google Contacts</h2>
             </div>
             <Icon name="chevron-down" className={`expand-icon${googleContactsExpanded ? ' rotated' : ''}`} />
           </button>
@@ -343,6 +322,38 @@ export function SettingsView() {
             </div>
           )}
         </section>
+        </section>
+
+        {/* ===== Tools ===== */}
+        <section className="settings-group">
+          <h2 className="settings-group-title">Tools</h2>
+
+          <Link to="/cleanup" className="collapsible-card settings-nav-link">
+            <div className="settings-section-header">
+              <Icon name="broom" />
+              <h2>Cleanup</h2>
+            </div>
+            <Icon name="chevron-right" className="nav-link-arrow" />
+          </Link>
+          <Link to="/merge" className="collapsible-card settings-nav-link">
+            <div className="settings-section-header">
+              <Icon name="code-merge" />
+              <h2>Merge</h2>
+            </div>
+            <Icon name="chevron-right" className="nav-link-arrow" />
+          </Link>
+          <Link to="/enrich" className="collapsible-card settings-nav-link">
+            <div className="settings-section-header">
+              <Icon name="wand-magic-sparkles" />
+              <h2>Enrich</h2>
+            </div>
+            <Icon name="chevron-right" className="nav-link-arrow" />
+          </Link>
+        </section>
+
+        {/* ===== Export ===== */}
+        <section className="settings-group">
+          <h2 className="settings-group-title">Export</h2>
 
         {/* Export Section */}
         <section className={`settings-section collapsible-card${exportExpanded ? ' expanded' : ''}`}>
@@ -367,6 +378,7 @@ export function SettingsView() {
               </button>
             </div>
           )}
+        </section>
         </section>
 
         {/* Danger Zone Section */}

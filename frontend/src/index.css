@@ -4527,7 +4527,23 @@ a.whatsapp-link:hover {
   flex-direction: column;
   align-items: stretch;
   width: 100%;
-  gap: var(--ds-space-6);
+  gap: var(--ds-space-8);
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.settings-group-title {
+  margin: 0 0 var(--ds-space-1);
+  padding: 0 var(--ds-space-1);
+  font-size: var(--ds-font-xs);
+  font-weight: var(--ds-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ds-text-secondary);
 }
 
 .settings-nav {
@@ -4754,7 +4770,6 @@ a.whatsapp-link:hover {
 }
 
 .settings-section.danger-zone .settings-section-header {
-  background: var(--ds-color-error-light);
   border-bottom-color: var(--ds-color-error-light);
 }
 
