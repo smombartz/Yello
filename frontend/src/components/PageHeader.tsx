@@ -6,6 +6,7 @@ interface PageHeaderProps {
   title: string;
   search?: string;
   onSearchChange?: (value: string) => void;
+  onSearchSubmit?: () => void;
   searchPlaceholder?: string;
   info?: ReactNode;
   actions?: ReactNode;
@@ -16,6 +17,7 @@ export function PageHeader({
   title,
   search,
   onSearchChange,
+  onSearchSubmit,
   searchPlaceholder = 'Search...',
   info,
   actions,
@@ -38,6 +40,7 @@ export function PageHeader({
               <SearchBar
                 value={search ?? ''}
                 onChange={onSearchChange}
+                onSubmit={onSearchSubmit}
                 placeholder={searchPlaceholder}
                 className="search-bar--header"
               />

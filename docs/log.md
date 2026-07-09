@@ -273,3 +273,11 @@
 - Added inline edit mode to Normalize tab: pencil icon on each junk address opens editable fields (street, city, state, postalCode, country); Save updates the address and removes it from the junk list
 - Added "Custom" radio option to Duplicates tab: lets users compose a custom address from editable fields pre-filled with the recommended address data; on Apply, the recommended address is updated and duplicates are removed
 - Added CSS styles for `.address-edit-form`, `.address-edit-input`, `.address-edit-actions`, and normalize edit button
+
+## 2026-07-08 — Search bar on Dashboard & Groups pages
+
+- Added optional `onSubmit` (fires on Enter) to the shared `SearchBar` primitive; threaded a matching `onSearchSubmit` through `PageHeaderConfig` (Layout) and `PageHeader`
+- Dashboard (`DashboardView`): added a header search bar; pressing Enter navigates to `/contacts?q=<term>` (global contact search)
+- `ContactsPage`: now seeds its search state from the `?q=` URL param via `useSearchParams`, so the Dashboard query arrives pre-filled
+- Groups (`GroupsView`): added a header search bar that filters the groups grid by category name (with a "No matching groups" empty state); when a group is open, the search filters contacts within that group via `ContactList`'s `search` prop. Search resets when entering/leaving a group.
+

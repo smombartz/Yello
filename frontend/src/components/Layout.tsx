@@ -10,6 +10,7 @@ export interface PageHeaderConfig {
   title: string;
   search?: string;
   onSearchChange?: (value: string) => void;
+  onSearchSubmit?: () => void;
   searchPlaceholder?: string;
   info?: ReactNode;
   actions?: ReactNode;

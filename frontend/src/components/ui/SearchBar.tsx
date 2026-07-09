@@ -13,6 +13,8 @@ interface SearchBarProps {
    */
   trailing?: 'clear' | 'cancel';
   onCancel?: () => void;
+  /** Called when the user presses Enter in the field. */
+  onSubmit?: () => void;
   autoFocus?: boolean;
   disabled?: boolean;
   inputRef?: Ref<HTMLInputElement>;
@@ -27,6 +29,7 @@ export function SearchBar({
   variant = 'boxed',
   trailing = 'clear',
   onCancel,
+  onSubmit,
   autoFocus = false,
   disabled = false,
   inputRef,
@@ -46,6 +49,9 @@ export function SearchBar({
         className="search-bar-input"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onSubmit?.();
+        }}
         placeholder={placeholder}
         autoFocus={autoFocus}
         disabled={disabled}

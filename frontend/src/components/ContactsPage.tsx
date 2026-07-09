@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { ContactList } from './ContactList';
 import { Icon } from './Icon';
 import type { OutletContext } from './Layout';
@@ -7,7 +7,9 @@ import type { OutletContext } from './Layout';
 export function ContactsPage() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
   const navigate = useNavigate();
-  const [search, setSearch] = useState('');
+  const [searchParams] = useSearchParams();
+  // Seed search from the ?q= param (e.g. when arriving from the Dashboard search).
+  const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
   const [totalContacts, setTotalContacts] = useState<number>(0);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [sort, setSort] = useState('name-asc');

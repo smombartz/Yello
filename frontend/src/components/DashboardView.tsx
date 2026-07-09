@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
 import { useDashboardStats } from '../api/dashboardHooks';
@@ -85,11 +85,22 @@ function formatBirthdayDays(daysUntil: number): string {
 export function DashboardView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
   const navigate = useNavigate();
+  const [search, setSearch] = useState('');
   const { data, isLoading, error } = useDashboardStats();
 
   useEffect(() => {
-    setHeaderConfig({ title: 'Dashboard' });
-  }, [setHeaderConfig]);
+    const goToContacts = () => {
+      const trimmed = search.trim();
+      navigate(trimmed ? `/contacts?q=${encodeURIComponent(trimmed)}` : '/contacts');
+    };
+    setHeaderConfig({
+      title: 'Dashboard',
+      search,
+      onSearchChange: setSearch,
+      onSearchSubmit: goToContacts,
+      searchPlaceholder: 'Search contacts...',
+    });
+  }, [setHeaderConfig, search, navigate]);
 
   const handleContactClick = (id: number) => {
     navigate(`/contacts/${id}`);

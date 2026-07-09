@@ -10,16 +10,19 @@ import { EmptyState } from './ui/EmptyState';
 export function GroupsView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const [viewMode] = useState<'list' | 'grid'>(() => {
     return (localStorage.getItem('contactViewMode') as 'list' | 'grid') || 'list';
   });
   const { data, isLoading, error } = useGroups();
 
   const handleGroupClick = (category: string) => {
+    setSearch('');
     setSelectedCategory(category);
   };
 
   const handleBackToGroups = useCallback(() => {
+    setSearch('');
     setSelectedCategory(null);
   }, []);
 
@@ -27,6 +30,9 @@ export function GroupsView() {
     if (selectedCategory) {
       setHeaderConfig({
         title: selectedCategory,
+        search,
+        onSearchChange: setSearch,
+        searchPlaceholder: `Search in ${selectedCategory}...`,
         actions: (
           <button className="header-action-btn secondary" onClick={handleBackToGroups}>
             <Icon name="arrow-left" />
@@ -37,10 +43,17 @@ export function GroupsView() {
     } else {
       setHeaderConfig({
         title: 'Groups',
+        search,
+        onSearchChange: setSearch,
+        searchPlaceholder: 'Search groups...',
         info: data?.groups ? <span>{data.groups.length} groups</span> : undefined,
       });
     }
-  }, [setHeaderConfig, selectedCategory, handleBackToGroups, data?.groups]);
+  }, [setHeaderConfig, selectedCategory, search, handleBackToGroups, data?.groups]);
+
+  const filteredGroups = (data?.groups ?? []).filter((group) =>
+    group.category.toLowerCase().includes(search.trim().toLowerCase())
+  );
 
   // When a category is selected, show the filtered contact list
   if (selectedCategory) {
@@ -48,6 +61,7 @@ export function GroupsView() {
       <div className="groups-view groups-filtered">
         <ContactList
           categoryFilter={selectedCategory}
+          search={search}
           viewMode={viewMode}
         />
       </div>
@@ -70,9 +84,15 @@ export function GroupsView() {
           title="No Groups"
           description="Your contacts don't have any categories assigned yet."
         />
+      ) : !filteredGroups.length ? (
+        <EmptyState
+          icon="magnifying-glass"
+          title="No matching groups"
+          description={`No groups match "${search}"`}
+        />
       ) : (
         <div className="groups-grid">
-          {data.groups.map((group) => (
+          {filteredGroups.map((group) => (
             <div
               key={group.category}
               className="card group-card"
