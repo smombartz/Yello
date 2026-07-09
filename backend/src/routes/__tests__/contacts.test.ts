@@ -213,6 +213,68 @@ describe('contacts routes', () => {
       expect(body.contacts).toHaveLength(2);
       expect(body.total).toBe(2);
     });
+
+    it('should search LinkedIn enrichment fields (headline, company, skills)', async () => {
+      const db = getUserDatabase(1);
+      const target = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Grace Hopper');
+      const targetId = target.lastInsertRowid as number;
+      db.prepare(`
+        INSERT INTO linkedin_enrichment (contact_id, headline, company_name, skills, positions)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(
+        targetId,
+        'Distinguished Compiler Pioneer',
+        'US Navy',
+        JSON.stringify(['COBOL', 'Compilers']),
+        JSON.stringify([{ title: 'Rear Admiral', companyName: 'United States Navy' }])
+      );
+      rebuildContactSearch(db, targetId);
+
+      const other = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Someone Else');
+      rebuildContactSearch(db, other.lastInsertRowid as number);
+
+      for (const term of ['Compiler', 'COBOL', 'Navy', 'Admiral']) {
+        const response = await app.inject({ method: 'GET', url: `/api/contacts?search=${term}` });
+        const body = response.json();
+        expect(body.total, `search=${term}`).toBe(1);
+        expect(body.contacts[0].displayName, `search=${term}`).toBe('Grace Hopper');
+      }
+    });
+
+    it('should search by email domain', async () => {
+      const db = getUserDatabase(1);
+      const target = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Alan Turing');
+      const targetId = target.lastInsertRowid as number;
+      db.prepare('INSERT INTO contact_emails (contact_id, email, is_primary) VALUES (?, ?, ?)').run(targetId, 'alan@bletchley.org', 1);
+      rebuildContactSearch(db, targetId);
+
+      const other = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('No Email');
+      rebuildContactSearch(db, other.lastInsertRowid as number);
+
+      const response = await app.inject({ method: 'GET', url: '/api/contacts?search=bletchley' });
+      const body = response.json();
+      expect(body.total).toBe(1);
+      expect(body.contacts[0].displayName).toBe('Alan Turing');
+    });
+
+    it('should search by URL fragment', async () => {
+      const db = getUserDatabase(1);
+      const target = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Ada Lovelace');
+      const targetId = target.lastInsertRowid as number;
+      db.prepare('INSERT INTO contact_urls (contact_id, url, label) VALUES (?, ?, ?)').run(targetId, 'https://analyticalengine.example/ada', 'Homepage');
+      db.prepare('INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url) VALUES (?, ?, ?, ?)').run(targetId, 'linkedin', 'adalovelace', 'https://www.linkedin.com/in/countessofcomputing');
+      rebuildContactSearch(db, targetId);
+
+      const other = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('No Links');
+      rebuildContactSearch(db, other.lastInsertRowid as number);
+
+      for (const term of ['analyticalengine', 'countessofcomputing']) {
+        const response = await app.inject({ method: 'GET', url: `/api/contacts?search=${term}` });
+        const body = response.json();
+        expect(body.total, `search=${term}`).toBe(1);
+        expect(body.contacts[0].displayName, `search=${term}`).toBe('Ada Lovelace');
+      }
+    });
   });
 
   describe('GET /api/contacts/:id', () => {

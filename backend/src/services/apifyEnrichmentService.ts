@@ -8,6 +8,7 @@
 
 import type { Database as DatabaseType } from 'better-sqlite3';
 import { downloadAndProcessImage } from './profileImageService.js';
+import { rebuildContactSearch } from './database.js';
 
 // ============================================================
 // Shared interfaces (identical to apolloEnrichmentService.ts)
@@ -1084,6 +1085,9 @@ async function processApifyResults(
 
       storeEnrichmentData(db, contact.contactId, enrichmentData, JSON.stringify(profile));
       clearEnrichmentFailure(db, contact.contactId);
+      // Fold the freshly enriched LinkedIn data into the search index so it is
+      // immediately searchable (headline, company, skills, etc.).
+      rebuildContactSearch(db, contact.contactId);
       state.succeeded++;
 
       // Download LinkedIn photo if available (always download to collect all sources)

@@ -6,6 +6,7 @@ import type { Database as DatabaseType } from 'better-sqlite3';
 import { getAuthDatabase } from './authDatabase.js';
 import { getUserDatabase, closeUserDatabase } from './userDatabase.js';
 import { processPhoto } from './photoProcessor.js';
+import { rebuildAllContactSearch } from './database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -409,11 +410,6 @@ function seedDemoContacts(db: DatabaseType): void {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  const insertFts = db.prepare(`
-    INSERT INTO contacts_unified_fts (rowid, searchable_text)
-    VALUES (?, ?)
-  `);
-
   const seed = db.transaction(() => {
     for (const contact of DEMO_CONTACTS) {
       const displayName = `${contact.firstName} ${contact.lastName}`;
@@ -460,14 +456,14 @@ function seedDemoContacts(db: DatabaseType): void {
         );
       }
 
-      // Unified FTS entry
-      const emailText = contact.emails.map(e => e.email).join(' ');
-      const searchableText = `${displayName} ${contact.company} ${contact.title} ${emailText}`;
-      insertFts.run(contactId, searchableText);
     }
   });
 
   seed();
+
+  // Build the unified search index from all indexed fields (incl. LinkedIn
+  // enrichment, email domains, URLs) rather than a hand-rolled subset.
+  rebuildAllContactSearch(db);
 }
 
 /**

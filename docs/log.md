@@ -295,3 +295,13 @@
 - Fix: terminated the selector list with its own `{ height: var(--ds-control-height); box-sizing: border-box; }` block, restoring uniform 32px height + border-box and stopping the erroneous `width: 32px` leak (square-icon width rule now applies to only the four square buttons, as intended)
 - CSS-only change; `npm run build` passes
 
+## 2026-07-08 19:19 — Search now covers LinkedIn enrichment, email domains, and URLs
+
+- **Problem:** Contact search (FTS5 via `contacts_unified_fts`) never indexed the `linkedin_enrichment` table, so enriched data (headline, about, job title, company, industry, location, skills, education, positions, certifications, languages, honors) was unsearchable. Emails were only matchable from the start of the address (domain not searchable), and only social-profile *usernames* were indexed — not URLs.
+- `backend/src/services/database.ts` — `buildSearchableText`: added a `linkedin_enrichment` block that pushes the plain-text columns and flattens the JSON-array columns via a new `collectJsonStrings()` helper (recursively collects string values, tolerant of malformed JSON). Also: emails now additionally indexed split on `@`/`.` (so `gmail` matches `john@gmail.com`); social `profile_url` and `contact_urls.url` are now indexed (raw + punctuation-normalized copy). No schema/tokenizer change.
+- `backend/src/services/apifyEnrichmentService.ts` — `processApifyResults` now calls `rebuildContactSearch(db, contactId)` after `storeEnrichmentData`, so newly enriched data is immediately searchable (covers both `enrichContacts` and `recoverFromDataset`).
+- `backend/src/services/demoService.ts` — demo seeder now calls `rebuildAllContactSearch(db)` after seeding instead of hand-rolling a name/company/email-only FTS entry, so demo LinkedIn data is searchable too.
+- `backend/src/scripts/reindexSearch.ts` (new) — one-time backfill that iterates every per-user DB under `USER_DATA_PATH` and rebuilds the search index. Run with `npx tsx src/scripts/reindexSearch.ts`. Ran it: reindexed users 3 (8058), 12 (3693), 11 (20), 4 (20).
+- `backend/src/routes/__tests__/contacts.test.ts` — added tests for LinkedIn (headline/company/skill/position), email-domain, and URL-fragment search.
+- Verified: backend `npm run build` clean; full suite 126/126 pass; against real reindexed data, LinkedIn field terms (BlackRock, Spotify, skills, positions), email domains, and existing name search all resolve to the correct contacts.
+

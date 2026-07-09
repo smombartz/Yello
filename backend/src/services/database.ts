@@ -1,6 +1,35 @@
 import type { Database as DatabaseType } from 'better-sqlite3';
 
 /**
+ * Recursively collect every string value from a JSON-encoded column so it can
+ * be indexed for search. Handles string arrays (skills, education) and object
+ * arrays (positions: [{title, companyName, ...}]) alike. Returns [] on any
+ * parse failure so a malformed value never breaks index building.
+ */
+function collectJsonStrings(raw: string | null): string[] {
+  if (!raw) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+
+  const out: string[] = [];
+  const walk = (value: unknown): void => {
+    if (typeof value === 'string') {
+      if (value.trim()) out.push(value);
+    } else if (Array.isArray(value)) {
+      for (const item of value) walk(item);
+    } else if (value && typeof value === 'object') {
+      for (const item of Object.values(value)) walk(item);
+    }
+  };
+  walk(parsed);
+  return out;
+}
+
+/**
  * Build searchable text for a contact by concatenating all searchable fields
  */
 export function buildSearchableText(database: DatabaseType, contactId: number): string {
@@ -34,6 +63,9 @@ export function buildSearchableText(database: DatabaseType, contactId: number): 
   `).all(contactId) as Array<{ email: string }>;
   for (const e of emails) {
     parts.push(e.email);
+    // Also index the address split on @ and . so the domain/TLD are searchable
+    // (e.g. "gmail" matches john@gmail.com), not just the leading local-part.
+    parts.push(e.email.replace(/[@.]/g, ' '));
   }
 
   // Phones
@@ -64,10 +96,14 @@ export function buildSearchableText(database: DatabaseType, contactId: number): 
 
   // Social profiles
   const socials = database.prepare(`
-    SELECT username FROM contact_social_profiles WHERE contact_id = ?
-  `).all(contactId) as Array<{ username: string }>;
+    SELECT username, profile_url FROM contact_social_profiles WHERE contact_id = ?
+  `).all(contactId) as Array<{ username: string | null; profile_url: string | null }>;
   for (const s of socials) {
-    parts.push(s.username);
+    if (s.username) parts.push(s.username);
+    if (s.profile_url) {
+      parts.push(s.profile_url);
+      parts.push(s.profile_url.replace(/[^a-zA-Z0-9]+/g, ' '));
+    }
   }
 
   // Categories
@@ -86,12 +122,16 @@ export function buildSearchableText(database: DatabaseType, contactId: number): 
     parts.push(im.handle);
   }
 
-  // URLs (labels)
+  // URLs (labels + the URL itself)
   const urls = database.prepare(`
-    SELECT label FROM contact_urls WHERE contact_id = ? AND label IS NOT NULL
-  `).all(contactId) as Array<{ label: string }>;
+    SELECT label, url FROM contact_urls WHERE contact_id = ?
+  `).all(contactId) as Array<{ label: string | null; url: string | null }>;
   for (const u of urls) {
-    parts.push(u.label);
+    if (u.label) parts.push(u.label);
+    if (u.url) {
+      parts.push(u.url);
+      parts.push(u.url.replace(/[^a-zA-Z0-9]+/g, ' '));
+    }
   }
 
   // Related people
@@ -100,6 +140,45 @@ export function buildSearchableText(database: DatabaseType, contactId: number): 
   `).all(contactId) as Array<{ name: string }>;
   for (const r of related) {
     parts.push(r.name);
+  }
+
+  // LinkedIn enrichment (plain-text columns + parsed JSON-array columns)
+  const enrichment = database.prepare(`
+    SELECT headline, about, job_title, company_name, industry, country, location,
+           education, skills, positions, certifications, languages, honors
+    FROM linkedin_enrichment WHERE contact_id = ?
+  `).get(contactId) as {
+    headline: string | null;
+    about: string | null;
+    job_title: string | null;
+    company_name: string | null;
+    industry: string | null;
+    country: string | null;
+    location: string | null;
+    education: string | null;
+    skills: string | null;
+    positions: string | null;
+    certifications: string | null;
+    languages: string | null;
+    honors: string | null;
+  } | undefined;
+
+  if (enrichment) {
+    if (enrichment.headline) parts.push(enrichment.headline);
+    if (enrichment.about) parts.push(enrichment.about);
+    if (enrichment.job_title) parts.push(enrichment.job_title);
+    if (enrichment.company_name) parts.push(enrichment.company_name);
+    if (enrichment.industry) parts.push(enrichment.industry);
+    if (enrichment.country) parts.push(enrichment.country);
+    if (enrichment.location) parts.push(enrichment.location);
+    // JSON-encoded columns: flatten to their string values (e.g. position
+    // titles + companies, skill names, degrees).
+    parts.push(...collectJsonStrings(enrichment.education));
+    parts.push(...collectJsonStrings(enrichment.skills));
+    parts.push(...collectJsonStrings(enrichment.positions));
+    parts.push(...collectJsonStrings(enrichment.certifications));
+    parts.push(...collectJsonStrings(enrichment.languages));
+    parts.push(...collectJsonStrings(enrichment.honors));
   }
 
   return parts.join(' ');
