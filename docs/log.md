@@ -288,3 +288,10 @@
 - Rendered `WhatsAppLink` next to each phone in both view-mode phone displays (`PhoneSection` — used by the contact card/detail + expanded row + profile preview; and `ContactInfoSection` — used by the add-contact page)
 - Added `.whatsapp-link` styling in `index.css` (uses the new WhatsApp token)
 
+## 2026-07-08 — Fix: buttons rendering too small (dangling-comma CSS regression)
+
+- Fixed an app-wide button regression in `frontend/src/index.css` "UNIFORM CONTROL HEIGHT" block introduced by commit `08d2dbb`
+- Root cause: that commit removed the `.page-header-search { height: var(--ds-control-height); box-sizing: border-box; }` rule (which had terminated the large button/input selector list) and left only a comment. The list's trailing comma made it merge into the next rule (`.btn--icon, … { width: var(--ds-control-height); }`), so ~50 button/input selectors got `width: 32px` and lost their height entirely — squashing buttons so labels overflowed
+- Fix: terminated the selector list with its own `{ height: var(--ds-control-height); box-sizing: border-box; }` block, restoring uniform 32px height + border-box and stopping the erroneous `width: 32px` leak (square-icon width rule now applies to only the four square buttons, as intended)
+- CSS-only change; `npm run build` passes
+

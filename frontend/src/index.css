@@ -165,7 +165,11 @@ select:focus-visible {
 .threshold-select,
 .confidence-filter select,
 .settings-form input,
-.geocoding-edit-fields input,
+.geocoding-edit-fields input {
+  height: var(--ds-control-height);
+  box-sizing: border-box;
+}
+
 /* Search container height handled by .search-bar itself */
 
 /* Square icon buttons: equal width */
