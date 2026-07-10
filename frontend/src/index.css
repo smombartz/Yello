@@ -4903,11 +4903,28 @@ a.whatsapp-link:hover {
   border-top: 1px solid var(--ds-border-color);
 }
 
-.linkedin-import-controls {
+.import-controls {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--ds-space-3);
   margin-top: var(--ds-space-4);
+}
+
+/* Progress/status that should span the controls width rather than hug content */
+.import-progress-inline {
+  align-self: stretch;
+  max-width: 360px;
+}
+
+.import-progress-inline progress {
+  width: 100%;
+}
+
+.import-error-text {
+  margin-top: var(--ds-space-2);
+  color: var(--ds-color-error);
+  font-size: var(--ds-font-sm);
 }
 
 .file-input-row {
@@ -4944,6 +4961,12 @@ a.whatsapp-link:hover {
 .file-input-label:hover {
   background: var(--ds-bg-secondary);
   border-color: var(--ds-text-secondary);
+}
+
+.file-input-label.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .file-input-label [class*="fa-"] {

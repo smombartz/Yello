@@ -1,5 +1,24 @@
 # Change Log
 
+## 2026-07-09 15:51 — Consistent upload/submit buttons across import sections
+
+- **What:** unified the file-upload and submit buttons across the Settings import sections so VCF and LinkedIn look and behave identically.
+- **New:** `frontend/src/components/ui/FilePicker.tsx` — canonical file-upload control (visually-hidden native input + styled `.file-input-label` button showing the chosen filename, with a `disabled` state). One shared upload button.
+- **`LinkedInImportContent.tsx`:** swapped its inline file-input markup for `<FilePicker>`; `handleLinkedInFileChange` now takes a `File | null`.
+- **`SettingsView.tsx` (Import VCF):** replaced the raw browser-default `<input type="file">` (+ separate filename line) with `<FilePicker>`; the submit button now matches LinkedIn's (`secondary-button`, `upload` icon, disabled until a file is selected). Removed the now-unused `importFileRef`/`useRef` and inline styles in that block (the idle block unmounts on result, so the input is always fresh).
+- **CSS (`index.css`):** renamed `.linkedin-import-controls` → `.import-controls` (now `align-items: flex-start` so upload + submit sit left-aligned at content width), added `.file-input-label.is-disabled`, `.import-progress-inline`, `.import-error-text`. Both buttons already share the 32px uniform control height, so they now render identically.
+- Submit buttons are interactive: disabled with no file selected, enabled once a file is chosen (VCF and LinkedIn). Google/iCloud are fetch-based (no upload) and already used `secondary-button`; Onboarding uses a separate one-click choose-and-auto-import pattern and was left unchanged.
+- **Verified:** `npm run build` (tsc + vite) and `npm run lint` pass (no new issues); running Vite dev server transforms `FilePicker`/`LinkedInImportContent`/`SettingsView` and serves the renamed `.import-controls` CSS. Live UI walk-through not run (Chrome extension not connected).
+
+## 2026-07-09 11:37 — Inline LinkedIn & Google Contacts import in Settings
+
+- **What:** the "Import LinkedIn Connections" and "Import Google Contacts" entries on the Tools page (`SettingsView`) now expand inline as `collapsible-card` accordions instead of navigating to standalone pages, matching the existing pattern used by Import VCF / Sync Apple Contacts / Export / Danger Zone.
+- **New:** `frontend/src/components/LinkedInImportContent.tsx` and `frontend/src/components/GoogleContactsImportContent.tsx` — reusable content components extracted from the old page views (self-contained state/hooks, no `setHeaderConfig`, no page wrapper). The Google component drops the outer `icloud-import-view` wrapper (padding/max-width already provided by `.collapsible-content`) and keeps `useNavigate` for post-import redirect to `/contacts`.
+- **`SettingsView.tsx`:** added `linkedInExpanded` / `googleImportExpanded` state; replaced the two `<Link>` nav cards with collapsible sections rendering the new components. The "Sync Google Contacts" section's button (which linked to the removed route) now renders `<GoogleContactsImportContent />` inline instead.
+- **Removed:** `ImportView.tsx` and `GoogleContactsImportView.tsx` page files, plus their `/import` and `/google-contacts-import` routes/imports in `App.tsx` (nothing else referenced them; `OnboardingView` has its own inline LinkedIn import and was unaffected).
+- No backend changes — all import hooks/endpoints reused unchanged.
+- **Verified:** `frontend` `npm run build` (tsc + vite) and `npm run lint` pass (no new issues; 15 pre-existing lint errors in untouched files remain); running Vite dev server transforms all three modules; deleted files removed from disk with no dangling references. Live UI walk-through not run (Chrome extension not connected; Google import needs OAuth).
+
 ## 2026-07-08 — Fix: creating a contact returned 500 (missing `linkedinEnrichment`)
 
 - **Bug:** `POST /api/contacts` threw `"linkedinEnrichment" is required!` during response serialization. `ContactDetailSchema` (the 201 response schema) requires `linkedinEnrichment`, but the create handler's returned object omitted it. The GET and PUT handlers already include it; only the POST handler was missing the field.

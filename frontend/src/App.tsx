@@ -10,13 +10,11 @@ import { GroupsView } from './components/GroupsView';
 import { MapView } from './components/MapView';
 import { SettingsView } from './components/SettingsView';
 import { EnrichView } from './components/EnrichView';
-import { ImportView } from './components/ImportView';
 import { UserProfilePage } from './components/UserProfilePage';
 import { DashboardView } from './components/DashboardView';
 import { AdminView } from './components/AdminView';
 import OnboardingView from './components/OnboardingView';
 import { ICloudImportView } from './components/ICloudImportView';
-import { GoogleContactsImportView } from './components/GoogleContactsImportView';
 import { LoginPage } from './components/LoginPage';
 import { PublicContactCard } from './components/PublicContactCard';
 import { AuthProvider } from './contexts/AuthContext';
@@ -92,7 +90,6 @@ function AppRoutes() {
         <Route path="contacts/new" element={<AddContactPage />} />
         <Route path="contacts/:id" element={<ContactDetailPage />} />
         <Route path="contacts" element={<ContactsPage />} />
-        <Route path="import" element={<ImportView />} />
         <Route path="merge" element={<DeduplicationView />} />
         <Route path="cleanup" element={<CleanupView />} />
         <Route path="archived" element={<ArchivedView />} />
@@ -104,7 +101,6 @@ function AppRoutes() {
         <Route path="admin" element={<AdminView />} />
         <Route path="onboarding" element={<OnboardingView />} />
         <Route path="icloud-import" element={<ICloudImportView />} />
-        <Route path="google-contacts-import" element={<GoogleContactsImportView />} />
       </Route>
 
       {/* Catch-all redirect to dashboard */}

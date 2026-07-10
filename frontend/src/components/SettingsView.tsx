@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from './Icon';
@@ -12,6 +12,9 @@ import type { ImportResult } from '../api/types';
 import type { OutletContext } from './Layout';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { useToast } from './ui/Toast';
+import { LinkedInImportContent } from './LinkedInImportContent';
+import { GoogleContactsImportContent } from './GoogleContactsImportContent';
+import { FilePicker } from './ui/FilePicker';
 
 export function SettingsView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
@@ -22,12 +25,13 @@ export function SettingsView() {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [importExpanded, setImportExpanded] = useState(false);
+  const [linkedInExpanded, setLinkedInExpanded] = useState(false);
+  const [googleImportExpanded, setGoogleImportExpanded] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [importPhase, setImportPhase] = useState<'uploading' | 'processing' | null>(null);
-  const importFileRef = useRef<HTMLInputElement>(null);
   const [exportExpanded, setExportExpanded] = useState(false);
   const [dangerExpanded, setDangerExpanded] = useState(false);
   const [icloudExpanded, setIcloudExpanded] = useState(false);
@@ -54,7 +58,6 @@ export function SettingsView() {
       }) as ImportResult;
       setImportResult(result);
       setImportFile(null);
-      if (importFileRef.current) importFileRef.current.value = '';
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       queryClient.invalidateQueries({ queryKey: ['contactCount'] });
     } catch (err) {
@@ -111,44 +114,39 @@ export function SettingsView() {
                   <p className="settings-description">
                     Import contacts from a VCF file exported from this app or another contacts application.
                   </p>
-                  <input
-                    ref={importFileRef}
-                    type="file"
-                    accept=".vcf,text/vcard"
-                    onChange={(e) => { setImportFile(e.target.files?.[0] || null); setImportError(null); }}
-                    disabled={importPhase !== null}
-                  />
-                  {importFile && (
-                    <p className="settings-description" style={{ marginTop: '0.5rem' }}>
-                      {importFile.name} ({(importFile.size / 1024).toFixed(1)} KB)
-                    </p>
-                  )}
+                  <div className="import-controls">
+                    <FilePicker
+                      id="vcf-input"
+                      accept=".vcf,text/vcard"
+                      file={importFile}
+                      onChange={(file) => { setImportFile(file); setImportError(null); }}
+                      prompt="Choose VCF file"
+                      disabled={importPhase !== null}
+                    />
+                    {importPhase !== null ? (
+                      <div className="import-progress-inline">
+                        {importPhase === 'uploading' ? (
+                          <>
+                            <p className="settings-description">Uploading… {uploadProgress}%</p>
+                            <progress value={uploadProgress ?? 0} max={100} />
+                          </>
+                        ) : (
+                          <p className="settings-description">Processing contacts — this may take a moment for large files…</p>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        className="secondary-button"
+                        onClick={handleImport}
+                        disabled={!importFile}
+                      >
+                        <Icon name="upload" />
+                        Import Contacts
+                      </button>
+                    )}
+                  </div>
                   {importError && (
-                    <p style={{ color: 'var(--ds-color-error)', marginTop: '0.5rem', fontSize: '0.875rem' }}>
-                      {importError}
-                    </p>
-                  )}
-                  {importPhase !== null ? (
-                    <div style={{ marginTop: '1rem' }}>
-                      {importPhase === 'uploading' ? (
-                        <>
-                          <p className="settings-description">Uploading… {uploadProgress}%</p>
-                          <progress value={uploadProgress ?? 0} max={100} style={{ width: '100%' }} />
-                        </>
-                      ) : (
-                        <p className="settings-description">Processing contacts — this may take a moment for large files…</p>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      className="secondary-button"
-                      onClick={handleImport}
-                      disabled={!importFile}
-                      style={{ marginTop: '1rem' }}
-                    >
-                      <Icon name="file-import" />
-                      Import Contacts
-                    </button>
+                    <p className="import-error-text">{importError}</p>
                   )}
                 </>
               ) : (
@@ -189,22 +187,42 @@ export function SettingsView() {
         </section>
 
         {/* Import LinkedIn Connections */}
-        <Link to="/import" className="collapsible-card settings-nav-link">
-          <div className="settings-section-header">
-            <Icon name="linkedin" style="brands" />
-            <h2>Import LinkedIn Connections</h2>
-          </div>
-          <Icon name="chevron-right" className="nav-link-arrow" />
-        </Link>
+        <section className={`settings-section collapsible-card${linkedInExpanded ? ' expanded' : ''}`}>
+          <button
+            className="collapsible-header"
+            onClick={() => setLinkedInExpanded(!linkedInExpanded)}
+          >
+            <div className="settings-section-header">
+              <Icon name="linkedin" style="brands" />
+              <h2>Import LinkedIn Connections</h2>
+            </div>
+            <Icon name="chevron-down" className={`expand-icon${linkedInExpanded ? ' rotated' : ''}`} />
+          </button>
+          {linkedInExpanded && (
+            <div className="collapsible-content">
+              <LinkedInImportContent />
+            </div>
+          )}
+        </section>
 
         {/* Import Google Contacts */}
-        <Link to="/google-contacts-import" className="collapsible-card settings-nav-link">
-          <div className="settings-section-header">
-            <Icon name="google" style="brands" />
-            <h2>Import Google Contacts</h2>
-          </div>
-          <Icon name="chevron-right" className="nav-link-arrow" />
-        </Link>
+        <section className={`settings-section collapsible-card${googleImportExpanded ? ' expanded' : ''}`}>
+          <button
+            className="collapsible-header"
+            onClick={() => setGoogleImportExpanded(!googleImportExpanded)}
+          >
+            <div className="settings-section-header">
+              <Icon name="google" style="brands" />
+              <h2>Import Google Contacts</h2>
+            </div>
+            <Icon name="chevron-down" className={`expand-icon${googleImportExpanded ? ' rotated' : ''}`} />
+          </button>
+          {googleImportExpanded && (
+            <div className="collapsible-content">
+              <GoogleContactsImportContent />
+            </div>
+          )}
+        </section>
         </section>
 
         {/* ===== Sync ===== */}
@@ -315,10 +333,7 @@ export function SettingsView() {
               <p className="settings-description">
                 Import contacts from your Google account. Since you're already signed in with Google, you may just need to grant additional permission to access your contacts.
               </p>
-              <Link to="/google-contacts-import" className="secondary-button" style={{ textDecoration: 'none', marginTop: '1rem', display: 'inline-flex' }}>
-                <Icon name="cloud-arrow-down" />
-                Import from Google Contacts
-              </Link>
+              <GoogleContactsImportContent />
             </div>
           )}
         </section>

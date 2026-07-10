@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useOutletContext, useNavigate } from 'react-router-dom';
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Icon } from './Icon';
 import {
   useGoogleContactsStatus,
@@ -9,11 +9,9 @@ import {
   type ParsedContact,
   type MatchResult,
 } from '../api/googleContactsHooks';
-import type { OutletContext } from './Layout';
 import { MatchCard, NewContactCard, type MatchDecision } from './ImportMatchCards';
 
-export function GoogleContactsImportView() {
-  const { setHeaderConfig } = useOutletContext<OutletContext>();
+export function GoogleContactsImportContent() {
   const navigate = useNavigate();
   const contactsStatus = useGoogleContactsStatus();
   const fetchContacts = useFetchGoogleContacts();
@@ -24,10 +22,6 @@ export function GoogleContactsImportView() {
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
   const [matchDecisions, setMatchDecisions] = useState<Map<number, MatchDecision>>(new Map());
   const [selectedNewContacts, setSelectedNewContacts] = useState<Set<number>>(new Set());
-
-  useEffect(() => {
-    setHeaderConfig({ title: 'Import from Google Contacts' });
-  }, [setHeaderConfig]);
 
   const handleFetch = useCallback(() => {
     fetchContacts.mutate(undefined, {
@@ -118,17 +112,15 @@ export function GoogleContactsImportView() {
   // Redirect if needs reauth
   if (contactsStatus.data && contactsStatus.data.needsReauth) {
     return (
-      <div className="icloud-import-view">
-        <div className="icloud-empty-state">
-          <Icon name="google" style="brands" />
-          <h3>Google Contacts Access Required</h3>
-          <p>
-            {contactsStatus.data.reason || 'You need to grant permission to access your Google Contacts.'}
-          </p>
-          <a href="/api/auth/google/contacts" className="secondary-button" style={{ textDecoration: 'none' }}>
-            <Icon name="right-to-bracket" /> Grant Access
-          </a>
-        </div>
+      <div className="icloud-empty-state">
+        <Icon name="google" style="brands" />
+        <h3>Google Contacts Access Required</h3>
+        <p>
+          {contactsStatus.data.reason || 'You need to grant permission to access your Google Contacts.'}
+        </p>
+        <a href="/api/auth/google/contacts" className="secondary-button" style={{ textDecoration: 'none' }}>
+          <Icon name="right-to-bracket" /> Grant Access
+        </a>
       </div>
     );
   }
@@ -136,20 +128,18 @@ export function GoogleContactsImportView() {
   // --- Idle state ---
   if (!fetchedContacts && !fetchContacts.isPending) {
     return (
-      <div className="icloud-import-view">
-        <div className="icloud-empty-state">
-          <Icon name="cloud-arrow-down" />
-          <h3>Import from Google Contacts</h3>
-          <p>Fetch your contacts from Google. We'll check for duplicates before importing.</p>
-          {fetchContacts.isError && (
-            <p style={{ color: 'var(--ds-color-error)', fontSize: '0.875rem' }}>
-              {fetchContacts.error?.message || 'Failed to fetch contacts'}
-            </p>
-          )}
-          <button type="button" className="secondary-button" onClick={handleFetch}>
-            <Icon name="cloud-arrow-down" /> Fetch from Google Contacts
-          </button>
-        </div>
+      <div className="icloud-empty-state">
+        <Icon name="cloud-arrow-down" />
+        <h3>Import from Google Contacts</h3>
+        <p>Fetch your contacts from Google. We'll check for duplicates before importing.</p>
+        {fetchContacts.isError && (
+          <p style={{ color: 'var(--ds-color-error)', fontSize: '0.875rem' }}>
+            {fetchContacts.error?.message || 'Failed to fetch contacts'}
+          </p>
+        )}
+        <button type="button" className="secondary-button" onClick={handleFetch}>
+          <Icon name="cloud-arrow-down" /> Fetch from Google Contacts
+        </button>
       </div>
     );
   }
@@ -157,15 +147,13 @@ export function GoogleContactsImportView() {
   // --- Fetching state ---
   if (fetchContacts.isPending || previewImport.isPending) {
     return (
-      <div className="icloud-import-view">
-        <div className="icloud-empty-state">
-          <div className="icloud-spinner" />
-          <h3>{fetchContacts.isPending ? 'Fetching from Google...' : 'Analyzing contacts...'}</h3>
-          <p>{fetchContacts.isPending
-            ? 'Fetching your contacts from Google. This may take a moment for large address books.'
-            : 'Checking for duplicates against your existing contacts.'
-          }</p>
-        </div>
+      <div className="icloud-empty-state">
+        <div className="icloud-spinner" />
+        <h3>{fetchContacts.isPending ? 'Fetching from Google...' : 'Analyzing contacts...'}</h3>
+        <p>{fetchContacts.isPending
+          ? 'Fetching your contacts from Google. This may take a moment for large address books.'
+          : 'Checking for duplicates against your existing contacts.'
+        }</p>
       </div>
     );
   }
@@ -173,12 +161,10 @@ export function GoogleContactsImportView() {
   // --- Importing state ---
   if (executeImport.isPending) {
     return (
-      <div className="icloud-import-view">
-        <div className="icloud-empty-state">
-          <div className="icloud-spinner" />
-          <h3>Importing contacts...</h3>
-          <p>Please wait while your contacts are being imported and merged.</p>
-        </div>
+      <div className="icloud-empty-state">
+        <div className="icloud-spinner" />
+        <h3>Importing contacts...</h3>
+        <p>Please wait while your contacts are being imported and merged.</p>
       </div>
     );
   }
@@ -187,40 +173,38 @@ export function GoogleContactsImportView() {
   if (executeImport.isSuccess) {
     const result = executeImport.data;
     return (
-      <div className="icloud-import-view">
-        <div className="icloud-empty-state">
-          <Icon name="circle-check" style="regular" />
-          <h3>Import Complete</h3>
-          <div className="icloud-import-summary">
-            <div className="icloud-summary-stat">
-              <span className="icloud-summary-number">{result.imported}</span>
-              <span className="icloud-summary-label">Imported</span>
-            </div>
-            <div className="icloud-summary-stat">
-              <span className="icloud-summary-number">{result.merged}</span>
-              <span className="icloud-summary-label">Merged</span>
-            </div>
-            <div className="icloud-summary-stat">
-              <span className="icloud-summary-number">{result.skipped}</span>
-              <span className="icloud-summary-label">Skipped</span>
-            </div>
+      <div className="icloud-empty-state">
+        <Icon name="circle-check" style="regular" />
+        <h3>Import Complete</h3>
+        <div className="icloud-import-summary">
+          <div className="icloud-summary-stat">
+            <span className="icloud-summary-number">{result.imported}</span>
+            <span className="icloud-summary-label">Imported</span>
           </div>
-          {result.errors.length > 0 && (
-            <details style={{ marginTop: '1rem', textAlign: 'left', width: '100%' }}>
-              <summary style={{ color: 'var(--ds-color-error)', cursor: 'pointer' }}>
-                {result.errors.length} errors
-              </summary>
-              <ul style={{ fontSize: '0.875rem', maxHeight: '150px', overflow: 'auto' }}>
-                {result.errors.map((err, i) => (
-                  <li key={i}>#{err.line}: {err.reason}</li>
-                ))}
-              </ul>
-            </details>
-          )}
-          <button type="button" className="secondary-button" onClick={() => navigate('/contacts')} style={{ marginTop: '1rem' }}>
-            <Icon name="address-book" /> Go to Contacts
-          </button>
+          <div className="icloud-summary-stat">
+            <span className="icloud-summary-number">{result.merged}</span>
+            <span className="icloud-summary-label">Merged</span>
+          </div>
+          <div className="icloud-summary-stat">
+            <span className="icloud-summary-number">{result.skipped}</span>
+            <span className="icloud-summary-label">Skipped</span>
+          </div>
         </div>
+        {result.errors.length > 0 && (
+          <details style={{ marginTop: '1rem', textAlign: 'left', width: '100%' }}>
+            <summary style={{ color: 'var(--ds-color-error)', cursor: 'pointer' }}>
+              {result.errors.length} errors
+            </summary>
+            <ul style={{ fontSize: '0.875rem', maxHeight: '150px', overflow: 'auto' }}>
+              {result.errors.map((err, i) => (
+                <li key={i}>#{err.line}: {err.reason}</li>
+              ))}
+            </ul>
+          </details>
+        )}
+        <button type="button" className="secondary-button" onClick={() => navigate('/contacts')} style={{ marginTop: '1rem' }}>
+          <Icon name="address-book" /> Go to Contacts
+        </button>
       </div>
     );
   }
@@ -235,7 +219,7 @@ export function GoogleContactsImportView() {
   const totalToImport = selectedNewCount + mergeCount + importAsNewCount;
 
   return (
-    <div className="icloud-import-view">
+    <>
       {/* Summary bar */}
       <div className="icloud-import-summary-bar">
         <div className="icloud-summary-stat">
@@ -330,6 +314,6 @@ export function GoogleContactsImportView() {
           Import {totalToImport} Contacts
         </button>
       </div>
-    </div>
+    </>
   );
 }
