@@ -42,7 +42,7 @@ export function CleanupModeSelector({
   };
 
   return (
-    <div className="cleanup-mode-selector">
+    <div className="cleanup-mode-selector" role="tablist">
       {MODE_CONFIG.map(({ mode, label, icon, iconStyle }) => {
         const count = getCount(mode);
         const isActive = mode === selectedMode;
@@ -50,9 +50,11 @@ export function CleanupModeSelector({
         return (
           <button
             key={mode}
-            className={`cleanup-mode-pill ${isActive ? 'active' : ''}`}
+            className={`cleanup-mode-tab ${isActive ? 'active' : ''}`}
             onClick={() => onModeChange(mode)}
             disabled={isLoading}
+            role="tab"
+            aria-selected={isActive}
           >
             <Icon name={icon} style={iconStyle} />
             <span className="cleanup-mode-label">{label}</span>

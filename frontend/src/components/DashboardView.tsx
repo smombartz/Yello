@@ -3,6 +3,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
 import { useDashboardStats } from '../api/dashboardHooks';
 import { Icon } from './Icon';
+import { LaunchBanner } from './LaunchBanner';
 
 function getPhotoUrl(photoHash: string | null): string | null {
   if (!photoHash) return null;
@@ -131,6 +132,8 @@ export function DashboardView() {
   return (
     <div className="dashboard-view">
       <div className="dashboard-content">
+        <LaunchBanner />
+
         {/* Overview Stats Row */}
         <section className="dashboard-section overview-section">
           <div className="stat-cards-grid">

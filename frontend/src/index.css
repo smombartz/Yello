@@ -146,7 +146,6 @@ select:focus-visible {
 .add-item-btn,
 .fix-all-button,
 .mode-pill,
-.cleanup-mode-pill,
 .cleanup-filter-chip,
 .geocoding-edit-actions button,
 .geocoding-filter-btn,
@@ -1089,7 +1088,7 @@ a.nav-rail-item.active {
 .dedup-header {
   background-color: var(--ds-bg-primary);
   border-bottom: 1px solid var(--ds-border-color);
-  padding: 1rem 1.5rem;
+  padding: 1rem 0;
 }
 
 .back-button {
@@ -1157,52 +1156,64 @@ a.nav-rail-item.active {
   background: var(--ds-color-error-hover);
 }
 
-/* Mode Selector */
+/* Mode Selector (underline tab bar — matches Cleanup) */
 .mode-selector {
   display: flex;
-  gap: var(--ds-space-2);
+  gap: var(--ds-space-1);
   margin-bottom: var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-border-color);
+  overflow-x: auto;
 }
 
 .mode-pill {
   display: flex;
   align-items: center;
   gap: var(--ds-space-2);
-  padding: 0 1rem;
-  border-radius: 2rem;
-  border: 1px solid var(--ds-border-color);
-  background-color: var(--ds-bg-primary);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  margin-bottom: -1px; /* overlap the container's bottom border */
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
   color: var(--ds-text-secondary);
   font-weight: var(--ds-weight-medium);
   font-size: var(--ds-font-sm);
+  white-space: nowrap;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: color 0.15s, border-color 0.15s;
 }
 
 .mode-pill:hover:not(:disabled) {
-  border-color: var(--ds-color-primary);
-  color: var(--ds-color-primary);
+  color: var(--ds-text-primary);
 }
 
 .mode-pill.active {
-  background-color: var(--ds-color-primary);
-  border-color: var(--ds-color-primary);
-  color: white;
+  background-color: transparent;
+  color: var(--ds-color-primary);
+  border-bottom-color: var(--ds-color-primary);
+}
+
+.mode-pill:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .mode-pill [class*="fa-"] {
-  font-size: var(--ds-font-lg);
+  font-size: var(--ds-font-md);
 }
 
 .mode-pill .mode-count {
-  background-color: rgba(0, 0, 0, 0.1);
-  padding: 0.125rem 0.5rem;
-  border-radius: 1rem;
+  background-color: var(--ds-bg-tertiary);
+  color: var(--ds-text-secondary);
+  padding: 0.0625rem 0.4375rem;
+  border-radius: var(--ds-radius-full);
   font-size: var(--ds-font-xs);
+  font-weight: var(--ds-weight-semibold);
 }
 
 .mode-pill.active .mode-count {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: var(--ds-color-primary-light);
+  color: var(--ds-color-primary);
 }
 
 .dedup-stats-row {
@@ -2395,55 +2406,65 @@ a.whatsapp-link:hover {
 .cleanup-header {
   background-color: var(--ds-bg-primary);
   border-bottom: 1px solid var(--ds-border-color);
-  padding: 1rem 1.5rem;
+  padding: 1rem 0;
 }
 
-/* Cleanup Mode Selector */
+/* Cleanup Mode Tabs (standard underline tab bar) */
 .cleanup-mode-selector {
   display: flex;
-  gap: var(--ds-space-2);
+  gap: var(--ds-space-1);
   margin-bottom: var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-border-color);
+  overflow-x: auto;
 }
 
-.cleanup-mode-pill {
+.cleanup-mode-tab {
   display: flex;
   align-items: center;
   gap: var(--ds-space-2);
-  padding: 0 1rem;
-  border-radius: 2rem;
-  border: 1px solid var(--ds-border-color);
-  background-color: var(--ds-bg-primary);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  margin-bottom: -1px; /* overlap the container's bottom border */
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
   color: var(--ds-text-secondary);
   font-weight: var(--ds-weight-medium);
   font-size: var(--ds-font-sm);
+  white-space: nowrap;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: color 0.15s, border-color 0.15s;
 }
 
-.cleanup-mode-pill:hover:not(:disabled) {
-  border-color: var(--ds-color-primary);
+.cleanup-mode-tab:hover:not(:disabled) {
+  color: var(--ds-text-primary);
+}
+
+.cleanup-mode-tab.active {
   color: var(--ds-color-primary);
+  border-bottom-color: var(--ds-color-primary);
 }
 
-.cleanup-mode-pill.active {
-  background-color: var(--ds-color-primary);
-  border-color: var(--ds-color-primary);
-  color: white;
+.cleanup-mode-tab:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
-.cleanup-mode-pill [class*="fa-"] {
-  font-size: var(--ds-font-lg);
+.cleanup-mode-tab [class*="fa-"] {
+  font-size: var(--ds-font-md);
 }
 
-.cleanup-mode-pill .cleanup-mode-count {
-  background-color: rgba(0, 0, 0, 0.1);
-  padding: 0.125rem 0.5rem;
-  border-radius: 1rem;
+.cleanup-mode-tab .cleanup-mode-count {
+  background-color: var(--ds-bg-tertiary);
+  color: var(--ds-text-secondary);
+  padding: 0.0625rem 0.4375rem;
+  border-radius: var(--ds-radius-full);
   font-size: var(--ds-font-xs);
+  font-weight: var(--ds-weight-semibold);
 }
 
-.cleanup-mode-pill.active .cleanup-mode-count {
-  background-color: rgba(255, 255, 255, 0.2);
+.cleanup-mode-tab.active .cleanup-mode-count {
+  background-color: var(--ds-color-primary-light);
+  color: var(--ds-color-primary);
 }
 
 /* Cleanup Controls (threshold + filters) */

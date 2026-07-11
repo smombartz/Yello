@@ -1,202 +1,126 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Documentation
 
-## Workflow: Planning & Documentation
+When new features, integrations, architecture decisions, or other noteworthy information comes up during work, document it in `docs/readme.md`. Keep it updated as a living reference for the project.
 
-1. **After brainstorming** - Save the plan to `docs/plans/YYYY-MM-DD-feature-name.md`
-2. **After completing a plan** - Update the plan file (mark as "Implemented"), move it to `docs/plans/completed/`, and update this CLAUDE.md if the feature adds new environment variables, services, or patterns
-3. **After ANY code changes** (features, bugfixes, refactors, config changes) - Append to `docs/log.md` with a heading of `## YYYY-MM-DD HH:MM — Title` followed by a bullet list of changes. Every change should be logged, not just major features.
+**Database reference:** `docs/database.md` is the human-readable overview of the schema — every table, field, enum, RLS rule, bucket, and seeded option list in use. **Any migration that adds or changes tables, columns, enums, seed data, views, policies, or storage buckets must update `docs/database.md` in the same change.** (Migrations in `supabase/migrations/` remain the source of truth; the overview is the map.)
 
-Plans location: `docs/plans/` (completed plans in `docs/plans/completed/`)
-Change log: `docs/log.md`
+**Learn content:** `docs/learn.md` is the authoring guide for the Learn section (the file-based MDX blog at `/learn`). **When creating or editing any post under `content/learn/`, follow it** — the frontmatter contract, the components available inside posts (`<Figure>`/`<Gallery>`/`<Video>`/`<YouTube>`), image handling, and conventions. (`lib/learn.ts` is the source of truth for the frontmatter schema.)
 
-## Build & Development Commands
+---
 
-**Root (runs both concurrently):**
-```bash
-npm run dev
+## Verification
+
+**Visual/UI verification is the user's job — don't do it.** Do not start a
+preview/dev server, drive a browser, or take screenshots to check how something
+looks. The user runs their own dev server and verifies the UI themselves.
+Functional/logic verification you *should* still do (type-check, lint, build,
+and exercising behavior via `curl`/scripts against the running server is fine).
+When a change is visually observable, finish your logic checks and hand it to
+the user to look at rather than asking which browser to use.
+
+---
+
+## Plans
+
+All implementation plans must be saved to `docs/plans/`. Filenames must start with the date in `YYYY-MM-DD` format, followed by a descriptive name (e.g., `docs/plans/2026-03-27-auth-system.md`, `docs/plans/2026-03-27-cms-migration.md`). This ensures plans are versioned, reviewable, and accessible across sessions.
+
+---
+
+## Logging Requirements
+
+**CRITICAL:** For every code change or feature addition:
+
+1. **Write a log entry** describing what was changed and why
+2. **Save to `docs/log.md`** in the following format:
+
+### Log Entry Format
+
+```markdown
+## [YYYY-MM-DD] - [Brief Change Title]
+
+**What Changed:**
+- Specific file(s) modified or created
+- Description of the change
+
+**Why:**
+- Reason for the change (feature request, bug fix, refactor, etc.)
+
+**Files Modified:**
+- `path/to/file.ext`
+- `path/to/file.ext`
+
+---
 ```
 
-**Backend (`backend/`):**
-```bash
-npm run dev          # Start dev server with tsx watch (port 3456)
-npm run build        # Compile TypeScript to dist/
-npm test             # Run tests with vitest
-npm run test:watch   # Run tests in watch mode
+### Example
+
+```markdown
+## 2026-03-27 - Added Parent Name field to notification form
+
+**What Changed:**
+- Added "Parent Name" input field to the email notification modal
+- Updated `submitNotify()` to collect and send parent name to Google Apps Script
+
+**Why:**
+- Parents want to be identified when registering interest, not just by email
+
+**Files Modified:**
+- `index.html` - Added input field and updated form submission logic
+
+---
 ```
 
-**Frontend (`frontend/`):**
-```bash
-npm run dev          # Start Vite dev server (port 5173)
-npm run build        # Type check + Vite build
-npm run lint         # Run ESLint
+### When to Log
+
+Log entries are needed for:
+- ✅ New features
+- ✅ Bug fixes
+- ✅ File modifications
+- ✅ New file creation
+- ✅ Schema/structure changes (e.g., adding columns to Google Sheet)
+
+Don't log:
+- ❌ Reading files to understand context
+- ❌ Running tests/verification
+- ❌ Responding to questions without code changes
+
+
+
+### Workflow
+
+1. **Make the code change(s)**
+2. **Write the log entry** in the format above
+3. **Append to `docs/log.md`**
+4. **Inform the user** of what was done in your response
+
+---
+
+### How to Update `docs/log.md`
+
+```javascript
+// Pseudocode - in practice, use Read → Edit/Write
+const logEntry = `
+## [YYYY-MM-DD] - [Title]
+
+**What Changed:**
+- ...
+
+**Why:**
+- ...
+
+**Files Modified:**
+- ...
+
+---
+`;
+
+// Append to docs/log.md
 ```
 
-**Testing servers:** Always shut down dev servers after testing:
-```bash
-kill $(lsof -ti :3456) 2>/dev/null  # Stop backend
-kill $(lsof -ti :5173) 2>/dev/null  # Stop frontend
-```
+Always preserve existing log entries. New entries go at the **top** (most recent first) for easy scanning.
 
-## Architecture Overview
+---
 
-This is a monorepo contact management application with separate frontend and backend packages.
-
-### Tech Stack
-- **Frontend:** React 19, TypeScript, Vite, TanStack Query (data fetching), TanStack Virtual (virtualized lists), React Router, Leaflet (maps), hand-rolled CSS with `--ds-*` design tokens
-- **Backend:** Node.js 20, Fastify 5, better-sqlite3, Sharp (image processing), TypeBox (validation)
-- **Database:** SQLite with WAL mode and FTS5 full-text search (multi-tenant: database-per-user)
-
-### Multi-Tenancy Architecture
-- **Shared auth DB** (`data/auth.db`): users, sessions, profile_images
-- **Per-user contact DBs** (`data/users/{userId}/contacts.db`): contacts, FTS, enrichment, email history, settings
-- **Per-user photo dirs** (`data/users/{userId}/photos/`): contact photos isolated per user
-- `getAuthDatabase()` — singleton for auth data
-- `getUserDatabase(userId)` — per-user DB with LRU cache (max 50 connections)
-- Services accept `database: DatabaseType` parameter; routes pass `getUserDatabase(request.user!.id)`
-- Migration script: `npx tsx src/scripts/migrateToMultiTenant.ts`
-
-### Communication Flow
-- Frontend (port 5173) proxies `/api`, `/photos`, `/health` to backend (port 3456)
-- Authentication via Google OAuth with session cookies
-- API uses JSON; file uploads use multipart/form-data (100MB limit)
-
-### Key Directories
-
-**Backend (`backend/src/`):**
-- `routes/` - API endpoint handlers (contacts, duplicates, cleanup, import, auth, archive, map, settings)
-- `services/` - Business logic (authDatabase, userDatabase, database utilities, vcardParser, photoProcessor, mergeService, nameMatchingService, geocoding)
-- `scripts/` - Migration scripts (migrateToMultiTenant)
-- `schemas/` - TypeBox validation schemas
-- `middleware/auth.ts` - OAuth cookie validation
-
-**Frontend (`frontend/src/`):**
-- `components/` - React components (ContactList, DeduplicationView, CleanupView, MapView, SettingsView, etc.)
-- `api/` - API client and TanStack Query hooks (hooks.ts, deduplicationHooks.ts, cleanupHooks.ts, etc.)
-- `contexts/AuthContext.tsx` - Auth state management
-
-### Database Schema
-
-**Auth DB** (`auth.db`): `users`, `sessions`, `profile_images`
-
-**Per-User DB** (`contacts.db`): `contacts`, `contact_emails`, `contact_phones`, `contact_addresses`, `contact_social_profiles`, `contact_categories`, `contact_instant_messages`, `contact_urls`, `contact_related_people`, `user_settings`, `linkedin_enrichment`, `contact_emails_history`, `contact_photos`
-
-FTS5 virtual tables for full-text search on display_name, company, email with prefix tokenization.
-
-## Key Patterns
-
-### API & Data Fetching
-- TanStack Query for caching and synchronization
-- Optimistic updates on mutations
-- Query invalidation after mutations
-- Custom hooks per domain (useContacts, useContactDetail, useDuplicates, etc.)
-
-### Frontend
-- Virtualized lists for 10K+ contacts performance
-- `ProtectedRoute`/`PublicRoute` wrappers for auth
-
-### Design System & UI Primitives
-- **Tokens** (`frontend/src/styles/design-system.css`, `--ds-*` prefix): colors, spacing scale, type scale, radius, shadows, z-index, transitions, component tokens. **All styling goes through tokens** — no hard-coded hex/px in new CSS. Brand color is `--ds-color-primary` (#7C3AED); one brand gradient via `--ds-gradient-brand`. Typeface is Geist via `--ds-font-family`.
-- **Shared primitives** (`frontend/src/components/ui/`) — use these, don't hand-roll:
-  - `Button` (`variant: primary|secondary|danger|ghost|icon`) — or the canonical `.btn`/`.btn--*` classes
-  - `ConfirmDialog` (handles the Escape/`useLayoutModal` contract) — never build modals inline
-  - `Toast` + `useToast()` (mounted once via `ToastProvider` in `App.tsx`)
-  - `LoadingSpinner` (canonical loader; `fullscreen` variant) and `EmptyState` (`icon/title/description/action`)
-  - `SearchBar` (icon + input + clear/cancel; `boxed`/`plain` variants) and `Badge` (`variant: neutral|brand|success|warning|error|info|count`) — or the canonical `.badge`/`.badge--*` classes
-- **Stylesheets**: global base in `index.css`; per-page CSS in `styles/pages/*.css` (aggregated by `styles/pages.css`, imported after `index.css`). **No `<style>` blocks in TSX, no static inline `style={{}}`.** Page CSS is global — scope page-specific rules with a page prefix to avoid collisions with `index.css`.
-- Icons: Font Awesome via `components/Icon.tsx`. Page headers via the `setHeaderConfig` outlet contract (`Layout.tsx`).
-- Design context (audience, tone, conventions) lives in `.impeccable.md`.
-
-### Backend
-- Fastify plugins for modularity
-- TypeBox schemas validate all inputs
-- better-sqlite3 prepared statements with transactions
-- Sharp pipeline generates 4 image sizes (thumbnail, small, medium, large)
-
-## Environment Variables
-
-**Backend:**
-```
-AUTH_DATABASE_PATH=./data/auth.db
-USER_DATA_PATH=./data/users
-PORT=3456
-SESSION_SECRET=<required for production>
-GOOGLE_CLIENT_ID=<OAuth>
-GOOGLE_CLIENT_SECRET=<OAuth>
-HERE_API_KEY=<for geocoding - get from developer.here.com>
-APIFY_API_TOKEN=<for LinkedIn enrichment - get from apify.com>
-```
-
-## Photo URL Construction
-```typescript
-const photoUrl = `/photos/thumbnail/${hash.slice(0, 2)}/${hash}.jpg`
-```
-
-## Search Implementation
-FTS5 with prefix search: `"john sm"` becomes `"john* sm*"` for type-ahead matching.
-
-## Geocoding
-
-Address geocoding uses **HERE.com API** (requires `HERE_API_KEY` env var).
-
-- Free tier: 250,000 requests/month
-- Service location: `backend/src/services/geocoding.ts`
-- Addresses table has `latitude`, `longitude`, and `geocoded_at` columns
-- Cleanup UI provides bulk geocoding under Addresses > Geocoding tab
-
-## vCard Parsing & Contact Data Structure
-
-### Parser Location
-`backend/src/services/vcardParser.ts` - Uses `ical.js` for parsing with `libphonenumber-js` for phone normalization.
-
-### ParsedContact Structure
-```typescript
-interface ParsedContact {
-  firstName: string | null;
-  lastName: string | null;
-  displayName: string;           // Required - falls back to N field if FN missing
-  company: string | null;
-  title: string | null;
-  notes: string | null;
-  birthday: string | null;
-  emails: ParsedEmail[];         // { email, type, isPrimary }
-  phones: ParsedPhone[];         // { phone (E.164), phoneDisplay, countryCode, type, isPrimary }
-  addresses: ParsedAddress[];    // { street, city, state, postalCode, country, type }
-  categories: string[];          // From CATEGORIES field
-  instantMessages: ParsedInstantMessage[];  // From IMPP field
-  urls: ParsedUrl[];             // { url, label, type } - labels from X-ABLabel
-  relatedPeople: ParsedRelatedPerson[];     // From X-ABRELATEDNAMES
-  socialProfiles: ParsedSocialProfile[];    // From X-SOCIALPROFILE { platform, username, url }
-  photoBase64: string | null;    // Embedded photo data
-  rawVcard: string;              // Original vCard text preserved
-}
-```
-
-### Parsing Flow
-1. **Line unfolding** - vCard lines starting with whitespace continue previous line
-2. **Split into blocks** - Separate by `BEGIN:VCARD`
-3. **Parse each vCard** with ical.js:
-   - `FN` → displayName (required, falls back to constructing from `N`)
-   - `N` → [lastName, firstName, ...] (structured name)
-   - `TEL` → phones (normalized to E.164 format)
-   - `EMAIL` → emails
-   - `ADR` → addresses [PO, ext, street, city, state, postal, country]
-   - `ORG` → company
-   - `PHOTO` → base64 data (handles data URI and ENCODING=B formats)
-   - `BDAY` → birthday
-   - `CATEGORIES` → categories array
-   - `IMPP` → instant messages
-   - `URL` → urls with labels from associated `X-ABLabel`
-   - `X-SOCIALPROFILE` → social profiles with platform/username
-   - `X-ABRELATEDNAMES` → related people
-
-### vCard Edge Cases Handled
-- **Versions 2.1, 3.0, 4.0** - All supported
-- **Quoted-printable encoding** - Decoded before processing
-- **Line folding** - Unfolded before parsing
-- **Missing FN** - Constructed from N field as "First Last"
-- **TYPE parameters** - Extracted from `TYPE=work` or `TYPE=work,voice`
-- **Item groups** - `item3.URL` linked to `item3.X-ABLabel` for URL labels
-- **Phone normalization** - All phones converted to E.164 with display format preserved
-- **Primary flags** - First of each type (email, phone) marked as primary
+## Current Project State

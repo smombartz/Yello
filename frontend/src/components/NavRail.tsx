@@ -7,12 +7,14 @@ interface NavRailItemProps {
   to: string;
   icon: string;
   label: string;
+  end?: boolean;
 }
 
-function NavRailItem({ to, icon, label }: NavRailItemProps) {
+function NavRailItem({ to, icon, label, end }: NavRailItemProps) {
   return (
     <NavLink
       to={to}
+      end={end}
       className={({ isActive }) => `nav-rail-item ${isActive ? 'active' : ''}`}
     >
       <Icon name={icon} />
@@ -45,7 +47,10 @@ export function NavRail() {
       <NavRailItem to="/tools" icon="screwdriver-wrench" label="Tools" />
 
       {user?.email === 's@mombartz.com' && (
-        <NavRailItem to="/admin" icon="shield-halved" label="Admin" />
+        <>
+          <NavRailItem to="/admin" icon="shield-halved" label="Admin" end />
+          <NavRailItem to="/admin/docs" icon="book" label="Docs" />
+        </>
       )}
 
       <button

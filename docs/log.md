@@ -1,6 +1,47 @@
 # Change Log
 
-## 2026-07-09 15:51 — Consistent upload/submit buttons across import sections
+## 2026-07-10 16:10 — Launch/beta announcement banner + Welcome page
+
+**What Changed:**
+- **New `frontend/src/components/LaunchBanner.tsx`** — a dismissible brand-gradient announcement bar with a "Beta" pill and a "Read more" CTA. Clicking the bar navigates to `/welcome`; the "×" dismisses it and persists the choice in `localStorage` (`launchBannerDismissed`), following the direct-localStorage convention in `GroupsView.tsx`.
+- **New `frontend/src/components/WelcomeView.tsx`** — a Welcome page modeled on `DocsView` (uses `setHeaderConfig({ title: 'Welcome' })`, typed content constant rendered with `.map()`). A brand-gradient hero plus three cards: *We're live* (launch announcement), *Still being built* (beta/WIP), and *Help us build it* (invites suggestions, input, and flagging content). Copy positions Yello as an address book for staying on top of relationships and owning your social graph. Copy only — no form/mailto this round.
+- **New `frontend/src/styles/pages/launch.css`** — tokens-only styles for both the banner and the Welcome page; registered via an `@import` in `styles/pages.css`.
+- **`DashboardView.tsx`:** renders `<LaunchBanner />` as the first child of `.dashboard-content` (loaded state only), so the banner shows only on the Dashboard in normal flow — no changes to the fixed-header/NavRail offsets.
+- **`App.tsx`:** added the `WelcomeView` import and a `<Route path="welcome">` inside the protected `<Layout>` group. Reachable via the banner link only (no NavRail/BottomTabBar entry).
+
+**Why:**
+- Announce the launch and beta state of the site and invite early users to shape it with suggestions, input, and content flagging — together building the best place to stay on top of your relationships and own your social graph.
+
+**Files Modified:**
+- `frontend/src/components/LaunchBanner.tsx` (new)
+- `frontend/src/components/WelcomeView.tsx` (new)
+- `frontend/src/styles/pages/launch.css` (new)
+- `frontend/src/components/DashboardView.tsx`
+- `frontend/src/App.tsx`
+- `frontend/src/styles/pages.css`
+
+**Verified:** `npm run build` (tsc `-b` type-check + Vite build) passes; no lint issues in the new files (pre-existing lint errors in `MapView.tsx` etc. are unrelated). Visual/UI check left to the user per project convention.
+
+---
+
+## 2026-07-10 15:24 — Security audit (report only, no code changes)
+- **`docs/plans/2026-07-10-security-audit-hardening.md`** — new audit report. Reviewed multi-tenant isolation, auth/session handling, deployment/secrets, and input handling across the backend.
+- **Headline:** no live cross-tenant data-access path found — every per-user DB is opened via `getUserDatabase(request.user!.id)` sourced only from the server-side session; no route accepts a client-supplied userId; SQL is parameterized; photo serving is per-user with a traversal guard.
+- **P0:** live `GOOGLE_CLIENT_SECRET`/`SESSION_SECRET`/`HERE_API_KEY`/`APIFY_API_TOKEN` sit in plaintext `backend/.env` inside a Dropbox-synced folder (not in git, not in the image) → rotate; note SESSION_SECRET rotation invalidates sessions + stored OAuth tokens.
+- **P1:** contact/enrichment/imported photos write to a shared `./data/photos` keyed only by per-tenant contact id (`importService.ts:78` omits `userId`) → cross-tenant file collision/overwrite. Missing `trustProxy` makes rate limiting bucket on the proxy IP.
+- **P2/P3:** cookie-secret fallback, `NODE_ENV` single-point dependency, PII/OAuth-error-body logging, session lifecycle, traversal prefix separator, no global error handler, demo-session entropy, hardcoded admin email.
+- No source files changed; report only per user request.
+
+## 2026-07-10 11:12 — Move Enrich tools into the Tools page as an inline subsection
+
+- **What:** relocated the three enrichment tools (LinkedIn Profile Data, Fetch Contact Photos, Gmail Email History) from the standalone `/enrich` page into a new **"Enrich"** group on the Tools page (`SettingsView`), where each expands in place as a collapsible card.
+- **New:** `frontend/src/components/EnrichToolsContent.tsx` — extracted all of EnrichView's state/hooks/handlers and the three `settings-section collapsible-card` sections into a self-contained component (renders a fragment of the three cards; no page header/outlet wrapper).
+- **`SettingsView.tsx`:** removed the "Enrich" `settings-nav-link` (which navigated to `/enrich`) from the Tools group; added a new `settings-group` titled "Enrich" that renders `<EnrichToolsContent />`. Cleanup and Merge remain nav links to their own pages.
+- **`App.tsx`:** removed the `EnrichView` import and the `<Route path="enrich">` route.
+- **Deleted:** `frontend/src/components/EnrichView.tsx` (its content now lives in `EnrichToolsContent`, mounted on the Tools page).
+- **CSS (`styles/pages/enrich.css`):** removed the now-dead page-container rules (`.enrich-view`, `.enrich-header`, `.enrich-subtitle`, `.enrich-content`, and their responsive overrides); all tool-specific classes (`.enrich-stats-row`, `.enrichment-*`, `.gmail-discovery-*`, `.recovery-*`, etc.) are global and unchanged, so styling carries over intact.
+- **`DocsView.tsx`:** updated the Enrich feature location string from `Tools → Tools · /enrich` to `Tools → Enrich · /tools`.
+- **Verified:** `tsc --noEmit`, `npm run build` (tsc + vite), and ESLint on the changed files all pass. Live UI walk-through not run (Chrome extension not connected).
 
 - **What:** unified the file-upload and submit buttons across the Settings import sections so VCF and LinkedIn look and behave identically.
 - **New:** `frontend/src/components/ui/FilePicker.tsx` — canonical file-upload control (visually-hidden native input + styled `.file-input-label` button showing the chosen filename, with a `disabled` state). One shared upload button.
@@ -336,3 +377,29 @@
 - Dropped the redundant conditional "Import from iCloud" top nav link — that action is already reachable from the Apple Contacts sync card when connected.
 - **`frontend/src/index.css`** — added `.settings-group` (flex column, `--ds-space-3` gap) and `.settings-group-title` (uppercase `--ds-font-xs` secondary-color label); bumped `.settings-content` inter-group gap from `--ds-space-6` to `--ds-space-8`.
 - All existing inline logic (VCF upload/progress/results, iCloud connect/disconnect, export, delete-all confirm) preserved verbatim. `tsc --noEmit` and ESLint both clean.
+
+## 2026-07-10 — Cleanup mode tabs: pills → standard underline tab bar
+- **`frontend/src/components/CleanupModeSelector.tsx`** — the top-level Cleanup mode selector (Empty Contacts, Problematic Emails, Social Links, Invalid Links, Addresses) was rendered as fixed-height rounded pills, which clipped the longer labels. Swapped the `cleanup-mode-pill` class for `cleanup-mode-tab` and added `role="tablist"`/`role="tab"`/`aria-selected` for accessibility.
+- **`frontend/src/index.css`** —
+  - Removed `.cleanup-mode-pill` from the shared `--ds-control-height` (32px) fixed-height selector group (the root cause of the label clipping).
+  - Replaced the `.cleanup-mode-pill` pill styles with a `.cleanup-mode-tab` underline tab bar: `.cleanup-mode-selector` now has a `border-bottom` divider and `overflow-x: auto`; tabs use vertical padding (no fixed height), `white-space: nowrap`, a 2px transparent bottom border that turns brand-colored + primary text when `.active`. Count badges restyled to a subtle neutral chip (brand-tinted when active).
+- `tsc --noEmit` clean; no remaining references to `cleanup-mode-pill`.
+
+## 2026-07-10 09:42 — Admin › Docs page: Tools reference with right-column TOC
+- **`frontend/src/components/DocsView.tsx`** (new) — admin-only reference page documenting every tool in the Tools section, with a sticky right-column table of contents. Data-driven from a `TOOL_GROUPS` array (Import / Sync / Tools / Export / Danger Zone) so the TOC and sections stay in sync. Each tool documents **How it works** and categorized **Dependencies** (External APIs, Env vars, Packages, Data tables, Services), plus availability tags (Desktop only / Blocked in demo / Irreversible). TOC uses an `IntersectionObserver` to highlight the active section; clicks smooth-scroll and update the hash.
+- **`frontend/src/styles/pages/docs.css`** (new) — two-column grid (`minmax(0,1fr) 200px`), sticky `.docs-toc` (`top` offset by `--ds-header-height`), token-only styling, `scroll-margin-top` on tool cards so anchors clear the fixed header. Collapses to a single column and hides the TOC under 900px.
+- **`frontend/src/styles/pages.css`** — registered `@import './pages/docs.css'`.
+- **`frontend/src/App.tsx`** — added `admin/docs` route → `DocsView` (inside the protected `Layout`).
+- **`frontend/src/components/NavRail.tsx`** — added a gated **Docs** nav item (`book` icon, `/admin/docs`) next to Admin, both behind the existing `s@mombartz.com` guard; added an optional `end` prop to `NavRailItem` and set it on Admin so it only highlights on exact `/admin`.
+- Verified: `tsc --noEmit` clean, `npm run build` succeeds, ESLint clean on changed files (pre-existing MapView warnings unrelated).
+
+## 2026-07-10 10:05 — Docs page: break Enrich and Cleanup into subtools
+- **`frontend/src/components/DocsView.tsx`** — added `subtools` support to the tool model (`SubTool` type; `ToolDoc.how` doubles as an intro when subtools are present). Extracted `DepsList` and `Tags` helper components. The TOC now renders a nested sublist per subtool, and the `IntersectionObserver` tracks tool-header ids plus every subtool section id.
+  - **Enrich** split into its three real features: **LinkedIn Profile Data** (Apify actor + Recover-from-Dataset, `demo`-tagged), **Fetch Contact Photos** (Google otherContacts + Gravatar fallback), **Gmail Email History** (discover/sync into `contact_emails_history`). The `demo` tag moved from the whole tool onto the LinkedIn subtool (only it and recover are demo-blocked).
+  - **Cleanup** split into its five detectors: Empty Contacts, Problematic Emails, Social Links, Invalid Links, Addresses (Addresses notes its Fix/Normalize/Duplicates/Geocode ops; `HERE_API_KEY` scoped to Geocoding only).
+- **`frontend/src/styles/pages/docs.css`** — added `.docs-subtool*` blocks (nested cards on `--ds-bg-secondary`), `.docs-how--intro`, and `.docs-toc-sublist` / `.docs-toc-sublink` indented TOC entries.
+- Verified: `tsc --noEmit` clean, ESLint clean on DocsView, `npm run build` succeeds.
+
+## 2026-07-10 10:30 — Cleanup/Merge header padding + unified tab UX
+- **`frontend/src/index.css`** — removed left/right padding on `.cleanup-header` and `.dedup-header` (`1rem 1.5rem` → `1rem 0`) so the tab-bar underline and header divider span the full width of the view.
+- **`frontend/src/index.css`** — restyled the Merge mode selector (`.mode-selector`/`.mode-pill`) from rounded pills to the same underline tab-bar UX used in Cleanup (`.cleanup-mode-selector`/`.cleanup-mode-tab`): container bottom border + `overflow-x` scroll, transparent tabs with a 2px transparent bottom border that turns `--ds-color-primary` when active, and pill-style counts using `--ds-bg-tertiary`/`--ds-color-primary-light` tokens.

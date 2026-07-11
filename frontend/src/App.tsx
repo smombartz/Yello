@@ -9,10 +9,11 @@ import { ArchivedView } from './components/ArchivedView';
 import { GroupsView } from './components/GroupsView';
 import { MapView } from './components/MapView';
 import { SettingsView } from './components/SettingsView';
-import { EnrichView } from './components/EnrichView';
 import { UserProfilePage } from './components/UserProfilePage';
 import { DashboardView } from './components/DashboardView';
+import { WelcomeView } from './components/WelcomeView';
 import { AdminView } from './components/AdminView';
+import { DocsView } from './components/DocsView';
 import OnboardingView from './components/OnboardingView';
 import { ICloudImportView } from './components/ICloudImportView';
 import { LoginPage } from './components/LoginPage';
@@ -87,6 +88,7 @@ function AppRoutes() {
         }
       >
         <Route path="dashboard" element={<DashboardView />} />
+        <Route path="welcome" element={<WelcomeView />} />
         <Route path="contacts/new" element={<AddContactPage />} />
         <Route path="contacts/:id" element={<ContactDetailPage />} />
         <Route path="contacts" element={<ContactsPage />} />
@@ -96,9 +98,9 @@ function AppRoutes() {
         <Route path="groups" element={<GroupsView />} />
         <Route path="map" element={<MapView />} />
         <Route path="tools" element={<SettingsView />} />
-        <Route path="enrich" element={<EnrichView />} />
         <Route path="profile" element={<UserProfilePage />} />
         <Route path="admin" element={<AdminView />} />
+        <Route path="admin/docs" element={<DocsView />} />
         <Route path="onboarding" element={<OnboardingView />} />
         <Route path="icloud-import" element={<ICloudImportView />} />
       </Route>

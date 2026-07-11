@@ -1,0 +1,832 @@
+import { useState, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useLinkedInEnrichmentSummary, useLinkedInEnrichment, useLinkedInRecovery, useEnrichmentCategoryContacts } from '../api/enrichHooks';
+import { useFetchContactPhotosStream } from '../api/settingsHooks';
+import { useGmailSyncSummary, useGmailDiscover, useGmailBulkSync } from '../api/gmailEnrichHooks';
+import type { GmailDiscoveredContact } from '../api/types';
+import { LoadingSpinner } from './ui/LoadingSpinner';
+import { Icon } from './Icon';
+import { useToast } from './ui/Toast';
+
+/**
+ * The three enrichment tools (LinkedIn profile data, contact photos, Gmail history)
+ * rendered as collapsible cards that expand in place. Used inside the Tools page
+ * (SettingsView) "Enrich" group.
+ */
+export function EnrichToolsContent() {
+  const navigate = useNavigate();
+  const [includeAlreadyEnriched, setIncludeAlreadyEnriched] = useState(false);
+  const [limit, setLimit] = useState<number | undefined>(undefined);
+  const { showToast } = useToast();
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [enrichExpanded, setEnrichExpanded] = useState(false);
+  const [photosExpanded, setPhotosExpanded] = useState(false);
+  const [gmailExpanded, setGmailExpanded] = useState(false);
+  const [gmailStrategy, setGmailStrategy] = useState<'recent' | 'frequent' | 'all' | 'unsynced'>('recent');
+  const [gmailScanDepth, setGmailScanDepth] = useState(500);
+  const [gmailLimit, setGmailLimit] = useState(100);
+  const [discoveredContacts, setDiscoveredContacts] = useState<GmailDiscoveredContact[]>([]);
+  const [discoveryPhase, setDiscoveryPhase] = useState<'idle' | 'discovering' | 'discovered' | 'syncing'>('idle');
+
+  const { data: summary, isLoading: isSummaryLoading, refetch: refetchSummary } = useLinkedInEnrichmentSummary(includeAlreadyEnriched);
+  const { data: categoryContacts, isLoading: categoryLoading } = useEnrichmentCategoryContacts(expandedCategory);
+
+  const {
+    isEnriching,
+    progress,
+    result,
+    error,
+    startEnrichment,
+    cancel,
+    reset,
+  } = useLinkedInEnrichment();
+
+  const {
+    isRecovering,
+    progress: recoveryProgress,
+    result: recoveryResult,
+    error: recoveryError,
+    startRecovery,
+    reset: resetRecovery,
+  } = useLinkedInRecovery();
+
+  const { isStreaming, progress: photosProgress, startFetching, cancel: cancelFetching } = useFetchContactPhotosStream();
+
+  const { data: gmailSummary, isLoading: isGmailSummaryLoading, refetch: refetchGmailSummary } = useGmailSyncSummary();
+  const gmailDiscover = useGmailDiscover();
+  const {
+    isSyncing: isGmailSyncing,
+    progress: gmailProgress,
+    result: gmailResult,
+    error: gmailError,
+    startSync: startGmailSync,
+    cancel: cancelGmailSync,
+    reset: resetGmailSync,
+  } = useGmailBulkSync();
+
+  const [datasetId, setDatasetId] = useState('');
+
+  const handleStartEnrichment = useCallback(() => {
+    reset();
+    startEnrichment(
+      includeAlreadyEnriched,
+      (enrichResult) => {
+        if (enrichResult.succeeded > 0) {
+          showToast(`Enriched ${enrichResult.succeeded} contact${enrichResult.succeeded !== 1 ? 's' : ''} with LinkedIn data`);
+        } else if (enrichResult.failed > 0) {
+          showToast('All enrichment attempts failed. Check error details below.', { type: 'error' });
+        } else {
+          showToast('No contacts to enrich');
+        }
+        refetchSummary();
+      },
+      (errorMsg) => {
+        showToast(errorMsg, { type: 'error' });
+      },
+      limit
+    );
+  }, [includeAlreadyEnriched, startEnrichment, reset, showToast, refetchSummary, limit]);
+
+  const handleCheckboxChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setIncludeAlreadyEnriched(e.target.checked);
+    reset();
+  }, [reset]);
+
+  const handleLimitChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === '') {
+      setLimit(undefined);
+    } else {
+      const num = parseInt(value, 10);
+      if (!isNaN(num) && num > 0) {
+        setLimit(num);
+      }
+    }
+  }, []);
+
+  const handleFetchPhotos = useCallback(() => {
+    startFetching(
+      (result) => {
+        if (result.downloaded > 0) {
+          showToast(`Downloaded ${result.downloaded} photo${result.downloaded !== 1 ? 's' : ''} for your contacts`);
+        } else if (result.matched > 0) {
+          showToast('Photos found but failed to download. Please try again.', { type: 'error' });
+        } else {
+          showToast('No new photos found for contacts');
+        }
+      },
+      (error) => {
+        showToast(error, { type: 'error' });
+      }
+    );
+  }, [startFetching, showToast]);
+
+  const handleGmailDiscover = useCallback(() => {
+    setDiscoveryPhase('discovering');
+    gmailDiscover.mutate(
+      { strategy: gmailStrategy as 'recent' | 'frequent', scanDepth: gmailScanDepth },
+      {
+        onSuccess: (data) => {
+          setDiscoveredContacts(data.contacts);
+          setDiscoveryPhase('discovered');
+        },
+        onError: (err) => {
+          showToast(err instanceof Error ? err.message : 'Discovery failed', { type: 'error' });
+          setDiscoveryPhase('idle');
+        },
+      }
+    );
+  }, [gmailDiscover, gmailStrategy, gmailScanDepth, showToast]);
+
+  const handleGmailSync = useCallback(() => {
+    resetGmailSync();
+    setDiscoveryPhase('syncing');
+
+    let params: { contactIds?: number[]; strategy?: 'all' | 'unsynced'; limit: number };
+    if (gmailStrategy === 'recent' || gmailStrategy === 'frequent') {
+      // Use discovered contacts
+      params = { contactIds: discoveredContacts.slice(0, gmailLimit).map(c => c.contactId), limit: gmailLimit };
+    } else {
+      params = { strategy: gmailStrategy, limit: gmailLimit };
+    }
+
+    startGmailSync(
+      params,
+      (syncResult) => {
+        if (syncResult.succeeded > 0) {
+          showToast(`Synced email history for ${syncResult.succeeded} contact${syncResult.succeeded !== 1 ? 's' : ''}`);
+        } else {
+          showToast('No contacts synced');
+        }
+        refetchGmailSummary();
+        setDiscoveryPhase('idle');
+      },
+      (errorMsg) => {
+        showToast(errorMsg, { type: 'error' });
+        setDiscoveryPhase('idle');
+      }
+    );
+  }, [gmailStrategy, discoveredContacts, gmailLimit, startGmailSync, resetGmailSync, showToast, refetchGmailSummary]);
+
+  const gmailProgressPercent = gmailProgress && gmailProgress.total > 0
+    ? Math.round((gmailProgress.current / gmailProgress.total) * 100)
+    : 0;
+
+  const progressPercent = progress && progress.total > 0
+    ? Math.round((progress.current / progress.total) * 100)
+    : 0;
+
+  return (
+    <>
+      {/* LinkedIn Profile Data Enrichment */}
+      <section className={`settings-section collapsible-card${enrichExpanded ? ' expanded' : ''}`}>
+        <button
+          className="collapsible-header"
+          onClick={() => setEnrichExpanded(!enrichExpanded)}
+        >
+          <div className="settings-section-header">
+            <Icon name="briefcase" />
+            <h2>LinkedIn Profile Data</h2>
+          </div>
+          <Icon name="chevron-down" className={`expand-icon${enrichExpanded ? ' rotated' : ''}`} />
+        </button>
+        {enrichExpanded && (
+          <div className="collapsible-content">
+            <p className="settings-description">
+              Fetch professional information from LinkedIn for contacts that have LinkedIn URLs.
+              Data is stored separately and never overwrites existing contact information.
+            </p>
+
+            {!summary?.configured && (
+              <div className="config-warning">
+                <Icon name="triangle-exclamation" />
+                <div>
+                  <strong>API Not Configured</strong>
+                  <p>Set the <code>APIFY_API_TOKEN</code> environment variable to enable LinkedIn enrichment.</p>
+                </div>
+              </div>
+            )}
+
+            {isSummaryLoading ? (
+              <LoadingSpinner size={32} message="Loading summary..." />
+            ) : summary?.configured && (
+              <>
+                {/* Summary Stats */}
+                <div className="enrich-stats-row">
+                  <button
+                    className={`enrich-stat-card enrich-stat-enriched ${expandedCategory === 'enriched' ? 'expanded' : ''}`}
+                    onClick={() => setExpandedCategory(prev => prev === 'enriched' ? null : 'enriched')}
+                  >
+                    <div className="enrich-stat-count">{summary.enriched}</div>
+                    <div className="enrich-stat-label">Enriched</div>
+                  </button>
+                  <button
+                    className={`enrich-stat-card enrich-stat-ready ${expandedCategory === 'ready' ? 'expanded' : ''}`}
+                    onClick={() => setExpandedCategory(prev => prev === 'ready' ? null : 'ready')}
+                  >
+                    <div className="enrich-stat-count">{summary.readyToEnrich}</div>
+                    <div className="enrich-stat-label">Ready to Enrich</div>
+                  </button>
+                  <button
+                    className={`enrich-stat-card enrich-stat-failed ${expandedCategory === 'failed' ? 'expanded' : ''}`}
+                    onClick={() => setExpandedCategory(prev => prev === 'failed' ? null : 'failed')}
+                  >
+                    <div className="enrich-stat-count">{summary.failed}</div>
+                    <div className="enrich-stat-label">Failed</div>
+                  </button>
+                  <button
+                    className={`enrich-stat-card enrich-stat-no-linkedin ${expandedCategory === 'no-linkedin' ? 'expanded' : ''}`}
+                    onClick={() => setExpandedCategory(prev => prev === 'no-linkedin' ? null : 'no-linkedin')}
+                  >
+                    <div className="enrich-stat-count">{summary.noLinkedIn}</div>
+                    <div className="enrich-stat-label">No LinkedIn</div>
+                  </button>
+                </div>
+
+                {/* Category Drilldown Panel */}
+                {expandedCategory && (
+                  <div className="enrich-category-panel">
+                    <div className="enrich-category-header">
+                      <h4>
+                        {expandedCategory === 'enriched' && 'Enriched Contacts'}
+                        {expandedCategory === 'ready' && 'Ready to Enrich'}
+                        {expandedCategory === 'failed' && 'Failed Enrichment'}
+                        {expandedCategory === 'no-linkedin' && 'No LinkedIn URL'}
+                        {categoryContacts && ` (${categoryContacts.total})`}
+                      </h4>
+                      <button onClick={() => setExpandedCategory(null)} className="enrich-category-close">
+                        <Icon name="xmark" />
+                      </button>
+                    </div>
+                    {categoryLoading ? (
+                      <div className="enrich-category-loading"><LoadingSpinner size={24} message="Loading..." /></div>
+                    ) : (
+                      <div className="enrich-category-list">
+                        {categoryContacts?.contacts.map(contact => (
+                          <button
+                            key={contact.id}
+                            className="enrich-category-contact"
+                            onClick={() => navigate(`/contacts/${contact.id}`)}
+                          >
+                            <span className="enrich-category-contact-name">{contact.displayName}</span>
+                            {contact.company && <span className="enrich-category-contact-company">{contact.company}</span>}
+                            {contact.errorReason && <span className="enrich-category-contact-error">{contact.errorReason}</span>}
+                            {contact.enrichedAt && expandedCategory === 'enriched' && (
+                              <span className="enrich-category-contact-date">{new Date(contact.enrichedAt + 'Z').toLocaleDateString()}</span>
+                            )}
+                            <Icon name="chevron-right" className="enrich-category-contact-arrow" />
+                          </button>
+                        ))}
+                        {categoryContacts?.contacts.length === 0 && (
+                          <div className="enrich-category-empty">No contacts in this category</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Options */}
+                <div className="enrichment-options">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={includeAlreadyEnriched}
+                      onChange={handleCheckboxChange}
+                      disabled={isEnriching}
+                    />
+                    <span>Include previously enriched contacts (re-fetch data)</span>
+                  </label>
+
+                  <div className="limit-input-group">
+                    <label htmlFor="enrichment-limit">Enrich up to:</label>
+                    <input
+                      id="enrichment-limit"
+                      type="number"
+                      min="1"
+                      placeholder="all"
+                      value={limit ?? ''}
+                      onChange={handleLimitChange}
+                      disabled={isEnriching}
+                      className="limit-input"
+                    />
+                    <span className="limit-hint">contacts (leave empty for all)</span>
+                  </div>
+                </div>
+
+                {/* Progress Display */}
+                {isEnriching && progress && (
+                  <div className="enrichment-progress">
+                    <div className="progress-header">
+                      <span className="progress-status">
+                        <Icon name="arrows-rotate" className="spinning" />
+                        Enriching contacts...
+                      </span>
+                      <span className="progress-count">
+                        {progress.current} of {progress.total}
+                      </span>
+                    </div>
+
+                    <div className="progress-bar-container">
+                      <div
+                        className="progress-bar-fill"
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+
+                    {progress.currentContact && (
+                      <div className="progress-current">
+                        Processing: {progress.currentContact}
+                      </div>
+                    )}
+
+                    <div className="progress-stats">
+                      <span className="stat success">
+                        <Icon name="circle-check" />
+                        {progress.succeeded} succeeded
+                      </span>
+                      <span className="stat error">
+                        <Icon name="circle-exclamation" />
+                        {progress.failed} failed
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Results Display */}
+                {result && (
+                  <div className="enrichment-result">
+                    <div className="result-header">
+                      <Icon name="circle-check" className="success-icon" />
+                      <span>Enrichment Complete</span>
+                    </div>
+
+                    <div className="result-stats">
+                      <div className="stat-item success">
+                        <span className="stat-value">{result.succeeded}</span>
+                        <span className="stat-label">Succeeded</span>
+                      </div>
+                      <div className="stat-item error">
+                        <span className="stat-value">{result.failed}</span>
+                        <span className="stat-label">Failed</span>
+                      </div>
+                    </div>
+
+                    {result.errors.length > 0 && (
+                      <div className="result-errors">
+                        <h4>Errors:</h4>
+                        <ul>
+                          {result.errors.slice(0, 10).map((err, idx) => (
+                            <li key={idx}>
+                              <strong>{err.contactName}:</strong> {err.reason}
+                            </li>
+                          ))}
+                          {result.errors.length > 10 && (
+                            <li className="more-errors">
+                              ...and {result.errors.length - 10} more errors
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    {result.enrichedContacts.length > 0 && (
+                      <div className="enriched-contacts-section">
+                        <h4>Enriched Contacts:</h4>
+                        <div className="enriched-contacts-list">
+                          {result.enrichedContacts.map((contact) => (
+                            <div key={contact.contactId} className="enriched-contact-card">
+                              <Link to={`/contacts/${contact.contactId}`} className="enrich-contact-name">
+                                {contact.contactName}
+                              </Link>
+                              <div className="contact-details">
+                                {contact.jobTitle && contact.companyName && (
+                                  <span>{contact.jobTitle} at {contact.companyName}</span>
+                                )}
+                                {contact.jobTitle && !contact.companyName && (
+                                  <span>{contact.jobTitle}</span>
+                                )}
+                                {!contact.jobTitle && contact.companyName && (
+                                  <span>{contact.companyName}</span>
+                                )}
+                                {!contact.jobTitle && !contact.companyName && contact.headline && (
+                                  <span>{contact.headline}</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Error Display */}
+                {error && (
+                  <div className="enrichment-error">
+                    <Icon name="circle-exclamation" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                {/* Action Button */}
+                <div className="enrichment-actions">
+                  {isEnriching ? (
+                    <button className="secondary-button" onClick={cancel}>
+                      <Icon name="xmark" />
+                      Cancel
+                    </button>
+                  ) : (
+                    <button
+                      className="primary-button"
+                      onClick={handleStartEnrichment}
+                      disabled={summary.pendingEnrichment === 0}
+                    >
+                      <Icon name="rocket" />
+                      Start Enrichment
+                      {summary.pendingEnrichment > 0 && (
+                        <span className="button-badge">{summary.pendingEnrichment}</span>
+                      )}
+                    </button>
+                  )}
+                </div>
+
+                {/* Dataset Recovery Section */}
+                <div className="recovery-section">
+                  <h3 className="recovery-heading">Recover from Apify Dataset</h3>
+                  <p className="recovery-description">
+                    If an enrichment run failed midway, paste the Apify dataset ID to recover results.
+                    Find it in your <a href="https://console.apify.com/actors/runs" target="_blank" rel="noopener noreferrer">Apify Console</a>.
+                  </p>
+                  <div className="recovery-input-row">
+                    <input
+                      type="text"
+                      value={datasetId}
+                      onChange={(e) => setDatasetId(e.target.value)}
+                      placeholder="Dataset ID (e.g. abc123def456)"
+                      className="limit-input recovery-input"
+                      disabled={isRecovering || isEnriching}
+                    />
+                    <button
+                      className="secondary-button"
+                      onClick={() => {
+                        resetRecovery();
+                        startRecovery(
+                          datasetId.trim(),
+                          (r) => {
+                            showToast(`Recovered ${r.succeeded} contact${r.succeeded !== 1 ? 's' : ''}`);
+                            refetchSummary();
+                          },
+                          (err) => showToast(err, { type: 'error' })
+                        );
+                      }}
+                      disabled={!datasetId.trim() || isRecovering || isEnriching}
+                    >
+                      <Icon name={isRecovering ? 'arrows-rotate' : 'download'} className={isRecovering ? 'spinning' : ''} />
+                      {isRecovering ? 'Recovering...' : 'Recover'}
+                    </button>
+                  </div>
+
+                  {isRecovering && recoveryProgress && (
+                    <div className="enrichment-progress" style={{ marginTop: 12 }}>
+                      <div className="progress-header">
+                        <span className="progress-status">
+                          <Icon name="arrows-rotate" className="spinning" />
+                          Recovering...
+                        </span>
+                        <span className="progress-count">
+                          {recoveryProgress.succeeded + recoveryProgress.failed} processed
+                        </span>
+                      </div>
+                      <div className="progress-stats">
+                        <span className="stat success">
+                          <Icon name="circle-check" />
+                          {recoveryProgress.succeeded} succeeded
+                        </span>
+                        <span className="stat error">
+                          <Icon name="circle-exclamation" />
+                          {recoveryProgress.failed} failed
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {recoveryResult && (
+                    <div className="enrichment-result" style={{ marginTop: 12 }}>
+                      <div className="result-header">
+                        <Icon name="circle-check" className="success-icon" />
+                        <span>Recovery Complete</span>
+                      </div>
+                      <div className="result-stats">
+                        <div className="stat-item success">
+                          <span className="stat-value">{recoveryResult.succeeded}</span>
+                          <span className="stat-label">Succeeded</span>
+                        </div>
+                        <div className="stat-item error">
+                          <span className="stat-value">{recoveryResult.failed}</span>
+                          <span className="stat-label">Failed</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {recoveryError && (
+                    <div className="enrichment-error" style={{ marginTop: 12 }}>
+                      <Icon name="circle-exclamation" />
+                      <span>{recoveryError}</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Fetch Contact Photos */}
+      <section className={`settings-section collapsible-card${photosExpanded ? ' expanded' : ''}`}>
+        <button
+          className="collapsible-header"
+          onClick={() => setPhotosExpanded(!photosExpanded)}
+        >
+          <div className="settings-section-header">
+            <Icon name="images" />
+            <h2>Fetch Contact Photos</h2>
+          </div>
+          <Icon name="chevron-down" className={`expand-icon${photosExpanded ? ' rotated' : ''}`} />
+        </button>
+        {photosExpanded && (
+          <div className="collapsible-content">
+            <p className="settings-description">
+              Download profile photos for your contacts from Google Contacts and Gravatar.
+              Only contacts with email addresses and no existing photo will be updated.
+            </p>
+            {isStreaming && photosProgress && (
+              <div className="photo-fetch-progress">
+                <div className="progress-bar-container">
+                  <div
+                    className="progress-bar-fill"
+                    style={{ width: `${(photosProgress.current / photosProgress.total) * 100}%` }}
+                  />
+                </div>
+                <div className="progress-text">
+                  Processing {photosProgress.current} of {photosProgress.total} contacts...
+                </div>
+                <div className="progress-stats">
+                  <span className="stat downloaded">Downloaded: {photosProgress.downloaded}</span>
+                  <span className="stat skipped">Skipped: {photosProgress.skipped}</span>
+                  <span className="stat failed">Failed: {photosProgress.failed}</span>
+                </div>
+              </div>
+            )}
+            <button
+              className="secondary-button"
+              onClick={isStreaming ? cancelFetching : handleFetchPhotos}
+            >
+              <Icon name={isStreaming ? 'arrows-rotate' : 'cloud-arrow-down'} className={isStreaming ? 'spinning' : ''} />
+              {isStreaming ? 'Cancel' : 'Fetch Contact Photos'}
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* Gmail Email History */}
+      <section className={`settings-section collapsible-card${gmailExpanded ? ' expanded' : ''}`}>
+        <button
+          className="collapsible-header"
+          onClick={() => setGmailExpanded(!gmailExpanded)}
+        >
+          <div className="settings-section-header">
+            <Icon name="envelope" />
+            <h2>Gmail Email History</h2>
+          </div>
+          <Icon name="chevron-down" className={`expand-icon${gmailExpanded ? ' rotated' : ''}`} />
+        </button>
+        {gmailExpanded && (
+          <div className="collapsible-content">
+            <p className="settings-description">
+              Sync email history from Gmail for your contacts. Discover which contacts you email most
+              or sync all contacts with email addresses.
+            </p>
+
+            {isGmailSummaryLoading ? (
+              <LoadingSpinner size={32} message="Loading summary..." />
+            ) : gmailSummary && (
+              <>
+                {/* Summary Stats */}
+                <div className="enrich-stats-row" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                  <div className="enrich-stat-card">
+                    <div className="enrich-stat-count" style={{ color: 'var(--ds-color-success)' }}>{gmailSummary.synced}</div>
+                    <div className="enrich-stat-label">Synced</div>
+                  </div>
+                  <div className="enrich-stat-card">
+                    <div className="enrich-stat-count" style={{ color: 'var(--ds-color-primary)' }}>{gmailSummary.notSynced}</div>
+                    <div className="enrich-stat-label">Not Synced</div>
+                  </div>
+                  <div className="enrich-stat-card">
+                    <div className="enrich-stat-count" style={{ color: 'var(--ds-text-secondary)' }}>{gmailSummary.totalWithEmail}</div>
+                    <div className="enrich-stat-label">Total with Email</div>
+                  </div>
+                </div>
+
+                {/* Strategy selector */}
+                <div className="enrichment-options">
+                  <div className="limit-input-group">
+                    <label htmlFor="gmail-strategy">Strategy:</label>
+                    <select
+                      id="gmail-strategy"
+                      value={gmailStrategy}
+                      onChange={(e) => {
+                        setGmailStrategy(e.target.value as typeof gmailStrategy);
+                        setDiscoveredContacts([]);
+                        setDiscoveryPhase('idle');
+                        resetGmailSync();
+                      }}
+                      disabled={isGmailSyncing}
+                      className="strategy-select"
+                    >
+                      <option value="recent">Most recently emailed</option>
+                      <option value="frequent">Most frequently emailed</option>
+                      <option value="unsynced">Not yet synced</option>
+                      <option value="all">All contacts with email</option>
+                    </select>
+                  </div>
+
+                  {(gmailStrategy === 'recent' || gmailStrategy === 'frequent') && (
+                    <div className="limit-input-group">
+                      <label htmlFor="gmail-scan-depth">Scan depth:</label>
+                      <input
+                        id="gmail-scan-depth"
+                        type="number"
+                        min="50"
+                        max="5000"
+                        step="100"
+                        value={gmailScanDepth}
+                        onChange={(e) => setGmailScanDepth(Math.max(50, parseInt(e.target.value, 10) || 500))}
+                        disabled={isGmailSyncing || discoveryPhase === 'discovering'}
+                        className="limit-input"
+                      />
+                      <span className="limit-hint">messages to scan</span>
+                    </div>
+                  )}
+
+                  <div className="limit-input-group">
+                    <label htmlFor="gmail-limit">Sync up to:</label>
+                    <input
+                      id="gmail-limit"
+                      type="number"
+                      min="1"
+                      max="5000"
+                      value={gmailLimit}
+                      onChange={(e) => setGmailLimit(Math.max(1, parseInt(e.target.value, 10) || 100))}
+                      disabled={isGmailSyncing}
+                      className="limit-input"
+                    />
+                    <span className="limit-hint">contacts</span>
+                  </div>
+                </div>
+
+                {/* Discovery results */}
+                {discoveryPhase === 'discovered' && discoveredContacts.length > 0 && (
+                  <div className="gmail-discovery-results">
+                    <div className="gmail-discovery-header">
+                      Found {discoveredContacts.length} contacts.
+                      {discoveredContacts.length > gmailLimit && ` Top ${gmailLimit} selected.`}
+                    </div>
+                    <div className="gmail-discovery-list">
+                      {discoveredContacts.slice(0, 10).map(c => (
+                        <div key={c.contactId} className="gmail-discovery-item">
+                          <span className="gmail-discovery-name">{c.displayName}</span>
+                          <span className="gmail-discovery-detail">
+                            {gmailStrategy === 'frequent'
+                              ? `${c.messageCount} emails`
+                              : new Date(c.lastEmailDate).toLocaleDateString()
+                            }
+                          </span>
+                        </div>
+                      ))}
+                      {discoveredContacts.length > 10 && (
+                        <div className="gmail-discovery-more">
+                          ...and {discoveredContacts.length - 10} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {discoveryPhase === 'discovered' && discoveredContacts.length === 0 && (
+                  <div className="gmail-discovery-results">
+                    <div className="gmail-discovery-header">No matching contacts found in your recent Gmail messages.</div>
+                  </div>
+                )}
+
+                {/* Progress Display */}
+                {isGmailSyncing && gmailProgress && (
+                  <div className="enrichment-progress">
+                    <div className="progress-header">
+                      <span className="progress-status">
+                        <Icon name="arrows-rotate" className="spinning" />
+                        Syncing email history...
+                      </span>
+                      <span className="progress-count">
+                        {gmailProgress.current} of {gmailProgress.total}
+                      </span>
+                    </div>
+                    <div className="progress-bar-container">
+                      <div
+                        className="progress-bar-fill"
+                        style={{ width: `${gmailProgressPercent}%` }}
+                      />
+                    </div>
+                    <div className="progress-current">
+                      Syncing: {gmailProgress.contactName}
+                    </div>
+                    <div className="progress-stats">
+                      <span className="stat success">
+                        <Icon name="circle-check" />
+                        {gmailProgress.succeeded} synced
+                      </span>
+                      <span className="stat error">
+                        <Icon name="circle-exclamation" />
+                        {gmailProgress.failed} failed
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Result Display */}
+                {gmailResult && (
+                  <div className="enrichment-result">
+                    <div className="result-header">
+                      <Icon name="circle-check" className="success-icon" />
+                      <span>Sync Complete</span>
+                    </div>
+                    <div className="result-stats">
+                      <div className="stat-item success">
+                        <span className="stat-value">{gmailResult.succeeded}</span>
+                        <span className="stat-label">Synced</span>
+                      </div>
+                      <div className="stat-item error">
+                        <span className="stat-value">{gmailResult.failed}</span>
+                        <span className="stat-label">Failed</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Display */}
+                {gmailError && (
+                  <div className="enrichment-error">
+                    <Icon name="circle-exclamation" />
+                    <span>{gmailError}</span>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="enrichment-actions">
+                  {isGmailSyncing ? (
+                    <button className="secondary-button" onClick={() => { cancelGmailSync(); setDiscoveryPhase('idle'); }}>
+                      <Icon name="xmark" />
+                      Cancel
+                    </button>
+                  ) : (
+                    <>
+                      {(gmailStrategy === 'recent' || gmailStrategy === 'frequent') && discoveryPhase !== 'discovered' && (
+                        <button
+                          className="primary-button"
+                          onClick={handleGmailDiscover}
+                          disabled={discoveryPhase === 'discovering'}
+                        >
+                          <Icon name={discoveryPhase === 'discovering' ? 'arrows-rotate' : 'magnifying-glass'} className={discoveryPhase === 'discovering' ? 'spinning' : ''} />
+                          {discoveryPhase === 'discovering' ? 'Discovering...' : 'Discover Contacts'}
+                        </button>
+                      )}
+                      {((gmailStrategy === 'recent' || gmailStrategy === 'frequent') && discoveryPhase === 'discovered' && discoveredContacts.length > 0) && (
+                        <button className="primary-button" onClick={handleGmailSync}>
+                          <Icon name="rocket" />
+                          Start Sync
+                          <span className="button-badge">{Math.min(discoveredContacts.length, gmailLimit)}</span>
+                        </button>
+                      )}
+                      {(gmailStrategy === 'all' || gmailStrategy === 'unsynced') && (
+                        <button
+                          className="primary-button"
+                          onClick={handleGmailSync}
+                          disabled={gmailStrategy === 'unsynced' && gmailSummary.notSynced === 0}
+                        >
+                          <Icon name="rocket" />
+                          Start Sync
+                          {gmailStrategy === 'unsynced' && gmailSummary.notSynced > 0 && (
+                            <span className="button-badge">{Math.min(gmailSummary.notSynced, gmailLimit)}</span>
+                          )}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </section>
+    </>
+  );
+}

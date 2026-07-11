@@ -14,6 +14,7 @@ import { ConfirmDialog } from './ui/ConfirmDialog';
 import { useToast } from './ui/Toast';
 import { LinkedInImportContent } from './LinkedInImportContent';
 import { GoogleContactsImportContent } from './GoogleContactsImportContent';
+import { EnrichToolsContent } from './EnrichToolsContent';
 import { FilePicker } from './ui/FilePicker';
 
 export function SettingsView() {
@@ -357,13 +358,12 @@ export function SettingsView() {
             </div>
             <Icon name="chevron-right" className="nav-link-arrow" />
           </Link>
-          <Link to="/enrich" className="collapsible-card settings-nav-link">
-            <div className="settings-section-header">
-              <Icon name="wand-magic-sparkles" />
-              <h2>Enrich</h2>
-            </div>
-            <Icon name="chevron-right" className="nav-link-arrow" />
-          </Link>
+        </section>
+
+        {/* ===== Enrich ===== */}
+        <section className="settings-group">
+          <h2 className="settings-group-title">Enrich</h2>
+          <EnrichToolsContent />
         </section>
 
         {/* ===== Export ===== */}
