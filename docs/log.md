@@ -1,5 +1,24 @@
 # Change Log
 
+## 2026-07-13 — Collapsed the "Sync" group into "Import" on the Tools page
+
+**What Changed:**
+- Removed the duplicate "Sync Google Contacts" card from `SettingsView.tsx`. It rendered the same `GoogleContactsImportContent` component and hit the same endpoints as the "Import Google Contacts" card already in the Import group — two differently-labelled cards doing the identical thing. Its one useful piece of copy (explaining that a Google-signed-in user may only need to grant extra permission) was moved into the surviving Import card rather than lost.
+- Moved the Apple/iCloud card into the Import group and renamed it "Sync Apple Contacts" → "Import from Apple iCloud". Its connect/disconnect form and its link to `/icloud-import` are unchanged.
+- Deleted the now-empty "Sync" group and the unused `googleContactsExpanded` state.
+- Mirrored the same restructuring in `DocsView.tsx`'s `TOOL_GROUPS`: dropped the `sync-google` entry, moved `sync-apple` into the Import group as `import-apple` with an updated name and location.
+
+**Why:**
+- Neither integration actually syncs. Apple (`icloudService`) pulls a full CardDAV dump on every fetch with no CTag/ETag/sync-token stored; Google (`googlePeopleService`) pages `people/me/connections` to exhaustion without ever requesting a `syncToken`, and its OAuth scope is `contacts.readonly`, so write-back is impossible as built. Neither is scheduled, and nothing edited in Yello is pushed back to Apple or Google. The "Sync" group promised ongoing, two-way behaviour the code does not implement.
+- Grouping them under "Sync" had also produced a straight duplication of the Google import card.
+- Behavior is unchanged; this is naming and placement only. Real sync (Google `syncToken`, CardDAV CTag/ETag, read-write scope) remains future work per `docs/plans/2026-04-01-google-contacts-import.md` and `docs/plans/2026-03-31-icloud-contacts-sync-design.md`.
+
+**Files Modified:**
+- `frontend/src/components/SettingsView.tsx`
+- `frontend/src/components/DocsView.tsx`
+
+---
+
 ## 2026-07-13 — Header logo links to dashboard
 
 **What Changed:**

@@ -99,17 +99,12 @@ const TOOL_GROUPS: ToolGroup[] = [
           services: ['googlePeopleService', 'googleAuthService', 'icloudMatchingService', 'nameMatchingService', 'photoProcessor'],
         },
       },
-    ],
-  },
-  {
-    title: 'Sync',
-    tools: [
       {
-        id: 'sync-apple',
-        name: 'Sync Apple Contacts',
+        id: 'import-apple',
+        name: 'Import from Apple iCloud',
         icon: 'apple',
         iconStyle: 'brands',
-        location: 'Tools → Sync · POST /api/icloud/fetch',
+        location: 'Tools → Import · POST /api/icloud/fetch',
         how: 'The user connects with their Apple ID email and an app-specific password, which is verified against iCloud and stored encrypted (AES, keyed from SESSION_SECRET). Importing uses tsdav’s CardDAV client to pull vCards from every iCloud address book, which are then parsed with the same vCard parser as file import. Fetched contacts are previewed with the shared matcher and imported with the same new/merge logic as Google (photos tagged "icloud").',
         deps: {
           external: ['iCloud CardDAV (contacts.icloud.com)', 'Apple app-specific password'],
@@ -117,19 +112,6 @@ const TOOL_GROUPS: ToolGroup[] = [
           packages: ['tsdav', 'ical.js', 'libphonenumber-js', 'sharp', 'better-sqlite3'],
           tables: ['user_settings (icloud_email, icloud_app_password)', 'contacts + child tables', 'contact_photos', 'contacts_unified_fts'],
           services: ['icloudService', 'icloudMatchingService', 'nameMatchingService', 'photoProcessor', 'vcardParser'],
-        },
-      },
-      {
-        id: 'sync-google',
-        name: 'Sync Google Contacts',
-        icon: 'google',
-        iconStyle: 'brands',
-        location: 'Tools → Sync · shares Import Google Contacts',
-        how: 'Uses the same GoogleContactsImportContent component and backend flow as Import Google Contacts — it reuses the Google People API connection and the field-union merge logic. It is surfaced under Sync as the ongoing way to pull in Google contacts once access has been granted. See Import Google Contacts for the full flow and dependencies.',
-        deps: {
-          external: ['Google People API'],
-          env: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'APP_URL', 'SESSION_SECRET'],
-          services: ['googlePeopleService', 'googleAuthService', '(same as Import Google Contacts)'],
         },
       },
     ],

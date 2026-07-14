@@ -36,7 +36,6 @@ export function SettingsView() {
   const [exportExpanded, setExportExpanded] = useState(false);
   const [dangerExpanded, setDangerExpanded] = useState(false);
   const [icloudExpanded, setIcloudExpanded] = useState(false);
-  const [googleContactsExpanded, setGoogleContactsExpanded] = useState(false);
   const [icloudEmail, setIcloudEmail] = useState('');
   const [icloudPassword, setIcloudPassword] = useState('');
   const icloudSettings = useICloudSettings();
@@ -220,17 +219,15 @@ export function SettingsView() {
           </button>
           {googleImportExpanded && (
             <div className="collapsible-content">
+              <p className="settings-description">
+                Import contacts from your Google account. Since you're already signed in with Google, you may just need to grant additional permission to access your contacts.
+              </p>
               <GoogleContactsImportContent />
             </div>
           )}
         </section>
-        </section>
 
-        {/* ===== Sync ===== */}
-        <section className="settings-group">
-          <h2 className="settings-group-title">Sync</h2>
-
-        {/* Apple Contacts Section */}
+        {/* Import from Apple iCloud */}
         <section className={`settings-section collapsible-card${icloudExpanded ? ' expanded' : ''}`}>
           <button
             className="collapsible-header"
@@ -238,7 +235,7 @@ export function SettingsView() {
           >
             <div className="settings-section-header">
               <Icon name="apple" style="brands" />
-              <h2>Sync Apple Contacts</h2>
+              <h2>Import from Apple iCloud</h2>
             </div>
             <Icon name="chevron-down" className={`expand-icon${icloudExpanded ? ' rotated' : ''}`} />
           </button>
@@ -317,27 +314,6 @@ export function SettingsView() {
           )}
         </section>
 
-        {/* Google Contacts Section */}
-        <section className={`settings-section collapsible-card${googleContactsExpanded ? ' expanded' : ''}`}>
-          <button
-            className="collapsible-header"
-            onClick={() => setGoogleContactsExpanded(!googleContactsExpanded)}
-          >
-            <div className="settings-section-header">
-              <Icon name="google" style="brands" />
-              <h2>Sync Google Contacts</h2>
-            </div>
-            <Icon name="chevron-down" className={`expand-icon${googleContactsExpanded ? ' rotated' : ''}`} />
-          </button>
-          {googleContactsExpanded && (
-            <div className="collapsible-content">
-              <p className="settings-description">
-                Import contacts from your Google account. Since you're already signed in with Google, you may just need to grant additional permission to access your contacts.
-              </p>
-              <GoogleContactsImportContent />
-            </div>
-          )}
-        </section>
         </section>
 
         {/* ===== Tools ===== */}
