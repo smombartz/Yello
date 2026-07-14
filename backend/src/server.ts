@@ -56,7 +56,11 @@ try {
 }
 console.log('=================================');
 
-const app = Fastify({ logger: true });
+// Trust exactly one proxy hop (Railway's edge), so request.ip is the
+// client IP Railway appends to X-Forwarded-For. `true` would take the
+// leftmost XFF entry, which clients can spoof to bypass rate limiting.
+// Locally (Electron/dev) there is no XFF header, so the socket IP is used.
+const app = Fastify({ logger: true, trustProxy: 1 });
 
 if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
   console.error('FATAL: SESSION_SECRET environment variable is required in production');

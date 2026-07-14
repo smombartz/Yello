@@ -1,5 +1,22 @@
 # Change Log
 
+## 2026-07-11 — Fix rate-limit keying behind Railway proxy (trustProxy)
+
+**What Changed:**
+- `Fastify({ logger: true })` → `Fastify({ logger: true, trustProxy: 1 })` in `backend/src/server.ts`.
+- With no `trustProxy`, `request.ip` was Railway's proxy socket IP, so `@fastify/rate-limit` (default key: `req.ip`) bucketed **all users together** — one abuser could exhaust the global 100/min bucket and the tighter auth-endpoint limits for everyone, and per-client brute-force throttling didn't work.
+- Deliberately `trustProxy: 1` (trust exactly one hop — Railway's edge) instead of the suggested `trustProxy: true`: with `true`, Fastify takes the **leftmost** `X-Forwarded-For` entry, which a client can spoof (Railway appends the real IP rather than stripping the header), letting an attacker rotate fake IPs to bypass rate limits entirely. With `1`, `request.ip` is the rightmost XFF entry — the one Railway itself appends — which the client cannot forge. Locally (Electron/dev, no proxy) there's no XFF header, so it falls back to the socket IP unchanged.
+
+**Why:**
+- Security audit finding: rate limiting was ineffective behind Railway's edge proxy (shared bucket, no per-client keying).
+
+**Files Modified:**
+- `backend/src/server.ts`
+
+**Verified:** `tsc --noEmit` passes; all 126 backend tests pass. Behavioral test (Fastify inject mirroring the server config): spoofed-leftmost + Railway-appended-rightmost XFF resolves `request.ip` to the Railway-appended client IP; no-XFF requests fall back to the socket IP; the 4th request from the same real IP gets 429 even while rotating spoofed leftmost entries; a different real client IP gets a fresh bucket.
+
+---
+
 ## 2026-07-10 16:10 — Launch/beta announcement banner + Welcome page
 
 **What Changed:**
