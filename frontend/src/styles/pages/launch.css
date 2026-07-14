@@ -20,6 +20,11 @@
   box-shadow: var(--ds-shadow-lg);
 }
 
+/* Match the dashboard's section rhythm (.dashboard-section uses the same margin). */
+.dashboard-content > .launch-banner {
+  margin-bottom: var(--ds-space-6);
+}
+
 .launch-banner:focus-visible {
   outline: 2px solid var(--ds-text-inverse);
   outline-offset: 2px;

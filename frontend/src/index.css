@@ -448,6 +448,11 @@ select:focus-visible {
   height: 100%;
 }
 
+.page-header-logo-link {
+  display: flex;
+  align-items: center;
+}
+
 .page-header-logo {
   height: var(--ds-header-logo-size);
   width: auto;

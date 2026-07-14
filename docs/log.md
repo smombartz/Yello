@@ -1,5 +1,20 @@
 # Change Log
 
+## 2026-07-13 — Header logo links to dashboard
+
+**What Changed:**
+- Wrapped the Yello logo in `PageHeader` in a react-router `Link` to `/dashboard` (with an `aria-label`), so clicking it navigates to the dashboard from any page.
+- Added a `.page-header-logo-link` flex rule so the anchor wrapper doesn't change the logo's alignment.
+
+**Why:**
+- Standard UX convention: the app logo should take you back to the home/dashboard view.
+
+**Files Modified:**
+- `frontend/src/components/PageHeader.tsx`
+- `frontend/src/index.css`
+
+---
+
 ## 2026-07-11 — Per-user Apify API key for LinkedIn enrichment
 
 **What Changed:**

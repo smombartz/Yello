@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import logoSvg from '../assets/logo.svg';
 import { SearchBar } from './ui/SearchBar';
 
@@ -29,7 +30,9 @@ export function PageHeader({
     <header className="page-header">
       <div className="page-header-row">
         <div className="page-header-col-left">
-          <img src={logoSvg} alt="Yello" className="page-header-logo" />
+          <Link to="/dashboard" className="page-header-logo-link" aria-label="Go to dashboard">
+            <img src={logoSvg} alt="Yello" className="page-header-logo" />
+          </Link>
         </div>
 
         <div className="page-header-col-center">
