@@ -2,16 +2,24 @@ import type { Database as DatabaseType } from 'better-sqlite3';
 import type { ParsedContact } from './vcardParser.js';
 import { namesMatch } from './nameMatchingService.js';
 
+/**
+ * An incoming contact carrying whatever stable external identifier its source
+ * provides: Google's People API resourceName, or a vCard UID (iCloud/file).
+ */
+export type IncomingContact = ParsedContact & { googleResourceName?: string | null };
+
 export interface IncomingMatch {
-  incoming: ParsedContact;
+  incoming: IncomingContact;
   existingContactId: number;
   existingDisplayName: string;
   confidence: 'very_high' | 'high' | 'medium';
   matchReasons: string[];
+  /** True when the matched contact is archived — importing it again would resurrect it. */
+  existingArchived: boolean;
 }
 
 export interface MatchResult {
-  newContacts: ParsedContact[];
+  newContacts: IncomingContact[];
   matches: IncomingMatch[];
   stats: { total: number; new: number; matched: number };
 }
@@ -22,15 +30,31 @@ interface DbContactMatchData {
   emails: string[];
   phones: string[];
   socials: string[];
+  googleResourceName: string | null;
+  icloudUid: string | null;
+  archived: boolean;
 }
 
 /**
  * Load existing contact match data from the database.
+ *
+ * Archived contacts are deliberately included. If they were excluded, a contact
+ * the user archived would look brand new on the next import and be re-inserted
+ * as a duplicate — exactly the resurrection we're trying to prevent. They are
+ * flagged instead, so the caller can surface them rather than silently merge.
  */
 function loadExistingContacts(db: DatabaseType): DbContactMatchData[] {
   const contactRows = db.prepare(`
-    SELECT id, display_name as displayName FROM contacts WHERE archived_at IS NULL
-  `).all() as Array<{ id: number; displayName: string }>;
+    SELECT id, display_name as displayName, google_resource_name as googleResourceName,
+           icloud_uid as icloudUid, archived_at as archivedAt
+    FROM contacts
+  `).all() as Array<{
+    id: number;
+    displayName: string;
+    googleResourceName: string | null;
+    icloudUid: string | null;
+    archivedAt: string | null;
+  }>;
 
   const contactMap = new Map<number, DbContactMatchData>();
   for (const row of contactRows) {
@@ -40,14 +64,14 @@ function loadExistingContacts(db: DatabaseType): DbContactMatchData[] {
       emails: [],
       phones: [],
       socials: [],
+      googleResourceName: row.googleResourceName,
+      icloudUid: row.icloudUid,
+      archived: row.archivedAt !== null,
     });
   }
 
   const emailRows = db.prepare(`
-    SELECT e.contact_id, LOWER(e.email) as email
-    FROM contact_emails e
-    JOIN contacts c ON e.contact_id = c.id
-    WHERE c.archived_at IS NULL
+    SELECT contact_id, LOWER(email) as email FROM contact_emails
   `).all() as Array<{ contact_id: number; email: string }>;
 
   for (const row of emailRows) {
@@ -55,10 +79,7 @@ function loadExistingContacts(db: DatabaseType): DbContactMatchData[] {
   }
 
   const phoneRows = db.prepare(`
-    SELECT p.contact_id, p.phone
-    FROM contact_phones p
-    JOIN contacts c ON p.contact_id = c.id
-    WHERE p.phone != '' AND c.archived_at IS NULL
+    SELECT contact_id, phone FROM contact_phones WHERE phone != ''
   `).all() as Array<{ contact_id: number; phone: string }>;
 
   for (const row of phoneRows) {
@@ -66,10 +87,8 @@ function loadExistingContacts(db: DatabaseType): DbContactMatchData[] {
   }
 
   const socialRows = db.prepare(`
-    SELECT s.contact_id, LOWER(s.platform) || ':' || LOWER(s.username) as social
-    FROM contact_social_profiles s
-    JOIN contacts c ON s.contact_id = c.id
-    WHERE c.archived_at IS NULL
+    SELECT contact_id, LOWER(platform) || ':' || LOWER(username) as social
+    FROM contact_social_profiles
   `).all() as Array<{ contact_id: number; social: string }>;
 
   for (const row of socialRows) {
@@ -80,14 +99,31 @@ function loadExistingContacts(db: DatabaseType): DbContactMatchData[] {
 }
 
 /**
+ * Stable external-identity keys for an incoming contact, most trustworthy first.
+ */
+function externalKeysOf(contact: IncomingContact): string[] {
+  const keys: string[] = [];
+  if (contact.googleResourceName) keys.push(`google:${contact.googleResourceName}`);
+  if (contact.uid) keys.push(`uid:${contact.uid}`);
+  return keys;
+}
+
+/**
  * Build inverted indexes from existing contacts for O(1) lookup.
  */
 function buildIndexes(existingContacts: DbContactMatchData[]) {
   const emailIndex = new Map<string, number[]>();
   const phoneIndex = new Map<string, number[]>();
   const socialIndex = new Map<string, number[]>();
+  const externalIdIndex = new Map<string, number>();
 
   for (const contact of existingContacts) {
+    if (contact.googleResourceName) {
+      externalIdIndex.set(`google:${contact.googleResourceName}`, contact.id);
+    }
+    if (contact.icloudUid) {
+      externalIdIndex.set(`uid:${contact.icloudUid}`, contact.id);
+    }
     for (const email of contact.emails) {
       if (!emailIndex.has(email)) emailIndex.set(email, []);
       emailIndex.get(email)!.push(contact.id);
@@ -102,7 +138,7 @@ function buildIndexes(existingContacts: DbContactMatchData[]) {
     }
   }
 
-  return { emailIndex, phoneIndex, socialIndex };
+  return { emailIndex, phoneIndex, socialIndex, externalIdIndex };
 }
 
 /**
@@ -189,16 +225,35 @@ function determineConfidence(
  */
 export function matchIncomingContacts(
   db: DatabaseType,
-  incoming: ParsedContact[]
+  incoming: IncomingContact[]
 ): MatchResult {
   const existingContacts = loadExistingContacts(db);
   const indexes = buildIndexes(existingContacts);
   const existingById = new Map(existingContacts.map(c => [c.id, c]));
 
-  const newContacts: ParsedContact[] = [];
+  const newContacts: IncomingContact[] = [];
   const matches: IncomingMatch[] = [];
 
   for (const incomingContact of incoming) {
+    // A stable external identifier is authoritative: it means this is literally
+    // the same source record we imported before, so trust it over any heuristic.
+    const externalHit = externalKeysOf(incomingContact)
+      .map(key => indexes.externalIdIndex.get(key))
+      .find((id): id is number => id !== undefined);
+
+    if (externalHit !== undefined) {
+      const existing = existingById.get(externalHit)!;
+      matches.push({
+        incoming: incomingContact,
+        existingContactId: existing.id,
+        existingDisplayName: existing.displayName,
+        confidence: 'very_high',
+        matchReasons: [incomingContact.googleResourceName ? 'same Google contact' : 'same contact (vCard UID)'],
+        existingArchived: existing.archived,
+      });
+      continue;
+    }
+
     // Find all candidate existing contacts that share at least one field
     const candidateIds = new Set<number>();
 
@@ -239,6 +294,7 @@ export function matchIncomingContacts(
         existingDisplayName: existing.displayName,
         confidence: bestMatch.confidence,
         matchReasons: bestMatch.reasons,
+        existingArchived: existing.archived,
       });
     } else {
       newContacts.push(incomingContact);

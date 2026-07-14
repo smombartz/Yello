@@ -31,9 +31,10 @@ export function GoogleContactsImportContent() {
         previewImport.mutate({ contacts: result.contacts }, {
           onSuccess: (preview) => {
             setMatchResult(preview);
-            // Default: merge all matches, import all new
+            // Default: merge all matches, import all new. Archived matches default
+            // to skip — the user archived them, so don't quietly bring them back.
             const decisions = new Map<number, MatchDecision>();
-            preview.matches.forEach((_, i) => decisions.set(i, 'merge'));
+            preview.matches.forEach((m, i) => decisions.set(i, m.existingArchived ? 'skip' : 'merge'));
             setMatchDecisions(decisions);
             const selected = new Set<number>();
             preview.newContacts.forEach((_, i) => selected.add(i));

@@ -331,6 +331,15 @@ export function getUserDatabase(userId: number): DatabaseType {
     db.exec(`ALTER TABLE user_settings ADD COLUMN google_contacts_last_synced DATETIME`);
   } catch { /* column already exists */ }
 
+  // iCloud/vCard UID migration — stable identifier so re-imports match exactly
+  // instead of relying on email/phone heuristics.
+  try {
+    db.exec(`ALTER TABLE contacts ADD COLUMN icloud_uid TEXT`);
+  } catch { /* column already exists */ }
+  try {
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_contacts_icloud_uid ON contacts(icloud_uid) WHERE icloud_uid IS NOT NULL`);
+  } catch { /* index already exists */ }
+
   cache.set(userId, db);
   return db;
 }

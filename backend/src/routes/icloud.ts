@@ -116,8 +116,8 @@ export default async function icloudRoutes(
     const errors: Array<{ line: number; reason: string }> = [];
 
     const insertContact = db.prepare(`
-      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, photo_hash, raw_vcard)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, photo_hash, raw_vcard, icloud_uid)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const insertEmail = db.prepare('INSERT INTO contact_emails (contact_id, email, type, is_primary) VALUES (?, ?, ?, ?)');
     const insertPhone = db.prepare('INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, is_primary) VALUES (?, ?, ?, ?, ?, ?)');
@@ -133,7 +133,8 @@ export default async function icloudRoutes(
       try {
         const result = insertContact.run(
           contact.firstName, contact.lastName, contact.displayName,
-          contact.company, contact.title, contact.notes, contact.birthday, null, contact.rawVcard
+          contact.company, contact.title, contact.notes, contact.birthday, null, contact.rawVcard,
+          contact.uid || null
         );
         const contactId = result.lastInsertRowid as number;
 
@@ -181,6 +182,12 @@ export default async function icloudRoutes(
         if (!existingRow) {
           errors.push({ line: merged + 1, reason: `Existing contact ${existingContactId} not found` });
           continue;
+        }
+
+        // Store the vCard UID on the existing contact if it doesn't have one, so
+        // the next import matches this record exactly instead of by heuristics.
+        if (incomingContact.uid && !existingRow.icloud_uid) {
+          db.prepare('UPDATE contacts SET icloud_uid = ? WHERE id = ?').run(incomingContact.uid, existingContactId);
         }
 
         // Apply scalar field resolutions

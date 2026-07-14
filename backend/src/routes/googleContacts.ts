@@ -70,6 +70,7 @@ export default async function googleContactsRoutes(
       socialProfiles: c.socialProfiles,
       photoBase64: c.photoBase64,
       rawVcard: c.rawVcard,
+      uid: null, // Google identifies contacts by resourceName, not vCard UID
       googleResourceName: c.googleResourceName,
     }));
 

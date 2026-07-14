@@ -65,6 +65,8 @@ export interface ParsedContact {
   socialProfiles: ParsedSocialProfile[];
   photoBase64: string | null;
   rawVcard: string;
+  /** vCard UID — stable per-contact identifier, used to recognize re-imports. */
+  uid: string | null;
 }
 
 export interface ParseResult {
@@ -426,8 +428,19 @@ function parseSingleVcard(vcardText: string): ParsedContact | null {
     relatedPeople,
     socialProfiles,
     photoBase64,
-    rawVcard: vcardText
+    rawVcard: vcardText,
+    uid: normalizeUid(comp.getFirstPropertyValue('uid') as string | null)
   };
+}
+
+/**
+ * Normalize a vCard UID for use as a match key. Apple emits bare UUIDs, other
+ * clients wrap them in a urn:uuid: scheme; treat those as the same identifier.
+ */
+function normalizeUid(raw: string | null): string | null {
+  if (!raw) return null;
+  const trimmed = String(raw).trim().replace(/^urn:uuid:/i, '');
+  return trimmed || null;
 }
 
 export function parseVcf(vcfContent: string): ParseResult {

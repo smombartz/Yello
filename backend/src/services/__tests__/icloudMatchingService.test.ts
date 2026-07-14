@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { matchIncomingContacts, type MatchResult } from '../icloudMatchingService.js';
-import type { ParsedContact } from '../vcardParser.js';
+import { matchIncomingContacts, type MatchResult, type IncomingContact } from '../icloudMatchingService.js';
 import Database from 'better-sqlite3';
 
 function createTestDb(): InstanceType<typeof Database> {
@@ -10,7 +9,8 @@ function createTestDb(): InstanceType<typeof Database> {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       first_name TEXT, last_name TEXT, display_name TEXT NOT NULL,
       company TEXT, title TEXT, notes TEXT, birthday TEXT,
-      photo_hash TEXT, raw_vcard TEXT, archived_at DATETIME
+      photo_hash TEXT, raw_vcard TEXT, archived_at DATETIME,
+      google_resource_name TEXT, icloud_uid TEXT
     );
     CREATE TABLE contact_emails (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,13 +31,13 @@ function createTestDb(): InstanceType<typeof Database> {
   return db;
 }
 
-function makeParsedContact(overrides: Partial<ParsedContact>): ParsedContact {
+function makeParsedContact(overrides: Partial<IncomingContact>): IncomingContact {
   return {
     firstName: null, lastName: null, displayName: 'Test',
     company: null, title: null, notes: null, birthday: null,
     emails: [], phones: [], addresses: [], categories: [],
     instantMessages: [], urls: [], relatedPeople: [], socialProfiles: [],
-    photoBase64: null, rawVcard: 'BEGIN:VCARD\nEND:VCARD',
+    photoBase64: null, rawVcard: 'BEGIN:VCARD\nEND:VCARD', uid: null,
     ...overrides,
   };
 }
@@ -97,5 +97,85 @@ describe('matchIncomingContacts', () => {
     const result = matchIncomingContacts(db, incoming);
     expect(result.newContacts).toHaveLength(1);
     expect(result.matches).toHaveLength(0);
+  });
+
+  describe('stable external identifiers', () => {
+    it('matches on google_resource_name even with no email, phone or shared name', () => {
+      const db = createTestDb();
+      db.prepare('INSERT INTO contacts (display_name, google_resource_name) VALUES (?, ?)')
+        .run('Bob Jones', 'people/c123');
+
+      // Renamed in Google, and carries none of the heuristic fields — previously
+      // this re-imported as a brand new duplicate.
+      const incoming = [
+        makeParsedContact({ displayName: 'Robert Jones', googleResourceName: 'people/c123' }),
+      ];
+      const result = matchIncomingContacts(db, incoming);
+      expect(result.newContacts).toHaveLength(0);
+      expect(result.matches).toHaveLength(1);
+      expect(result.matches[0].existingContactId).toBe(1);
+      expect(result.matches[0].confidence).toBe('very_high');
+      expect(result.matches[0].matchReasons).toContain('same Google contact');
+    });
+
+    it('matches on vCard UID even with no email, phone or shared name', () => {
+      const db = createTestDb();
+      db.prepare('INSERT INTO contacts (display_name, icloud_uid) VALUES (?, ?)')
+        .run('Bob Jones', 'ABC-123');
+
+      const incoming = [
+        makeParsedContact({ displayName: 'Robert Jones', uid: 'ABC-123' }),
+      ];
+      const result = matchIncomingContacts(db, incoming);
+      expect(result.newContacts).toHaveLength(0);
+      expect(result.matches).toHaveLength(1);
+      expect(result.matches[0].existingContactId).toBe(1);
+      expect(result.matches[0].confidence).toBe('very_high');
+    });
+
+    it('does not match a different contact that happens to share no identifier', () => {
+      const db = createTestDb();
+      db.prepare('INSERT INTO contacts (display_name, icloud_uid) VALUES (?, ?)')
+        .run('Bob Jones', 'ABC-123');
+
+      const incoming = [makeParsedContact({ displayName: 'Someone Else', uid: 'XYZ-999' })];
+      const result = matchIncomingContacts(db, incoming);
+      expect(result.newContacts).toHaveLength(1);
+      expect(result.matches).toHaveLength(0);
+    });
+  });
+
+  describe('archived contacts', () => {
+    it('matches an archived contact instead of resurrecting it as new', () => {
+      const db = createTestDb();
+      db.prepare('INSERT INTO contacts (display_name, archived_at) VALUES (?, CURRENT_TIMESTAMP)').run('John Smith');
+      db.prepare('INSERT INTO contact_emails (contact_id, email, type, is_primary) VALUES (?, ?, ?, ?)').run(1, 'john@example.com', 'home', 1);
+
+      const incoming = [
+        makeParsedContact({
+          displayName: 'John Smith',
+          emails: [{ email: 'john@example.com', type: 'home', isPrimary: true }],
+        }),
+      ];
+      const result = matchIncomingContacts(db, incoming);
+      expect(result.newContacts).toHaveLength(0);
+      expect(result.matches).toHaveLength(1);
+      expect(result.matches[0].existingArchived).toBe(true);
+    });
+
+    it('flags live matches as not archived', () => {
+      const db = createTestDb();
+      db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('John Smith');
+      db.prepare('INSERT INTO contact_emails (contact_id, email, type, is_primary) VALUES (?, ?, ?, ?)').run(1, 'john@example.com', 'home', 1);
+
+      const incoming = [
+        makeParsedContact({
+          displayName: 'John Smith',
+          emails: [{ email: 'john@example.com', type: 'home', isPrimary: true }],
+        }),
+      ];
+      const result = matchIncomingContacts(db, incoming);
+      expect(result.matches[0].existingArchived).toBe(false);
+    });
   });
 });

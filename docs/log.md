@@ -1,5 +1,37 @@
 # Change Log
 
+## 2026-07-13 — Made contact re-imports safe (stable IDs, no archived resurrection)
+
+**What Changed:**
+- **Schema:** added `contacts.icloud_uid` + a partial index (`userDatabase.ts`), mirroring the existing `google_resource_name` column.
+- **vCard parser:** `ParsedContact` now carries a `uid` field, parsed from the vCard `UID` property (normalizing the `urn:uuid:` prefix). It was never extracted before, so iCloud's stable per-contact identifier was being thrown away on every import.
+- **Matcher (`icloudMatchingService.ts`):** an exact external-identifier hit (`google_resource_name` or vCard `uid`) now short-circuits the heuristics and matches with `very_high` confidence. Previously matching was *only* email/phone/social overlap, so a contact with just a name re-imported as a fresh duplicate every time.
+- **Matcher:** `loadExistingContacts` no longer filters `WHERE archived_at IS NULL`. Archived contacts are now loaded and flagged with a new `existingArchived` field on each match, instead of being invisible.
+- **Routes:** `icloud.ts` now persists `icloud_uid` on insert and backfills it on merge (the Google route already did the equivalent for `google_resource_name`).
+- **UI:** archived matches are labelled ("Existing (archived)" + an `archived` tag) and default to **skip** rather than merge, in `ICloudImportView` and `GoogleContactsImportContent`.
+- **Tests:** 5 new cases in `icloudMatchingService.test.ts` covering resource-name matching, UID matching, non-matching UIDs, and the archived flag.
+
+**Why:**
+- Re-running either import was unsafe. Dedupe was purely heuristic: a contact with no email/phone/social overlap produced no match candidate at all and was re-inserted as a duplicate. `google_resource_name` was already being written on every Google import but was **never read** — the fix was mostly a matter of using it.
+- Archived contacts were excluded from the match set, so anything the user archived came back as a brand-new contact on the next import.
+- Kept as a manual import — no scheduling, no incremental sync, no write-back.
+
+**Files Modified:**
+- `backend/src/services/userDatabase.ts`
+- `backend/src/services/vcardParser.ts`
+- `backend/src/services/icloudMatchingService.ts`
+- `backend/src/services/__tests__/icloudMatchingService.test.ts`
+- `backend/src/routes/icloud.ts`
+- `backend/src/routes/googleContacts.ts`
+- `frontend/src/api/icloudHooks.ts`
+- `frontend/src/components/ImportMatchCards.tsx`
+- `frontend/src/components/ICloudImportView.tsx`
+- `frontend/src/components/GoogleContactsImportContent.tsx`
+
+**Known gap:** the plain `.vcf` upload path (`/api/import` → `importService.ts`) still has no matching at all — re-uploading a file duplicates every contact. It now parses `uid`, so wiring it through `matchIncomingContacts` is the natural follow-up.
+
+---
+
 ## 2026-07-13 — Collapsed the "Sync" group into "Import" on the Tools page
 
 **What Changed:**

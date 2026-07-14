@@ -55,6 +55,10 @@ export interface ParsedContact {
   socialProfiles: ParsedSocialProfile[];
   photoBase64: string | null;
   rawVcard: string;
+  /** vCard UID (iCloud); null for Google, which uses googleResourceName instead. */
+  uid?: string | null;
+  /** Google People API resourceName; absent for iCloud. */
+  googleResourceName?: string | null;
 }
 
 export interface ICloudFetchResult {
@@ -69,6 +73,8 @@ export interface IncomingMatch {
   existingDisplayName: string;
   confidence: 'very_high' | 'high' | 'medium';
   matchReasons: string[];
+  /** The matched contact is archived — merging would leave it archived, importing as new would resurrect it as a duplicate. */
+  existingArchived?: boolean;
 }
 
 export interface MatchResult {

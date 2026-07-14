@@ -37,6 +37,9 @@ export function MatchCard({
         >
           {match.confidence.replace('_', ' ')}
         </span>
+        {match.existingArchived && (
+          <span className="icloud-reason-tag">archived</span>
+        )}
         <div className="icloud-match-reasons">
           {match.matchReasons.map((reason, i) => (
             <span key={i} className="icloud-reason-tag">{reason}</span>
@@ -61,8 +64,11 @@ export function MatchCard({
           <Icon name="arrows-left-right" />
         </div>
         <div className="icloud-match-side">
-          <div className="icloud-match-label">Existing</div>
+          <div className="icloud-match-label">{match.existingArchived ? 'Existing (archived)' : 'Existing'}</div>
           <div className="icloud-match-name">{match.existingDisplayName}</div>
+          {match.existingArchived && (
+            <div className="icloud-match-detail">You archived this contact. Skipping leaves it archived.</div>
+          )}
         </div>
       </div>
       <div className="icloud-match-actions">
