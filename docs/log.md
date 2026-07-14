@@ -1,5 +1,26 @@
 # Change Log
 
+## 2026-07-14 — Redesigned onboarding to match the app design system
+
+**What Changed:**
+- Rewrote `OnboardingView` markup: replaced the native `<details>`/`<summary>` accordion (and the ref/attribute machinery fighting it) with state-driven step cards, a gradient hero (Welcome-page treatment) with a 3-dot progress indicator, and a success card on completion.
+- Swapped raw HTML controls for the app's ui/ primitives: `Button` (primary/secondary), `FilePicker` for VCF and LinkedIn CSV selection (two-step select → import, matching the Settings import pattern), `Badge` ("Done"), `Icon` chips per step, and the global `.progress-bar-*` classes instead of a raw `<progress>`.
+- Errors now surface via `useToast` instead of inline `error-text` paragraphs; the empty-CSV case now shows a toast instead of silently returning.
+- Moved styles to `frontend/src/styles/pages/onboarding.css` (all `--ds-*` tokens, BEM-ish naming per `launch.css`), registered in `styles/pages.css`, and deleted the ad-hoc co-located `OnboardingView.css`.
+- No functional changes: same hooks, 3-step flow, auto-advance, all-complete → 1.5s redirect, skip/finish → `PATCH /api/auth/onboarded`.
+
+**Why:**
+- The first-run onboarding was bare-bones and ignored the design system (raw buttons, native disclosure elements, ad-hoc CSS), looking broken next to the rest of the app.
+
+**Files Modified:**
+- `frontend/src/components/OnboardingView.tsx` (rewritten markup)
+- `frontend/src/styles/pages/onboarding.css` (new)
+- `frontend/src/styles/pages.css`
+- `frontend/src/components/OnboardingView.css` (deleted)
+- `docs/plans/2026-07-14-onboarding-redesign.md` (plan)
+
+---
+
 ## 2026-07-13 — Made contact re-imports safe (stable IDs, no archived resurrection)
 
 **What Changed:**

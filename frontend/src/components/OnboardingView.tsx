@@ -6,15 +6,26 @@ import { useCompleteOnboarding } from '../api/authHooks';
 import { useImportVcf, useUploadProfileImage } from '../api/hooks';
 import { useImportLinkedInStream, parseLinkedInCsv } from '../api/settingsHooks';
 import { Avatar } from './Avatar';
-import './OnboardingView.css';
+import { Icon } from './Icon';
+import { Button } from './ui/Button';
+import { Badge } from './ui/Badge';
+import { FilePicker } from './ui/FilePicker';
+import { useToast } from './ui/Toast';
 
 type Section = 'profile' | 'vcf' | 'linkedin' | null;
+
+const STEPS: { id: Exclude<Section, null>; icon: string; iconStyle?: 'brands'; title: string; desc: string }[] = [
+  { id: 'profile', icon: 'user', title: 'Set up your profile', desc: 'Add a photo so people recognize you' },
+  { id: 'vcf', icon: 'address-book', title: 'Import from Contacts', desc: 'Bring in contacts from your phone or email (VCF)' },
+  { id: 'linkedin', icon: 'linkedin', iconStyle: 'brands', title: 'Import from LinkedIn', desc: 'Import your LinkedIn connections (CSV)' },
+];
 
 export default function OnboardingView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const completeOnboarding = useCompleteOnboarding();
+  const { showToast } = useToast();
 
   const [openSection, setOpenSection] = useState<Section>('profile');
   const [completed, setCompleted] = useState<Record<string, boolean>>({
@@ -23,54 +34,31 @@ export default function OnboardingView() {
     linkedin: false,
   });
 
-  // Refs for accordion control
-  const profileRef = useRef<HTMLDetailsElement>(null);
-  const vcfRef = useRef<HTMLDetailsElement>(null);
-  const linkedinRef = useRef<HTMLDetailsElement>(null);
-
   // Profile upload
   const uploadImage = useUploadProfileImage();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // VCF import
   const importVcf = useImportVcf();
-  const vcfInputRef = useRef<HTMLInputElement>(null);
+  const [vcfFile, setVcfFile] = useState<File | null>(null);
   const [vcfResult, setVcfResult] = useState<{ imported: number; photosProcessed: number; failed: number } | null>(null);
 
   // LinkedIn import
   const { isImporting: isLinkedInImporting, progress: linkedInProgress, importResult: linkedInResult, error: linkedInError, startImport: startLinkedInImport } = useImportLinkedInStream();
-  const linkedInInputRef = useRef<HTMLInputElement>(null);
+  const [linkedInFile, setLinkedInFile] = useState<File | null>(null);
 
   useEffect(() => {
     setHeaderConfig({ title: 'Get Started' });
   }, [setHeaderConfig]);
 
-  // Accordion: only one open at a time
-  const handleToggle = useCallback((section: Section) => {
-    return (e: React.ToggleEvent<HTMLDetailsElement>) => {
-      if (e.newState === 'open') {
-        setOpenSection(section);
-        if (section !== 'profile') profileRef.current?.removeAttribute('open');
-        if (section !== 'vcf') vcfRef.current?.removeAttribute('open');
-        if (section !== 'linkedin') linkedinRef.current?.removeAttribute('open');
-      } else if (openSection === section) {
-        setOpenSection(null);
-      }
-    };
-  }, [openSection]);
+  const toggleSection = useCallback((section: Section) => {
+    setOpenSection(prev => (prev === section ? null : section));
+  }, []);
 
   const advanceToNext = useCallback((current: Section) => {
     const order: Section[] = ['profile', 'vcf', 'linkedin'];
-    const idx = order.indexOf(current);
-    const next = order[idx + 1];
-    if (next) {
-      setOpenSection(next);
-      const refs: Record<string, React.RefObject<HTMLDetailsElement | null>> = { profile: profileRef, vcf: vcfRef, linkedin: linkedinRef };
-      if (current) refs[current]?.current?.removeAttribute('open');
-      setTimeout(() => {
-        refs[next]?.current?.setAttribute('open', '');
-      }, 100);
-    }
+    const next = order[order.indexOf(current) + 1];
+    setOpenSection(next ?? null);
   }, []);
 
   const markComplete = useCallback((section: string) => {
@@ -83,7 +71,7 @@ export default function OnboardingView() {
   }, [completeOnboarding, navigate]);
 
   // Profile photo handler
-  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
@@ -91,41 +79,43 @@ export default function OnboardingView() {
       markComplete('profile');
       advanceToNext('profile');
     } catch {
-      // Error handled by mutation state
+      showToast('Failed to upload photo. Try again.', { type: 'error' });
     }
-  }, [uploadImage, markComplete, advanceToNext]);
+  }, [uploadImage, markComplete, advanceToNext, showToast]);
 
-  // VCF handler
-  const handleVcfSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // VCF handlers
+  const handleVcfImport = useCallback(async () => {
+    if (!vcfFile) return;
     try {
-      const result = await importVcf.mutateAsync(file);
+      const result = await importVcf.mutateAsync(vcfFile);
       setVcfResult(result);
       markComplete('vcf');
       advanceToNext('vcf');
     } catch {
-      // Error handled by mutation state
+      showToast('Import failed. Please try again.', { type: 'error' });
     }
-  }, [importVcf, markComplete, advanceToNext]);
+  }, [vcfFile, importVcf, markComplete, advanceToNext, showToast]);
 
-  // LinkedIn handler
-  const handleLinkedInSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // LinkedIn handlers
+  const handleLinkedInImport = useCallback(async () => {
+    if (!linkedInFile) return;
     try {
-      const content = await file.text();
+      const content = await linkedInFile.text();
       const contacts = parseLinkedInCsv(content);
-      if (contacts.length === 0) return;
+      if (contacts.length === 0) {
+        showToast('No valid contacts found in CSV file', { type: 'error' });
+        return;
+      }
       startLinkedInImport(contacts, () => {
         markComplete('linkedin');
       });
     } catch {
-      // Error handled by hook state
+      showToast('Failed to read CSV file', { type: 'error' });
     }
-  }, [startLinkedInImport, markComplete]);
+  }, [linkedInFile, startLinkedInImport, markComplete, showToast]);
 
   const allComplete = completed.profile && completed.vcf && completed.linkedin;
+  const completedCount = STEPS.filter(step => completed[step.id]).length;
 
   useEffect(() => {
     if (allComplete) {
@@ -134,154 +124,214 @@ export default function OnboardingView() {
     }
   }, [allComplete, handleFinish]);
 
-  return (
-    <div className="onboarding-container">
-      <div className="onboarding-header">
-        <h2>Welcome to Yello{user?.name ? `, ${user.name.split(' ')[0]}` : ''}</h2>
-        <p>Get started by setting up your profile and importing your contacts.</p>
-        <a className="skip-link" onClick={handleFinish}>
-          Skip to Dashboard &rarr;
-        </a>
-      </div>
+  const stepResult = (id: Exclude<Section, null>) => {
+    if (id === 'profile') return 'Profile photo uploaded';
+    if (id === 'vcf' && vcfResult) {
+      return (
+        <>Imported <strong>{vcfResult.imported}</strong> contacts{vcfResult.photosProcessed > 0 && <>, processed <strong>{vcfResult.photosProcessed}</strong> photos</>}</>
+      );
+    }
+    if (id === 'linkedin' && linkedInResult) {
+      return (
+        <>Created <strong>{linkedInResult.created}</strong> &middot; Updated <strong>{linkedInResult.updated}</strong> &middot; Skipped <strong>{linkedInResult.skipped}</strong></>
+      );
+    }
+    return 'Done';
+  };
 
-      {allComplete && (
-        <p className="onboarding-success">You're all set! Redirecting to dashboard...</p>
-      )}
-
-      {/* Section 1: Profile */}
-      <details ref={profileRef} open onToggle={handleToggle('profile')}>
-        <summary>
-          {completed.profile ? '\u2705' : '1.'} Set up your profile
-        </summary>
-        <div className="onboarding-section onboarding-profile">
-          <div className="profile-preview">
-            <Avatar
-              photoUrl={user?.profileImages?.find(img => img.isPrimary)?.url || user?.avatarUrl || null}
-              name={user?.name || user?.email || 'User'}
-              size={120}
-            />
-            <div className="profile-info">
-              <strong>{user?.name || 'Your Name'}</strong>
-              <span>{user?.email}</span>
-            </div>
+  const renderStepBody = (id: Exclude<Section, null>) => {
+    if (id === 'profile') {
+      return (
+        <div className="onboarding-profile">
+          <Avatar
+            photoUrl={user?.profileImages?.find(img => img.isPrimary)?.url || user?.avatarUrl || null}
+            name={user?.name || user?.email || 'User'}
+            size={120}
+          />
+          <div className="onboarding-profile__info">
+            <span className="onboarding-profile__name">{user?.name || 'Your Name'}</span>
+            <span className="onboarding-profile__email">{user?.email}</span>
           </div>
           <input
-            ref={fileInputRef}
+            ref={photoInputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            onChange={handleFileSelect}
+            onChange={handlePhotoSelect}
             style={{ display: 'none' }}
           />
-          <button
-            className="outline"
-            onClick={() => fileInputRef.current?.click()}
+          <Button
+            variant="secondary"
+            onClick={() => photoInputRef.current?.click()}
             disabled={uploadImage.isPending}
           >
-            {uploadImage.isPending ? 'Uploading...' : 'Upload Photo'}
-          </button>
-          {uploadImage.isError && (
-            <p className="error-text">Failed to upload photo. Try again.</p>
-          )}
+            <Icon name={uploadImage.isPending ? 'arrows-rotate' : 'camera'} className={uploadImage.isPending ? 'spinning' : ''} />
+            {uploadImage.isPending ? 'Uploading...' : completed.profile ? 'Change Photo' : 'Upload Photo'}
+          </Button>
         </div>
-      </details>
+      );
+    }
 
-      {/* Section 2: VCF Import */}
-      <details ref={vcfRef} onToggle={handleToggle('vcf')}>
-        <summary>
-          {completed.vcf ? '\u2705' : '2.'} Import from Contacts (VCF)
-        </summary>
-        <div className="onboarding-section">
-          <p>Import contacts from your phone or email client.</p>
-          <details className="onboarding-instructions">
-            <summary>How to export your contacts</summary>
+    if (id === 'vcf') {
+      return (
+        <>
+          <div className="onboarding-help">
+            <h4 className="onboarding-help__title"><Icon name="circle-info" /> How to export your contacts</h4>
             <ul>
               <li><strong>iPhone / iCloud:</strong> Go to <a href="https://www.icloud.com/contacts/" target="_blank" rel="noopener">icloud.com/contacts</a> &rarr; Select All (Cmd+A) &rarr; Export vCard</li>
               <li><strong>Google Contacts:</strong> Go to <a href="https://contacts.google.com/" target="_blank" rel="noopener">contacts.google.com</a> &rarr; Export &rarr; vCard format</li>
               <li><strong>Outlook:</strong> File &rarr; Open &amp; Export &rarr; Export to a file &rarr; choose CSV or vCard</li>
             </ul>
-          </details>
-
-          {vcfResult ? (
-            <div className="import-result">
-              <p>Imported <strong>{vcfResult.imported}</strong> contacts{vcfResult.photosProcessed > 0 && <>, processed <strong>{vcfResult.photosProcessed}</strong> photos</>}.</p>
-            </div>
-          ) : (
-            <>
-              <input
-                ref={vcfInputRef}
-                type="file"
-                accept=".vcf,.vcard"
-                onChange={handleVcfSelect}
-                style={{ display: 'none' }}
-              />
-              <button
-                className="outline"
-                onClick={() => vcfInputRef.current?.click()}
-                disabled={importVcf.isPending}
-              >
-                {importVcf.isPending ? 'Importing...' : 'Choose VCF File'}
-              </button>
-              {importVcf.isPending && <p className="muted-text">This may take a moment for large files.</p>}
-              {importVcf.isError && <p className="error-text">Import failed. Please try again.</p>}
-            </>
+          </div>
+          <div className="import-controls">
+            <FilePicker
+              id="onboarding-vcf-input"
+              accept=".vcf,.vcard"
+              file={vcfFile}
+              onChange={setVcfFile}
+              prompt="Choose VCF file"
+              disabled={importVcf.isPending}
+            />
+            <Button
+              variant="secondary"
+              onClick={handleVcfImport}
+              disabled={!vcfFile || importVcf.isPending}
+            >
+              <Icon name={importVcf.isPending ? 'arrows-rotate' : 'upload'} className={importVcf.isPending ? 'spinning' : ''} />
+              {importVcf.isPending ? 'Importing...' : 'Import Contacts'}
+            </Button>
+          </div>
+          {importVcf.isPending && (
+            <p className="onboarding-step__desc">This may take a moment for large files.</p>
           )}
+        </>
+      );
+    }
+
+    return (
+      <>
+        <div className="onboarding-help">
+          <h4 className="onboarding-help__title"><Icon name="circle-info" /> How to export from LinkedIn</h4>
+          <ol>
+            <li>Go to <a href="https://www.linkedin.com/mypreferences/d/download-my-data" target="_blank" rel="noopener">linkedin.com</a> &rarr; Click your profile icon &rarr; <strong>Settings &amp; Privacy</strong></li>
+            <li>Select <strong>Data privacy</strong> &rarr; <strong>Get a copy of your data</strong></li>
+            <li>Select <strong>Connections</strong> only (faster than the full archive)</li>
+            <li>Click <strong>Request archive</strong> &mdash; LinkedIn will email you a download link (can take minutes to hours)</li>
+            <li>Download the ZIP file, extract it, and find <code>Connections.csv</code></li>
+            <li>Upload that CSV file below</li>
+          </ol>
         </div>
-      </details>
-
-      {/* Section 3: LinkedIn Import */}
-      <details ref={linkedinRef} onToggle={handleToggle('linkedin')}>
-        <summary>
-          {completed.linkedin ? '\u2705' : '3.'} Import from LinkedIn
-        </summary>
-        <div className="onboarding-section">
-          <p>Import your LinkedIn connections.</p>
-          <details className="onboarding-instructions">
-            <summary>How to export from LinkedIn</summary>
-            <ol>
-              <li>Go to <a href="https://www.linkedin.com/mypreferences/d/download-my-data" target="_blank" rel="noopener">linkedin.com</a> &rarr; Click your profile icon &rarr; <strong>Settings &amp; Privacy</strong></li>
-              <li>Select <strong>Data privacy</strong> &rarr; <strong>Get a copy of your data</strong></li>
-              <li>Select <strong>Connections</strong> only (faster than the full archive)</li>
-              <li>Click <strong>Request archive</strong> — LinkedIn will email you a download link (can take minutes to hours)</li>
-              <li>Download the ZIP file, extract it, and find <code>Connections.csv</code></li>
-              <li>Upload that CSV file below</li>
-            </ol>
-          </details>
-
-          {linkedInResult ? (
-            <div className="import-result">
-              <p>Created <strong>{linkedInResult.created}</strong> / Updated <strong>{linkedInResult.updated}</strong> / Skipped <strong>{linkedInResult.skipped}</strong></p>
-            </div>
-          ) : isLinkedInImporting && linkedInProgress ? (
-            <div className="import-progress">
-              <p>Importing... Created: {linkedInProgress.created} / Updated: {linkedInProgress.updated} / Skipped: {linkedInProgress.skipped}</p>
-              <progress value={linkedInProgress.current} max={linkedInProgress.total} />
-            </div>
-          ) : (
-            <>
-              <input
-                ref={linkedInInputRef}
-                type="file"
-                accept=".csv"
-                onChange={handleLinkedInSelect}
-                style={{ display: 'none' }}
+        {isLinkedInImporting && linkedInProgress ? (
+          <div>
+            <div className="progress-bar-container">
+              <div
+                className="progress-bar-fill"
+                style={{ width: `${(linkedInProgress.current / linkedInProgress.total) * 100}%` }}
               />
-              <button
-                className="outline"
-                onClick={() => linkedInInputRef.current?.click()}
-                disabled={isLinkedInImporting}
-              >
-                Choose CSV File
-              </button>
-              {linkedInError && <p className="error-text">{linkedInError}</p>}
-            </>
-          )}
-        </div>
-      </details>
+            </div>
+            <div className="progress-text">
+              Processing {linkedInProgress.current} of {linkedInProgress.total} contacts...
+            </div>
+          </div>
+        ) : (
+          <div className="import-controls">
+            <FilePicker
+              id="onboarding-linkedin-input"
+              accept=".csv"
+              file={linkedInFile}
+              onChange={setLinkedInFile}
+              prompt="Choose CSV file"
+              disabled={isLinkedInImporting}
+            />
+            <Button
+              variant="secondary"
+              icon="upload"
+              onClick={handleLinkedInImport}
+              disabled={!linkedInFile || isLinkedInImporting}
+            >
+              Import Contacts
+            </Button>
+          </div>
+        )}
+        {linkedInError && (
+          <div className="import-error">
+            <Icon name="circle-exclamation" />
+            <span>{linkedInError}</span>
+          </div>
+        )}
+      </>
+    );
+  };
 
-      <div className="onboarding-footer">
-        <button onClick={handleFinish} disabled={completeOnboarding.isPending}>
-          Go to Dashboard
+  return (
+    <div className="onboarding-view">
+      <div className="onboarding-content">
+        <div className="onboarding-hero">
+          <span className="onboarding-hero__badge"><Icon name="hand-sparkles" /> Welcome</span>
+          <h2 className="onboarding-hero__title">Welcome to Yello{user?.name ? `, ${user.name.split(' ')[0]}` : ''}</h2>
+          <p className="onboarding-hero__subtitle">Get started by setting up your profile and importing your contacts.</p>
+          <div className="onboarding-hero__progress">
+            {STEPS.map(step => (
+              <span key={step.id} className={`onboarding-hero__dot${completed[step.id] ? ' onboarding-hero__dot--done' : ''}`} />
+            ))}
+            {completedCount} of {STEPS.length} complete
+          </div>
+        </div>
+
+        <button className="onboarding-skip" onClick={handleFinish}>
+          Skip to Dashboard &rarr;
         </button>
+
+        {allComplete && (
+          <div className="onboarding-success">
+            <Icon name="circle-check" />
+            You're all set! Redirecting to dashboard...
+          </div>
+        )}
+
+        <div className="onboarding-steps">
+          {STEPS.map(step => {
+            const isDone = completed[step.id];
+            const isOpen = openSection === step.id;
+            return (
+              <div
+                key={step.id}
+                className={`onboarding-step${isOpen ? ' onboarding-step--active' : ''}${isDone ? ' onboarding-step--done' : ''}`}
+              >
+                <button
+                  className="onboarding-step__header"
+                  aria-expanded={isOpen}
+                  onClick={() => toggleSection(step.id)}
+                >
+                  <span className="onboarding-step__icon">
+                    <Icon name={isDone ? 'circle-check' : step.icon} style={isDone ? 'solid' : step.iconStyle} />
+                  </span>
+                  <span className="onboarding-step__titles">
+                    <h3 className="onboarding-step__title">{step.title}</h3>
+                    <p className="onboarding-step__desc">{step.desc}</p>
+                  </span>
+                  <span className="onboarding-step__meta">
+                    {isDone && <Badge variant="success">Done</Badge>}
+                    <Icon name="chevron-down" />
+                  </span>
+                </button>
+                {isOpen ? (
+                  <div className="onboarding-step__body">{renderStepBody(step.id)}</div>
+                ) : isDone ? (
+                  <div className="onboarding-step__result">
+                    <Icon name="circle-check" />
+                    <span>{stepResult(step.id)}</span>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="onboarding-footer">
+          <Button variant="primary" onClick={handleFinish} disabled={completeOnboarding.isPending}>
+            Go to Dashboard
+          </Button>
+        </div>
       </div>
     </div>
   );
