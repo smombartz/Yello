@@ -72,7 +72,8 @@ function spawnBackend(): ChildProcess {
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
     HERE_API_KEY: process.env.HERE_API_KEY || '',
-    APIFY_API_TOKEN: process.env.APIFY_API_TOKEN || '',
+    // Apify LinkedIn enrichment uses a per-user API key entered in-app (Tools → Enrich),
+    // stored encrypted in the user's database — no global env var.
   };
 
   console.log(`[Electron] Spawning backend: ${process.execPath} ${serverPath}`);

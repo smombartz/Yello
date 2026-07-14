@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useLinkedInEnrichmentSummary, useLinkedInEnrichment, useLinkedInRecovery, useEnrichmentCategoryContacts } from '../api/enrichHooks';
+import { useLinkedInEnrichmentSummary, useLinkedInEnrichment, useLinkedInRecovery, useEnrichmentCategoryContacts, useSaveApifyKey, useDeleteApifyKey } from '../api/enrichHooks';
 import { useFetchContactPhotosStream } from '../api/settingsHooks';
 import { useGmailSyncSummary, useGmailDiscover, useGmailBulkSync } from '../api/gmailEnrichHooks';
 import type { GmailDiscoveredContact } from '../api/types';
@@ -65,6 +65,31 @@ export function EnrichToolsContent() {
   } = useGmailBulkSync();
 
   const [datasetId, setDatasetId] = useState('');
+
+  const [apifyKey, setApifyKey] = useState('');
+  const saveApifyKey = useSaveApifyKey();
+  const deleteApifyKey = useDeleteApifyKey();
+
+  const handleConnectApify = useCallback(() => {
+    const token = apifyKey.trim();
+    if (!token) return;
+    saveApifyKey.mutate(token, {
+      onSuccess: ({ username }) => {
+        showToast(`Connected to Apify as ${username}`);
+        setApifyKey('');
+      },
+      onError: (err: Error) => {
+        showToast(err.message, { type: 'error' });
+      },
+    });
+  }, [apifyKey, saveApifyKey, showToast]);
+
+  const handleDisconnectApify = useCallback(() => {
+    deleteApifyKey.mutate(undefined, {
+      onSuccess: () => showToast('Disconnected from Apify'),
+      onError: (err: Error) => showToast(err.message, { type: 'error' }),
+    });
+  }, [deleteApifyKey, showToast]);
 
   const handleStartEnrichment = useCallback(() => {
     reset();
@@ -197,12 +222,34 @@ export function EnrichToolsContent() {
               Data is stored separately and never overwrites existing contact information.
             </p>
 
-            {!summary?.configured && (
-              <div className="config-warning">
-                <Icon name="triangle-exclamation" />
-                <div>
-                  <strong>API Not Configured</strong>
-                  <p>Set the <code>APIFY_API_TOKEN</code> environment variable to enable LinkedIn enrichment.</p>
+            {!isSummaryLoading && !summary?.configured && (
+              <div className="apify-key-setup">
+                <strong>Connect your Apify account</strong>
+                <p>
+                  LinkedIn enrichment runs on your own Apify account. Paste an API token from the{' '}
+                  <a href="https://console.apify.com/settings/integrations" target="_blank" rel="noreferrer">
+                    Apify Console
+                  </a>{' '}
+                  (a free tier is available) to get started.
+                </p>
+                <div className="apify-key-form">
+                  <input
+                    type="password"
+                    autoComplete="off"
+                    className="limit-input apify-key-input"
+                    placeholder="apify_api_..."
+                    value={apifyKey}
+                    onChange={(e) => setApifyKey(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleConnectApify(); }}
+                  />
+                  <button
+                    className="primary-button"
+                    onClick={handleConnectApify}
+                    disabled={!apifyKey.trim() || saveApifyKey.isPending}
+                  >
+                    <Icon name={saveApifyKey.isPending ? 'arrows-rotate' : 'link'} className={saveApifyKey.isPending ? 'spinning' : ''} />
+                    {saveApifyKey.isPending ? 'Connecting...' : 'Connect'}
+                  </button>
                 </div>
               </div>
             )}
@@ -211,6 +258,19 @@ export function EnrichToolsContent() {
               <LoadingSpinner size={32} message="Loading summary..." />
             ) : summary?.configured && (
               <>
+                {/* Apify connection status */}
+                <div className="apify-connected-row">
+                  <Icon name="circle-check" className="apify-connected-icon" />
+                  <span>Connected to Apify as <strong>{summary.apifyUsername ?? 'Apify user'}</strong></span>
+                  <button
+                    className="secondary-button apify-disconnect-button"
+                    onClick={handleDisconnectApify}
+                    disabled={isEnriching || isRecovering || deleteApifyKey.isPending}
+                  >
+                    {deleteApifyKey.isPending ? 'Disconnecting...' : 'Disconnect'}
+                  </button>
+                </div>
+
                 {/* Summary Stats */}
                 <div className="enrich-stats-row">
                   <button

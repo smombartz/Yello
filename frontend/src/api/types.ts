@@ -740,6 +740,7 @@ export interface UpdateUserProfileRequest {
 // LinkedIn Enrichment types
 export interface LinkedInEnrichmentSummary {
   configured: boolean;
+  apifyUsername: string | null;
   totalWithLinkedIn: number;
   alreadyEnriched: number;
   pendingEnrichment: number;

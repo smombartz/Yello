@@ -62,9 +62,8 @@ HERE_API_KEY=your-api-key
 Free tier: 250,000 requests/month
 
 #### Apify LinkedIn Enrichment
-```
-APIFY_API_TOKEN=your-api-token
-```
+No env var needed — each user enters their own Apify API key in-app (Tools → Enrich).
+It is validated against Apify and stored encrypted in their per-user database.
 
 ## Architecture
 
@@ -98,7 +97,6 @@ Electron main process (electron/src/main.ts)
 - `GOOGLE_CLIENT_ID` (from .env)
 - `GOOGLE_CLIENT_SECRET` (from .env)
 - `HERE_API_KEY` (optional, from .env)
-- `APIFY_API_TOKEN` (optional, from .env)
 
 ## Building for Distribution
 

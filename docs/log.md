@@ -1,5 +1,36 @@
 # Change Log
 
+## 2026-07-11 — Per-user Apify API key for LinkedIn enrichment
+
+**What Changed:**
+- Replaced the global `APIFY_API_TOKEN` env var with a per-user Apify API key, validated against Apify and stored encrypted (AES-256-GCM via `tokenEncryption`) in each user's `user_settings` row.
+- `userDatabase.ts`: added `apify_api_token` and `apify_username` columns (CREATE TABLE + guarded ALTER TABLE migrations).
+- `apifyEnrichmentService.ts`: removed the module-level token constant and `isLinkedInEnrichmentConfigured()`; added `validateApifyToken()` (calls Apify `GET /users/me`); threaded a `token` param through `startApifyRun`/`waitForApifyRun`/`getApifyResults`/`enrichContacts`/`recoverFromDataset`.
+- `enrich.ts`: added `POST`/`DELETE /api/enrich/apify-key` (validate → encrypt → store; never returns the secret); `/linkedin/summary` now derives `configured` + `apifyUsername` from the DB; `/linkedin/start` and `/linkedin/recover` decrypt the stored key and 400 with an actionable message when unset.
+- Frontend: `useSaveApifyKey`/`useDeleteApifyKey` hooks; `apifyUsername` on `LinkedInEnrichmentSummary`; the Enrich card's "API Not Configured" warning is now an inline connect-your-Apify-account form, and the configured state shows "Connected to Apify as {username}" + Disconnect.
+- Removed `APIFY_API_TOKEN` from Electron env pass-through and setup docs; updated the Tools docs entry.
+- Added `backend/src/routes/__tests__/apifyKey.test.ts`.
+
+**Why:**
+- Multi-tenant app: every user should bill their own Apify account rather than a shared server-owned token (which also failed outright if unset).
+
+**Files Modified:**
+- `backend/src/services/userDatabase.ts`
+- `backend/src/services/apifyEnrichmentService.ts`
+- `backend/src/routes/enrich.ts`
+- `backend/src/routes/__tests__/apifyKey.test.ts` (new)
+- `frontend/src/api/enrichHooks.ts`
+- `frontend/src/api/types.ts`
+- `frontend/src/components/EnrichToolsContent.tsx`
+- `frontend/src/components/DocsView.tsx`
+- `frontend/src/styles/pages/enrich.css`
+- `electron/src/main.ts`
+- `electron/README.md`
+- `electron/.env.example`
+- `ELECTRON_SETUP.md`
+
+---
+
 ## 2026-07-11 — Fix rate-limit keying behind Railway proxy (trustProxy)
 
 **What Changed:**

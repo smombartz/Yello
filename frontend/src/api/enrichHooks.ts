@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useCallback, useRef } from 'react';
 import { fetchApi } from './client';
 import type {
@@ -18,6 +18,37 @@ export function useLinkedInEnrichmentSummary(includeAlreadyEnriched: boolean = f
       fetchApi<LinkedInEnrichmentSummary>(
         `/api/enrich/linkedin/summary?includeAlreadyEnriched=${includeAlreadyEnriched}`
       ),
+  });
+}
+
+/**
+ * Hook to validate and store the user's Apify API key
+ */
+export function useSaveApifyKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) =>
+      fetchApi<{ success: boolean; username: string }>('/api/enrich/apify-key', {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['linkedinEnrichmentSummary'] });
+    },
+  });
+}
+
+/**
+ * Hook to remove the user's stored Apify API key
+ */
+export function useDeleteApifyKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      fetchApi<{ success: boolean }>('/api/enrich/apify-key', { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['linkedinEnrichmentSummary'] });
+    },
   });
 }
 

@@ -35,6 +35,69 @@
   font-size: var(--ds-font-xs);
 }
 
+/* Apify API key setup (shown when no key is stored) */
+.apify-key-setup {
+  padding: var(--ds-space-4);
+  background: var(--ds-bg-secondary);
+  border: 1px solid var(--ds-border-color);
+  border-radius: var(--ds-radius-lg);
+  margin-bottom: var(--ds-space-5);
+}
+
+.apify-key-setup strong {
+  display: block;
+  color: var(--ds-text-primary);
+  margin-bottom: var(--ds-space-1);
+}
+
+.apify-key-setup p {
+  margin: 0 0 var(--ds-space-3) 0;
+  font-size: 0.8125rem;
+  color: var(--ds-text-secondary);
+  line-height: 1.4;
+}
+
+.apify-key-setup a {
+  color: var(--ds-color-primary);
+}
+
+.apify-key-form {
+  display: flex;
+  gap: var(--ds-space-2);
+  align-items: center;
+}
+
+.apify-key-input {
+  flex: 1;
+  width: auto;
+}
+
+/* Apify connection status (shown when a key is stored) */
+.apify-connected-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  background: var(--ds-bg-secondary);
+  border: 1px solid var(--ds-border-color);
+  border-radius: var(--ds-radius-lg);
+  margin-bottom: var(--ds-space-4);
+  font-size: 0.8125rem;
+  color: var(--ds-text-secondary);
+}
+
+.apify-connected-row strong {
+  color: var(--ds-text-primary);
+}
+
+.apify-connected-icon {
+  color: var(--ds-color-success);
+}
+
+.apify-disconnect-button {
+  margin-left: auto;
+}
+
 .enrich-stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

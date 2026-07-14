@@ -227,6 +227,8 @@ export function getUserDatabase(userId: number): DatabaseType {
       linkedin_url TEXT,
       icloud_email TEXT,
       icloud_app_password TEXT,
+      apify_api_token TEXT,
+      apify_username TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -308,6 +310,14 @@ export function getUserDatabase(userId: number): DatabaseType {
   } catch { /* column already exists */ }
   try {
     db.exec(`ALTER TABLE user_settings ADD COLUMN icloud_app_password TEXT`);
+  } catch { /* column already exists */ }
+
+  // Apify API key migration (for existing databases)
+  try {
+    db.exec(`ALTER TABLE user_settings ADD COLUMN apify_api_token TEXT`);
+  } catch { /* column already exists */ }
+  try {
+    db.exec(`ALTER TABLE user_settings ADD COLUMN apify_username TEXT`);
   } catch { /* column already exists */ }
 
   // Google Contacts sync migration (for existing databases)

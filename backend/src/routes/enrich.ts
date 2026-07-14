@@ -1,13 +1,27 @@
 import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
 import { Type } from '@sinclair/typebox';
+import type { Database as DatabaseType } from 'better-sqlite3';
 import {
-  isLinkedInEnrichmentConfigured,
   getEnrichmentSummary,
   enrichContacts,
   recoverFromDataset,
+  validateApifyToken,
   EnrichmentProgress,
 } from '../services/apifyEnrichmentService.js';
 import { getUserDatabase } from '../services/userDatabase.js';
+import { encryptToken, decryptToken } from '../services/tokenEncryption.js';
+
+interface ApifyRow {
+  apify_api_token: string | null;
+  apify_username: string | null;
+}
+
+/** Read the stored (encrypted) Apify key and username for the single-row user_settings table. */
+function getApifyRow(db: DatabaseType): ApifyRow | undefined {
+  return db
+    .prepare('SELECT apify_api_token, apify_username FROM user_settings WHERE id = 1')
+    .get() as ApifyRow | undefined;
+}
 
 export default async function enrichRoutes(
   fastify: FastifyInstance,
@@ -22,6 +36,7 @@ export default async function enrichRoutes(
       response: {
         200: Type.Object({
           configured: Type.Boolean(),
+          apifyUsername: Type.Union([Type.String(), Type.Null()]),
           totalWithLinkedIn: Type.Number(),
           alreadyEnriched: Type.Number(),
           pendingEnrichment: Type.Number(),
@@ -39,13 +54,66 @@ export default async function enrichRoutes(
   ) => {
     const db = getUserDatabase(request.user!.id);
     const includeAlreadyEnriched = request.query.includeAlreadyEnriched === true;
-    const configured = isLinkedInEnrichmentConfigured();
+    const row = getApifyRow(db);
     const summary = getEnrichmentSummary(db, includeAlreadyEnriched);
 
     return {
-      configured,
+      configured: !!row?.apify_api_token,
+      apifyUsername: row?.apify_username ?? null,
       ...summary,
     };
+  });
+
+  // POST /api/enrich/apify-key - Validate and store the user's Apify API key
+  fastify.post<{
+    Body: { token: string };
+  }>('/apify-key', {
+    schema: {
+      body: Type.Object({
+        token: Type.String({ minLength: 1, maxLength: 500 }),
+      }),
+    },
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
+  }, async (request: FastifyRequest<{ Body: { token: string } }>, reply: FastifyReply) => {
+    if (request.user?.isDemo) {
+      return reply.status(403).send({ error: 'This feature is not available in demo mode. Sign in with Google to unlock all features.' });
+    }
+
+    const token = request.body.token.trim();
+    const validation = await validateApifyToken(token);
+    if (!validation.ok) {
+      // Bad key → 400; couldn't reach Apify (no status) → 502
+      const status = validation.status === 401 || validation.status === 403 ? 400 : 502;
+      return reply.status(status).send({ error: validation.error });
+    }
+
+    let encrypted: string;
+    try {
+      encrypted = encryptToken(token);
+    } catch {
+      return reply.status(500).send({ error: 'Server is missing SESSION_SECRET; cannot store credentials.' });
+    }
+
+    const db = getUserDatabase(request.user!.id);
+    db.prepare(
+      'UPDATE user_settings SET apify_api_token = ?, apify_username = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1'
+    ).run(encrypted, validation.username ?? null);
+
+    return { success: true, username: validation.username };
+  });
+
+  // DELETE /api/enrich/apify-key - Remove the user's stored Apify API key
+  fastify.delete('/apify-key', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (request.user?.isDemo) {
+      return reply.status(403).send({ error: 'This feature is not available in demo mode. Sign in with Google to unlock all features.' });
+    }
+
+    const db = getUserDatabase(request.user!.id);
+    db.prepare(
+      'UPDATE user_settings SET apify_api_token = NULL, apify_username = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = 1'
+    ).run();
+
+    return { success: true };
   });
 
   // POST /api/enrich/linkedin/start - Start enrichment process (SSE)
@@ -64,13 +132,20 @@ export default async function enrichRoutes(
       return reply.status(403).send({ error: 'This feature is not available in demo mode. Sign in with Google to unlock all features.' });
     }
 
-    if (!isLinkedInEnrichmentConfigured()) {
+    const db = getUserDatabase(request.user!.id);
+    const row = getApifyRow(db);
+    if (!row?.apify_api_token) {
       return reply.status(400).send({
-        error: 'LinkedIn enrichment not configured. Set APIFY_API_TOKEN environment variable.',
+        error: 'LinkedIn enrichment not configured. Add your Apify API key in Tools → Enrich.',
+      });
+    }
+    const token = decryptToken(row.apify_api_token);
+    if (!token) {
+      return reply.status(500).send({
+        error: 'Could not decrypt your Apify key. Disconnect and re-enter your key.',
       });
     }
 
-    const db = getUserDatabase(request.user!.id);
     const includeAlreadyEnriched = request.body.includeAlreadyEnriched === true;
     const limit = request.body.limit;
 
@@ -88,7 +163,7 @@ export default async function enrichRoutes(
     };
 
     try {
-      const result = await enrichContacts(db, includeAlreadyEnriched, (progress: EnrichmentProgress) => {
+      const result = await enrichContacts(db, token, includeAlreadyEnriched, (progress: EnrichmentProgress) => {
         sendEvent('progress', progress);
       }, limit);
 
@@ -213,13 +288,20 @@ export default async function enrichRoutes(
       return reply.status(403).send({ error: 'This feature is not available in demo mode. Sign in with Google to unlock all features.' });
     }
 
-    if (!isLinkedInEnrichmentConfigured()) {
+    const db = getUserDatabase(request.user!.id);
+    const row = getApifyRow(db);
+    if (!row?.apify_api_token) {
       return reply.status(400).send({
-        error: 'LinkedIn enrichment not configured. Set APIFY_API_TOKEN environment variable.',
+        error: 'LinkedIn enrichment not configured. Add your Apify API key in Tools → Enrich.',
+      });
+    }
+    const token = decryptToken(row.apify_api_token);
+    if (!token) {
+      return reply.status(500).send({
+        error: 'Could not decrypt your Apify key. Disconnect and re-enter your key.',
       });
     }
 
-    const db = getUserDatabase(request.user!.id);
     const { datasetId } = request.body;
 
     // Set SSE headers
@@ -235,7 +317,7 @@ export default async function enrichRoutes(
     };
 
     try {
-      const result = await recoverFromDataset(db, datasetId, (progress: EnrichmentProgress) => {
+      const result = await recoverFromDataset(db, token, datasetId, (progress: EnrichmentProgress) => {
         sendEvent('progress', progress);
       });
 

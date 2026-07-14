@@ -87,7 +87,8 @@ cp electron/.env.example ~/.config/Yello/.env
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID | ✅ Yes | [Google Cloud Console](https://console.cloud.google.com/) |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | ✅ Yes | [Google Cloud Console](https://console.cloud.google.com/) |
 | `HERE_API_KEY` | HERE.com geocoding API key | ❌ No | [HERE Developer](https://developer.here.com/) - Free tier: 250K requests/month |
-| `APIFY_API_TOKEN` | Apify LinkedIn enrichment token | ❌ No | [Apify](https://apify.com/) |
+
+> **LinkedIn enrichment (Apify):** no env var needed. Each user connects their own Apify account by entering an API key in-app (Tools → Enrich); it's validated and stored encrypted in their per-user database.
 
 **Google OAuth Setup:**
 - Create a project in [Google Cloud Console](https://console.cloud.google.com/)

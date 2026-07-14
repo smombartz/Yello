@@ -176,7 +176,6 @@ interface ApifyRunStatus {
 // Constants
 // ============================================================
 
-const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN || '';
 const APIFY_BASE_URL = 'https://api.apify.com/v2';
 const APIFY_ACTOR_ID = 'supreme_coder~linkedin-profile-scraper';
 const MAX_URLS_PER_RUN = 1500;
@@ -225,14 +224,45 @@ async function fetchWithRetry(
 }
 
 // ============================================================
-// Configuration check
+// Token validation
 // ============================================================
 
+export interface ApifyTokenValidation {
+  ok: boolean;
+  username?: string;
+  status?: number;
+  error?: string;
+}
+
 /**
- * Check if Apify API is configured
+ * Validate an Apify API token by calling GET /v2/users/me.
+ * On success, returns the Apify account username (for display).
  */
-export function isLinkedInEnrichmentConfigured(): boolean {
-  return APIFY_API_TOKEN.length > 0;
+export async function validateApifyToken(token: string): Promise<ApifyTokenValidation> {
+  try {
+    const response = await fetch(`${APIFY_BASE_URL}/users/me`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (response.ok) {
+      const data = await response.json() as { data?: { username?: string; email?: string } };
+      const username = data.data?.username || data.data?.email || 'Apify user';
+      return { ok: true, username };
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      return { ok: false, status: response.status, error: 'Invalid Apify API token' };
+    }
+
+    return {
+      ok: false,
+      status: response.status,
+      error: `Apify returned an unexpected error (${response.status})`,
+    };
+  } catch {
+    return { ok: false, error: 'Could not reach Apify. Check your connection and try again.' };
+  }
 }
 
 // ============================================================
@@ -507,7 +537,7 @@ function extractPublicIdentifier(url: string): string | null {
 /**
  * Start an Apify actor run with a batch of LinkedIn URLs
  */
-async function startApifyRun(urls: string[]): Promise<{ runId: string; datasetId: string }> {
+async function startApifyRun(token: string, urls: string[]): Promise<{ runId: string; datasetId: string }> {
   console.log(`[Enrich] Starting Apify run with ${urls.length} URLs`);
 
   const response = await fetch(
@@ -516,7 +546,7 @@ async function startApifyRun(urls: string[]): Promise<{ runId: string; datasetId
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${APIFY_API_TOKEN}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         urls: urls.map(url => ({ url })),
@@ -550,6 +580,7 @@ async function startApifyRun(urls: string[]): Promise<{ runId: string; datasetId
  * Returns the dataset ID when the run finishes successfully
  */
 async function waitForApifyRun(
+  token: string,
   runId: string,
   onPoll?: (pollCount: number, status: string, elapsedMs: number) => void
 ): Promise<string> {
@@ -569,7 +600,7 @@ async function waitForApifyRun(
       `${APIFY_BASE_URL}/actor-runs/${runId}`,
       {
         headers: {
-          'Authorization': `Bearer ${APIFY_API_TOKEN}`,
+          'Authorization': `Bearer ${token}`,
         },
       },
       'Apify status check'
@@ -611,14 +642,14 @@ async function waitForApifyRun(
 /**
  * Retrieve results from an Apify dataset
  */
-async function getApifyResults(datasetId: string): Promise<ApifyProfileResult[]> {
+async function getApifyResults(token: string, datasetId: string): Promise<ApifyProfileResult[]> {
   console.log(`[Enrich] Fetching results from dataset ${datasetId}`);
 
   const response = await fetchWithRetry(
     `${APIFY_BASE_URL}/datasets/${datasetId}/items?format=json`,
     {
       headers: {
-        'Authorization': `Bearer ${APIFY_API_TOKEN}`,
+        'Authorization': `Bearer ${token}`,
       },
     },
     'Apify dataset fetch'
@@ -802,12 +833,13 @@ function mapApifyToEnrichmentData(profile: ApifyProfileResult): LinkedInEnrichme
  */
 export async function enrichContacts(
   db: DatabaseType,
+  token: string,
   includeAlreadyEnriched: boolean,
   onProgress?: (progress: EnrichmentProgress) => void,
   limit?: number
 ): Promise<EnrichmentComplete> {
-  if (!isLinkedInEnrichmentConfigured()) {
-    throw new Error('APIFY_API_TOKEN not configured');
+  if (!token) {
+    throw new Error('Apify API token not configured');
   }
 
   let contacts = getContactsForEnrichment(db, includeAlreadyEnriched);
@@ -895,7 +927,7 @@ export async function enrichContacts(
 
     try {
       // Phase 1: Start the Apify run
-      const { runId, datasetId: batchDatasetId } = await startApifyRun(batchUrls);
+      const { runId, datasetId: batchDatasetId } = await startApifyRun(token, batchUrls);
       console.log(`[Enrich] Batch ${batchIndex + 1}/${batches.length}: runId=${runId}, datasetId=${batchDatasetId} ← save this for recovery`);
 
       // Phase 2: Poll for completion
@@ -909,7 +941,7 @@ export async function enrichContacts(
         });
       }
 
-      const datasetId = await waitForApifyRun(runId, (pollCount, status, elapsedMs) => {
+      const datasetId = await waitForApifyRun(token, runId, (pollCount, status, elapsedMs) => {
         if (onProgress) {
           onProgress({
             current: 0,
@@ -932,7 +964,7 @@ export async function enrichContacts(
         });
       }
 
-      const results = await getApifyResults(datasetId);
+      const results = await getApifyResults(token, datasetId);
       const batchState: ProcessResultsState = { succeeded, failed, errors, enrichedContacts };
       const matchedIdentifiers = await processApifyResults(
         db, results, identifierToContacts, batchState, total, onProgress
@@ -1149,11 +1181,12 @@ async function processApifyResults(
  */
 export async function recoverFromDataset(
   db: DatabaseType,
+  token: string,
   datasetId: string,
   onProgress?: (progress: EnrichmentProgress) => void
 ): Promise<EnrichmentComplete> {
-  if (!isLinkedInEnrichmentConfigured()) {
-    throw new Error('APIFY_API_TOKEN not configured');
+  if (!token) {
+    throw new Error('Apify API token not configured');
   }
 
   console.log(`[Enrich] Recovering from dataset ${datasetId}`);
@@ -1176,7 +1209,7 @@ export async function recoverFromDataset(
     onProgress({ current: 0, total: 0, succeeded: 0, failed: 0, currentContact: 'Fetching dataset results...' });
   }
 
-  const results = await getApifyResults(datasetId);
+  const results = await getApifyResults(token, datasetId);
   const total = results.length;
 
   console.log(`[Enrich] Recovery: ${results.length} profiles to process against ${identifierToContacts.size} known contacts`);
