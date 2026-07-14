@@ -4316,6 +4316,107 @@ a.whatsapp-link:hover {
   color: var(--ds-text-secondary);
 }
 
+/* Related-person name combobox (typeahead over contacts) */
+.name-combobox {
+  position: relative;
+  width: 100%;
+}
+
+.name-combobox-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  background-color: var(--ds-bg-primary);
+  border: 1px solid var(--ds-border-color);
+  border-radius: var(--ds-radius-md);
+  box-shadow: var(--ds-shadow-lg);
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.name-combobox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border: none;
+  background: transparent;
+  border-radius: var(--ds-radius-md);
+  cursor: pointer;
+  text-align: left;
+}
+
+.name-combobox-item.active,
+.name-combobox-item:hover {
+  background-color: var(--ds-bg-hover);
+}
+
+.name-combobox-item-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name-combobox-item-info strong {
+  font-size: var(--ds-font-sm);
+  color: var(--ds-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.name-combobox-item-detail {
+  font-size: var(--ds-font-xs);
+  color: var(--ds-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.linked-person-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--ds-border-color);
+  border-radius: var(--ds-radius-md);
+  background-color: var(--ds-bg-hover);
+}
+
+.linked-person-chip-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--ds-font-sm);
+  color: var(--ds-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.linked-person-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--ds-text-secondary);
+  cursor: pointer;
+  padding: 0.125rem;
+  border-radius: var(--ds-radius-md);
+}
+
+.linked-person-chip-remove:hover {
+  color: var(--ds-text-primary);
+  background-color: var(--ds-bg-hover);
+}
+
 /* Edit section content */
 .edit-section-content {
   display: flex;

@@ -9,6 +9,7 @@ import type {
   ContactInstantMessage,
   ContactUrl,
   ContactRelatedPerson,
+  LinkedFromEntry,
 } from '../api/types';
 import { Icon } from './Icon';
 import {
@@ -31,6 +32,7 @@ export interface ContactCardViewData {
   socialProfiles: ContactSocialProfile[];
   urls?: ContactUrl[];
   relatedPeople?: ContactRelatedPerson[];
+  linkedFrom?: LinkedFromEntry[];
   birthday: string | null;
   notes: string | null;
   createdAt?: string;
@@ -79,6 +81,8 @@ interface ContactCardViewProps {
   sectionSuffixes?: SectionSuffixes;
   /** Section keys to hide entirely from edit mode. */
   hiddenSections?: Set<string>;
+  /** Id of the contact being edited, so related-people search excludes self. */
+  contactId?: number;
 }
 
 function formatDate(dateString: string): string {
@@ -121,6 +125,7 @@ export function ContactCardView({
   onEditStateChange,
   sectionSuffixes,
   hiddenSections,
+  contactId,
 }: ContactCardViewProps) {
   const hidden = hiddenSections ?? new Set<string>();
 
@@ -181,6 +186,7 @@ export function ContactCardView({
                 isEditMode={true}
                 onRelatedPeopleChange={(relatedPeople) => onEditStateChange('relatedPeople', relatedPeople)}
                 renderItemSuffix={sectionSuffixes?.relatedPeople}
+                excludeContactId={contactId}
               />
             )}
           </div>
@@ -239,7 +245,7 @@ export function ContactCardView({
   const hasLocations = data.addresses.length > 0;
   const hasSocial = data.socialProfiles.length > 0;
   const hasUrls = (data.urls?.length ?? 0) > 0;
-  const hasRelatedPeople = (data.relatedPeople?.length ?? 0) > 0;
+  const hasRelatedPeople = (data.relatedPeople?.length ?? 0) > 0 || (data.linkedFrom?.length ?? 0) > 0;
   const hasBirthday = !!data.birthday;
 
   const hasRow1 = hasPhones || hasLocations || hasSocial;
@@ -264,7 +270,7 @@ export function ContactCardView({
             <div className="expanded-column">
               {hasBirthday && <BirthdaySection birthday={data.birthday} isEditMode={false} />}
               {hasRelatedPeople && (
-                <RelatedPeopleSection relatedPeople={data.relatedPeople!} isEditMode={false} />
+                <RelatedPeopleSection relatedPeople={data.relatedPeople ?? []} linkedFrom={data.linkedFrom} isEditMode={false} />
               )}
             </div>
           )}

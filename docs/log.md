@@ -1,5 +1,42 @@
 # Change Log
 
+## 2026-07-14 — Added Open Graph / Twitter share image and meta tags
+
+**What Changed:**
+- Created `frontend/public/og-image.png` (1200×630): Yello logo on a white background with a soft purple glow and the tagline "Manage and organize your contacts with ease", rendered in the app's Geist font and brand purple (#5F27E3).
+- Added `og:*` and `twitter:*` meta tags plus a `<meta name="description">` to `frontend/index.html`. Image paths are root-relative (`/og-image.png`) since there is no fixed production domain yet — swap in the absolute URL once one exists, as some scrapers require absolute `og:image` URLs.
+
+**Why:**
+- The app had no OG image or social meta tags, so shared links rendered without a preview card.
+
+**Files Modified:**
+- `frontend/public/og-image.png` (new)
+- `frontend/index.html`
+
+---
+
+## 2026-07-14 — Linked related contacts with autocomplete
+
+**What Changed:**
+- Related people on a contact can now be linked to a real contact. In edit mode the name field is a typeahead: as you type it shows a dropdown of matching contacts (new `RelatedPersonNameField` combobox); picking one links the entry and shows it as a locked chip with an × to unlink. Free-text names that match nothing still save as plain, unlinked names.
+- Linked entries follow the linked contact's current name (renames propagate) via a `COALESCE(linked.display_name, stored_name)` read; in view mode a linked name renders as a `<Link>` to `/contacts/:id`.
+- Reverse links: a contact's detail view now also shows (read-only) the other contacts that list it as a related person (`linkedFrom`), deduped against its own outgoing links.
+- Schema: added nullable `related_contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL` (+ partial index) to `contact_related_people` via the existing try/catch ALTER migration. Deleting a linked contact nulls the link and keeps the name snapshot (FKs are enforced).
+- New `GET /api/contacts/search?q=&exclude=` FTS typeahead endpoint (excludes archived contacts and the contact being edited). Writes null out self-links and dead ids and refresh the stored name snapshot for valid links. Merge repoints related-person links from secondaries to the surviving primary.
+
+**Why:**
+- Users wanted related people to connect to actual contacts (navigable, rename-safe) while still allowing free-text names.
+
+**Files Modified:**
+- `backend/src/services/userDatabase.ts` (migration)
+- `backend/src/routes/contacts.ts` (search route, link-aware reads/writes, reverse links)
+- `backend/src/schemas/contact.ts`, `backend/src/types/index.ts`
+- `backend/src/services/mergeService.ts`, `archiveService.ts`, `cleanupService.ts`, `deduplicationService.ts`, `socialLinksCleanupService.ts`
+- `frontend/src/components/RelatedPersonNameField.tsx` (new), `ContactFormSections.tsx`, `ContactCardView.tsx`, `ContactRowExpanded.tsx`, `AddContactPage.tsx`
+- `frontend/src/api/types.ts`, `frontend/src/api/hooks.ts`, `frontend/src/index.css`
+
+---
+
 ## 2026-07-14 — Redesigned onboarding to match the app design system
 
 **What Changed:**

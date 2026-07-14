@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import type { Database as DatabaseType } from 'better-sqlite3';
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { getUserDatabase } from '../services/userDatabase.js';
 import { rebuildContactSearch } from '../services/database.js';
@@ -27,6 +28,7 @@ import {
   CreateContactBodySchema,
   CreateContactBody
 } from '../schemas/contact.js';
+import { ContactSearchResultSchema, type ContactSearchResult } from '../schemas/profile.js';
 
 interface ContactRow {
   id: number;
@@ -121,6 +123,76 @@ interface RelatedPersonRow {
   contact_id: number;
   name: string;
   relationship: string | null;
+  related_contact_id: number | null;
+}
+
+interface LinkedFromRow {
+  contact_id: number;
+  display_name: string;
+  relationship: string | null;
+  photo_hash: string | null;
+}
+
+/**
+ * Fetches a contact's related people. Linked entries (related_contact_id set)
+ * display the linked contact's *current* display name via COALESCE so renames
+ * propagate; free-text entries keep their stored name.
+ */
+function getRelatedPeople(db: DatabaseType, contactId: number) {
+  const rows = db.prepare(`
+    SELECT rp.id, rp.contact_id, COALESCE(c2.display_name, rp.name) AS name,
+           rp.relationship, rp.related_contact_id
+    FROM contact_related_people rp
+    LEFT JOIN contacts c2 ON c2.id = rp.related_contact_id
+    WHERE rp.contact_id = ?
+  `).all(contactId) as RelatedPersonRow[];
+  return rows.map(rp => ({
+    id: rp.id,
+    contactId: rp.contact_id,
+    name: rp.name,
+    relationship: rp.relationship,
+    relatedContactId: rp.related_contact_id
+  }));
+}
+
+/**
+ * Fetches reverse references: other (non-archived) contacts that list this
+ * contact as a related person. Entries already covered by this contact's own
+ * outgoing links are dropped so a mutual link is not shown twice.
+ */
+function getLinkedFrom(db: DatabaseType, contactId: number, outgoingLinkedIds: Set<number>) {
+  const rows = db.prepare(`
+    SELECT rp.contact_id, c.display_name, rp.relationship, c.photo_hash
+    FROM contact_related_people rp
+    JOIN contacts c ON c.id = rp.contact_id
+    WHERE rp.related_contact_id = ? AND c.archived_at IS NULL
+  `).all(contactId) as LinkedFromRow[];
+  return rows
+    .filter(r => !outgoingLinkedIds.has(r.contact_id))
+    .map(r => ({
+      contactId: r.contact_id,
+      displayName: r.display_name,
+      relationship: r.relationship,
+      photoUrl: getPhotoUrl(r.photo_hash, 'small')
+    }));
+}
+
+/**
+ * Normalizes an incoming related_contact_id for persistence: drops self-links
+ * and references to contacts that don't exist, returning null in those cases.
+ * When the link is valid, returns { id, displayName } so callers can refresh
+ * the stored name snapshot.
+ */
+function resolveRelatedLink(
+  db: DatabaseType,
+  ownerContactId: number,
+  relatedContactId: number | null | undefined
+): { id: number; displayName: string } | null {
+  if (relatedContactId == null || relatedContactId === ownerContactId) return null;
+  const target = db.prepare('SELECT id, display_name FROM contacts WHERE id = ?')
+    .get(relatedContactId) as { id: number; display_name: string } | undefined;
+  if (!target) return null;
+  return { id: target.id, displayName: target.display_name };
 }
 
 interface CountRow {
@@ -207,6 +279,61 @@ export default async function contactsRoutes(
     }
 
     return { contactIds };
+  });
+
+  // GET /api/contacts/search - Typeahead search for linking related people.
+  // Excludes archived contacts and (optionally) the contact being edited.
+  fastify.get<{ Querystring: { q: string; exclude?: number } }>('/search', {
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          q: { type: 'string', minLength: 1 },
+          exclude: { type: 'number' }
+        },
+        required: ['q']
+      },
+      response: {
+        200: {
+          type: 'array',
+          items: ContactSearchResultSchema
+        }
+      }
+    }
+  }, async (request, _reply) => {
+    const db = getUserDatabase(request.user!.id);
+    const { q, exclude } = request.query;
+    const escapedSearch = q.replace(/"/g, '""');
+    const searchTerm = `"${escapedSearch}"*`;
+
+    const params: (string | number)[] = [searchTerm];
+    let excludeClause = '';
+    if (exclude != null) {
+      excludeClause = ' AND c.id != ?';
+      params.push(exclude);
+    }
+
+    const contacts = db.prepare(`
+      SELECT DISTINCT
+        c.id,
+        c.display_name,
+        c.photo_hash,
+        (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
+        (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone
+      FROM contacts c
+      WHERE c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
+        AND c.archived_at IS NULL${excludeClause}
+      ORDER BY c.last_name, c.first_name, c.display_name
+      LIMIT 10
+    `).all(...params) as Array<{ id: number; display_name: string; photo_hash: string | null; primary_email: string | null; primary_phone: string | null }>;
+
+    return contacts.map((c): ContactSearchResult => ({
+      id: c.id,
+      displayName: c.display_name,
+      photoUrl: getPhotoUrl(c.photo_hash, 'small'),
+      primaryEmail: c.primary_email,
+      primaryPhone: c.primary_phone,
+    }));
   });
 
   // GET /api/contacts
@@ -468,14 +595,15 @@ export default async function contactsRoutes(
       }
     }
 
-    // Insert related people
+    // Insert related people (with optional link to another contact)
     if (data.relatedPeople && data.relatedPeople.length > 0) {
       const insertRelated = db.prepare(`
-        INSERT INTO contact_related_people (contact_id, name, relationship)
-        VALUES (?, ?, ?)
+        INSERT INTO contact_related_people (contact_id, name, relationship, related_contact_id)
+        VALUES (?, ?, ?, ?)
       `);
       for (const person of data.relatedPeople) {
-        insertRelated.run(contactId, person.name, person.relationship);
+        const link = resolveRelatedLink(db, contactId, person.relatedContactId);
+        insertRelated.run(contactId, link ? link.displayName : person.name, person.relationship, link ? link.id : null);
       }
     }
 
@@ -533,11 +661,8 @@ export default async function contactsRoutes(
       WHERE contact_id = ?
     `).all(contactId) as UrlRow[];
 
-    const relatedPeople = db.prepare(`
-      SELECT id, contact_id, name, relationship
-      FROM contact_related_people
-      WHERE contact_id = ?
-    `).all(contactId) as RelatedPersonRow[];
+    const relatedPeople = getRelatedPeople(db, contactId);
+    const linkedFrom = getLinkedFrom(db, contactId, new Set(relatedPeople.map(rp => rp.relatedContactId).filter((v): v is number => v != null)));
 
     reply.status(201);
     return {
@@ -606,12 +731,8 @@ export default async function contactsRoutes(
         label: u.label,
         type: u.type
       })),
-      relatedPeople: relatedPeople.map(rp => ({
-        id: rp.id,
-        contactId: rp.contact_id,
-        name: rp.name,
-        relationship: rp.relationship
-      })),
+      relatedPeople,
+      linkedFrom,
       photoUrl: getPhotoUrl(contact.photo_hash, 'medium'),
       linkedinEnrichment: null
     };
@@ -684,11 +805,8 @@ export default async function contactsRoutes(
       WHERE contact_id = ?
     `).all(id) as UrlRow[];
 
-    const relatedPeople = db.prepare(`
-      SELECT id, contact_id, name, relationship
-      FROM contact_related_people
-      WHERE contact_id = ?
-    `).all(id) as RelatedPersonRow[];
+    const relatedPeople = getRelatedPeople(db, id);
+    const linkedFrom = getLinkedFrom(db, id, new Set(relatedPeople.map(rp => rp.relatedContactId).filter((v): v is number => v != null)));
 
     // Fetch LinkedIn enrichment data if available
     interface LinkedInEnrichmentRow {
@@ -796,12 +914,8 @@ export default async function contactsRoutes(
         label: u.label,
         type: u.type
       })),
-      relatedPeople: relatedPeople.map(rp => ({
-        id: rp.id,
-        contactId: rp.contact_id,
-        name: rp.name,
-        relationship: rp.relationship
-      })),
+      relatedPeople,
+      linkedFrom,
       photoUrl: getPhotoUrl(contact.photo_hash, 'medium'),
       photos: contactPhotos.map(p => ({
         id: p.id,
@@ -1021,15 +1135,16 @@ export default async function contactsRoutes(
       }
     }
 
-    // Update related people (delete all and re-insert)
+    // Update related people (delete all and re-insert, preserving links)
     if (updates.relatedPeople !== undefined) {
       db.prepare('DELETE FROM contact_related_people WHERE contact_id = ?').run(id);
       const insertRelated = db.prepare(`
-        INSERT INTO contact_related_people (contact_id, name, relationship)
-        VALUES (?, ?, ?)
+        INSERT INTO contact_related_people (contact_id, name, relationship, related_contact_id)
+        VALUES (?, ?, ?, ?)
       `);
       for (const person of updates.relatedPeople) {
-        insertRelated.run(id, person.name, person.relationship);
+        const link = resolveRelatedLink(db, id, person.relatedContactId);
+        insertRelated.run(id, link ? link.displayName : person.name, person.relationship, link ? link.id : null);
       }
     }
 
@@ -1084,11 +1199,8 @@ export default async function contactsRoutes(
       WHERE contact_id = ?
     `).all(id) as UrlRow[];
 
-    const relatedPeople = db.prepare(`
-      SELECT id, contact_id, name, relationship
-      FROM contact_related_people
-      WHERE contact_id = ?
-    `).all(id) as RelatedPersonRow[];
+    const relatedPeople = getRelatedPeople(db, id);
+    const linkedFrom = getLinkedFrom(db, id, new Set(relatedPeople.map(rp => rp.relatedContactId).filter((v): v is number => v != null)));
 
     // Fetch LinkedIn enrichment data if available
     interface LinkedInEnrichmentRow {
@@ -1196,12 +1308,8 @@ export default async function contactsRoutes(
         label: u.label,
         type: u.type
       })),
-      relatedPeople: relatedPeople.map(rp => ({
-        id: rp.id,
-        contactId: rp.contact_id,
-        name: rp.name,
-        relationship: rp.relationship
-      })),
+      relatedPeople,
+      linkedFrom,
       photoUrl: getPhotoUrl(contact.photo_hash, 'medium'),
       photos: contactPhotos.map(p => ({
         id: p.id,

@@ -70,6 +70,14 @@ export interface ContactRelatedPerson {
   contactId: number;
   name: string;
   relationship: string | null;
+  relatedContactId: number | null;
+}
+
+export interface LinkedFromEntry {
+  contactId: number;
+  displayName: string;
+  relationship: string | null;
+  photoUrl: string | null;
 }
 
 export interface LinkedInEnrichment {
@@ -118,6 +126,7 @@ export interface ContactDetail {
   instantMessages: ContactInstantMessage[];
   urls: ContactUrl[];
   relatedPeople: ContactRelatedPerson[];
+  linkedFrom: LinkedFromEntry[];
   photoUrl: string | null;
   photos: ContactPhoto[];
   createdAt: string;
@@ -332,6 +341,7 @@ export interface UpdateContactUrl {
 export interface UpdateContactRelatedPerson {
   name: string;
   relationship: string | null;
+  relatedContactId?: number | null;
 }
 
 export interface UpdateContactRequest {

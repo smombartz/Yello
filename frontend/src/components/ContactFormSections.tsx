@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import type { ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, LinkedInEnrichment } from '../api/types';
+import { Link } from 'react-router-dom';
+import type { ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, LinkedFromEntry, ContactSearchResult, LinkedInEnrichment } from '../api/types';
 import { getCountryFlag, getCountryName } from '../lib/phoneUtils';
 import { formatAddressLines } from '../lib/addressUtils';
 import { Icon } from './Icon';
+import { RelatedPersonNameField } from './RelatedPersonNameField';
 import {
   formatBirthday,
   getZodiacSign,
@@ -1092,17 +1094,20 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange, renderItemSuffix }
 
 // ─── RelatedPeopleSection ────────────────────────────────────────
 
-export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopleChange, renderItemSuffix }: {
+export function RelatedPeopleSection({ relatedPeople, linkedFrom, isEditMode, onRelatedPeopleChange, renderItemSuffix, excludeContactId }: {
   relatedPeople: ContactRelatedPerson[];
+  linkedFrom?: LinkedFromEntry[];
   isEditMode: boolean;
   onRelatedPeopleChange?: (people: ContactRelatedPerson[]) => void;
   renderItemSuffix?: (index: number) => React.ReactNode;
+  excludeContactId?: number;
 }) {
-  if (!isEditMode && !relatedPeople.length) return null;
+  const reverseLinks = linkedFrom ?? [];
+  if (!isEditMode && !relatedPeople.length && !reverseLinks.length) return null;
 
   const addPerson = () => {
     if (onRelatedPeopleChange) {
-      onRelatedPeopleChange([...relatedPeople, { id: 0, contactId: 0, name: '', relationship: null }]);
+      onRelatedPeopleChange([...relatedPeople, { id: 0, contactId: 0, name: '', relationship: null, relatedContactId: null }]);
     }
   };
 
@@ -1110,6 +1115,23 @@ export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopl
     if (onRelatedPeopleChange) {
       const updated = [...relatedPeople];
       updated[index] = { ...updated[index], [field]: value };
+      onRelatedPeopleChange(updated);
+    }
+  };
+
+  // Linking must set the name and target id together in one state update.
+  const linkPerson = (index: number, contact: ContactSearchResult) => {
+    if (onRelatedPeopleChange) {
+      const updated = [...relatedPeople];
+      updated[index] = { ...updated[index], name: contact.displayName, relatedContactId: contact.id };
+      onRelatedPeopleChange(updated);
+    }
+  };
+
+  const unlinkPerson = (index: number) => {
+    if (onRelatedPeopleChange) {
+      const updated = [...relatedPeople];
+      updated[index] = { ...updated[index], relatedContactId: null };
       onRelatedPeopleChange(updated);
     }
   };
@@ -1141,10 +1163,13 @@ export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopl
               >
                 <Icon name={getRelationshipIcon(person.relationship)} />
                 <div className="edit-field-group">
-                  <EditableField
-                    value={person.name}
-                    onChange={(v) => updatePerson(i, 'name', v)}
-                    placeholder="Name"
+                  <RelatedPersonNameField
+                    name={person.name}
+                    relatedContactId={person.relatedContactId}
+                    excludeContactId={excludeContactId}
+                    onNameChange={(v) => updatePerson(i, 'name', v)}
+                    onLink={(contact) => linkPerson(i, contact)}
+                    onUnlink={() => unlinkPerson(i)}
                   />
                   <EditableField
                     value={person.relationship || ''}
@@ -1170,7 +1195,16 @@ export function RelatedPeopleSection({ relatedPeople, isEditMode, onRelatedPeopl
       <SectionHeading icon="user" label="Related" />
       {relatedPeople.map((person) => (
         <InfoField key={person.id} icon={getRelationshipIcon(person.relationship)}>
-          <span>{person.name}</span>
+          {person.relatedContactId != null ? (
+            <Link to={`/contacts/${person.relatedContactId}`}>{person.name}</Link>
+          ) : (
+            <span>{person.name}</span>
+          )}
+        </InfoField>
+      ))}
+      {reverseLinks.map((entry) => (
+        <InfoField key={`from-${entry.contactId}`} icon={getRelationshipIcon(entry.relationship)}>
+          <Link to={`/contacts/${entry.contactId}`}>{entry.displayName}</Link>
         </InfoField>
       ))}
     </div>

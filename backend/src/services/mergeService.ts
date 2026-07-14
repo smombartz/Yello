@@ -367,18 +367,29 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
 
     for (const secondaryId of secondaryContactIds) {
       const secondaryRelated = db.prepare(`
-        SELECT name, relationship FROM contact_related_people WHERE contact_id = ?
-      `).all(secondaryId) as Array<{ name: string; relationship: string | null }>;
+        SELECT name, relationship, related_contact_id FROM contact_related_people WHERE contact_id = ?
+      `).all(secondaryId) as Array<{ name: string; relationship: string | null; related_contact_id: number | null }>;
 
       for (const person of secondaryRelated) {
         if (!primaryRelatedSet.has(person.name.toLowerCase())) {
           db.prepare(`
-            INSERT INTO contact_related_people (contact_id, name, relationship) VALUES (?, ?, ?)
-          `).run(primaryContactId, person.name, person.relationship);
+            INSERT INTO contact_related_people (contact_id, name, relationship, related_contact_id) VALUES (?, ?, ?, ?)
+          `).run(primaryContactId, person.name, person.relationship, person.related_contact_id);
           primaryRelatedSet.add(person.name.toLowerCase());
         }
       }
     }
+
+    // Repoint any related-person links that targeted a secondary contact to the
+    // surviving primary, then drop self-links that repointing may have created.
+    db.prepare(`
+      UPDATE contact_related_people SET related_contact_id = ?
+      WHERE related_contact_id IN (${secondaryContactIds.map(() => '?').join(',')})
+    `).run(primaryContactId, ...secondaryContactIds);
+    db.prepare(`
+      UPDATE contact_related_people SET related_contact_id = NULL
+      WHERE contact_id = related_contact_id
+    `).run();
 
     // Preserve photo: if primary has no photo, use first available from secondary contacts
     const primaryPhoto = db.prepare(`
@@ -550,10 +561,10 @@ function getContactDetail(database: DatabaseType, contactId: number): ContactDet
   `).all(contactId) as Array<{ id: number; contactId: number; url: string; label: string | null; type: string | null }>;
 
   const relatedPeople = db.prepare(`
-    SELECT id, contact_id as contactId, name, relationship
+    SELECT id, contact_id as contactId, name, relationship, related_contact_id as relatedContactId
     FROM contact_related_people
     WHERE contact_id = ?
-  `).all(contactId) as Array<{ id: number; contactId: number; name: string; relationship: string | null }>;
+  `).all(contactId) as Array<{ id: number; contactId: number; name: string; relationship: string | null; relatedContactId: number | null }>;
 
   const enrichment = db.prepare(`
     SELECT linkedin_first_name, linkedin_last_name, headline, about,
@@ -594,6 +605,7 @@ function getContactDetail(database: DatabaseType, contactId: number): ContactDet
     instantMessages,
     urls,
     relatedPeople,
+    linkedFrom: [],
     photoUrl: getPhotoUrl(contact.photoHash, 'medium'),
     linkedinEnrichment: enrichment ? {
       linkedinFirstName: enrichment.linkedin_first_name,

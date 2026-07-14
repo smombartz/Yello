@@ -340,6 +340,15 @@ export function getUserDatabase(userId: number): DatabaseType {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_contacts_icloud_uid ON contacts(icloud_uid) WHERE icloud_uid IS NOT NULL`);
   } catch { /* index already exists */ }
 
+  // Related-contact linking migration — nullable FK so a related person can
+  // point at a real contact while free-text names keep a NULL link.
+  try {
+    db.exec(`ALTER TABLE contact_related_people ADD COLUMN related_contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL`);
+  } catch { /* column already exists */ }
+  try {
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_contact_related_people_related_contact_id ON contact_related_people(related_contact_id) WHERE related_contact_id IS NOT NULL`);
+  } catch { /* index already exists */ }
+
   cache.set(userId, db);
   return db;
 }

@@ -10,7 +10,8 @@ import type {
   CreateContactRequest,
   MergePreviewResponse,
   MergeRequest,
-  MergeResponse
+  MergeResponse,
+  ContactSearchResult
 } from './types';
 
 export function useContacts(page: number = 1, limit: number = 50, search?: string, category?: string, sort?: string, filter?: string) {
@@ -41,6 +42,21 @@ export function useGroups() {
   return useQuery({
     queryKey: ['groups'],
     queryFn: () => fetchApi<GroupsResponse>('/api/contacts/groups'),
+  });
+}
+
+// Typeahead search for linking related people. Optionally excludes a contact
+// (the one being edited) so it can't be linked to itself.
+export function useSearchContacts(query: string, excludeId?: number) {
+  return useQuery({
+    queryKey: ['contactSearch', query, excludeId],
+    queryFn: () => {
+      const params = new URLSearchParams({ q: query });
+      if (excludeId != null) params.set('exclude', String(excludeId));
+      return fetchApi<ContactSearchResult[]>(`/api/contacts/search?${params}`);
+    },
+    enabled: query.length >= 1,
+    staleTime: 5000,
   });
 }
 

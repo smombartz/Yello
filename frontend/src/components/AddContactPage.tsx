@@ -126,6 +126,7 @@ export function AddContactPage() {
       relatedPeople: form.relatedPeople.filter(rp => rp.name.trim()).map(rp => ({
         name: rp.name,
         relationship: rp.relationship,
+        relatedContactId: rp.relatedContactId ?? null,
       })),
     };
 

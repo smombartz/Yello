@@ -118,6 +118,7 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
       relatedPeople: editForm.relatedPeople.filter(rp => rp.name.trim()).map(rp => ({
         name: rp.name,
         relationship: rp.relationship,
+        relatedContactId: rp.relatedContactId ?? null,
       })),
     };
 
@@ -195,6 +196,7 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
 
         <ContactCardView
           data={contact}
+          contactId={contact.id}
           isEditMode={true}
           editState={{
             phones: editForm.phones,
@@ -228,6 +230,7 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
           socialProfiles: contact.socialProfiles,
           urls: contact.urls,
           relatedPeople: contact.relatedPeople,
+          linkedFrom: contact.linkedFrom,
           birthday: contact.birthday,
           notes: contact.notes,
           createdAt: contact.createdAt,

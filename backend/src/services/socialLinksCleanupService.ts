@@ -679,10 +679,10 @@ function getContactDetails(db: DatabaseType, contactIds: number[]): ContactDetai
     `).all(contact.id) as Array<{ id: number; contactId: number; url: string; label: string | null; type: string | null }>;
 
     const relatedPeople = db.prepare(`
-      SELECT id, contact_id as contactId, name, relationship
+      SELECT id, contact_id as contactId, name, relationship, related_contact_id as relatedContactId
       FROM contact_related_people
       WHERE contact_id = ?
-    `).all(contact.id) as Array<{ id: number; contactId: number; name: string; relationship: string | null }>;
+    `).all(contact.id) as Array<{ id: number; contactId: number; name: string; relationship: string | null; relatedContactId: number | null }>;
 
     return {
       ...contact,
@@ -694,6 +694,7 @@ function getContactDetails(db: DatabaseType, contactIds: number[]): ContactDetai
       instantMessages,
       urls,
       relatedPeople,
+      linkedFrom: [],
       photoUrl: getPhotoUrl(contact.photoHash, 'medium'),
       linkedinEnrichment: null
     };

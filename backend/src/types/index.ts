@@ -78,6 +78,14 @@ export interface ContactRelatedPerson {
   contactId: number;
   name: string;
   relationship: string | null;
+  relatedContactId: number | null;
+}
+
+export interface LinkedFromEntry {
+  contactId: number;
+  displayName: string;
+  relationship: string | null;
+  photoUrl: string | null;
 }
 
 export interface ContactListItem {
@@ -120,6 +128,7 @@ export interface ContactDetail extends Contact {
   instantMessages: ContactInstantMessage[];
   urls: ContactUrl[];
   relatedPeople: ContactRelatedPerson[];
+  linkedFrom: LinkedFromEntry[];
   photoUrl: string | null;
   linkedinEnrichment: LinkedInEnrichment | null;
 }

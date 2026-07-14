@@ -81,7 +81,16 @@ export const ContactRelatedPersonSchema = Type.Object({
   id: Type.Number(),
   contactId: Type.Number(),
   name: Type.String(),
-  relationship: Type.Union([Type.String(), Type.Null()])
+  relationship: Type.Union([Type.String(), Type.Null()]),
+  relatedContactId: Type.Union([Type.Number(), Type.Null()])
+});
+
+// Read-only reverse reference: another contact that lists this contact as a related person
+export const LinkedFromEntrySchema = Type.Object({
+  contactId: Type.Number(),
+  displayName: Type.String(),
+  relationship: Type.Union([Type.String(), Type.Null()]),
+  photoUrl: Type.Union([Type.String(), Type.Null()])
 });
 
 export const LinkedInEnrichmentSchema = Type.Object({
@@ -143,6 +152,7 @@ export const ContactDetailSchema = Type.Object({
   instantMessages: Type.Array(ContactInstantMessageSchema),
   urls: Type.Array(ContactUrlSchema),
   relatedPeople: Type.Array(ContactRelatedPersonSchema),
+  linkedFrom: Type.Array(LinkedFromEntrySchema),
   photoUrl: Type.Union([Type.String(), Type.Null()]),
   photos: Type.Optional(Type.Array(Type.Object({
     id: Type.Number(),
@@ -231,7 +241,8 @@ export const UpdateContactUrlSchema = Type.Object({
 
 export const UpdateContactRelatedPersonSchema = Type.Object({
   name: Type.String(),
-  relationship: Type.Union([Type.String(), Type.Null()])
+  relationship: Type.Union([Type.String(), Type.Null()]),
+  relatedContactId: Type.Optional(Type.Union([Type.Number(), Type.Null()]))
 });
 
 export const UpdateContactBodySchema = Type.Object({
