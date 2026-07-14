@@ -1,5 +1,37 @@
 # Change Log
 
+## 2026-07-14 — Made og:image URLs absolute via VITE_PUBLIC_URL env var
+
+**What Changed:**
+- `og:image` and `twitter:image` in `frontend/index.html` now use a `%VITE_PUBLIC_URL%` placeholder instead of a bare root-relative path.
+- `frontend/vite.config.ts` injects the value at build time via a small `transformIndexHtml` plugin (runs `pre` so an unset variable resolves to an empty string — root-relative path, as before — rather than leaving the literal placeholder in the HTML). Trailing slashes are stripped.
+- `Dockerfile` declares `ARG VITE_PUBLIC_URL` in the frontend build stage so Railway service variables reach the Vite build.
+- Created `docs/readme.md` documenting the variable.
+
+**Why:**
+- Link previews weren't showing: the OG spec requires `og:image` to be an absolute URL, and scrapers (iMessage, Slack, Facebook, etc.) ignore relative paths. The domain may change, so it's wired through an env var instead of hardcoded. Set `VITE_PUBLIC_URL=https://<production-domain>` in Railway for previews to work.
+
+**Files Modified:**
+- `frontend/index.html`
+- `frontend/vite.config.ts`
+- `Dockerfile`
+- `docs/readme.md` (new)
+
+---
+
+## 2026-07-14 — Recolored Open Graph image to purple brand background
+
+**What Changed:**
+- Regenerated `frontend/public/og-image.png` (1200×630) with a solid brand-purple background (`#5F27E3`) and the Yello logo, divider, and tagline all reversed out in white, replacing the previous white-background version.
+
+**Why:**
+- Requested a stronger, on-brand share card that leads with the brand color.
+
+**Files Modified:**
+- `frontend/public/og-image.png`
+
+---
+
 ## 2026-07-14 — Added Open Graph / Twitter share image and meta tags
 
 **What Changed:**

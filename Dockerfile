@@ -1,5 +1,9 @@
 # Build stage for frontend
 FROM node:20-alpine AS frontend-builder
+# Public origin baked into og:image URLs at build time (Railway passes service
+# variables to Docker builds only when declared as ARG)
+ARG VITE_PUBLIC_URL
+ENV VITE_PUBLIC_URL=$VITE_PUBLIC_URL
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm ci
