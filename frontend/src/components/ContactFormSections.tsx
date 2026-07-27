@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, LinkedFromEntry, ContactSearchResult, LinkedInEnrichment } from '../api/types';
 import { getCountryFlag, getCountryName } from '../lib/phoneUtils';
@@ -299,13 +299,21 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
       <SectionHeading icon="phone" label="Phone" />
       {visible.map((phone, i) => {
         const flag = getCountryFlag(phone.countryCode);
-        return (
-          <InfoField key={`phone-${i}`} flagEmoji={flag || undefined} icon={!flag ? 'phone' : undefined}>
+        const field = (
+          <InfoField flagEmoji={flag || undefined} icon={!flag ? 'phone' : undefined}>
             <a href={`tel:${phone.phone}`} title={getCountryName(phone.countryCode) || undefined}>
               {phone.phoneDisplay}
             </a>
             <WhatsAppLink phone={phone.phone} />
           </InfoField>
+        );
+        return renderItemSuffix ? (
+          <div key={`phone-${i}`} className="view-item-with-suffix">
+            {field}
+            {renderItemSuffix(i)}
+          </div>
+        ) : (
+          <React.Fragment key={`phone-${i}`}>{field}</React.Fragment>
         );
       })}
       {!showAll && remaining > 0 && (
@@ -406,10 +414,18 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
       <SectionHeading icon="envelope" label="Email" />
       {visible.map((email, i) => {
         const { icon, style } = getEmailIcon(email.email);
-        return (
-          <InfoField key={`email-${i}`} icon={icon} iconStyle={style}>
+        const field = (
+          <InfoField icon={icon} iconStyle={style}>
             <a href={`mailto:${email.email}`}>{email.email}</a>
           </InfoField>
+        );
+        return renderItemSuffix ? (
+          <div key={`email-${i}`} className="view-item-with-suffix">
+            {field}
+            {renderItemSuffix(i)}
+          </div>
+        ) : (
+          <React.Fragment key={`email-${i}`}>{field}</React.Fragment>
         );
       })}
       {!showAll && remaining > 0 && (
@@ -675,14 +691,22 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange, ren
         const icon = addr.type?.toLowerCase() === 'home' ? 'house' :
                      addr.type?.toLowerCase() === 'work' ? 'building' : 'location-dot';
 
-        return (
-          <InfoField key={i} icon={icon}>
+        const field = (
+          <InfoField icon={icon}>
             <div className="address-lines">
               {lines.map((line, li) => (
                 <span key={li}>{line}</span>
               ))}
             </div>
           </InfoField>
+        );
+        return renderItemSuffix ? (
+          <div key={i} className="view-item-with-suffix">
+            {field}
+            {renderItemSuffix(i)}
+          </div>
+        ) : (
+          <React.Fragment key={i}>{field}</React.Fragment>
         );
       })}
     </div>
@@ -772,17 +796,27 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
   return (
     <div className="expanded-section-view">
       <SectionHeading icon="share-nodes" label="Social Links" />
-      {socialProfiles.map((profile) => (
-        <InfoField key={profile.id} icon={getPlatformIcon(profile.platform)} iconStyle={getPlatformIconStyle(profile.platform)}>
-          {profile.profileUrl ? (
-            <a href={profile.profileUrl} target="_blank" rel="noopener noreferrer">
-              {profile.username || profile.platform}
-            </a>
-          ) : (
-            <span>{profile.username}</span>
-          )}
-        </InfoField>
-      ))}
+      {socialProfiles.map((profile, i) => {
+        const field = (
+          <InfoField icon={getPlatformIcon(profile.platform)} iconStyle={getPlatformIconStyle(profile.platform)}>
+            {profile.profileUrl ? (
+              <a href={profile.profileUrl} target="_blank" rel="noopener noreferrer">
+                {profile.username || profile.platform}
+              </a>
+            ) : (
+              <span>{profile.username}</span>
+            )}
+          </InfoField>
+        );
+        return renderItemSuffix ? (
+          <div key={profile.id} className="view-item-with-suffix">
+            {field}
+            {renderItemSuffix(i)}
+          </div>
+        ) : (
+          <React.Fragment key={profile.id}>{field}</React.Fragment>
+        );
+      })}
     </div>
   );
 }
@@ -826,9 +860,18 @@ export function BirthdaySection({ birthday, isEditMode, onBirthdayChange, render
   return (
     <div className="expanded-section-view">
       <SectionHeading icon="cake-candles" label="Birthday" zodiacSign={zodiacSign} />
-      <InfoField icon="cake-candles">
-        <span>{formatBirthday(birthday!)}</span>
-      </InfoField>
+      {renderSuffix ? (
+        <div className="view-item-with-suffix">
+          <InfoField icon="cake-candles">
+            <span>{formatBirthday(birthday!)}</span>
+          </InfoField>
+          {renderSuffix()}
+        </div>
+      ) : (
+        <InfoField icon="cake-candles">
+          <span>{formatBirthday(birthday!)}</span>
+        </InfoField>
+      )}
     </div>
   );
 }
@@ -1081,13 +1124,23 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange, renderItemSuffix }
   return (
     <div className="expanded-section-view">
       <SectionHeading icon="link" label="Web Links" />
-      {urls.map((u) => (
-        <InfoField key={u.id} icon={getUrlIcon(u.url, u.label)}>
-          <a href={u.url} target="_blank" rel="noopener noreferrer">
-            {getDisplayLabel(u.url, u.label)}
-          </a>
-        </InfoField>
-      ))}
+      {urls.map((u, i) => {
+        const field = (
+          <InfoField icon={getUrlIcon(u.url, u.label)}>
+            <a href={u.url} target="_blank" rel="noopener noreferrer">
+              {getDisplayLabel(u.url, u.label)}
+            </a>
+          </InfoField>
+        );
+        return renderItemSuffix ? (
+          <div key={u.id} className="view-item-with-suffix">
+            {field}
+            {renderItemSuffix(i)}
+          </div>
+        ) : (
+          <React.Fragment key={u.id}>{field}</React.Fragment>
+        );
+      })}
     </div>
   );
 }

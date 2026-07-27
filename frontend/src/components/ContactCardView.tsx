@@ -256,25 +256,25 @@ export function ContactCardView({
       {/* Row 1: Phone | Address | Social Links */}
       {hasRow1 && (
         <div className="expanded-row">
-          {hasPhones && <PhoneSection phones={data.phones} isEditMode={false} />}
-          {hasLocations && <LocationsSection addresses={data.addresses} isEditMode={false} />}
-          {hasSocial && <SocialLinksSection socialProfiles={data.socialProfiles} isEditMode={false} />}
+          {hasPhones && <PhoneSection phones={data.phones} isEditMode={false} renderItemSuffix={sectionSuffixes?.phones} />}
+          {hasLocations && <LocationsSection addresses={data.addresses} isEditMode={false} renderItemSuffix={sectionSuffixes?.addresses} />}
+          {hasSocial && <SocialLinksSection socialProfiles={data.socialProfiles} isEditMode={false} renderItemSuffix={sectionSuffixes?.socialProfiles} />}
         </div>
       )}
 
       {/* Row 2: Email | Birthday+Related | Web Links */}
       {hasRow2 && (
         <div className="expanded-row">
-          {hasEmails && <EmailSection emails={data.emails} isEditMode={false} />}
+          {hasEmails && <EmailSection emails={data.emails} isEditMode={false} renderItemSuffix={sectionSuffixes?.emails} />}
           {(hasBirthday || hasRelatedPeople) && (
             <div className="expanded-column">
-              {hasBirthday && <BirthdaySection birthday={data.birthday} isEditMode={false} />}
+              {hasBirthday && <BirthdaySection birthday={data.birthday} isEditMode={false} renderSuffix={sectionSuffixes?.birthday} />}
               {hasRelatedPeople && (
                 <RelatedPeopleSection relatedPeople={data.relatedPeople ?? []} linkedFrom={data.linkedFrom} isEditMode={false} />
               )}
             </div>
           )}
-          {hasUrls && <UrlsSection urls={data.urls!} isEditMode={false} />}
+          {hasUrls && <UrlsSection urls={data.urls!} isEditMode={false} renderItemSuffix={sectionSuffixes?.urls} />}
         </div>
       )}
 

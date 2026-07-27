@@ -1,5 +1,14 @@
 /* User profile page (extracted from UserProfilePage.tsx) */
 
+  .header-user-email {
+    font-size: 0.8125rem;
+    color: var(--ds-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+  }
+
   .logout-btn {
     display: flex;
     align-items: center;
@@ -349,72 +358,50 @@
     padding: 0;
   }
 
-  .profile-contact-details .expanded-bottom-actions {
+  /* Identity fields (name, company, title, tagline) with visibility toggles */
+  .profile-identity-fields {
     display: flex;
-    justify-content: flex-end;
-    padding: 16px 0;
-    gap: var(--ds-space-2);
-  }
-
-  .profile-edit-button-primary {
-    display: flex;
-    align-items: center;
-    gap: var(--ds-space-2);
-    padding: 10px 24px;
-    background: var(--ds-color-primary);
-    color: white;
-    border: none;
-    border-radius: var(--ds-radius-lg);
-    cursor: pointer;
-    font-size: var(--ds-font-sm);
-    font-weight: var(--ds-weight-medium);
-    transition: all 0.2s;
-  }
-
-  .profile-edit-button-primary:hover {
-    background: var(--ds-color-primary-hover);
-  }
-
-  .profile-action-button {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 20px;
-    border-radius: var(--ds-radius-lg);
-    cursor: pointer;
-    font-size: var(--ds-font-sm);
-    font-weight: var(--ds-weight-medium);
-    transition: all 0.2s;
-  }
-
-  .profile-action-button.primary {
-    background: var(--ds-color-primary);
-    color: white;
-    border: none;
-  }
-
-  .profile-action-button.primary:hover:not(:disabled) {
-    background: var(--ds-color-primary-hover);
-  }
-
-  .profile-action-button.primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .profile-action-button.secondary {
-    background: transparent;
-    color: var(--ds-text-secondary);
+    flex-wrap: wrap;
+    gap: var(--ds-space-3);
+    background: var(--ds-bg-primary);
     border: 1px solid var(--ds-border-color);
+    border-radius: var(--ds-radius-xl);
+    padding: var(--ds-space-4) var(--ds-space-5);
   }
 
-  .profile-action-button.secondary:hover {
-    background: var(--ds-border-color);
+  .identity-field-row {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    min-width: 160px;
+    flex: 1;
   }
 
-  /* Profile name fields — inherits .edit-name-fields flex-wrap from index.css */
-  .profile-name-fields .name-field-with-toggle .visibility-toggle {
+  .identity-field-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .identity-field-label {
+    font-size: var(--ds-font-xs);
+    color: var(--ds-text-secondary);
+  }
+
+  .identity-field-value {
+    font-size: var(--ds-font-sm);
+    font-weight: var(--ds-weight-medium);
+    color: var(--ds-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .identity-field-row .visibility-toggle {
     margin-top: 0;
+    width: 28px;
+    height: 28px;
   }
 
   .profile-section {
@@ -766,22 +753,6 @@
     gap: var(--ds-space-1);
     color: var(--ds-color-success);
     font-size: var(--ds-font-sm);
-  }
-
-  /* Mobile save bar */
-  .mobile-save-bar {
-    position: fixed;
-    bottom: 60px;
-    left: 0;
-    right: 0;
-    padding: var(--ds-space-4);
-    background: var(--ds-bg-primary);
-    border-top: 1px solid var(--ds-border-color);
-    z-index: 100;
-  }
-
-  .mobile-save-bar .full-width {
-    width: 100%;
   }
 
   /* Buttons */

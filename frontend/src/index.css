@@ -4593,6 +4593,24 @@ a.whatsapp-link:hover {
   flex: 1;
 }
 
+/* View-mode item with suffix (visibility toggle next to a read-only field) */
+.view-item-with-suffix {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+
+.view-item-with-suffix > .info-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.view-item-with-suffix .visibility-toggle {
+  margin-top: 0;
+  width: 28px;
+  height: 28px;
+}
+
 /* Profile name fields with inline visibility toggles */
 .name-field-with-toggle {
   display: flex;

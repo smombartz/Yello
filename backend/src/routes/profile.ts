@@ -139,8 +139,31 @@ function generateSlug(): string {
   return slug;
 }
 
-// Get default visibility settings - all fields hidden by default for privacy
+// Get default visibility settings - name and avatar visible, everything else
+// hidden for privacy (nothing is exposed until is_public is enabled)
 function getDefaultVisibility(): ProfileVisibility {
+  return {
+    avatar: true,
+    firstName: true,
+    lastName: true,
+    tagline: false,
+    company: false,
+    title: false,
+    emails: {},
+    phones: {},
+    addresses: {},
+    website: false,
+    linkedin: false,
+    instagram: false,
+    whatsapp: false,
+    otherSocialLinks: {},
+    birthday: false,
+  };
+}
+
+// All-hidden visibility object, used to blank the visibility settings in the
+// public profile response (must stay all-false regardless of the defaults)
+function emptyVisibility(): ProfileVisibility {
   return {
     avatar: false,
     firstName: false,
@@ -928,7 +951,7 @@ export default async function profileRoutes(
       otherSocialLinks: fullProfile.otherSocialLinks.filter(s => s.id && visibility.otherSocialLinks[s.id] === true),
       birthday: visibility.birthday ? fullProfile.birthday : null,
       notes: null, // Notes are always private
-      visibility: getDefaultVisibility(), // Don't expose visibility settings
+      visibility: emptyVisibility(), // Don't expose visibility settings
     };
 
     return publicProfile;

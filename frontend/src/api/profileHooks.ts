@@ -18,8 +18,8 @@ export function useUpdateUserProfile() {
         method: 'PUT',
         body: JSON.stringify(data),
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+    onSuccess: (data) => {
+      queryClient.setQueryData(['userProfile'], data);
     },
   });
 }

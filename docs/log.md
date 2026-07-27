@@ -1,5 +1,63 @@
 # Change Log
 
+## 2026-07-27 — Removed profile edit mode; per-field visibility toggles now inline and autosaving
+
+**What Changed:**
+- Removed the entire edit mode from the Profile page (Edit Profile button, editable fields, Save/Cancel buttons, mobile save bar, and the `mapFormToEditState`/`mapEditStateToForm` mapping helpers). The page is now read-only; profile data is edited via the linked contact.
+- The per-field visibility (eye) toggles now render directly in the read-only contact card, next to each phone, email, address, social link, web link, and birthday entry, and autosave on click via the existing `savePublicSettings` partial-PUT helper (optimistic update, revert + error banner on failure, disabled while a save is in flight or the card is private).
+- Added an identity block above the contact card showing first name, last name, company, job title, and tagline with their own autosaving visibility toggles (these fields aren't part of the shared card layout).
+- `ContactCardView` now passes `sectionSuffixes` through in view mode, and the view-mode branches of `PhoneSection`, `EmailSection`, `LocationsSection`, `SocialLinksSection`, `UrlsSection`, and `BirthdaySection` in `ContactFormSections.tsx` support an optional suffix renderer (wrapped in a new `.view-item-with-suffix` layout). Markup is unchanged when no suffix is provided, so the contact pages are unaffected.
+- `mapProfileToCardData` now assigns the sentinel IDs (linkedin/instagram/whatsapp/website/other links) to the view data so the toggles can map each row back to its visibility flag.
+- Removed now-dead code and CSS: `hasChanges`/`isEditMode` state, `updateForm`, `handleSave`, `handleCancelEdit`, edit-button/action-button/mobile-save-bar/name-field rules in `user-profile.css`.
+
+**Why:**
+- Showing/hiding fields required entering edit mode and pressing Save — cumbersome for what is conceptually a one-click setting. Visibility is now a direct, autosaving control on the page.
+
+**Files Modified:**
+- `frontend/src/components/UserProfilePage.tsx`
+- `frontend/src/components/ContactCardView.tsx`
+- `frontend/src/components/ContactFormSections.tsx`
+- `frontend/src/index.css` — `.view-item-with-suffix` layout
+- `frontend/src/styles/pages/user-profile.css` — identity-field styles, removed dead edit-mode rules
+- `docs/readme.md` — updated the public-card feature notes
+
+---
+
+## 2026-07-26 — Fixed public profile toggle: autosave + no more "Anonymous" preview
+
+**What Changed:**
+- The "Make my contact card public" toggle and the "Hide All Fields" button now autosave immediately via a partial `PUT /api/profile` (new `savePublicSettings` helper), with optimistic UI, disabled controls while saving, and revert + error banner on failure. Previously these only mutated local form state and were silently lost unless the user happened to press the edit-mode Save button.
+- When the toggle is switched on for a profile whose visibility was never configured (all flags false), first name, last name, and avatar are seeded as visible — the preview and public card no longer render "Anonymous". Already-public profiles are never auto-seeded.
+- `getDefaultVisibility()` (frontend + backend) now defaults `avatar`/`firstName`/`lastName` to `true` for new profiles; safe because nothing is served until `is_public` is enabled. The public endpoint now blanks the visibility object with a dedicated all-false `emptyVisibility()` so its response doesn't drift with the defaults.
+- `useUpdateUserProfile` writes the PUT response into the query cache (`setQueryData`) instead of invalidating/refetching; the profile→form sync effect only runs when the form has no unsaved changes, so background cache updates can't clobber in-flight edit-mode edits. `handleSave` syncs the form from the mutation response directly. The triplicated profile→form mapping was extracted into `profileToFormState()`.
+
+**Why:**
+- Bug report: enabling the public profile showed an "Anonymous" preview (all visibility flags defaulted to hidden) and the setting was lost on reload (the toggle never triggered a save).
+
+**Files Modified:**
+- `frontend/src/components/UserProfilePage.tsx`
+- `frontend/src/api/profileHooks.ts`
+- `backend/src/routes/profile.ts`
+- `docs/readme.md` — documented the public-card behavior
+- `docs/plans/2026-07-26-public-profile-toggle-autosave.md` — implementation plan
+
+---
+
+## 2026-07-24 — Show logged-in user's email next to Profile header logout button
+
+**What Changed:**
+- Added the signed-in user's email to the Profile page header actions, rendered to the left of the "Logout" button
+- Added a `.header-user-email` style (secondary text, truncates with ellipsis) in `user-profile.css`
+
+**Why:**
+- Make it clear which account is currently signed in, directly in the header alongside the logout control
+
+**Files Modified:**
+- `frontend/src/components/UserProfilePage.tsx`
+- `frontend/src/styles/pages/user-profile.css`
+
+---
+
 ## 2026-07-14 — Made og:image URLs absolute via VITE_PUBLIC_URL env var
 
 **What Changed:**

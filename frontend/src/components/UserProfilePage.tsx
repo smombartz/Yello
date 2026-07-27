@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Icon } from './Icon';
 import { ContactCardView } from './ContactCardView';
-import type { ContactCardViewData, ContactCardEditState, SectionSuffixes } from './ContactCardView';
+import type { ContactCardViewData, SectionSuffixes } from './ContactCardView';
 import type {
   ContactSocialProfile,
   ContactUrl,
@@ -20,6 +20,7 @@ import {
 } from '../api/profileHooks';
 import { useAuth } from '../hooks/useAuth';
 import type {
+  UserProfile,
   UpdateUserProfileRequest,
   ProfileEmail,
   ProfilePhone,
@@ -31,15 +32,15 @@ import type {
 import { Avatar } from './Avatar';
 import { SearchBar } from './ui/SearchBar';
 import type { OutletContext } from './Layout';
-import { EditableField } from './ContactFormSections';
 import { formatBirthday } from '../utils/contactFormatters';
 
-// Default visibility settings - all fields hidden by default for privacy
+// Default visibility settings - name and avatar visible, everything else
+// hidden for privacy (contact details are opt-in via the eye toggles)
 function getDefaultVisibility(): ProfileVisibility {
   return {
-    avatar: false,
-    firstName: false,
-    lastName: false,
+    avatar: true,
+    firstName: true,
+    lastName: true,
     tagline: false,
     company: false,
     title: false,
@@ -53,6 +54,22 @@ function getDefaultVisibility(): ProfileVisibility {
     otherSocialLinks: {},
     birthday: false,
   };
+}
+
+// A profile whose visibility has never been configured (all flags false, as
+// older profiles were created) — used to seed defaults when going public
+function isVisibilityUnconfigured(v: ProfileVisibility): boolean {
+  const boolFlags = [
+    v.avatar, v.firstName, v.lastName, v.tagline, v.company, v.title,
+    v.website, v.linkedin, v.instagram, v.whatsapp, v.birthday,
+  ];
+  const recordFlags = [v.emails, v.phones, v.addresses, v.otherSocialLinks]
+    .flatMap((record) => Object.values(record));
+  return !boolFlags.some(Boolean) && !recordFlags.some(Boolean);
+}
+
+function seedBasicVisibility(v: ProfileVisibility): ProfileVisibility {
+  return { ...v, avatar: true, firstName: true, lastName: true };
 }
 
 // Initial form state
@@ -102,64 +119,34 @@ function getInitialFormState(): FormState {
   };
 }
 
-/** Map profile form state to ContactCardViewData for the shared card layout */
-function mapProfileToCardData(form: FormState): ContactCardViewData {
-  const socialProfiles: ContactSocialProfile[] = [];
-  let socialId = 1;
-
-  if (form.linkedin) {
-    socialProfiles.push({
-      id: socialId++, contactId: 0,
-      platform: 'linkedin', username: form.linkedin,
-      profileUrl: form.linkedin.startsWith('http') ? form.linkedin : `https://linkedin.com/in/${form.linkedin}`,
-      type: null,
-    });
-  }
-  if (form.instagram) {
-    socialProfiles.push({
-      id: socialId++, contactId: 0,
-      platform: 'instagram', username: form.instagram,
-      profileUrl: `https://instagram.com/${form.instagram}`,
-      type: null,
-    });
-  }
-  if (form.whatsapp) {
-    socialProfiles.push({
-      id: socialId++, contactId: 0,
-      platform: 'whatsapp', username: form.whatsapp,
-      profileUrl: `https://wa.me/${form.whatsapp.replace(/\D/g, '')}`,
-      type: null,
-    });
-  }
-  for (const link of form.otherSocialLinks) {
-    if (link.platform.trim() && link.username.trim()) {
-      socialProfiles.push({
-        id: socialId++, contactId: 0,
-        platform: link.platform, username: link.username,
-        profileUrl: link.profileUrl,
-        type: null,
-      });
-    }
-  }
-
-  const urls: ContactUrl[] = [];
-  if (form.website) {
-    urls.push({ id: 1, contactId: 0, url: form.website, label: 'Website', type: null });
-  }
-
+// Map a server profile into form state (used on load, save, and cancel)
+function profileToFormState(profile: UserProfile): FormState {
   return {
-    phones: form.phones as ContactPhone[],
-    emails: form.emails as ContactEmail[],
-    addresses: form.addresses as ContactAddress[],
-    socialProfiles,
-    urls,
-    birthday: form.birthday,
-    notes: form.notes,
+    isPublic: profile.isPublic,
+    publicSlug: profile.publicSlug,
+    avatarUrl: profile.avatarUrl,
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    tagline: profile.tagline,
+    company: profile.company,
+    title: profile.title,
+    emails: profile.emails,
+    phones: profile.phones,
+    addresses: profile.addresses,
+    website: profile.website,
+    linkedin: profile.linkedin,
+    instagram: profile.instagram,
+    whatsapp: profile.whatsapp,
+    otherSocialLinks: profile.otherSocialLinks,
+    birthday: profile.birthday,
+    notes: profile.notes,
+    visibility: profile.visibility || getDefaultVisibility(),
   };
 }
 
-// ─── Sentinel IDs for bidirectional mapping ───────────────────
-// These negative IDs track which social profile / URL maps to which named field
+// ─── Sentinel IDs ─────────────────────────────────────────────
+// These negative IDs track which social profile / URL maps to which named
+// field, so the visibility toggles can find the right flag per row
 const SENTINEL_LINKEDIN = -1;
 const SENTINEL_INSTAGRAM = -2;
 const SENTINEL_WHATSAPP = -3;
@@ -167,123 +154,59 @@ const SENTINEL_WEBSITE_URL = -200;
 // otherSocialLinks use -100, -101, ...
 function otherSocialSentinel(index: number) { return -(100 + index); }
 
-/** Map form state → ContactCardEditState for edit mode */
-function mapFormToEditState(form: FormState): ContactCardEditState {
+/** Map profile form state to ContactCardViewData for the shared card layout */
+function mapProfileToCardData(form: FormState): ContactCardViewData {
   const socialProfiles: ContactSocialProfile[] = [];
 
-  // Always include all 3 named slots (even if empty) so user can type into them
-  socialProfiles.push({
-    id: SENTINEL_LINKEDIN, contactId: 0,
-    platform: 'linkedin', username: form.linkedin || '',
-    profileUrl: form.linkedin
-      ? (form.linkedin.startsWith('http') ? form.linkedin : `https://linkedin.com/in/${form.linkedin}`)
-      : null,
-    type: null,
-  });
-  socialProfiles.push({
-    id: SENTINEL_INSTAGRAM, contactId: 0,
-    platform: 'instagram', username: form.instagram || '',
-    profileUrl: form.instagram ? `https://instagram.com/${form.instagram}` : null,
-    type: null,
-  });
-  socialProfiles.push({
-    id: SENTINEL_WHATSAPP, contactId: 0,
-    platform: 'whatsapp', username: form.whatsapp || '',
-    profileUrl: form.whatsapp ? `https://wa.me/${form.whatsapp.replace(/\D/g, '')}` : null,
-    type: null,
-  });
-
-  // Other social links
-  form.otherSocialLinks.forEach((link, i) => {
+  if (form.linkedin) {
     socialProfiles.push({
-      id: otherSocialSentinel(i), contactId: 0,
-      platform: link.platform, username: link.username,
-      profileUrl: link.profileUrl,
+      id: SENTINEL_LINKEDIN, contactId: 0,
+      platform: 'linkedin', username: form.linkedin,
+      profileUrl: form.linkedin.startsWith('http') ? form.linkedin : `https://linkedin.com/in/${form.linkedin}`,
       type: null,
     });
+  }
+  if (form.instagram) {
+    socialProfiles.push({
+      id: SENTINEL_INSTAGRAM, contactId: 0,
+      platform: 'instagram', username: form.instagram,
+      profileUrl: `https://instagram.com/${form.instagram}`,
+      type: null,
+    });
+  }
+  if (form.whatsapp) {
+    socialProfiles.push({
+      id: SENTINEL_WHATSAPP, contactId: 0,
+      platform: 'whatsapp', username: form.whatsapp,
+      profileUrl: `https://wa.me/${form.whatsapp.replace(/\D/g, '')}`,
+      type: null,
+    });
+  }
+  form.otherSocialLinks.forEach((link, i) => {
+    if (link.platform.trim() && link.username.trim()) {
+      socialProfiles.push({
+        id: otherSocialSentinel(i), contactId: 0,
+        platform: link.platform, username: link.username,
+        profileUrl: link.profileUrl,
+        type: null,
+      });
+    }
   });
 
   const urls: ContactUrl[] = [];
-  urls.push({
-    id: SENTINEL_WEBSITE_URL, contactId: 0,
-    url: form.website || '', label: 'Website', type: null,
-  });
+  if (form.website) {
+    urls.push({ id: SENTINEL_WEBSITE_URL, contactId: 0, url: form.website, label: 'Website', type: null });
+  }
 
   return {
     phones: form.phones as ContactPhone[],
     emails: form.emails as ContactEmail[],
     addresses: form.addresses as ContactAddress[],
     socialProfiles,
-    categories: [],
-    instantMessages: [],
     urls,
-    relatedPeople: [],
     birthday: form.birthday,
     notes: form.notes,
   };
-}
-
-/** Reverse map: editState change → form state updates */
-function mapEditStateToForm(
-  key: keyof ContactCardEditState,
-  value: unknown,
-  currentForm: FormState,
-): Partial<FormState> {
-  switch (key) {
-    case 'phones':
-      return { phones: value as ProfilePhone[] };
-    case 'emails':
-      return { emails: value as ProfileEmail[] };
-    case 'addresses':
-      return { addresses: value as ProfileAddress[] };
-    case 'birthday':
-      return { birthday: value as string | null };
-    case 'notes':
-      return { notes: value as string | null };
-
-    case 'socialProfiles': {
-      const profiles = value as ContactSocialProfile[];
-      let linkedin = currentForm.linkedin;
-      let instagram = currentForm.instagram;
-      let whatsapp = currentForm.whatsapp;
-      const otherSocialLinks: ProfileSocialLink[] = [];
-
-      for (const p of profiles) {
-        if (p.id === SENTINEL_LINKEDIN) {
-          linkedin = p.username || null;
-        } else if (p.id === SENTINEL_INSTAGRAM) {
-          instagram = p.username || null;
-        } else if (p.id === SENTINEL_WHATSAPP) {
-          whatsapp = p.username || null;
-        } else {
-          // Other social links (sentinel IDs <= -100) or newly added (id=0)
-          const existingIndex = p.id <= -100 ? -(p.id + 100) : -1;
-          const existing = existingIndex >= 0 ? currentForm.otherSocialLinks[existingIndex] : undefined;
-          otherSocialLinks.push({
-            id: existing?.id,
-            platform: p.platform,
-            username: p.username,
-            profileUrl: p.profileUrl,
-          });
-        }
-      }
-      return { linkedin, instagram, whatsapp, otherSocialLinks };
-    }
-
-    case 'urls': {
-      const urlList = value as ContactUrl[];
-      let website = currentForm.website;
-      for (const u of urlList) {
-        if (u.id === SENTINEL_WEBSITE_URL) {
-          website = u.url || null;
-        }
-      }
-      return { website };
-    }
-
-    default:
-      return {};
-  }
 }
 
 // Visibility toggle component
@@ -618,7 +541,7 @@ function LinkedProfileHeader({
 }
 
 export function UserProfilePage() {
-  const { setHeaderConfig, isMobile } = useOutletContext<OutletContext>();
+  const { setHeaderConfig } = useOutletContext<OutletContext>();
   const { user, logout, isLoggingOut } = useAuth();
   const { data: profile, isLoading } = useUserProfile();
   const updateProfileMutation = useUpdateUserProfile();
@@ -627,76 +550,70 @@ export function UserProfilePage() {
   const createMutation = useCreateProfileContact();
 
   const [form, setForm] = useState<FormState>(getInitialFormState);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [, setSaveSuccess] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConnectSearch, setShowConnectSearch] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
 
   useEffect(() => {
     setHeaderConfig({
       title: 'Profile',
       actions: (
-        <button
-          type="button"
-          className="logout-btn"
-          onClick={logout}
-          disabled={isLoggingOut}
-        >
-          <Icon name="right-from-bracket" />
-          {isLoggingOut ? 'Logging out...' : 'Logout'}
-        </button>
+        <>
+          {user?.email && (
+            <span className="header-user-email">{user.email}</span>
+          )}
+          <button
+            type="button"
+            className="logout-btn"
+            onClick={logout}
+            disabled={isLoggingOut}
+          >
+            <Icon name="right-from-bracket" />
+            {isLoggingOut ? 'Logging out...' : 'Logout'}
+          </button>
+        </>
       ),
     });
-  }, [setHeaderConfig, logout, isLoggingOut]);
+  }, [setHeaderConfig, logout, isLoggingOut, user?.email]);
 
   // Sync form when profile data loads from server
   // This is a legitimate pattern for syncing external (server) data to local form state
   useEffect(() => {
     if (profile) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm({
-        isPublic: profile.isPublic,
-        publicSlug: profile.publicSlug,
-        avatarUrl: profile.avatarUrl,
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        tagline: profile.tagline,
-        company: profile.company,
-        title: profile.title,
-        emails: profile.emails,
-        phones: profile.phones,
-        addresses: profile.addresses,
-        website: profile.website,
-        linkedin: profile.linkedin,
-        instagram: profile.instagram,
-        whatsapp: profile.whatsapp,
-        otherSocialLinks: profile.otherSocialLinks,
-        birthday: profile.birthday,
-        notes: profile.notes,
-        visibility: profile.visibility || getDefaultVisibility(),
-      });
-      setHasChanges(false);
+      setForm(profileToFormState(profile));
     }
   }, [profile]);
 
-  // Update form state helper
-  const updateForm = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    setHasChanges(true);
-    setSaveSuccess(false);
-  }, []);
+  // Autosave for the public settings (isPublic toggle, visibility toggles,
+  // Hide All). Applies the change optimistically, persists via a partial PUT,
+  // and reverts with an error banner if the save fails.
+  const savePublicSettings = useCallback(async (partial: Pick<UpdateUserProfileRequest, 'isPublic' | 'visibility'>) => {
+    const prev = { isPublic: form.isPublic, visibility: form.visibility };
+    setError(null);
+    setForm((f) => ({ ...f, ...partial }));
+    try {
+      await updateProfileMutation.mutateAsync(partial);
+    } catch (err) {
+      setForm((f) => ({ ...f, ...prev }));
+      setError(err instanceof Error ? err.message : 'Failed to save public settings');
+    }
+  }, [form.isPublic, form.visibility, updateProfileMutation]);
 
-  // Update visibility helper
+  // Toggle a single visibility flag, autosaving immediately
   const updateVisibility = useCallback(<K extends keyof ProfileVisibility>(key: K, value: ProfileVisibility[K]) => {
-    setForm((prev) => ({
-      ...prev,
-      visibility: { ...prev.visibility, [key]: value },
-    }));
-    setHasChanges(true);
-    setSaveSuccess(false);
-  }, []);
+    void savePublicSettings({ visibility: { ...form.visibility, [key]: value } });
+  }, [form.visibility, savePublicSettings]);
+
+  const handlePublicToggle = useCallback((checked: boolean) => {
+    if (checked && isVisibilityUnconfigured(form.visibility)) {
+      // First time going public: make name and avatar visible so the card
+      // doesn't render as "Anonymous"
+      void savePublicSettings({ isPublic: true, visibility: seedBasicVisibility(form.visibility) });
+    } else {
+      void savePublicSettings({ isPublic: checked });
+    }
+  }, [form.visibility, savePublicSettings]);
 
   // Hide all visibility fields
   const hideAllVisibility = useCallback(() => {
@@ -717,76 +634,8 @@ export function UserProfilePage() {
       otherSocialLinks: Object.fromEntries(form.otherSocialLinks.filter(l => l.id).map(l => [l.id!, false])),
       birthday: false,
     };
-    updateForm('visibility', newVisibility);
-  }, [form.emails, form.phones, form.addresses, form.otherSocialLinks, updateForm]);
-
-  // Save handler
-  const handleSave = async () => {
-    setError(null);
-    setSaveSuccess(false);
-
-    const updateData: UpdateUserProfileRequest = {
-      isPublic: form.isPublic,
-      publicSlug: form.publicSlug,
-      firstName: form.firstName,
-      lastName: form.lastName,
-      tagline: form.tagline,
-      company: form.company,
-      title: form.title,
-      emails: form.emails.filter((e) => e.email.trim()),
-      phones: form.phones.filter((p) => p.phone.trim()),
-      addresses: form.addresses.filter(
-        (a) => a.street || a.city || a.state || a.postalCode || a.country
-      ),
-      website: form.website,
-      linkedin: form.linkedin,
-      instagram: form.instagram,
-      whatsapp: form.whatsapp,
-      otherSocialLinks: form.otherSocialLinks.filter((s) => s.platform.trim() && s.username.trim()),
-      birthday: form.birthday,
-      notes: form.notes,
-      visibility: form.visibility,
-    };
-
-    try {
-      await updateProfileMutation.mutateAsync(updateData);
-      setHasChanges(false);
-      setSaveSuccess(true);
-      setIsEditMode(false);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save profile');
-    }
-  };
-
-  // Cancel edit mode and reset form
-  const handleCancelEdit = () => {
-    setIsEditMode(false);
-    if (profile) {
-      setForm({
-        isPublic: profile.isPublic,
-        publicSlug: profile.publicSlug,
-        avatarUrl: profile.avatarUrl,
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        tagline: profile.tagline,
-        company: profile.company,
-        title: profile.title,
-        emails: profile.emails,
-        phones: profile.phones,
-        addresses: profile.addresses,
-        website: profile.website,
-        linkedin: profile.linkedin,
-        instagram: profile.instagram,
-        whatsapp: profile.whatsapp,
-        otherSocialLinks: profile.otherSocialLinks,
-        birthday: profile.birthday,
-        notes: profile.notes,
-        visibility: profile.visibility || getDefaultVisibility(),
-      });
-      setHasChanges(false);
-    }
-  };
+    void savePublicSettings({ visibility: newVisibility });
+  }, [form.emails, form.phones, form.addresses, form.otherSocialLinks, savePublicSettings]);
 
   // Copy URL handler
   const handleCopyUrl = async () => {
@@ -829,13 +678,13 @@ export function UserProfilePage() {
     }
   };
 
-  // Memoize edit state for ContactCardView
-  const editState = useMemo<ContactCardEditState>(
-    () => mapFormToEditState(form),
-    [form]
-  );
+  // Card data for the shared view layout
+  const cardData = useMemo(() => mapProfileToCardData(form), [form]);
 
-  // Build sectionSuffixes for visibility toggles
+  // Toggles are disabled while the card is private or an autosave is in flight
+  const togglesDisabled = !form.isPublic || updateProfileMutation.isPending;
+
+  // Build sectionSuffixes for the per-field visibility toggles (autosaving)
   const sectionSuffixes = useMemo<SectionSuffixes>(() => ({
     phones: (index: number) => {
       const phone = form.phones[index];
@@ -844,7 +693,7 @@ export function UserProfilePage() {
         <VisibilityToggle
           visible={form.visibility.phones[phone.phone] === true}
           onChange={(v) => updateVisibility('phones', { ...form.visibility.phones, [phone.phone]: v })}
-          disabled={!form.isPublic}
+          disabled={togglesDisabled}
         />
       );
     },
@@ -855,7 +704,7 @@ export function UserProfilePage() {
         <VisibilityToggle
           visible={form.visibility.emails[email.email] === true}
           onChange={(v) => updateVisibility('emails', { ...form.visibility.emails, [email.email]: v })}
-          disabled={!form.isPublic}
+          disabled={togglesDisabled}
         />
       );
     },
@@ -866,12 +715,12 @@ export function UserProfilePage() {
         <VisibilityToggle
           visible={addr.id ? form.visibility.addresses[addr.id] === true : false}
           onChange={(v) => addr.id && updateVisibility('addresses', { ...form.visibility.addresses, [addr.id]: v })}
-          disabled={!form.isPublic}
+          disabled={togglesDisabled}
         />
       );
     },
     socialProfiles: (index: number) => {
-      const profile = editState.socialProfiles[index];
+      const profile = cardData.socialProfiles[index];
       if (!profile) return null;
       // Map sentinel IDs back to visibility keys
       if (profile.id === SENTINEL_LINKEDIN) {
@@ -879,7 +728,7 @@ export function UserProfilePage() {
           <VisibilityToggle
             visible={form.visibility.linkedin}
             onChange={(v) => updateVisibility('linkedin', v)}
-            disabled={!form.isPublic}
+            disabled={togglesDisabled}
           />
         );
       }
@@ -888,7 +737,7 @@ export function UserProfilePage() {
           <VisibilityToggle
             visible={form.visibility.instagram}
             onChange={(v) => updateVisibility('instagram', v)}
-            disabled={!form.isPublic}
+            disabled={togglesDisabled}
           />
         );
       }
@@ -897,7 +746,7 @@ export function UserProfilePage() {
           <VisibilityToggle
             visible={form.visibility.whatsapp}
             onChange={(v) => updateVisibility('whatsapp', v)}
-            disabled={!form.isPublic}
+            disabled={togglesDisabled}
           />
         );
       }
@@ -909,21 +758,21 @@ export function UserProfilePage() {
           <VisibilityToggle
             visible={form.visibility.otherSocialLinks[otherLink.id] === true}
             onChange={(v) => updateVisibility('otherSocialLinks', { ...form.visibility.otherSocialLinks, [otherLink.id!]: v })}
-            disabled={!form.isPublic}
+            disabled={togglesDisabled}
           />
         );
       }
       return null;
     },
     urls: (index: number) => {
-      const url = editState.urls[index];
+      const url = cardData.urls?.[index];
       if (!url) return null;
       if (url.id === SENTINEL_WEBSITE_URL) {
         return (
           <VisibilityToggle
             visible={form.visibility.website}
             onChange={(v) => updateVisibility('website', v)}
-            disabled={!form.isPublic}
+            disabled={togglesDisabled}
           />
         );
       }
@@ -933,13 +782,20 @@ export function UserProfilePage() {
       <VisibilityToggle
         visible={form.visibility.birthday}
         onChange={(v) => updateVisibility('birthday', v)}
-        disabled={!form.isPublic}
+        disabled={togglesDisabled}
       />
     ),
     // notes: no visibility toggle (always private)
-  }), [form, editState.socialProfiles, editState.urls, updateVisibility]);
+  }), [form, cardData.socialProfiles, cardData.urls, updateVisibility, togglesDisabled]);
 
-  const hiddenSections = useMemo(() => new Set(['categories', 'instantMessages', 'relatedPeople']), []);
+  // Identity fields shown above the card with their own visibility toggles
+  const identityFields: Array<{ key: 'firstName' | 'lastName' | 'company' | 'title' | 'tagline'; label: string; value: string | null }> = [
+    { key: 'firstName', label: 'First name', value: form.firstName },
+    { key: 'lastName', label: 'Last name', value: form.lastName },
+    { key: 'company', label: 'Company', value: form.company },
+    { key: 'title', label: 'Job title', value: form.title },
+    { key: 'tagline', label: 'Tagline', value: form.tagline },
+  ];
 
   if (isLoading) {
     return (
@@ -1023,7 +879,8 @@ export function UserProfilePage() {
                     <input
                       type="checkbox"
                       checked={form.isPublic}
-                      onChange={(e) => updateForm('isPublic', e.target.checked)}
+                      disabled={updateProfileMutation.isPending}
+                      onChange={(e) => handlePublicToggle(e.target.checked)}
                     />
                     <span className="toggle-slider"></span>
                   </label>
@@ -1033,6 +890,7 @@ export function UserProfilePage() {
                   <button
                     type="button"
                     className="hide-all-btn"
+                    disabled={updateProfileMutation.isPending}
                     onClick={hideAllVisibility}
                   >
                     <Icon name="eye-slash" />
@@ -1070,8 +928,8 @@ export function UserProfilePage() {
               </div>
             </div>
 
-            {/* Preview sidebar — only show in edit mode or when public */}
-            {(isEditMode || form.isPublic) && (
+            {/* Preview sidebar — only shown when public */}
+            {form.isPublic && (
               <div className="public-settings-preview">
                 <div className="preview-panel-header">
                   <h3>Public Card Preview</h3>
@@ -1084,133 +942,26 @@ export function UserProfilePage() {
 
           {/* Section 2: Contact details — full width */}
           <div className="profile-contact-details">
-            {!isEditMode ? (
-              <>
-                <div className="contact-detail-content">
-                  <ContactCardView data={mapProfileToCardData(form)} showMetadata={false} />
-                </div>
-                <div className="expanded-bottom-actions">
-                  <button className="profile-edit-button-primary" onClick={() => setIsEditMode(true)}>
-                    <Icon name="pen-to-square" />
-                    Edit Profile
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="expanded-top-row">
-                  <div className="edit-name-fields profile-name-fields">
-                    <div className="name-field-with-toggle">
-                      <EditableField
-                        value={form.firstName || ''}
-                        onChange={(v) => { updateForm('firstName', v || null); }}
-                        placeholder="First name"
-                      />
-                      <VisibilityToggle
-                        visible={form.visibility.firstName}
-                        onChange={(v) => updateVisibility('firstName', v)}
-                        disabled={!form.isPublic}
-                      />
+            {identityFields.some((f) => f.value) && (
+              <div className="profile-identity-fields">
+                {identityFields.filter((f) => f.value).map((f) => (
+                  <div key={f.key} className="identity-field-row">
+                    <div className="identity-field-text">
+                      <span className="identity-field-label">{f.label}</span>
+                      <span className="identity-field-value">{f.value}</span>
                     </div>
-                    <div className="name-field-with-toggle">
-                      <EditableField
-                        value={form.lastName || ''}
-                        onChange={(v) => { updateForm('lastName', v || null); }}
-                        placeholder="Last name"
-                      />
-                      <VisibilityToggle
-                        visible={form.visibility.lastName}
-                        onChange={(v) => updateVisibility('lastName', v)}
-                        disabled={!form.isPublic}
-                      />
-                    </div>
-                    <div className="name-field-with-toggle">
-                      <EditableField
-                        value={form.company || ''}
-                        onChange={(v) => { updateForm('company', v || null); }}
-                        placeholder="Company"
-                      />
-                      <VisibilityToggle
-                        visible={form.visibility.company}
-                        onChange={(v) => updateVisibility('company', v)}
-                        disabled={!form.isPublic}
-                      />
-                    </div>
-                    <div className="name-field-with-toggle">
-                      <EditableField
-                        value={form.title || ''}
-                        onChange={(v) => { updateForm('title', v || null); }}
-                        placeholder="Job title"
-                      />
-                      <VisibilityToggle
-                        visible={form.visibility.title}
-                        onChange={(v) => updateVisibility('title', v)}
-                        disabled={!form.isPublic}
-                      />
-                    </div>
-                    <div className="name-field-with-toggle">
-                      <EditableField
-                        value={form.tagline || ''}
-                        onChange={(v) => { updateForm('tagline', v || null); }}
-                        placeholder="Tagline"
-                      />
-                      <VisibilityToggle
-                        visible={form.visibility.tagline}
-                        onChange={(v) => updateVisibility('tagline', v)}
-                        disabled={!form.isPublic}
-                      />
-                    </div>
+                    <VisibilityToggle
+                      visible={form.visibility[f.key]}
+                      onChange={(v) => updateVisibility(f.key, v)}
+                      disabled={togglesDisabled}
+                    />
                   </div>
-                  <div className="expanded-actions">
-                    <button
-                      className="profile-action-button secondary"
-                      onClick={handleCancelEdit}
-                      disabled={updateProfileMutation.isPending}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      className="profile-action-button primary"
-                      onClick={handleSave}
-                      disabled={updateProfileMutation.isPending}
-                    >
-                      {updateProfileMutation.isPending ? (
-                        <>
-                          <Icon name="arrows-rotate" className="spinning" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Icon name="floppy-disk" />
-                          Save
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {error && (
-                  <div className="edit-error">
-                    <Icon name="circle-exclamation" />
-                    {error}
-                  </div>
-                )}
-
-                <ContactCardView
-                  data={mapProfileToCardData(form)}
-                  isEditMode={true}
-                  editState={editState}
-                  onEditStateChange={(key, value) => {
-                    const updates = mapEditStateToForm(key, value, form);
-                    setForm(prev => ({ ...prev, ...updates }));
-                    setHasChanges(true);
-                  }}
-                  sectionSuffixes={sectionSuffixes}
-                  hiddenSections={hiddenSections}
-                  showMetadata={false}
-                />
-              </>
+                ))}
+              </div>
             )}
+            <div className="contact-detail-content">
+              <ContactCardView data={cardData} showMetadata={false} sectionSuffixes={sectionSuffixes} />
+            </div>
           </div>
 
           {/* Section 3: Account — full width */}
@@ -1234,19 +985,6 @@ export function UserProfilePage() {
               </button>
             </div>
           </div>
-
-          {/* Mobile save button */}
-          {isMobile && isEditMode && hasChanges && (
-            <div className="mobile-save-bar">
-              <button
-                className="primary-button full-width"
-                onClick={handleSave}
-                disabled={updateProfileMutation.isPending}
-              >
-                {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
