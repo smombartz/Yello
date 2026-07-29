@@ -270,7 +270,7 @@
   }
 
   /* Responsive adjustments */
-  @media (max-width: 440px) {
+  @media (max-width: 640px) {
     .public-card-page {
       padding: var(--ds-space-4);
     }

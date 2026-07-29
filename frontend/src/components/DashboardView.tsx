@@ -100,6 +100,15 @@ export function DashboardView() {
       onSearchChange: setSearch,
       onSearchSubmit: goToContacts,
       searchPlaceholder: 'Search contacts...',
+      actions: (
+        <button
+          className="header-action-btn"
+          onClick={() => navigate('/contacts/new')}
+        >
+          <Icon name="circle-plus" />
+          Add Contact
+        </button>
+      ),
     });
   }, [setHeaderConfig, search, navigate]);
 

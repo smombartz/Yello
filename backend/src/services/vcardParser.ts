@@ -74,7 +74,12 @@ export interface ParseResult {
   errors: Array<{ line: number; reason: string }>;
 }
 
-function unfoldLines(vcfContent: string): string {
+/**
+ * Joins RFC 6350 folded continuation lines. Folding never crosses a
+ * BEGIN/END:VCARD boundary, so this is safe to apply to a single card block —
+ * which is what the streaming importer does to avoid holding the whole file.
+ */
+export function unfoldLines(vcfContent: string): string {
   return vcfContent.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '');
 }
 
@@ -112,7 +117,7 @@ function parsePhone(rawPhone: string): { phone: string; phoneDisplay: string; co
   return { phone: cleaned, phoneDisplay: rawPhone, countryCode: null };
 }
 
-function parseSingleVcard(vcardText: string): ParsedContact | null {
+export function parseSingleVcard(vcardText: string): ParsedContact | null {
   const jcalData = ICAL.parse(vcardText);
   const comp = new ICAL.Component(jcalData);
 

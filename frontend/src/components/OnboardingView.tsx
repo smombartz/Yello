@@ -3,7 +3,9 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
 import { useAuth } from '../hooks/useAuth';
 import { useCompleteOnboarding } from '../api/authHooks';
-import { useImportVcf, useUploadProfileImage } from '../api/hooks';
+import { useStartVcfImport, useUploadProfileImage } from '../api/hooks';
+import { useImportStatus } from '../hooks/useImportStatus';
+import type { ImportResult } from '../api/types';
 import { useImportLinkedInStream, parseLinkedInCsv } from '../api/settingsHooks';
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
@@ -38,10 +40,14 @@ export default function OnboardingView() {
   const uploadImage = useUploadProfileImage();
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  // VCF import
-  const importVcf = useImportVcf();
+  // VCF import — staged upload plus a background job, so a large file does not
+  // block the onboarding flow. The job is tracked app-wide (same source as the
+  // global status pill) so leaving this page mid-import loses nothing.
+  const startVcfImport = useStartVcfImport();
+  const { job: vcfJob, startTracking: trackVcfImport, dismiss: dismissVcfImport } = useImportStatus();
   const [vcfFile, setVcfFile] = useState<File | null>(null);
-  const [vcfResult, setVcfResult] = useState<{ imported: number; photosProcessed: number; failed: number } | null>(null);
+  const [vcfUploadProgress, setVcfUploadProgress] = useState<number | null>(null);
+  const [vcfResult, setVcfResult] = useState<ImportResult | null>(null);
 
   // LinkedIn import
   const { isImporting: isLinkedInImporting, progress: linkedInProgress, importResult: linkedInResult, error: linkedInError, startImport: startLinkedInImport } = useImportLinkedInStream();
@@ -83,18 +89,44 @@ export default function OnboardingView() {
     }
   }, [uploadImage, markComplete, advanceToNext, showToast]);
 
+  const isVcfRunning = vcfJob?.status === 'pending' || vcfJob?.status === 'running';
+  const isVcfBusy = vcfUploadProgress !== null || isVcfRunning;
+  const vcfPercent = vcfJob && vcfJob.totalCards > 0
+    ? Math.min(100, Math.round((vcfJob.cardsProcessed / vcfJob.totalCards) * 100))
+    : 0;
+
   // VCF handlers
   const handleVcfImport = useCallback(async () => {
     if (!vcfFile) return;
+    setVcfUploadProgress(0);
     try {
-      const result = await importVcf.mutateAsync(vcfFile);
-      setVcfResult(result);
-      markComplete('vcf');
-      advanceToNext('vcf');
+      const { jobId } = await startVcfImport.mutateAsync({
+        file: vcfFile,
+        onUploadProgress: setVcfUploadProgress,
+      });
+      trackVcfImport(jobId);
     } catch {
       showToast('Import failed. Please try again.', { type: 'error' });
+    } finally {
+      setVcfUploadProgress(null);
     }
-  }, [vcfFile, importVcf, markComplete, advanceToNext, showToast]);
+  }, [vcfFile, startVcfImport, trackVcfImport, showToast]);
+
+  // The import runs server-side; advance the step only once it finishes.
+  // Dismissing hands the result to this step's own summary, so the global pill
+  // does not also linger with the same news.
+  useEffect(() => {
+    if (!vcfJob) return;
+    if (vcfJob.status === 'completed' && vcfJob.result) {
+      setVcfResult(vcfJob.result);
+      dismissVcfImport();
+      markComplete('vcf');
+      advanceToNext('vcf');
+    } else if (vcfJob.status === 'failed') {
+      showToast(vcfJob.errorMessage ?? 'Import failed. Please try again.', { type: 'error' });
+      dismissVcfImport();
+    }
+  }, [vcfJob, dismissVcfImport, markComplete, advanceToNext, showToast]);
 
   // LinkedIn handlers
   const handleLinkedInImport = useCallback(async () => {
@@ -128,7 +160,7 @@ export default function OnboardingView() {
     if (id === 'profile') return 'Profile photo uploaded';
     if (id === 'vcf' && vcfResult) {
       return (
-        <>Imported <strong>{vcfResult.imported}</strong> contacts{vcfResult.photosProcessed > 0 && <>, processed <strong>{vcfResult.photosProcessed}</strong> photos</>}</>
+        <>Imported <strong>{vcfResult.imported}</strong> contacts{vcfResult.skipped > 0 && <>, skipped <strong>{vcfResult.skipped}</strong> already present</>}{vcfResult.photosProcessed > 0 && <>, processed <strong>{vcfResult.photosProcessed}</strong> photos</>}</>
       );
     }
     if (id === 'linkedin' && linkedInResult) {
@@ -189,19 +221,32 @@ export default function OnboardingView() {
               file={vcfFile}
               onChange={setVcfFile}
               prompt="Choose VCF file"
-              disabled={importVcf.isPending}
+              disabled={isVcfBusy}
             />
             <Button
               variant="secondary"
               onClick={handleVcfImport}
-              disabled={!vcfFile || importVcf.isPending}
+              disabled={!vcfFile || isVcfBusy}
             >
-              <Icon name={importVcf.isPending ? 'arrows-rotate' : 'upload'} className={importVcf.isPending ? 'spinning' : ''} />
-              {importVcf.isPending ? 'Importing...' : 'Import Contacts'}
+              <Icon name={isVcfBusy ? 'arrows-rotate' : 'upload'} className={isVcfBusy ? 'spinning' : ''} />
+              {isVcfBusy ? 'Importing...' : 'Import Contacts'}
             </Button>
           </div>
-          {importVcf.isPending && (
-            <p className="onboarding-step__desc">This may take a moment for large files.</p>
+          {vcfUploadProgress !== null && (
+            <div className="import-progress-inline">
+              <p className="onboarding-step__desc">Uploading… {vcfUploadProgress}%</p>
+              <progress value={vcfUploadProgress} max={100} />
+            </div>
+          )}
+          {isVcfRunning && vcfJob && (
+            <div className="import-progress-inline">
+              <div className="progress-bar-container">
+                <div className="progress-bar-fill" style={{ width: `${vcfPercent}%` }} />
+              </div>
+              <p className="onboarding-step__desc">
+                Importing {vcfJob.cardsProcessed.toLocaleString()} of {vcfJob.totalCards.toLocaleString()} contacts — this keeps running in the background.
+              </p>
+            </div>
           )}
         </>
       );

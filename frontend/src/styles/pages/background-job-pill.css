@@ -1,0 +1,142 @@
+/**
+ * Background job pill
+ *
+ * Persistent status indicator for work that outlives the page that started it
+ * (currently VCF import). Fixed bottom-left, above the mobile tab bar.
+ *
+ * z-index sits above the fixed header/nav rail (300) but below the modal
+ * overlay (500), so any open modal covers it without the pill having to know
+ * modal state — several modals in this app never report theirs.
+ */
+
+.background-job-pill {
+  position: fixed;
+  bottom: var(--ds-space-6);
+  /* Clear of the nav rail: 40px items + 16px padding each side = 72px. */
+  left: calc(72px + var(--ds-space-4));
+  z-index: 400;
+
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+
+  min-width: 260px;
+  max-width: min(360px, calc(100vw - 2rem));
+  overflow: hidden;
+
+  background: var(--ds-bg-primary);
+  border: 1px solid var(--ds-border-color);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-md);
+
+  animation: backgroundJobPillIn 0.25s ease;
+}
+
+@keyframes backgroundJobPillIn {
+  from { opacity: 0; transform: translateY(0.75rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.background-job-pill__body {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+
+  padding: 0.75rem var(--ds-space-3);
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: var(--ds-text-primary);
+  cursor: pointer;
+  min-width: 0;
+}
+
+.background-job-pill__body:disabled {
+  cursor: default;
+}
+
+.background-job-pill__body:not(:disabled):hover {
+  background: var(--ds-bg-secondary);
+}
+
+.background-job-pill__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  color: var(--ds-color-primary);
+}
+
+.background-job-pill--completed .background-job-pill__icon {
+  color: var(--ds-color-success);
+}
+
+.background-job-pill--failed .background-job-pill__icon {
+  color: var(--ds-color-error);
+}
+
+.background-job-pill__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.background-job-pill__title {
+  font-size: var(--ds-font-sm);
+  font-weight: 500;
+  /* Long error messages must not stretch the pill off-screen. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.background-job-pill__count {
+  font-size: var(--ds-font-xs);
+  color: var(--ds-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.background-job-pill__dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+
+  padding: 0 var(--ds-space-3);
+  border: none;
+  background: none;
+  color: var(--ds-text-muted);
+  cursor: pointer;
+  font-size: var(--ds-font-sm);
+}
+
+.background-job-pill__dismiss:hover {
+  color: var(--ds-text-primary);
+  background: var(--ds-bg-secondary);
+}
+
+.background-job-pill__progress {
+  grid-column: 1 / -1;
+  height: 3px;
+  background: var(--ds-bg-secondary);
+}
+
+.background-job-pill__progress-fill {
+  height: 100%;
+  background: var(--ds-color-primary);
+  transition: width 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .background-job-pill {
+    /* No nav rail on mobile, and the tab bar owns the bottom edge. */
+    left: var(--ds-space-4);
+    right: var(--ds-space-4);
+    max-width: none;
+    min-width: 0;
+    bottom: calc(56px + env(safe-area-inset-bottom) + var(--ds-space-4));
+  }
+}

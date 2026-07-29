@@ -2,9 +2,19 @@ import { type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import logoSvg from '../assets/logo.svg';
 import { SearchBar } from './ui/SearchBar';
+import { Icon } from './Icon';
+
+export interface Breadcrumb {
+  label: string;
+  /** Route to navigate to when clicked. */
+  to?: string;
+  /** Alternative to `to` for in-page navigation (e.g. clearing a drill-down). */
+  onClick?: () => void;
+}
 
 interface PageHeaderProps {
   title: string;
+  breadcrumbs?: Breadcrumb[];
   search?: string;
   onSearchChange?: (value: string) => void;
   onSearchSubmit?: () => void;
@@ -16,6 +26,7 @@ interface PageHeaderProps {
 
 export function PageHeader({
   title,
+  breadcrumbs,
   search,
   onSearchChange,
   onSearchSubmit,
@@ -37,7 +48,27 @@ export function PageHeader({
 
         <div className="page-header-col-center">
           <div className="page-header-center-row">
-            <h1 className="page-header-title">{title}</h1>
+            {breadcrumbs?.length ? (
+              <nav className="page-header-breadcrumbs" aria-label="Breadcrumb">
+                {breadcrumbs.map((crumb) => (
+                  <span key={crumb.label} className="page-header-crumb-item">
+                    {crumb.to ? (
+                      <Link to={crumb.to} className="page-header-crumb">
+                        {crumb.label}
+                      </Link>
+                    ) : (
+                      <button type="button" className="page-header-crumb" onClick={crumb.onClick}>
+                        {crumb.label}
+                      </button>
+                    )}
+                    <Icon name="chevron-right" className="page-header-crumb-sep" />
+                  </span>
+                ))}
+                <h1 className="page-header-title">{title}</h1>
+              </nav>
+            ) : (
+              <h1 className="page-header-title">{title}</h1>
+            )}
 
             {showSearch && (
               <SearchBar
@@ -50,6 +81,8 @@ export function PageHeader({
             )}
 
             {info && <div className="page-header-info">{info}</div>}
+
+            {actions && <div className="page-header-actions">{actions}</div>}
           </div>
 
           {children && (
@@ -57,9 +90,7 @@ export function PageHeader({
           )}
         </div>
 
-        <div className="page-header-col-right">
-          {actions && <div className="page-header-actions">{actions}</div>}
-        </div>
+        <div className="page-header-col-right" />
       </div>
     </header>
   );

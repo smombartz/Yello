@@ -75,7 +75,6 @@ export function uploadFileWithProgress(
           if (body.error) msg = body.error;
           else if (body.message) msg = body.message;
         } catch { /* keep default */ }
-        if (xhr.status === 408) msg = 'Import timed out — the file may be too large to process. Try splitting it into smaller files.';
         if (xhr.status === 413) msg = 'File exceeds the 100 MB size limit.';
         if (xhr.status === 429) msg = 'Too many import requests. Wait a minute and try again.';
         if (xhr.status === 403) msg = 'Import is disabled for demo accounts.';

@@ -30,15 +30,10 @@ export function GroupsView() {
     if (selectedCategory) {
       setHeaderConfig({
         title: selectedCategory,
+        breadcrumbs: [{ label: 'Groups', onClick: handleBackToGroups }],
         search,
         onSearchChange: setSearch,
         searchPlaceholder: `Search in ${selectedCategory}...`,
-        actions: (
-          <button className="header-action-btn secondary" onClick={handleBackToGroups}>
-            <Icon name="arrow-left" />
-            Back to Groups
-          </button>
-        ),
       });
     } else {
       setHeaderConfig({

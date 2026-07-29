@@ -26,7 +26,10 @@ export function ICloudImportView() {
   const [selectedNewContacts, setSelectedNewContacts] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    setHeaderConfig({ title: 'Import from iCloud' });
+    setHeaderConfig({
+      title: 'Import from iCloud',
+      breadcrumbs: [{ label: 'Tools', to: '/tools' }],
+    });
   }, [setHeaderConfig]);
 
   const handleFetch = useCallback(() => {

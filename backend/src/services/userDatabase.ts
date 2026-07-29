@@ -302,6 +302,34 @@ export function getUserDatabase(userId: number): DatabaseType {
 
     CREATE INDEX IF NOT EXISTS idx_contact_photos_contact_id ON contact_photos(contact_id);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_contact_photos_contact_source ON contact_photos(contact_id, source);
+
+    -- Background import jobs. Large VCF files are staged to disk and processed
+    -- in batches by an in-process worker; this row is the durable progress
+    -- record the frontend polls, and cards_processed doubles as the resume
+    -- offset if the container restarts mid-import.
+    CREATE TABLE IF NOT EXISTS import_jobs (
+      id TEXT PRIMARY KEY,
+      kind TEXT NOT NULL DEFAULT 'vcf',
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'running', 'completed', 'failed')),
+      filename TEXT,
+      file_path TEXT,
+      file_size INTEGER,
+      total_cards INTEGER DEFAULT 0,
+      cards_processed INTEGER DEFAULT 0,
+      imported_count INTEGER DEFAULT 0,
+      skipped_count INTEGER DEFAULT 0,
+      failed_count INTEGER DEFAULT 0,
+      photos_processed INTEGER DEFAULT 0,
+      result TEXT,
+      error_message TEXT,
+      started_at TEXT,
+      completed_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_import_jobs_status ON import_jobs(status);
+    CREATE INDEX IF NOT EXISTS idx_import_jobs_created_at ON import_jobs(created_at DESC);
   `);
 
   // iCloud credentials migration (for existing databases)
@@ -365,6 +393,37 @@ export function getUserPhotosPath(userId: number): string {
   }
 
   return photosDir;
+}
+
+/**
+ * Returns the staged-imports directory for a user, creating it if needed.
+ * Uploaded VCF files live here while a background import job consumes them.
+ */
+export function getUserImportsPath(userId: number): string {
+  const basePath = getUserDataPath();
+  const importsDir = path.join(basePath, String(userId), 'imports');
+
+  if (!fs.existsSync(importsDir)) {
+    fs.mkdirSync(importsDir, { recursive: true });
+  }
+
+  return importsDir;
+}
+
+/**
+ * Returns the user IDs that have a data directory on disk. Used by the boot
+ * sweep to find interrupted import jobs — there is no cross-user index, so the
+ * only way to enumerate tenants is the filesystem.
+ */
+export function listUserIds(): number[] {
+  const basePath = getUserDataPath();
+  if (!fs.existsSync(basePath)) return [];
+
+  return fs
+    .readdirSync(basePath, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => Number(entry.name))
+    .filter(id => Number.isInteger(id) && id > 0);
 }
 
 /**

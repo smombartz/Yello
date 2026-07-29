@@ -147,9 +147,44 @@ export interface ContactIdsResponse {
 
 export interface ImportResult {
   imported: number;
+  /** Cards whose vCard UID already existed — a re-import is a no-op for these. */
+  skipped: number;
   failed: number;
   photosProcessed: number;
+  /** Truncated by the backend — `failed` is the true count. */
   errors: Array<{ line: number; reason: string }>;
+}
+
+export type ImportJobStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+/**
+ * A background VCF import. Large files are staged server-side and processed in
+ * batches, so the UI polls this row instead of holding a request open.
+ */
+export interface VcfImportJob {
+  id: string;
+  kind: string;
+  status: ImportJobStatus;
+  filename: string | null;
+  totalCards: number;
+  cardsProcessed: number;
+  importedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  photosProcessed: number;
+  result: ImportResult | null;
+  errorMessage: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string | null;
+}
+
+export interface StartImportResponse {
+  jobId: string;
+}
+
+export interface ActiveImportJobResponse {
+  job: VcfImportJob | null;
 }
 
 // Deduplication types

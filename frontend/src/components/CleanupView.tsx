@@ -180,6 +180,7 @@ export function CleanupView() {
   useEffect(() => {
     setHeaderConfig({
       title: 'Cleanup',
+      breadcrumbs: [{ label: 'Tools', to: '/tools' }],
       info: shouldFetchContacts && !isContactsLoading ? <span>{total} contacts found</span> : undefined,
     });
   }, [setHeaderConfig, shouldFetchContacts, isContactsLoading, total]);

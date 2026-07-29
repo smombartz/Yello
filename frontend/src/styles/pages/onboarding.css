@@ -294,6 +294,7 @@
 
 .onboarding-footer .btn {
   min-width: 200px;
+  max-width: 100%;
 }
 
 @media (max-width: 640px) {
@@ -305,5 +306,13 @@
   }
   .onboarding-step__result {
     padding-left: var(--ds-space-5);
+  }
+  /* Full-width CTA is easier to tap on phones. */
+  .onboarding-footer {
+    padding-left: var(--ds-space-4);
+    padding-right: var(--ds-space-4);
+  }
+  .onboarding-footer .btn {
+    width: 100%;
   }
 }

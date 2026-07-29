@@ -13,6 +13,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    white-space: nowrap;
     padding: 8px 16px;
     background: none;
     border: 1px solid var(--ds-border-color);

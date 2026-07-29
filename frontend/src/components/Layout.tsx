@@ -1,13 +1,15 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { NavRail } from './NavRail';
-import { PageHeader } from './PageHeader';
+import { PageHeader, type Breadcrumb } from './PageHeader';
 import { BottomTabBar } from './BottomTabBar';
+import { ImportStatusIndicator } from './ImportStatusIndicator';
 import { useIsMobile } from '../hooks/useIsMobile';
 import type { ReactNode } from 'react';
 
 export interface PageHeaderConfig {
   title: string;
+  breadcrumbs?: Breadcrumb[];
   search?: string;
   onSearchChange?: (value: string) => void;
   onSearchSubmit?: () => void;
@@ -79,6 +81,7 @@ export function Layout() {
         </main>
       </div>
       {isMobile && <BottomTabBar />}
+      <ImportStatusIndicator />
     </div>
   );
 }

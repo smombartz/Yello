@@ -20,6 +20,7 @@ import { LoginPage } from './components/LoginPage';
 import { PublicContactCard } from './components/PublicContactCard';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
+import { ImportStatusProvider } from './contexts/ImportStatusProvider';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { useAuth } from './hooks/useAuth';
 import { DemoPromptModal } from './components/DemoPromptModal';
@@ -115,7 +116,9 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <AppRoutes />
+        <ImportStatusProvider>
+          <AppRoutes />
+        </ImportStatusProvider>
       </ToastProvider>
     </AuthProvider>
   );

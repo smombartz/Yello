@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { BREAKPOINTS } from '../constants/breakpoints';
 
-const MOBILE_BREAKPOINT = 768;
+const MOBILE_BREAKPOINT = BREAKPOINTS.tablet;
 
 export function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = useState(() =>

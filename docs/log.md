@@ -1,5 +1,170 @@
 # Change Log
 
+## 2026-07-29 — Header: breadcrumbs, right-aligned search, dashboard Add Contact
+
+**What Changed:**
+- **Breadcrumb support in the page header.** `PageHeader` accepts a new optional `breadcrumbs` prop (`{ label, to?, onClick? }[]`, also added to `PageHeaderConfig` in `Layout.tsx`). Crumbs render before the page title in the title slot — muted, clickable (router `Link` for `to`, button for `onClick`), separated by small chevrons — so drill-down pages read e.g. "Tools › Cleanup" with "Tools" navigating back.
+- **Wired breadcrumbs into drill-down pages:** Cleanup, Resolve Duplicates, Archived, and Import from iCloud show "Tools › …"; Docs shows "Admin › Docs"; a selected group shows "Groups › {category}" (replacing the old "Back to Groups" action button — the crumb now handles going back).
+- **Search bar right-aligned and smaller.** `.search-bar--header` gets `margin-left: auto` so it pins to the right edge of the center column ahead of the info/actions blocks (which drop their own auto margin when a search is present, via sibling selectors). `--ds-header-search-width` reduced from 400px to 300px.
+- **Added an "Add Contact" button to the Dashboard header**, matching the one on the Contacts page (navigates to `/contacts/new`).
+
+**Why:**
+- User request: quicker contact creation from the dashboard, a tidier right-aligned search, and clickable breadcrumbs to keep section context (Tools, Groups, Admin) visible and make navigating back out of sub-pages easier.
+
+**Files Modified:**
+- `frontend/src/components/PageHeader.tsx` — `Breadcrumb` type + breadcrumb rendering
+- `frontend/src/components/Layout.tsx` — `breadcrumbs` in `PageHeaderConfig`
+- `frontend/src/index.css` — breadcrumb styles; search bar right-align + sibling margin rules
+- `frontend/src/styles/design-system.css` — `--ds-header-search-width` 400px → 300px
+- `frontend/src/components/DashboardView.tsx` — Add Contact header action
+- `frontend/src/components/GroupsView.tsx` — Groups crumb replaces back button
+- `frontend/src/components/CleanupView.tsx`, `DeduplicationView.tsx`, `ArchivedView.tsx`, `ICloudImportView.tsx` — Tools crumb
+- `frontend/src/components/DocsView.tsx` — Admin crumb
+
+---
+
+## 2026-07-29 — Header follow-up: logo/title overlap and off-center right edge
+
+**What Changed:**
+- **Fixed the title running into the logo.** The wordmark SVG is 188×40, so at its 24px header height it renders ~113px wide — but `.page-header-col-left` only reserved `min-width: 56px`. On windows under ~1250px the left column shrank below the logo's width and the logo overflowed under the title. Both side columns now share a `--ds-header-side-col-min: 120px` floor (new token in `design-system.css`, sized to the logo with the math documented).
+- **Fixed the info text + action button being crammed against the right window edge.** The empty right spacer column had `flex-basis: 0` and no min-width, so on narrow windows it collapsed to 0 while the left column held its floor — shifting the whole center column off-center to the right and pushing the info counts ("X of Y on map") and button to the viewport edge. The shared min-width on `.page-header-col-right` restores symmetric centering.
+- Added `column-gap: var(--ds-space-4)` to `.page-header-row` so the columns can never abut even at their floors.
+- Mobile: `.page-header-col-right` is now `display: none` (was `flex: 0`) — with the new min-width it would otherwise reserve 120px of dead space on phones; the left column was already hidden there.
+
+**Why:**
+- User report after moving actions into the content column: info counts colliding with the button on the right, and the title sometimes running into the logo on the left. Both traced to asymmetric side-column minimums (56px left floor vs. none on the right) and a left floor smaller than the logo's rendered width.
+
+**Files Modified:**
+- `frontend/src/styles/design-system.css` — added `--ds-header-side-col-min` token
+- `frontend/src/index.css` — side-column min-widths, header row column-gap, mobile right-column hide
+
+---
+
+## 2026-07-29 — Moved header action buttons into the main content column
+
+**What Changed:**
+- Header action buttons ("Add Contact" on Contacts, "Geocode" on Map, etc.) now render inside `.page-header-center-row` — the column sized to `--ds-content-width` and aligned with the main content — instead of the separate right-hand flex column. `.page-header-col-right` remains as an empty spacer that mirrors the logo column so the center column stays centered.
+- `.page-header-actions` gets `margin-left: auto` (pins to the content column's right edge when no info block is present) plus `flex-shrink: 0`; when an info block precedes it, `.page-header-info + .page-header-actions` drops the auto margin so the info text keeps its right-edge anchor with the buttons following.
+
+**Why:**
+- The action buttons lived in a flex column to the right of the content column, so on mid-width windows they collided with / overlapped the center column instead of participating in its layout. Placing them inside the content column makes them part of the normal squeeze order and aligns them with the page content edge.
+
+**Files Modified:**
+- `frontend/src/components/PageHeader.tsx` — actions moved into the center row; right column reduced to a spacer
+- `frontend/src/index.css` — `.page-header-actions` pinning/no-shrink rules; simplified `.page-header-col-right`; updated stale comments
+
+---
+
+## 2026-07-28 — Header/layout consistency pass: shrinkable center columns, dead CSS removal
+
+**What Changed:**
+- **Fixed logout/actions being pushed off-screen (769–~1100px windows).** `.page-header-col-center` was `width: 960px; flex-shrink: 0` — it could not shrink, so on windows narrower than ~1100px the header's right column (email + Logout on Profile, "Add Contact" on Contacts) overflowed past the viewport edge. Now `flex: 0 1 var(--ds-content-width); min-width: 0` so the center column squeezes gracefully. Squeeze order: info ellipsizes → search shrinks to its 200px floor → title ellipsizes at 120px; action buttons never shrink (`.page-header-actions button { flex-shrink: 0 }`) and the profile email truncates instead.
+- **Same fix for the body column.** `.main-content` was also fixed `960px; flex-shrink: 0` (viewport overflow below ~992px, and the fixed 72px nav rail overlapped content's left edge below ~1104px). Now `flex: 0 1 var(--ds-content-width)` with `max-width: calc(100% - 2 * var(--ds-nav-rail-width))` so content stays clear of the rail on both sides; the map view keeps its full-bleed exception. Added `--ds-nav-rail-width: 72px` token to `design-system.css`. Mobile overrides updated from `width: 100%` to `flex: 1 1 100%` because a width override loses to the desktop rule's flex-basis.
+- **Removed legacy dead CSS that corrupted the header title.** An old in-page-header block (`.page-header { margin-bottom }`, `.page-header h1 { font-size: 1.75rem; margin-bottom: 0.25rem }`, `.page-header p`) out-specified `.page-header-title`, making every page title render at 28px and vertically off-center instead of the intended 20px `--ds-header-title-size` token. No component uses the legacy pattern; block deleted.
+- **Normalized cross-page header spacing.** The center row was left-packed, so the search bar started at a title-width-dependent x ("Dashboard" vs "Map") and the info text ("3,024 contacts") floated right after it at a different spot on each page. Title now has a `min-width: 120px` slot (search starts at the same x on all standard pages; long contact names ellipsize) and `.page-header-info` gets `margin-left: auto` (counts pinned to the center column's right edge on every page).
+- Guard rails: `.page-header-col-left` gets `min-width: 56px` so the logo keeps breathing room; `.logout-btn` gets `white-space: nowrap`. Removed the never-rendered `.app-body-spacer` rules (dead class from an older layout).
+
+**Why:**
+- User report: header spacing differed between Dashboard/Contacts/Map, and the logout button was pushed off the page when narrowing the window. Fine-tooth-comb pass traced both to fixed 960px non-shrinkable columns (header center + main content), a leaked legacy CSS block, and left-packed header content with no anchoring.
+
+**Files Modified:**
+- `frontend/src/index.css`
+- `frontend/src/styles/design-system.css`
+- `frontend/src/styles/pages/user-profile.css`
+
+---
+
+## 2026-07-28 — Responsiveness foundation + fixed-size fixes
+
+**What Changed:**
+- **Breakpoint source of truth.** Added authoritative `--ds-bp-mobile/tablet/desktop/wide` (640/768/1024/1280) CSS variables to `styles/design-system.css` and a JS mirror `constants/breakpoints.ts` (`BREAKPOINTS`). `hooks/useIsMobile.ts` now derives its 768 threshold from `BREAKPOINTS.tablet` instead of a duplicated literal — the `768` value now exists in exactly one place in TS. Rewrote the old comment-only breakpoint block to declare these four as the only allowed breakpoints.
+- **Normalized drifting breakpoints** onto the standard scale: `pages/docs.css` 900px→1024px (TOC drop), `index.css` iCloud match 600px→640px, `pages/public-contact-card.css` 440px→640px. Verified via grep that only 640/768/1024 remain in use.
+- **Enrich 4-column stat grid** (`pages/enrich.css`) converted from fixed `repeat(4, 1fr)` to `repeat(auto-fit, minmax(150px, 1fr))` so it flows 4→1 columns without a manual breakpoint; removed the now-redundant 2-col override. Also made `.limit-input-group` wrap and capped `.strategy-select` with `max-width: 100%`.
+- **Fixed-width offenders shrunk:** `.contact-details > .contact-detail-item` `width: 220px`→`width: min(220px, 100%)`; header search bar gets `min-width: 0` in the ≤768px block so `flex-shrink` actually works; `.within-contact-info` now `flex: 1; min-width: 0` with the name truncating; onboarding CTA capped and made full-width on phones.
+- **Grid hardening:** `.geocoding-edit-row` collapses to a single column ≤640px; dashboard `.stat-card`/`.stat-info` get `min-width: 0` (+ `overflow-wrap` on the value) so long stat numbers can't blow out the 1fr track.
+- **Verified (no change needed):** UserProfile split-pane already collapses cleanly at 1024px (sticky preview → static, moved to top); AdminView 7-col table is correctly contained in an `overflow-x: auto` wrapper; the expanded-row/expanded-grid contact grids already collapse 3→2→1. The three desktop-only routes (`/merge`, `/cleanup`, `/archived`) were intentionally left as-is (mobile redirect kept), so `.duplicate-card`'s fixed 220px was left untouched.
+- Verification: `tsc -b`, `vite build`, and grep sanity checks pass; the 15 pre-existing ESLint errors are React-Compiler memoization issues in unrelated components. Visual verification at 320/375/768/1024px is handed to the user.
+
+**Why:**
+- Responsiveness audit found a decent foundation (flex layouts, auto-fit card grids, a real mobile shell) undermined by breakpoint drift (no enforced scale, off-scale one-offs, the 768 value duplicated in JS and CSS) and a scatter of fixed `width`/`min-width` declarations that overflowed narrow (~320px) screens. This establishes an enforceable breakpoint foundation and fixes the highest-risk offenders.
+
+**Files Modified:**
+- `frontend/src/styles/design-system.css`
+- `frontend/src/constants/breakpoints.ts` (new)
+- `frontend/src/hooks/useIsMobile.ts`
+- `frontend/src/index.css`
+- `frontend/src/styles/pages/enrich.css`
+- `frontend/src/styles/pages/docs.css`
+- `frontend/src/styles/pages/public-contact-card.css`
+- `frontend/src/styles/pages/dashboard.css`
+- `frontend/src/styles/pages/onboarding.css`
+
+---
+
+## 2026-07-28 — Persistent background-import status pill
+
+**What Changed:**
+- Added `ImportStatusProvider` (`contexts/ImportStatusProvider.tsx` + `contexts/importStatusContextValue.ts` + `hooks/useImportStatus.ts`), mounted in `App.tsx` beside `ToastProvider`. It owns VCF import tracking for the whole app. Previously the job id lived in `SettingsView` state, so navigating away unmounted the only thing watching the job — the import kept running with nothing to show for it, despite the panel saying "you can close this page and come back".
+- Added `BackgroundJobPill` — a fixed bottom-left indicator showing spinner, label, `1,240 of 8,900`, and a progress bar; success and failure states; a dismiss button. Mounted once in `Layout` via `ImportStatusIndicator`, so it survives every route change. Clicking it navigates to Tools, which now auto-expands the Import section when an import is in flight.
+- The pill takes a generic `BackgroundJobSummary` (`{id, status, label, doneLabel, current, total, errorMessage}`) rather than a VCF-specific type, so the other long-running flows can feed it once they move off SSE. Only VCF import is wired now.
+- **Terminal jobs persist until dismissed.** `forgetImportJobId()` moved out of the completion effect in `useVcfImportJob` and onto the provider's `dismiss()`. This means a job that finished while the user was on another page — or before a reload — is still reported rather than silently vanishing. `SettingsView`'s "Import Another File" and the onboarding step's completion both call `dismiss()`.
+- `SettingsView` and `OnboardingView` now derive their import state from the provider instead of each polling their own copy. `SettingsView`'s `importResult`/`importError` are derived from the shared job, so the inline panel and the pill can never disagree.
+- The provider derives the tracked job id instead of syncing it through effects (`trackedJobId ?? activeJob.id`, minus a dismissed id). The React Compiler lint rule rejects synchronous `setState` inside an effect, and deriving is simpler regardless. The one remaining effect only touches `localStorage`, which is a legitimate external-system update.
+- Pill sits at `z-index: 400` — above the fixed header/nav rail (300), below the modal overlay (500) — so modals cover it without the pill needing to know modal state. Several modals in this app never report theirs, so the Layout `modalOpen` coupling originally considered would have been unreliable. On mobile it clears the 56px bottom tab bar plus the safe-area inset; on desktop it clears the 72px nav rail.
+- Fixed a build break from the previous change: `useUploadProfileImage` still used `uploadFile`, whose import had been dropped when `useImportVcf` was replaced. `npx tsc --noEmit` at the frontend root does not pick up `tsconfig.app.json` (`noUnusedLocals`, `include: ["src"]`), so only `npm run build` caught it.
+
+**Why:**
+- The backend already made imports survivable across navigation and restarts, but the UI gave no evidence of it — the only way to check on a running import was to reopen Tools. A large import can run for many minutes, so the status needs to follow the user around the app.
+
+**Files Modified:**
+- `frontend/src/contexts/ImportStatusProvider.tsx` — new
+- `frontend/src/contexts/importStatusContextValue.ts` — new
+- `frontend/src/hooks/useImportStatus.ts` — new
+- `frontend/src/components/BackgroundJobPill.tsx` — new
+- `frontend/src/components/ImportStatusIndicator.tsx` — new
+- `frontend/src/styles/pages/background-job-pill.css` — new
+- `frontend/src/styles/pages.css`
+- `frontend/src/App.tsx`, `frontend/src/components/Layout.tsx`
+- `frontend/src/api/hooks.ts`
+- `frontend/src/components/SettingsView.tsx`, `frontend/src/components/OnboardingView.tsx`
+
+---
+
+## 2026-07-27 — VCF import runs as a chunked background job
+
+**What Changed:**
+- `POST /api/import` no longer parses the upload inline. It streams the file straight to `/data/users/<id>/imports/<jobId>.vcf`, creates an `import_jobs` row, kicks off the worker without awaiting it, and returns `202 { jobId }`. Added `GET /api/import/jobs/:id` and `GET /api/import/jobs/active` for polling and reconnect, both with a raised rate limit (300/min) since they are polled once a second. A second upload while one is running returns 409.
+- Deleted `MAX_PARSE_TIME_MS` and the `Promise.race` timeout. That race returned 408 to the browser while `importVcf` kept running to completion in the background — the user saw "Import timed out", contacts kept landing, and retrying duplicated everything. The 408 path no longer exists, and the matching client-side message in `client.ts` was removed.
+- Rewrote `importService.ts`: `importVcf(db, content)` became `runVcfImportJob(userId, jobId)`. It streams one vCard block at a time via `readline` (peak memory is now one batch, not the whole file — the old path held the file three times over: Buffer, string, and a fully-parsed array with base64 photos inline) and commits in batches of 50.
+- Each batch is now a single `db.transaction()`. Previously every INSERT was its own implicit transaction, so a contact with emails, phones and addresses cost an fsync per row. Photo processing is sandwiched between two transactions — `processPhoto` is async and hashes on the contact id, so it can neither run inside a synchronous better-sqlite3 transaction nor before the insert that assigns the id. The event loop is yielded after every batch so the server stays responsive during an import.
+- Added UID-based dedupe: a card whose vCard `UID` already exists in `contacts.icloud_uid` is skipped rather than inserted, and the UID is stamped on newly created contacts. Re-importing the same export is now a no-op. `ImportResult` gained a `skipped` count. Cards with no UID still insert unconditionally — full match/merge is still a follow-up.
+- Fixed a cross-tenant photo bug: `processPhoto(base64, contactId)` was called without the `userId` argument, so imported photos fell back to the shared `PHOTOS_PATH` and hashed on `contactId` alone — two users importing could overwrite each other's images. iCloud and Google import already passed it.
+- Added restart recovery. `cards_processed` is written only after a batch commits, so it is an exact resume offset. On boot, `resumeInterruptedImports` walks `USER_DATA_PATH` (there is no cross-user index — each tenant is a separate SQLite file), re-enqueues any `running` job whose staged file still exists, and fails the rest with a clear message.
+- Frontend: `useImportVcf` replaced by `useStartVcfImport` / `useVcfImportJob` (`refetchInterval: 1500`, stops on terminal status) / `useActiveVcfImportJob`, with the job id in `localStorage`. This is the first polling query in the codebase — every other long-running flow hand-rolls SSE parsing. SettingsView now shows a real progress bar with imported/skipped/failed counts instead of a static "this may take a moment", and reconnects to a running import on mount. OnboardingView advances its step when the job completes rather than awaiting the request.
+- Exported `unfoldLines` and `parseSingleVcard` from `vcardParser.ts` so the streaming worker can unfold per block. `parseVcf` is unchanged and still used by `icloudService`.
+- Removed the dead duplicate `api.importVcf()` from `frontend/src/lib/api.ts`.
+
+**Why:**
+- A 37 MB .vcf failed with "Import timed out — the file may be too large to process. Try splitting it into smaller files." The message was misleading on both counts: the timeout was self-imposed rather than a real limit, and it did not stop the import, so the file was neither too large nor actually failing — it was just slow, and reporting failure while still writing.
+
+**Files Modified:**
+- `backend/src/routes/import.ts`
+- `backend/src/services/importService.ts`
+- `backend/src/services/importJobService.ts` — new
+- `backend/src/services/importRecovery.ts` — new
+- `backend/src/schemas/import.ts` — new
+- `backend/src/services/userDatabase.ts` — `import_jobs` table, `getUserImportsPath`, `listUserIds`
+- `backend/src/services/vcardParser.ts` — export `unfoldLines`, `parseSingleVcard`
+- `backend/src/server.ts` — boot-time import recovery
+- `backend/src/routes/__tests__/import.test.ts`
+- `backend/src/services/__tests__/importService.test.ts` — new
+- `backend/src/services/__tests__/importRecovery.test.ts` — new
+- `frontend/src/api/hooks.ts`, `frontend/src/api/types.ts`, `frontend/src/api/client.ts`, `frontend/src/lib/api.ts`
+- `frontend/src/components/SettingsView.tsx`, `frontend/src/components/OnboardingView.tsx`, `frontend/src/components/DocsView.tsx`
+- `docs/plans/2026-07-27-background-chunked-vcf-import.md` — new
+
+---
+
 ## 2026-07-27 — Removed profile edit mode; per-field visibility toggles now inline and autosaving
 
 **What Changed:**

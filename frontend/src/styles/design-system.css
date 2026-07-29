@@ -251,21 +251,40 @@
   --ds-nav-icon-size: 24px;
   --ds-nav-item-padding: 8px;
   --ds-nav-gap: 4px;
+  /* Collapsed rail footprint: 40px item (icon 24 + 2×8 padding) + 2×16px rail padding */
+  --ds-nav-rail-width: 72px;
 
   /* Layout - Page Header */
   --ds-header-height: 64px;
   --ds-header-padding: 16px;
   --ds-header-logo-size: 24px;
+  /* Floor for both header side columns. Must fit the logo: the wordmark SVG
+     is 188x40, so at 24px tall it renders ~113px wide. Applied to left AND
+     right so the center column stays centered on the viewport. */
+  --ds-header-side-col-min: 120px;
   --ds-header-title-size: 20px;
-  --ds-header-search-width: 400px;
+  --ds-header-search-width: 300px;
+
+  /* ============================================
+   * BREAKPOINTS - authoritative scale
+   * ============================================ */
+  --ds-bp-mobile: 640px;
+  --ds-bp-tablet: 768px;
+  --ds-bp-desktop: 1024px;
+  --ds-bp-wide: 1280px;
 }
 
 /* ============================================
- * BREAKPOINTS (as CSS custom media - documented)
- * Use these values in @media queries:
+ * BREAKPOINTS
  *
- * Mobile:  max-width: 640px
- * Tablet:  max-width: 768px
- * Desktop: max-width: 1024px
- * Wide:    max-width: 1280px
+ * These are THE ONLY allowed @media breakpoints. Their values live in
+ * `--ds-bp-*` above and are mirrored in JS at src/constants/breakpoints.ts.
+ * CSS @media conditions cannot read var(), so queries hardcode the matching
+ * px value below. Do not introduce off-scale breakpoints — if a one-off is
+ * genuinely required, add a comment justifying it.
+ *
+ * Mobile:  max-width: 640px   (--ds-bp-mobile)
+ * Tablet:  max-width: 768px   (--ds-bp-tablet)  ← primary app-shell switch
+ * Desktop: max-width: 1024px  (--ds-bp-desktop)
+ * Wide:    max-width: 1280px  (--ds-bp-wide)
  * ============================================ */

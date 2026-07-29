@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from './Icon';
 import {
   useDeleteAllContacts,
   exportAllContacts
 } from '../api/settingsHooks';
-import { uploadFileWithProgress } from '../api/client';
+import { useStartVcfImport } from '../api/hooks';
+import { useImportStatus } from '../hooks/useImportStatus';
 import { useICloudSettings, useSaveICloudSettings, useDeleteICloudSettings } from '../api/icloudHooks';
 import type { ImportResult } from '../api/types';
 import type { OutletContext } from './Layout';
@@ -24,15 +24,16 @@ export function SettingsView() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const { showToast } = useToast();
-  const queryClient = useQueryClient();
   const [importExpanded, setImportExpanded] = useState(false);
   const [linkedInExpanded, setLinkedInExpanded] = useState(false);
   const [googleImportExpanded, setGoogleImportExpanded] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  const [importError, setImportError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [importPhase, setImportPhase] = useState<'uploading' | 'processing' | null>(null);
+  const [importPhase, setImportPhase] = useState<'uploading' | null>(null);
+  const startImport = useStartVcfImport();
+  // The job itself is tracked app-wide so it survives leaving this page.
+  const { job, startTracking, dismiss: dismissImport } = useImportStatus();
   const [exportExpanded, setExportExpanded] = useState(false);
   const [dangerExpanded, setDangerExpanded] = useState(false);
   const [icloudExpanded, setIcloudExpanded] = useState(false);
@@ -46,27 +47,42 @@ export function SettingsView() {
     setHeaderConfig({ title: 'Tools' });
   }, [setHeaderConfig]);
 
+  // Open the section automatically when arriving with an import in flight —
+  // typically from clicking the global status pill.
+  const isImportRunning = job?.status === 'pending' || job?.status === 'running';
+  useEffect(() => {
+    if (isImportRunning) setImportExpanded(true);
+  }, [isImportRunning]);
+
   const handleImport = useCallback(async () => {
     if (!importFile) return;
-    setImportError(null);
+    setUploadError(null);
     setImportPhase('uploading');
     setUploadProgress(0);
     try {
-      const result = await uploadFileWithProgress('/api/import', importFile, (pct) => {
-        setUploadProgress(pct);
-        if (pct === 100) setImportPhase('processing');
-      }) as ImportResult;
-      setImportResult(result);
+      const { jobId } = await startImport.mutateAsync({
+        file: importFile,
+        onUploadProgress: (pct) => setUploadProgress(pct),
+      });
+      startTracking(jobId);
       setImportFile(null);
-      queryClient.invalidateQueries({ queryKey: ['contacts'] });
-      queryClient.invalidateQueries({ queryKey: ['contactCount'] });
     } catch (err) {
-      setImportError(err instanceof Error ? err.message : 'Import failed');
+      setUploadError(err instanceof Error ? err.message : 'Import failed');
     } finally {
       setImportPhase(null);
       setUploadProgress(null);
     }
-  }, [importFile, queryClient]);
+  }, [importFile, startImport, startTracking]);
+
+  // Derived from the shared job so this panel and the pill can never disagree.
+  const importResult: ImportResult | null =
+    job?.status === 'completed' ? job.result : null;
+  const importError = uploadError
+    ?? (job?.status === 'failed' ? (job.errorMessage ?? 'Import failed') : null);
+  const isImportBusy = importPhase !== null || isImportRunning;
+  const importPercent = job && job.totalCards > 0
+    ? Math.min(100, Math.round((job.cardsProcessed / job.totalCards) * 100))
+    : 0;
 
   const handleExport = useCallback(() => {
     exportAllContacts();
@@ -99,7 +115,7 @@ export function SettingsView() {
         <section className={`settings-section collapsible-card${importExpanded ? ' expanded' : ''}`}>
           <button
             className="collapsible-header"
-            onClick={() => { setImportExpanded(!importExpanded); setImportResult(null); }}
+            onClick={() => setImportExpanded(!importExpanded)}
           >
             <div className="settings-section-header">
               <Icon name="file-import" />
@@ -119,20 +135,53 @@ export function SettingsView() {
                       id="vcf-input"
                       accept=".vcf,text/vcard"
                       file={importFile}
-                      onChange={(file) => { setImportFile(file); setImportError(null); }}
+                      onChange={(file) => { setImportFile(file); setUploadError(null); }}
                       prompt="Choose VCF file"
-                      disabled={importPhase !== null}
+                      disabled={isImportBusy}
                     />
-                    {importPhase !== null ? (
+                    {importPhase === 'uploading' ? (
                       <div className="import-progress-inline">
-                        {importPhase === 'uploading' ? (
-                          <>
-                            <p className="settings-description">Uploading… {uploadProgress}%</p>
-                            <progress value={uploadProgress ?? 0} max={100} />
-                          </>
-                        ) : (
-                          <p className="settings-description">Processing contacts — this may take a moment for large files…</p>
-                        )}
+                        <p className="settings-description">Uploading… {uploadProgress}%</p>
+                        <progress value={uploadProgress ?? 0} max={100} />
+                      </div>
+                    ) : isImportRunning && job ? (
+                      <div className="enrichment-progress">
+                        <div className="progress-header">
+                          <span className="progress-status">
+                            <Icon name="arrows-rotate" className="spinning" />
+                            Importing contacts…
+                          </span>
+                          <span className="progress-count">
+                            {job.cardsProcessed.toLocaleString()} of {job.totalCards.toLocaleString()}
+                          </span>
+                        </div>
+
+                        <div className="progress-bar-container">
+                          <div className="progress-bar-fill" style={{ width: `${importPercent}%` }} />
+                        </div>
+
+                        <div className="progress-current">
+                          This runs in the background — you can close this page and come back.
+                        </div>
+
+                        <div className="progress-stats">
+                          <span className="stat success">
+                            <Icon name="circle-check" />
+                            {job.importedCount.toLocaleString()} imported
+                          </span>
+                          {job.skippedCount > 0 && (
+                            <span className="stat skipped">
+                              <Icon name="circle-minus" />
+                              {job.skippedCount.toLocaleString()} already present
+                            </span>
+                          )}
+                          {job.failedCount > 0 && (
+                            <span className="stat error">
+                              <Icon name="circle-exclamation" />
+                              {job.failedCount.toLocaleString()} failed
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <button
@@ -152,11 +201,17 @@ export function SettingsView() {
               ) : (
                 <>
                   <p className="settings-description">Import complete.</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: importResult.skipped > 0 ? '1fr 1fr 1fr' : '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                     <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--ds-bg-secondary)', borderRadius: '0.5rem' }}>
                       <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--ds-color-primary)' }}>{importResult.imported}</div>
                       <div style={{ fontSize: '0.875rem', color: 'var(--ds-text-secondary)' }}>Imported</div>
                     </div>
+                    {importResult.skipped > 0 && (
+                      <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--ds-bg-secondary)', borderRadius: '0.5rem' }}>
+                        <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{importResult.skipped}</div>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--ds-text-secondary)' }}>Already present</div>
+                      </div>
+                    )}
                     <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--ds-bg-secondary)', borderRadius: '0.5rem' }}>
                       <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{importResult.photosProcessed}</div>
                       <div style={{ fontSize: '0.875rem', color: 'var(--ds-text-secondary)' }}>Photos</div>
@@ -169,14 +224,19 @@ export function SettingsView() {
                       </summary>
                       <ul style={{ fontSize: '0.875rem', maxHeight: '150px', overflow: 'auto' }}>
                         {importResult.errors.map((err, i) => (
-                          <li key={i}>Line {err.line}: {err.reason}</li>
+                          <li key={i}>Card {err.line}: {err.reason}</li>
                         ))}
                       </ul>
+                      {importResult.failed > importResult.errors.length && (
+                        <p className="settings-description">
+                          Showing the first {importResult.errors.length} of {importResult.failed} errors.
+                        </p>
+                      )}
                     </details>
                   )}
                   <button
                     className="secondary-button"
-                    onClick={() => setImportResult(null)}
+                    onClick={() => { dismissImport(); setUploadError(null); }}
                   >
                     Import Another File
                   </button>

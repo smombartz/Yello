@@ -104,6 +104,7 @@ export function ArchivedView() {
   useEffect(() => {
     setHeaderConfig({
       title: 'Archived',
+      breadcrumbs: [{ label: 'Tools', to: '/tools' }],
       info: <span>{archivedCount} contacts</span>,
       actions: archivedCount > 0 ? (
         <button className="header-action-btn secondary" onClick={handleExport}>

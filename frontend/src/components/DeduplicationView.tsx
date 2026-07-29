@@ -153,6 +153,7 @@ export function DeduplicationView() {
   useEffect(() => {
     setHeaderConfig({
       title: 'Resolve Duplicates',
+      breadcrumbs: [{ label: 'Tools', to: '/tools' }],
       info: !isDuplicatesLoading ? (
         <span>{visibleCount} of {totalGroups} duplicate groups</span>
       ) : undefined,

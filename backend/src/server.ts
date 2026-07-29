@@ -33,6 +33,7 @@ import gmailEnrichRoutes from './routes/gmailEnrich.js';
 import adminRoutes from './routes/admin.js';
 import icloudRoutes from './routes/icloud.js';
 import googleContactsRoutes from './routes/googleContacts.js';
+import { resumeInterruptedImports } from './services/importRecovery.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -214,6 +215,8 @@ await app.register(googleContactsRoutes, { prefix: '/api/google-contacts' });
 const port = parseInt(process.env.PORT || '3456');
 app.listen({ port, host: '0.0.0.0' }).then(() => {
   console.log(`Server running on port ${port}`);
+  // Pick up any VCF imports that were mid-flight when the process last stopped.
+  resumeInterruptedImports(app.log);
 });
 
 export default app;

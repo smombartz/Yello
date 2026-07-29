@@ -63,12 +63,12 @@ const TOOL_GROUPS: ToolGroup[] = [
         icon: 'file-import',
         location: 'Tools → Import · POST /api/import',
         tags: ['demo'],
-        how: 'Uploads a .vcf/.vcard file to /api/import with live upload progress. The backend validates the file, then parseVcf unfolds and splits the vCard blocks and parses each card with ical.js — name, emails, phones, addresses, org, title, notes, birthday, photo, categories and IMPP — plus regex for grouped labels, related names and social profiles. Phone numbers are normalized to E.164 via libphonenumber-js. Every card is inserted as a new contact (there is no de-duplication) along with all child rows; embedded photos are processed into four sizes and the full-text search index is rebuilt.',
+        how: 'Uploads a .vcf/.vcard file to /api/import with live upload progress. The file is streamed straight to disk and queued as a background job, so the request returns immediately with a job id and the browser polls /api/import/jobs/:id for progress — an import keeps running if you navigate away, and even survives a server restart by resuming from the last committed batch. The worker streams one vCard block at a time (so memory stays flat no matter how large the file is) and parses each card with ical.js — name, emails, phones, addresses, org, title, notes, birthday, photo, categories and IMPP — plus regex for grouped labels, related names and social profiles. Phone numbers are normalized to E.164 via libphonenumber-js. Cards are committed 50 at a time in a single transaction along with all child rows, and the full-text search index is rebuilt per contact; embedded photos are processed into four sizes between transactions. A card whose vCard UID already exists is skipped, so re-importing the same export is a no-op.',
         deps: {
           packages: ['ical.js', 'libphonenumber-js', 'sharp', 'better-sqlite3', '@fastify/multipart'],
-          env: ['PHOTOS_PATH'],
-          tables: ['contacts + child tables', 'contact_photos', 'contacts_unified_fts'],
-          services: ['vcardParser', 'photoProcessor', 'importService'],
+          env: ['PHOTOS_PATH', 'USER_DATA_PATH'],
+          tables: ['contacts + child tables', 'contact_photos', 'contacts_unified_fts', 'import_jobs'],
+          services: ['vcardParser', 'photoProcessor', 'importService', 'importJobService', 'importRecovery'],
         },
       },
       {
@@ -326,7 +326,10 @@ export function DocsView() {
   const [activeId, setActiveId] = useState<string>(ALL_ANCHOR_IDS[0]);
 
   useEffect(() => {
-    setHeaderConfig({ title: 'Docs' });
+    setHeaderConfig({
+      title: 'Docs',
+      breadcrumbs: [{ label: 'Admin', to: '/admin' }],
+    });
   }, [setHeaderConfig]);
 
   // Highlight the section nearest the top of the viewport in the table of contents.

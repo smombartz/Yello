@@ -354,7 +354,7 @@
 }
 
 /* ===== Responsive: drop the TOC on narrow viewports ===== */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .docs-layout {
     grid-template-columns: minmax(0, 1fr);
   }

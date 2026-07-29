@@ -411,11 +411,6 @@ select:focus-visible {
   padding-top: var(--ds-header-height);
 }
 
-.app-body-spacer {
-  flex: 1;
-  min-width: 0;
-}
-
 /* ===== Page Header ===== */
 
 .page-header {
@@ -439,6 +434,9 @@ select:focus-visible {
   justify-content: space-between;
   width: 100%;
   height: 100%;
+  /* Guaranteed separation between the columns so the title never abuts the
+     logo and the actions never abut the right edge when space is tight. */
+  column-gap: var(--ds-space-4);
 }
 
 .page-header-col-left {
@@ -446,6 +444,7 @@ select:focus-visible {
   display: flex;
   align-items: center;
   height: 100%;
+  min-width: var(--ds-header-side-col-min);
 }
 
 .page-header-logo-link {
@@ -459,8 +458,10 @@ select:focus-visible {
 }
 
 .page-header-col-center {
-  width: var(--ds-content-width);
-  flex-shrink: 0;
+  /* Target the content width but shrink below it on 769–1100px windows so
+     the header column stays aligned with the main content column. */
+  flex: 0 1 var(--ds-content-width);
+  min-width: 0;
 }
 
 .page-header-center-row {
@@ -478,6 +479,57 @@ select:focus-visible {
   margin: 0;
   white-space: nowrap;
   line-height: 20px;
+  /* Fixed slot for one-word page titles so the search bar starts at the
+     same x on every page; long titles (contact names) ellipsize. */
+  min-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Breadcrumb trail — parent section(s) + current page title in the title slot.
+   The container takes over the title's fixed 120px slot; the title inside
+   shrinks and ellipsizes while the crumbs keep their full width. */
+.page-header-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  min-width: 120px;
+  overflow: hidden;
+}
+
+.page-header-breadcrumbs .page-header-title {
+  min-width: 0;
+}
+
+.page-header-crumb-item {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  flex-shrink: 0;
+}
+
+.page-header-crumb {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--ds-header-title-size);
+  font-weight: var(--ds-weight-bold);
+  line-height: 20px;
+  white-space: nowrap;
+  color: var(--ds-text-muted);
+  text-decoration: none;
+}
+
+.page-header-crumb:hover {
+  color: var(--ds-text-primary);
+}
+
+.page-header-crumb-sep {
+  font-size: var(--ds-font-xs);
+  color: var(--ds-text-muted);
 }
 
 /* Shared SearchBar (components/ui/SearchBar.tsx) */
@@ -493,11 +545,20 @@ select:focus-visible {
   box-sizing: border-box;
 }
 
-/* Header variant — grows to fill the header center column */
+/* Header variant — pinned to the right edge of the center column, ahead of
+   any info/actions blocks. */
 .search-bar--header {
   max-width: var(--ds-header-search-width);
   flex: 1;
   min-width: 200px;
+  margin-left: auto;
+}
+
+/* When a search bar is present it already carries the auto margin, so the
+   info block drops its own and sits right after the search instead of
+   splitting the free space with it. */
+.search-bar--header ~ .page-header-info {
+  margin-left: 0;
 }
 
 /* Plain variant — borderless row for use inside a card (e.g. autocomplete) */
@@ -572,19 +633,42 @@ input.search-bar-input {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Pin to the right edge of the center column so counts sit in the same
+     spot on every page instead of floating after the search bar. */
+  margin-left: auto;
 }
 
+/* Empty spacer that mirrors the left (logo) column so the center column
+   stays centered on the viewport, aligned with the main content column.
+   The min-width MUST match the left column's — without it this column
+   collapses to 0 on narrow windows while the left holds its floor, which
+   shifts the whole center column off-center to the right. */
 .page-header-col-right {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
+  min-width: var(--ds-header-side-col-min);
 }
 
 .page-header-actions {
   display: flex;
   align-items: center;
   gap: var(--ds-space-2);
+  min-width: 0;
+  flex-shrink: 0;
+  /* Pin to the right edge of the content column; when an info block is
+     present it already carries the auto margin, so drop it to keep the
+     info pinned right with the actions following. */
+  margin-left: auto;
+}
+
+.page-header-info + .page-header-actions,
+.search-bar--header ~ .page-header-actions {
+  margin-left: 0;
+}
+
+/* Buttons keep their size when space is tight; flexible items beside them
+   (e.g. the profile email) shrink and truncate instead. */
+.page-header-actions button {
+  flex-shrink: 0;
 }
 
 .page-header-sub {
@@ -736,8 +820,11 @@ a.nav-rail-item.active {
 
 /* Main Content */
 .main-content {
-  width: var(--ds-content-width);
-  flex-shrink: 0;
+  /* Target the content width but shrink below it on narrow windows instead
+     of overflowing the viewport; the max-width keeps the column clear of
+     the fixed nav rail on both sides. */
+  flex: 0 1 var(--ds-content-width);
+  max-width: calc(100% - 2 * var(--ds-nav-rail-width));
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -746,7 +833,8 @@ a.nav-rail-item.active {
 }
 
 .main-content:has(.map-view) {
-  width: 100%;
+  flex-basis: 100%;
+  max-width: 100%;
 }
 
 .header-actions {
@@ -782,23 +870,6 @@ a.nav-rail-item.active {
   flex: 1;
   padding: 1.5rem 0;
   overflow-y: auto;
-}
-
-.page-header {
-  margin-bottom: var(--ds-space-6);
-}
-
-.page-header h1 {
-  margin: 0 0 0.25rem;
-  font-size: 1.75rem;
-  font-weight: var(--ds-weight-bold);
-  color: var(--ds-text-primary);
-}
-
-.page-header p {
-  margin: 0;
-  color: var(--ds-text-secondary);
-  font-size: 0.9375rem;
 }
 
 /* Contact List */
@@ -875,7 +946,7 @@ a.nav-rail-item.active {
 }
 
 .contact-details > .contact-detail-item {
-  width: 220px;
+  width: min(220px, 100%);
   overflow: hidden;
 }
 
@@ -3064,7 +3135,10 @@ a.whatsapp-link:hover {
   display: flex;
   align-items: center;
   gap: var(--ds-space-3);
-  min-width: 200px;
+  /* Fill available space but allow shrinking below content width so the
+     name truncates instead of overflowing on narrow screens. */
+  flex: 1;
+  min-width: 0;
 }
 
 .within-contact-avatar {
@@ -3090,6 +3164,10 @@ a.whatsapp-link:hover {
   font-weight: var(--ds-weight-medium);
   font-size: 0.9375rem;
   color: var(--ds-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .within-contact-urls {
@@ -7277,6 +7355,12 @@ a.whatsapp-link:hover {
   gap: var(--ds-space-2);
 }
 
+@media (max-width: 640px) {
+  .geocoding-edit-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .geocoding-edit-actions {
   display: flex;
   justify-content: flex-end;
@@ -7400,14 +7484,15 @@ a.whatsapp-link:hover {
 
 /* Mobile layout adjustments */
 @media (max-width: 768px) {
-  .nav-rail,
-  .app-body-spacer {
+  .nav-rail {
     display: none;
   }
 
   .main-content {
-    width: 100%;
-    flex-shrink: 1;
+    /* flex-basis (not width) — the desktop rule sets flex-basis, which
+       would win over a width override. */
+    flex: 1 1 100%;
+    max-width: 100%;
     padding: 0 1rem calc(56px + env(safe-area-inset-bottom));
   }
 
@@ -7422,8 +7507,8 @@ a.whatsapp-link:hover {
   }
 
   .page-header-col-center {
-    width: 100%;
-    flex-shrink: 1;
+    /* flex-basis (not width) — see .main-content note above. */
+    flex: 1 1 100%;
   }
 
   .page-header-center-row {
@@ -7434,6 +7519,9 @@ a.whatsapp-link:hover {
     width: auto;
     flex: 1;
     flex-shrink: 1;
+    /* Override the 200px desktop min so the search can shrink on
+       narrow phones instead of overflowing the header. */
+    min-width: 0;
   }
 
   .page-header-info {
@@ -7441,7 +7529,10 @@ a.whatsapp-link:hover {
   }
 
   .page-header-col-right {
-    flex: 0;
+    /* The left (logo) column is hidden too — with both spacers gone the
+       center column gets the full width; keeping this visible would waste
+       its --ds-header-side-col-min floor on phone widths. */
+    display: none;
   }
 
   /* Adjust page content for mobile */
@@ -7846,7 +7937,7 @@ a.whatsapp-link:hover {
 }
 
 /* Mobile responsive */
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   .icloud-match-comparison {
     flex-direction: column;
     gap: var(--ds-space-2);

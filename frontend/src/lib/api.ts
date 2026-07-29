@@ -1,4 +1,4 @@
-import type { ContactsResponse, ContactDetail, ImportResponse } from '../types';
+import type { ContactsResponse, ContactDetail } from '../types';
 
 const API_BASE = '';
 
@@ -17,18 +17,6 @@ export const api = {
   async getContact(id: number): Promise<ContactDetail> {
     const response = await fetch(`${API_BASE}/api/contacts/${id}`);
     if (!response.ok) throw new Error('Failed to fetch contact');
-    return response.json();
-  },
-
-  async importVcf(file: File): Promise<ImportResponse> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${API_BASE}/api/import`, {
-      method: 'POST',
-      body: formData
-    });
-    if (!response.ok) throw new Error('Failed to import file');
     return response.json();
   },
 

@@ -1,10 +1,13 @@
+import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchApi, uploadFile } from './client';
+import { fetchApi, uploadFile, uploadFileWithProgress } from './client';
 import type {
   ContactListResponse,
   ContactDetail,
   ContactIdsResponse,
-  ImportResult,
+  VcfImportJob,
+  StartImportResponse,
+  ActiveImportJobResponse,
   GroupsResponse,
   UpdateContactRequest,
   CreateContactRequest,
@@ -75,16 +78,92 @@ export function useContactCount() {
   });
 }
 
-export function useImportVcf() {
-  const queryClient = useQueryClient();
+/** Survives a page reload so a running import can be picked back up. */
+const IMPORT_JOB_STORAGE_KEY = 'yello.vcfImportJobId';
 
+export function rememberImportJobId(jobId: string): void {
+  try {
+    localStorage.setItem(IMPORT_JOB_STORAGE_KEY, jobId);
+  } catch { /* private mode — polling still works for this session */ }
+}
+
+export function readImportJobId(): string | null {
+  try {
+    return localStorage.getItem(IMPORT_JOB_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function forgetImportJobId(): void {
+  try {
+    localStorage.removeItem(IMPORT_JOB_STORAGE_KEY);
+  } catch { /* nothing to clean up */ }
+}
+
+/**
+ * Uploads a VCF and returns the background job that will process it. The
+ * upload itself reports real byte progress; everything after that is polled
+ * via useVcfImportJob.
+ */
+export function useStartVcfImport() {
   return useMutation({
-    mutationFn: (file: File) => uploadFile('/api/import', file) as Promise<ImportResult>,
-    onSuccess: () => {
-      // Invalidate all contact queries after import
-      queryClient.invalidateQueries({ queryKey: ['contacts'] });
-      queryClient.invalidateQueries({ queryKey: ['contactCount'] });
+    mutationFn: ({ file, onUploadProgress }: { file: File; onUploadProgress?: (percent: number) => void }) =>
+      uploadFileWithProgress('/api/import', file, onUploadProgress ?? (() => {})) as Promise<StartImportResponse>,
+    onSuccess: ({ jobId }) => rememberImportJobId(jobId),
+  });
+}
+
+/**
+ * Polls a running import. Stops as soon as the job reaches a terminal state,
+ * then refreshes the contact list once.
+ */
+export function useVcfImportJob(jobId: string | null) {
+  const queryClient = useQueryClient();
+  const settledRef = useRef<string | null>(null);
+
+  const query = useQuery({
+    queryKey: ['vcfImportJob', jobId],
+    queryFn: () => fetchApi<VcfImportJob>(`/api/import/jobs/${jobId}`),
+    enabled: !!jobId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === 'pending' || status === 'running' ? 1500 : false;
     },
+    staleTime: 0,
+    // A stale id from localStorage should fail fast so the caller can drop it,
+    // not retry and leave the import form stuck in a busy state.
+    retry: false,
+  });
+
+  const job = query.data;
+
+  useEffect(() => {
+    if (!job || (job.status !== 'completed' && job.status !== 'failed')) return;
+    // Guard against re-running on every poll-driven render.
+    if (settledRef.current === job.id) return;
+    settledRef.current = job.id;
+
+    queryClient.invalidateQueries({ queryKey: ['contacts'] });
+    queryClient.invalidateQueries({ queryKey: ['contactCount'] });
+    // The stored id deliberately outlives completion: the status indicator
+    // shows terminal jobs until dismissed, so a result that landed while the
+    // user was on another page (or before a reload) still gets seen.
+    // ImportStatusProvider clears it via forgetImportJobId() on dismiss.
+  }, [job, queryClient]);
+
+  return query;
+}
+
+/**
+ * Finds an import already in flight, so navigating away and back (or reloading)
+ * reconnects to it instead of losing the progress display.
+ */
+export function useActiveVcfImportJob() {
+  return useQuery({
+    queryKey: ['vcfImportJob', 'active'],
+    queryFn: () => fetchApi<ActiveImportJobResponse>('/api/import/jobs/active'),
+    staleTime: 0,
   });
 }
 

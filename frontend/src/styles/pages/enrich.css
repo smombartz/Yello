@@ -100,7 +100,9 @@
 
 .enrich-stats-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* auto-fit lets the stat cards flow from 4 cols (desktop) down to 1 on
+     narrow phones without a manual breakpoint. */
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--ds-space-3);
   margin-bottom: var(--ds-space-5);
 }
@@ -267,6 +269,7 @@
 .limit-input-group {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--ds-space-2);
   margin-top: var(--ds-space-3);
   font-size: var(--ds-font-sm);
@@ -560,6 +563,7 @@
   color: var(--ds-text-primary);
   cursor: pointer;
   min-width: 200px;
+  max-width: 100%;
 }
 
 .strategy-select:focus {
@@ -624,10 +628,6 @@
 }
 
 @media (max-width: 768px) {
-  .enrich-stats-row {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .enrichment-actions {
     flex-direction: column;
   }
