@@ -9,12 +9,14 @@ import {
   createImportJob,
   getImportJob,
   getActiveImportJob,
+  getLatestFinishedImportJob,
   failJob
 } from '../services/importJobService.js';
 import {
   ImportJobParamsSchema,
   ImportJobSchema,
   ActiveImportJobResponseSchema,
+  LatestImportJobResponseSchema,
   type ImportJobParams
 } from '../schemas/import.js';
 
@@ -149,6 +151,18 @@ const importRoutes: FastifyPluginAsync = async (app) => {
   }, async (request) => {
     const db = getUserDatabase(request.user!.id);
     return { job: getActiveImportJob(db) };
+  });
+
+  /**
+   * The most recent finished import. Unlike /active this ignores dismissal, so
+   * the Tools panel can keep showing the last result indefinitely.
+   */
+  app.get('/import/jobs/latest', {
+    config: { rateLimit: { max: 300, timeWindow: '1 minute' } },
+    schema: { response: { 200: LatestImportJobResponseSchema } }
+  }, async (request) => {
+    const db = getUserDatabase(request.user!.id);
+    return { job: getLatestFinishedImportJob(db) };
   });
 
   app.get<{ Params: ImportJobParams }>('/import/jobs/:id', {

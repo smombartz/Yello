@@ -24,6 +24,11 @@ Importing a `.vcf` is a **staged, chunked background job**, not an inline reques
 - **Re-imports are safe.** A card whose vCard `UID` matches an existing `contacts.icloud_uid` is skipped and counted separately; new contacts get their UID stamped. Cards without a UID still insert unconditionally — full match/merge (as iCloud/Google import does via `matchIncomingContacts`) remains a follow-up.
 - **Restart-safe.** `cards_processed` is written only after a batch commits, making it an exact resume offset. `resumeInterruptedImports` runs at boot, walks `USER_DATA_PATH` (there is no cross-user index — each tenant is a separate SQLite file), and re-enqueues any `running` job whose staged file survives. The staged file is deleted on success and kept on failure for debugging.
 - One import at a time per user; a concurrent upload gets a 409.
+- **Per-address `GEO` is preserved**, closing the round trip with the exporter below. Coordinates are matched to their address by item group (`item1.ADR` ↔ `item1.GEO`) since vCard 3.0's bare `GEO` is card-level; a card-level `GEO` is only applied when the card has exactly one address. `0;0` and out-of-range values are rejected as failed-geocode sentinels. Imported coordinates stamp `geocoded_at` so the address-cleanup queue does not re-geocode them through the paid HERE API. iCloud import shares the parser and benefits too; the Google People API exposes no coordinates.
+
+#### Last import summary
+
+`GET /api/import/jobs/latest` returns the most recent `completed`/`failed` job, independent of the tracked-job lifecycle that drives the status indicator. The Tools → Import VCF section renders it as a persistent "Last import" block (imported / already present / photos / geotagged / failed, plus filename, time and size), so results survive dismissing the pill, navigation, and new sessions. The upload form is always available above it — there is no form-vs-result mode switch.
 
 Historical note: this replaced a synchronous path guarded by a 2-minute `Promise.race`. That race returned **408 while the import kept running**, so large files reported failure, kept writing contacts, and duplicated them on retry (the path had no dedupe at all).
 
@@ -36,6 +41,15 @@ Historical note: this replaced a synchronous path guarded by a 2-minute `Promise
 - **Terminal jobs persist until dismissed.** `forgetImportJobId()` runs on `dismiss()`, not on completion — otherwise an import that finished while the user was elsewhere would leave no trace.
 - **`z-index: 400`** puts the pill above the header/nav rail (300) and below the modal overlay (500), so modals cover it without it having to track modal state — several modals here never report theirs.
 - The pill takes a **generic `BackgroundJobSummary`**, so LinkedIn CSV / Google Contacts / enrichment can feed it once they migrate off SSE. Today they stream over SSE and die on unmount, so they cannot.
+
+### VCF export (`GET /api/contacts/export/vcf`)
+
+Exports all non-archived contacts as vCard 3.0. Two modes:
+
+- **Default** reuses each contact's stored `raw_vcard` (falling back to generation for contacts without one), injecting the current photo and geocode data.
+- **`?regenerate=true`** rebuilds every card from database fields via `generateVcard()` (`backend/src/services/vcardGenerator.ts`).
+
+**Geocode data:** addresses geocoded by the address-cleanup feature (`contact_addresses.latitude/longitude`) export as per-address `GEO` properties tied to their `ADR` via Apple-style item groups (`item1.ADR` + `item1.GEO:lat;lon`) — vCard 3.0's plain `GEO` is card-level, so grouping is what keeps it per-address. For raw vCards, `injectGeoIntoVcard()` matches DB addresses to `ADR` lines by street + city/postal (positional fallback when counts align), reuses the ADR's existing group or adds a `yelloN.` group to ungrouped ones, and replaces any stale `GEO` lines. Unmatched addresses are skipped rather than guessed.
 
 ### Public profile card (`/p/:slug`)
 

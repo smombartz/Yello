@@ -76,6 +76,9 @@ describe('mapGooglePersonToParsedContact', () => {
       postalCode: '94105',
       country: 'US',
       type: 'home',
+      // The People API exposes no coordinates, unlike a vCard's GEO property.
+      latitude: null,
+      longitude: null,
     });
 
     // URLs

@@ -121,7 +121,7 @@ export default async function icloudRoutes(
     `);
     const insertEmail = db.prepare('INSERT INTO contact_emails (contact_id, email, type, is_primary) VALUES (?, ?, ?, ?)');
     const insertPhone = db.prepare('INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, is_primary) VALUES (?, ?, ?, ?, ?, ?)');
-    const insertAddress = db.prepare('INSERT INTO contact_addresses (contact_id, street, city, state, postal_code, country, type) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    const insertAddress = db.prepare('INSERT INTO contact_addresses (contact_id, street, city, state, postal_code, country, type, latitude, longitude, geocoded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? IS NULL THEN NULL ELSE datetime(\'now\') END)');
     const insertCategory = db.prepare('INSERT INTO contact_categories (contact_id, category) VALUES (?, ?)');
     const insertInstantMessage = db.prepare('INSERT INTO contact_instant_messages (contact_id, service, handle, type) VALUES (?, ?, ?, ?)');
     const insertUrl = db.prepare('INSERT INTO contact_urls (contact_id, url, label, type) VALUES (?, ?, ?, ?)');
@@ -152,7 +152,7 @@ export default async function icloudRoutes(
 
         for (const e of contact.emails) insertEmail.run(contactId, e.email, e.type, e.isPrimary ? 1 : 0);
         for (const p of contact.phones) insertPhone.run(contactId, p.phone, p.phoneDisplay, p.countryCode, p.type, p.isPrimary ? 1 : 0);
-        for (const a of contact.addresses) insertAddress.run(contactId, a.street, a.city, a.state, a.postalCode, a.country, a.type);
+        for (const a of contact.addresses) insertAddress.run(contactId, a.street, a.city, a.state, a.postalCode, a.country, a.type, a.latitude, a.longitude, a.latitude);
         for (const c of contact.categories) insertCategory.run(contactId, c);
         for (const im of contact.instantMessages) insertInstantMessage.run(contactId, im.service, im.handle, im.type);
         for (const u of contact.urls) insertUrl.run(contactId, u.url, u.label, u.type);
@@ -242,7 +242,7 @@ export default async function icloudRoutes(
         for (const a of incomingContact.addresses) {
           const key = `${(a.street || '').toLowerCase()}|${(a.city || '').toLowerCase()}|${(a.postalCode || '').toLowerCase()}`;
           if (!existingAddresses.has(key)) {
-            insertAddress.run(existingContactId, a.street, a.city, a.state, a.postalCode, a.country, a.type);
+            insertAddress.run(existingContactId, a.street, a.city, a.state, a.postalCode, a.country, a.type, a.latitude, a.longitude, a.latitude);
           }
         }
 

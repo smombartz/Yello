@@ -132,7 +132,8 @@ describe('runVcfImportJob', () => {
       importedCount: 4,
       skippedCount: 0,
       failedCount: 0,
-      photosProcessed: 0
+      photosProcessed: 0,
+      addressesGeotagged: 0
     });
 
     const result = await runVcfImportJob(USER_ID, jobId);
@@ -164,6 +165,126 @@ describe('runVcfImportJob', () => {
     const db = getUserDatabase(USER_ID);
     const row = db.prepare('SELECT notes FROM contacts LIMIT 1').get() as { notes: string | null };
     expect(row.notes).toContain('two physical lines');
+  });
+
+  it('keeps per-address GEO coordinates from a grouped vCard', async () => {
+    // This is exactly the shape vcardGenerator writes on export, so an
+    // export/import round trip must not lose the geocoding.
+    const vcf = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      'FN:Geo Person',
+      'N:Person;Geo;;;',
+      'item1.ADR;TYPE=HOME:;;1 Infinite Loop;Cupertino;CA;95014;USA',
+      'item1.GEO:37.331741;-122.030333',
+      'END:VCARD'
+    ].join('\n');
+
+    const result = await runVcfImportJob(USER_ID, stageJob(vcf));
+    expect(result.addressesGeotagged).toBe(1);
+
+    const row = getUserDatabase(USER_ID)
+      .prepare('SELECT latitude, longitude, geocoded_at FROM contact_addresses LIMIT 1')
+      .get() as { latitude: number; longitude: number; geocoded_at: string | null };
+
+    expect(row.latitude).toBeCloseTo(37.331741);
+    expect(row.longitude).toBeCloseTo(-122.030333);
+    // Stamped so the geocoding queue treats it as done, not pending.
+    expect(row.geocoded_at).not.toBeNull();
+  });
+
+  it('matches GEO to the right address when a card has several', async () => {
+    const vcf = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      'FN:Multi Address',
+      'N:Address;Multi;;;',
+      'item1.ADR;TYPE=HOME:;;1 Home St;Springfield;IL;62701;USA',
+      'item1.GEO:39.799999;-89.650002',
+      'ADR;TYPE=WORK:;;2 Work Ave;Chicago;IL;60601;USA',
+      'END:VCARD'
+    ].join('\n');
+
+    const result = await runVcfImportJob(USER_ID, stageJob(vcf));
+    expect(result.addressesGeotagged).toBe(1);
+
+    const rows = getUserDatabase(USER_ID)
+      .prepare('SELECT street, latitude FROM contact_addresses ORDER BY id')
+      .all() as Array<{ street: string; latitude: number | null }>;
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0].street).toBe('1 Home St');
+    expect(rows[0].latitude).toBeCloseTo(39.799999);
+    // The ungrouped work address must not inherit the home coordinates.
+    expect(rows[1].street).toBe('2 Work Ave');
+    expect(rows[1].latitude).toBeNull();
+  });
+
+  it('applies a card-level GEO only when there is one address', async () => {
+    const single = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      'FN:Single Addr',
+      'N:Addr;Single;;;',
+      'ADR;TYPE=HOME:;;5 Only Rd;Boston;MA;02101;USA',
+      'GEO:42.360081;-71.058884',
+      'END:VCARD'
+    ].join('\n');
+
+    expect((await runVcfImportJob(USER_ID, stageJob(single))).addressesGeotagged).toBe(1);
+
+    getUserDatabase(USER_ID).exec('DELETE FROM contacts');
+
+    const ambiguous = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      'FN:Two Addr',
+      'N:Addr;Two;;;',
+      'ADR;TYPE=HOME:;;5 One Rd;Boston;MA;02101;USA',
+      'ADR;TYPE=WORK:;;6 Two Rd;Boston;MA;02102;USA',
+      'GEO:42.360081;-71.058884',
+      'END:VCARD'
+    ].join('\n');
+
+    // Guessing which of two addresses a card-level GEO belongs to is worse
+    // than leaving both ungeocoded.
+    expect((await runVcfImportJob(USER_ID, stageJob(ambiguous))).addressesGeotagged).toBe(0);
+  });
+
+  it('ignores unusable GEO values', async () => {
+    const vcf = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      'FN:Bad Geo',
+      'N:Geo;Bad;;;',
+      // 0;0 is the common "geocoding failed" sentinel, not the Atlantic.
+      'item1.ADR;TYPE=HOME:;;1 Null Island;Nowhere;;;',
+      'item1.GEO:0;0',
+      'END:VCARD'
+    ].join('\n');
+
+    expect((await runVcfImportJob(USER_ID, stageJob(vcf))).addressesGeotagged).toBe(0);
+  });
+
+  it('accepts the vCard 4.0 geo: URI form', async () => {
+    const vcf = [
+      'BEGIN:VCARD',
+      'VERSION:4.0',
+      'FN:V4 Person',
+      'N:Person;V4;;;',
+      'item1.ADR;TYPE=home:;;9 Fourth St;Portland;OR;97201;USA',
+      'item1.GEO:geo:45.512230,-122.658722',
+      'END:VCARD'
+    ].join('\n');
+
+    const result = await runVcfImportJob(USER_ID, stageJob(vcf));
+    expect(result.addressesGeotagged).toBe(1);
+
+    const row = getUserDatabase(USER_ID)
+      .prepare('SELECT latitude, longitude FROM contact_addresses LIMIT 1')
+      .get() as { latitude: number; longitude: number };
+    expect(row.latitude).toBeCloseTo(45.51223);
+    expect(row.longitude).toBeCloseTo(-122.658722);
   });
 
   it('marks the job failed when the staged file is missing', async () => {

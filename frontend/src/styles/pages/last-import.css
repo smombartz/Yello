@@ -1,0 +1,108 @@
+/**
+ * Last import summary
+ *
+ * Persistent record of the most recent finished import, shown under the form in
+ * the Tools → Import VCF section. Sourced from /api/import/jobs/latest, so it
+ * outlives the status indicator's dismissal.
+ */
+
+.last-import {
+  margin-top: var(--ds-space-5);
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-border-color);
+}
+
+.last-import__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ds-space-2) var(--ds-space-3);
+  margin-bottom: var(--ds-space-3);
+}
+
+.last-import__title {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  margin: 0;
+  font-size: var(--ds-font-sm);
+  font-weight: 600;
+  color: var(--ds-text-primary);
+}
+
+.last-import__meta {
+  font-size: var(--ds-font-xs);
+  color: var(--ds-text-secondary);
+  /* Long filenames must not push the timestamp out of the card. */
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.last-import__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: var(--ds-space-2);
+  margin: 0;
+}
+
+.last-import__stat {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  padding: var(--ds-space-3) var(--ds-space-2);
+  text-align: center;
+  background: var(--ds-bg-secondary);
+  border-radius: var(--ds-radius-md);
+}
+
+.last-import__stat-label {
+  font-size: var(--ds-font-xs);
+  color: var(--ds-text-secondary);
+}
+
+.last-import__stat-value {
+  margin: 0;
+  font-size: var(--ds-font-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.last-import__stat--primary .last-import__stat-value {
+  color: var(--ds-color-primary);
+}
+
+.last-import__stat--error .last-import__stat-value {
+  color: var(--ds-color-error);
+}
+
+/* A zero count is context, not a result — keep it from competing visually. */
+.last-import__stat.is-zero .last-import__stat-value {
+  color: var(--ds-text-muted);
+  font-weight: 600;
+}
+
+.last-import__error {
+  margin: 0;
+  font-size: var(--ds-font-sm);
+  color: var(--ds-color-error);
+}
+
+.last-import__errors {
+  margin-top: var(--ds-space-3);
+}
+
+.last-import__errors summary {
+  font-size: var(--ds-font-sm);
+  color: var(--ds-color-error);
+  cursor: pointer;
+}
+
+.last-import__errors ul {
+  max-height: 150px;
+  overflow: auto;
+  margin: var(--ds-space-2) 0 0;
+  padding-left: var(--ds-space-5);
+  font-size: var(--ds-font-xs);
+  color: var(--ds-text-secondary);
+}

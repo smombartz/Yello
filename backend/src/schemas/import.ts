@@ -19,6 +19,8 @@ export const ImportJobResultSchema = Type.Object({
   skipped: Type.Number(),
   failed: Type.Number(),
   photosProcessed: Type.Number(),
+  // Older result blobs predate this field, so it has to be optional.
+  addressesGeotagged: Type.Optional(Type.Number()),
   errors: Type.Array(Type.Object({
     line: Type.Number(),
     reason: Type.String()
@@ -41,6 +43,8 @@ export const ImportJobSchema = Type.Object({
   skippedCount: Type.Number(),
   failedCount: Type.Number(),
   photosProcessed: Type.Number(),
+  addressesGeotagged: Type.Number(),
+  fileSize: Type.Union([Type.Number(), Type.Null()]),
   result: Type.Union([ImportJobResultSchema, Type.Null()]),
   errorMessage: Type.Union([Type.String(), Type.Null()]),
   startedAt: Type.Union([Type.String(), Type.Null()]),
@@ -55,5 +59,9 @@ export const StartImportResponseSchema = Type.Object({
 });
 
 export const ActiveImportJobResponseSchema = Type.Object({
+  job: Type.Union([ImportJobSchema, Type.Null()])
+});
+
+export const LatestImportJobResponseSchema = Type.Object({
   job: Type.Union([ImportJobSchema, Type.Null()])
 });

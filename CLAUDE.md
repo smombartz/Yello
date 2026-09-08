@@ -1,12 +1,32 @@
 # CLAUDE.md
 
+## Stack
+
+Read this first — it heads off the most common wrong assumptions. Nothing here is Postgres, Supabase, Express, or Next.js.
+
+- **Backend:** Fastify 5 + TypeScript (ESM). Entry point `backend/src/server.ts`; one plugin per file in `routes/`, business logic in `services/`, TypeBox schemas in `schemas/`.
+- **Database:** `better-sqlite3`, WAL. **Multi-tenancy is one SQLite file per user** — isolation comes from opening a different file, not from a `user_id` column, so there is no cross-tenant query surface. See `docs/database.md`.
+- **Frontend:** React 19 + Vite 7 + TanStack Query v5. Plain global CSS (`index.css` + `styles/`), no CSS modules or Tailwind. Design tokens are `--ds-*` custom properties.
+- **Auth:** Google OAuth + signed cookie sessions. A global `onRequest` hook guards `/api/*` and `/photos/*`; handlers scope data with `getUserDatabase(request.user!.id)`.
+- **Deployment:** single Docker container on Railway with a persistent volume at `/data`. Also packaged as an Electron desktop app.
+- **Tests:** Vitest (`cd backend && npx vitest run`). A few suites are slow enough to need `--testTimeout=20000`.
+- **Type-checking the frontend:** use `npm run build`. A bare `npx tsc --noEmit` at the frontend root misses `tsconfig.app.json` (`noUnusedLocals`, `include: ["src"]`) and will pass on code that fails the build.
+
+---
+
 ## Documentation
 
 When new features, integrations, architecture decisions, or other noteworthy information comes up during work, document it in `docs/readme.md`. Keep it updated as a living reference for the project.
 
-**Database reference:** `docs/database.md` is the human-readable overview of the schema — every table, field, enum, RLS rule, bucket, and seeded option list in use. **Any migration that adds or changes tables, columns, enums, seed data, views, policies, or storage buckets must update `docs/database.md` in the same change.** (Migrations in `supabase/migrations/` remain the source of truth; the overview is the map.)
+**Database reference:** `docs/database.md` is the human-readable overview of the schema — every table, column, CHECK constraint, index, FTS table, and on-disk artefact in use. **Any change that adds or alters tables, columns, constraints, indexes, triggers, or seed data must update `docs/database.md` in the same change.**
 
-**Learn content:** `docs/learn.md` is the authoring guide for the Learn section (the file-based MDX blog at `/learn`). **When creating or editing any post under `content/learn/`, follow it** — the frontmatter contract, the components available inside posts (`<Figure>`/`<Gallery>`/`<Video>`/`<YouTube>`), image handling, and conventions. (`lib/learn.ts` is the source of truth for the frontmatter schema.)
+There are no migration files and no migration CLI. Schema is applied imperatively on every connection, so the code is the source of truth:
+
+- `backend/src/services/authDatabase.ts` — the shared auth database (`/data/auth.db`)
+- `backend/src/services/userDatabase.ts` — the per-user contacts database (`/data/users/<id>/contacts.db`)
+- `backend/src/routes/profile.ts` — `user_profiles` and `profile_slugs`, created lazily
+
+To add a column: add it to the `CREATE TABLE IF NOT EXISTS` block **and** add an idempotent `try { ALTER TABLE ... } catch {}` so existing databases pick it up.
 
 ---
 
@@ -57,17 +77,21 @@ All implementation plans must be saved to `docs/plans/`. Filenames must start wi
 ### Example
 
 ```markdown
-## 2026-03-27 - Added Parent Name field to notification form
+## 2026-07-30 — VCF import keeps per-address GEO coordinates
 
 **What Changed:**
-- Added "Parent Name" input field to the email notification modal
-- Updated `submitNotify()` to collect and send parent name to Google Apps Script
+- `vcardParser` now parses `GEO`, matched to its address by item group (`item1.ADR` ↔ `item1.GEO`)
+- Import persists `latitude`/`longitude` and stamps `geocoded_at` so the cleanup queue skips them
+- Added `addresses_geotagged` to `import_jobs`, surfaced in the Last import summary
 
 **Why:**
-- Parents want to be identified when registering interest, not just by email
+- Export wrote coordinates but import discarded them, so an export/import round trip
+  silently lost all geocoding and forced re-billing through the HERE API
 
 **Files Modified:**
-- `index.html` - Added input field and updated form submission logic
+- `backend/src/services/vcardParser.ts` — `applyGeoToAddresses`, `parseGeoValue`
+- `backend/src/services/importService.ts` — persist coordinates, count them
+- `backend/src/services/userDatabase.ts` — `addresses_geotagged` column + migration
 
 ---
 ```
@@ -79,48 +103,16 @@ Log entries are needed for:
 - ✅ Bug fixes
 - ✅ File modifications
 - ✅ New file creation
-- ✅ Schema/structure changes (e.g., adding columns to Google Sheet)
+- ✅ Schema changes (see the database reference requirement above)
 
 Don't log:
 - ❌ Reading files to understand context
 - ❌ Running tests/verification
 - ❌ Responding to questions without code changes
 
-
-
 ### Workflow
 
 1. **Make the code change(s)**
 2. **Write the log entry** in the format above
-3. **Append to `docs/log.md`**
+3. **Insert it at the top of `docs/log.md`** — most recent first, preserving all existing entries
 4. **Inform the user** of what was done in your response
-
----
-
-### How to Update `docs/log.md`
-
-```javascript
-// Pseudocode - in practice, use Read → Edit/Write
-const logEntry = `
-## [YYYY-MM-DD] - [Title]
-
-**What Changed:**
-- ...
-
-**Why:**
-- ...
-
-**Files Modified:**
-- ...
-
----
-`;
-
-// Append to docs/log.md
-```
-
-Always preserve existing log entries. New entries go at the **top** (most recent first) for easy scanning.
-
----
-
-## Current Project State

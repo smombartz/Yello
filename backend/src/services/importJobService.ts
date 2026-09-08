@@ -16,6 +16,7 @@ export interface ImportJob {
   skippedCount: number;
   failedCount: number;
   photosProcessed: number;
+  addressesGeotagged: number;
   result: ImportJobResult | null;
   errorMessage: string | null;
   startedAt: string | null;
@@ -28,6 +29,8 @@ export interface ImportJobResult {
   skipped: number;
   failed: number;
   photosProcessed: number;
+  /** Addresses that arrived with usable GEO coordinates in the file. */
+  addressesGeotagged: number;
   /** Truncated to MAX_STORED_ERRORS — `failed` is the true count. */
   errors: Array<{ line: number; reason: string }>;
 }
@@ -38,6 +41,7 @@ export interface ImportJobProgress {
   skippedCount: number;
   failedCount: number;
   photosProcessed: number;
+  addressesGeotagged: number;
 }
 
 interface ImportJobRow {
@@ -53,6 +57,7 @@ interface ImportJobRow {
   skipped_count: number | null;
   failed_count: number | null;
   photos_processed: number | null;
+  addresses_geotagged: number | null;
   result: string | null;
   error_message: string | null;
   started_at: string | null;
@@ -84,6 +89,7 @@ function mapRow(row: ImportJobRow): ImportJob {
     skippedCount: row.skipped_count ?? 0,
     failedCount: row.failed_count ?? 0,
     photosProcessed: row.photos_processed ?? 0,
+    addressesGeotagged: row.addresses_geotagged ?? 0,
     result,
     errorMessage: row.error_message,
     startedAt: row.started_at,
@@ -152,7 +158,8 @@ export function updateJobProgress(db: DatabaseType, id: string, progress: Import
         imported_count = ?,
         skipped_count = ?,
         failed_count = ?,
-        photos_processed = ?
+        photos_processed = ?,
+        addresses_geotagged = ?
     WHERE id = ?
   `).run(
     progress.cardsProcessed,
@@ -160,6 +167,7 @@ export function updateJobProgress(db: DatabaseType, id: string, progress: Import
     progress.skippedCount,
     progress.failedCount,
     progress.photosProcessed,
+    progress.addressesGeotagged,
     id
   );
 }
@@ -182,6 +190,22 @@ export function failJob(db: DatabaseType, id: string, message: string): void {
         completed_at = datetime('now')
     WHERE id = ?
   `).run(message, id);
+}
+
+/**
+ * The most recently finished import, regardless of whether the user dismissed
+ * its indicator. Backs the persistent "last import" summary, which must outlive
+ * the tracked-job lifecycle.
+ */
+export function getLatestFinishedImportJob(db: DatabaseType): ImportJob | null {
+  const row = db.prepare(`
+    SELECT * FROM import_jobs
+    WHERE status IN ('completed', 'failed')
+    ORDER BY COALESCE(completed_at, created_at) DESC, rowid DESC
+    LIMIT 1
+  `).get() as ImportJobRow | undefined;
+
+  return row ? mapRow(row) : null;
 }
 
 /** Jobs left mid-flight by a process restart. */

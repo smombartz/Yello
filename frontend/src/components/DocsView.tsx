@@ -63,12 +63,24 @@ const TOOL_GROUPS: ToolGroup[] = [
         icon: 'file-import',
         location: 'Tools → Import · POST /api/import',
         tags: ['demo'],
-        how: 'Uploads a .vcf/.vcard file to /api/import with live upload progress. The file is streamed straight to disk and queued as a background job, so the request returns immediately with a job id and the browser polls /api/import/jobs/:id for progress — an import keeps running if you navigate away, and even survives a server restart by resuming from the last committed batch. The worker streams one vCard block at a time (so memory stays flat no matter how large the file is) and parses each card with ical.js — name, emails, phones, addresses, org, title, notes, birthday, photo, categories and IMPP — plus regex for grouped labels, related names and social profiles. Phone numbers are normalized to E.164 via libphonenumber-js. Cards are committed 50 at a time in a single transaction along with all child rows, and the full-text search index is rebuilt per contact; embedded photos are processed into four sizes between transactions. A card whose vCard UID already exists is skipped, so re-importing the same export is a no-op.',
+        how: 'Uploads a .vcf/.vcard file to /api/import with live upload progress. The file is streamed straight to disk and queued as a background job, so the request returns immediately with a job id and the browser polls /api/import/jobs/:id for progress — an import keeps running if you navigate away, and even survives a server restart by resuming from the last committed batch. The worker streams one vCard block at a time (so memory stays flat no matter how large the file is) and parses each card with ical.js — name, emails, phones, addresses, org, title, notes, birthday, photo, categories and IMPP — plus regex for grouped labels, related names and social profiles. Phone numbers are normalized to E.164 via libphonenumber-js. Cards are committed 50 at a time in a single transaction along with all child rows, and the full-text search index is rebuilt per contact; embedded photos are processed into four sizes between transactions. A card whose vCard UID already exists is skipped, so re-importing the same export is a no-op. Per-address GEO coordinates are kept, matched to their address by item group (item1.ADR ↔ item1.GEO) since plain vCard GEO is card-level; a card-level GEO is only trusted when the card has exactly one address, and 0;0 is rejected as a failed-geocode sentinel. Imported coordinates stamp geocoded_at so the address cleanup queue does not re-geocode them, which makes an export/import round trip lossless.',
         deps: {
           packages: ['ical.js', 'libphonenumber-js', 'sharp', 'better-sqlite3', '@fastify/multipart'],
           env: ['PHOTOS_PATH', 'USER_DATA_PATH'],
-          tables: ['contacts + child tables', 'contact_photos', 'contacts_unified_fts', 'import_jobs'],
+          tables: ['contacts + child tables', 'contact_addresses', 'contact_photos', 'contacts_unified_fts', 'import_jobs'],
           services: ['vcardParser', 'photoProcessor', 'importService', 'importJobService', 'importRecovery'],
+        },
+      },
+      {
+        id: 'import-status',
+        name: 'Import status & history',
+        icon: 'clock-rotate-left',
+        location: 'Anywhere (status pill) · Tools → Import VCF · GET /api/import/jobs/{active,latest,:id}',
+        how: 'A running import shows as a pill in the bottom-left corner of every page, driven by ImportStatusProvider rather than by the Tools page — so the progress follows you around the app instead of disappearing when you navigate away. On load the app asks /api/import/jobs/active for anything still running, which also picks up an import started in another tab or before a refresh. The pill stays until dismissed, including after the job finishes, so a result that landed while you were elsewhere is never lost; dismissing it is what clears the stored job id. Separately, /api/import/jobs/latest returns the most recent finished job regardless of dismissal, and the Import VCF section renders it as a persistent Last import summary — contacts imported, already present, photos, geotagged addresses and failures, plus the filename, time and file size, and the first 100 error rows. Because it reads the job row rather than the tracked job, the summary survives dismissing the pill, navigation, and new sessions.',
+        deps: {
+          packages: ['@tanstack/react-query'],
+          tables: ['import_jobs'],
+          services: ['importJobService', 'ImportStatusProvider', 'BackgroundJobPill', 'LastImportSummary'],
         },
       },
       {
@@ -252,7 +264,7 @@ const TOOL_GROUPS: ToolGroup[] = [
         name: 'Export Data',
         icon: 'upload',
         location: 'Tools → Export · GET /api/contacts/export/vcf',
-        how: 'Opens /api/contacts/export/vcf as a browser download. The backend exports all non-archived contacts, reusing each contact’s stored raw vCard and injecting the current photo, or regenerating the vCard from database fields for contacts without one (e.g. LinkedIn or manually added). An optional regenerate mode rebuilds every vCard from fields, with country-formatted addresses.',
+        how: 'Opens /api/contacts/export/vcf as a browser download. The backend exports all non-archived contacts, reusing each contact’s stored raw vCard and injecting the current photo, or regenerating the vCard from database fields for contacts without one (e.g. LinkedIn or manually added). An optional regenerate mode rebuilds every vCard from fields, with country-formatted addresses. Geocoded addresses export their coordinates as per-address GEO properties tied to their ADR via Apple-style item groups (item1.ADR + item1.GEO), because vCard 3.0’s plain GEO is card-level. For raw vCards, injectGeoIntoVcard matches database addresses to ADR lines by street plus city/postal (falling back to position when the counts line up), reuses an existing item group or adds a yelloN. group to ungrouped ones, and replaces any stale GEO lines; unmatched addresses are skipped rather than guessed. Importing the result preserves these coordinates.',
         deps: {
           packages: ['better-sqlite3', 'Node fs/path'],
           env: ['USER_DATA_PATH'],

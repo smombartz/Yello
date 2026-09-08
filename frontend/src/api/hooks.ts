@@ -8,6 +8,7 @@ import type {
   VcfImportJob,
   StartImportResponse,
   ActiveImportJobResponse,
+  LatestImportJobResponse,
   GroupsResponse,
   UpdateContactRequest,
   CreateContactRequest,
@@ -146,6 +147,8 @@ export function useVcfImportJob(jobId: string | null) {
 
     queryClient.invalidateQueries({ queryKey: ['contacts'] });
     queryClient.invalidateQueries({ queryKey: ['contactCount'] });
+    // Refresh the "last import" summary so it reflects the run that just ended.
+    queryClient.invalidateQueries({ queryKey: ['vcfImportJob', 'latest'] });
     // The stored id deliberately outlives completion: the status indicator
     // shows terminal jobs until dismissed, so a result that landed while the
     // user was on another page (or before a reload) still gets seen.
@@ -163,6 +166,19 @@ export function useActiveVcfImportJob() {
   return useQuery({
     queryKey: ['vcfImportJob', 'active'],
     queryFn: () => fetchApi<ActiveImportJobResponse>('/api/import/jobs/active'),
+    staleTime: 0,
+  });
+}
+
+/**
+ * The most recent finished import. Independent of the tracked-job lifecycle, so
+ * the Tools panel keeps showing the last result after the indicator is
+ * dismissed and across sessions.
+ */
+export function useLatestVcfImportJob() {
+  return useQuery({
+    queryKey: ['vcfImportJob', 'latest'],
+    queryFn: () => fetchApi<LatestImportJobResponse>('/api/import/jobs/latest'),
     staleTime: 0,
   });
 }

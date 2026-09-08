@@ -321,6 +321,7 @@ export function getUserDatabase(userId: number): DatabaseType {
       skipped_count INTEGER DEFAULT 0,
       failed_count INTEGER DEFAULT 0,
       photos_processed INTEGER DEFAULT 0,
+      addresses_geotagged INTEGER DEFAULT 0,
       result TEXT,
       error_message TEXT,
       started_at TEXT,
@@ -367,6 +368,12 @@ export function getUserDatabase(userId: number): DatabaseType {
   try {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_contacts_icloud_uid ON contacts(icloud_uid) WHERE icloud_uid IS NOT NULL`);
   } catch { /* index already exists */ }
+
+  // Imported-GEO migration — vCards carrying per-address coordinates (this
+  // app's own exports do) now keep them instead of forcing a re-geocode.
+  try {
+    db.exec(`ALTER TABLE import_jobs ADD COLUMN addresses_geotagged INTEGER DEFAULT 0`);
+  } catch { /* column already exists */ }
 
   // Related-contact linking migration — nullable FK so a related person can
   // point at a real contact while free-text names keep a NULL link.

@@ -115,6 +115,9 @@ export function mapGooglePersonToParsedContact(person: GooglePerson): GooglePars
     postalCode: a.postalCode || null,
     country: a.country || null,
     type: a.type || null,
+    // The People API does not expose coordinates.
+    latitude: null,
+    longitude: null,
   }));
 
   // URLs

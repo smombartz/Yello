@@ -7,7 +7,7 @@ import { rebuildContactSearch } from '../services/database.js';
 import { getPhotoUrl } from '../services/photoProcessor.js';
 import { detectMergeConflicts, mergeContactsWithResolutions } from '../services/mergeService.js';
 import { geocodeAddress, isValidCoordinate } from '../services/geocoding.js';
-import { generateVcard, type ContactForVcard } from '../services/vcardGenerator.js';
+import { generateVcard, injectGeoIntoVcard, type ContactForVcard } from '../services/vcardGenerator.js';
 
 const USER_DATA_PATH = process.env.USER_DATA_PATH ?? './data/users';
 import {
@@ -1582,7 +1582,8 @@ export default async function contactsRoutes(
       `).all(contact.id) as Array<{ phone: string; phone_display: string; type: string | null; is_primary: number }>;
 
       const addresses = db.prepare(`
-        SELECT street, city, state, postal_code, country, type FROM contact_addresses WHERE contact_id = ?
+        SELECT street, city, state, postal_code, country, type, latitude, longitude
+        FROM contact_addresses WHERE contact_id = ?
       `).all(contact.id) as Array<{
         street: string | null;
         city: string | null;
@@ -1590,6 +1591,8 @@ export default async function contactsRoutes(
         postal_code: string | null;
         country: string | null;
         type: string | null;
+        latitude: number | null;
+        longitude: number | null;
       }>;
 
       const socialProfiles = db.prepare(`
@@ -1627,7 +1630,9 @@ export default async function contactsRoutes(
           state: a.state,
           postalCode: a.postal_code,
           country: a.country,
-          type: a.type
+          type: a.type,
+          latitude: a.latitude,
+          longitude: a.longitude
         })),
         socialProfiles: socialProfiles.map(s => ({
           platform: s.platform,
@@ -1688,8 +1693,27 @@ export default async function contactsRoutes(
         let vcard: string;
 
         if (contact.raw_vcard) {
-          // Use existing raw vCard, inject current photo
+          // Use existing raw vCard, inject geocode data and current photo
           vcard = contact.raw_vcard;
+
+          const addresses = db.prepare(`
+            SELECT street, city, postal_code, latitude, longitude
+            FROM contact_addresses WHERE contact_id = ?
+          `).all(contact.id) as Array<{
+            street: string | null;
+            city: string | null;
+            postal_code: string | null;
+            latitude: number | null;
+            longitude: number | null;
+          }>;
+          vcard = injectGeoIntoVcard(vcard, addresses.map(a => ({
+            street: a.street,
+            city: a.city,
+            postalCode: a.postal_code,
+            latitude: a.latitude,
+            longitude: a.longitude
+          })));
+
           if (contact.photo_hash) {
             const base64 = readPhotoBase64(contact.photo_hash);
             if (base64) {

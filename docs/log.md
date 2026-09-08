@@ -1,5 +1,91 @@
 # Change Log
 
+## 2026-07-30 — Pruned CLAUDE.md of another project's instructions
+
+**What Changed:**
+- Removed the **Learn content** section entirely — it described a file-based MDX blog at `/learn` with `docs/learn.md`, `content/learn/`, and `lib/learn.ts`. None of those exist, and there is no `/learn` route.
+- Rewrote the **Database reference** section. It described Supabase concepts that do not apply (RLS rules, storage buckets, views, policies) and named `supabase/migrations/` as the source of truth. There is no `supabase/` directory and not one `.sql` file in the repo. It now names the three files that actually create schema and explains the `CREATE TABLE IF NOT EXISTS` + idempotent `ALTER TABLE` model.
+- Replaced the log-entry **example**, which was from a different project — a Google Apps Script notification form editing a root `index.html`, neither of which exists here — with a real entry from this repo.
+- Fixed a contradiction in the logging workflow: step 3 said to **append** to `docs/log.md` while the section below it said new entries go at the top. Now consistently "insert at the top".
+- Removed the redundant JavaScript pseudocode block for updating `docs/log.md` (it opened by admitting it was pseudocode and to use Read → Edit instead) and the empty trailing `## Current Project State` heading.
+- Added a **Stack** section at the top: Fastify 5 / better-sqlite3 with file-per-tenant isolation / React 19 + Vite 7 + TanStack Query / Google OAuth / Railway + Electron / Vitest. Also recorded that frontend type-checking must go through `npm run build`, since a bare `npx tsc --noEmit` at the frontend root misses `tsconfig.app.json` and passes on code that fails the build.
+
+**Why:**
+- The file was largely boilerplate copied from an unrelated Next.js/Supabase project. It actively misled — two exploration passes on the import work started out looking for Supabase clients and Express routes because CLAUDE.md said they were there. Only the `docs/readme.md`, `docs/log.md`, `docs/plans/`, and verification conventions ever applied to this repo.
+
+**Files Modified:**
+- `CLAUDE.md`
+
+---
+
+## 2026-07-30 — Wrote docs/database.md; documented import status, history and GEO in DocsView
+
+**What Changed:**
+- **Created `docs/database.md`** — the schema overview `CLAUDE.md` has required all along but which never existed. Covers both tiers (shared `/data/auth.db` and per-user `/data/users/<id>/contacts.db`), every table with full column lists, all CHECK constraints, indexes, FTS5 virtual tables and their triggers, the on-disk photo/import layout, and the environment variables that place them.
+- Documented the things that are easy to get wrong rather than just listing columns: tenancy is **by file, not by a `user_id` column** (so there is no cross-tenant query surface and sweeps must walk the filesystem); `getUserDatabase`'s 50-entry LRU can close a handle mid-flight; `contacts_unified_fts` is contentless and **trigger-free**, so any writer must call `rebuildContactSearch` itself; `contact_addresses` geocoding is a three-state machine keyed on `geocoded_at` vs lat/lon; rotating `SESSION_SECRET` invalidates every encrypted third-party credential in `user_settings`; and timestamps are zone-less UTC that clients must suffix with `Z`.
+- Noted two schema surprises found while writing it: `user_profiles` and `profile_slugs` are created lazily by `routes/profile.ts` rather than by the database modules (and `user_profiles` carries a destructive `DROP COLUMN` migration), and **user profile images go to the shared `PHOTOS_PATH` hashed on user identity**, not into the per-user photos directory that contact photos use.
+- Documented the migration model explicitly — no migration files, no CLI; schema is a `CREATE TABLE IF NOT EXISTS` block plus try/catch `ALTER TABLE` re-run on every connection — and flagged inline that `CLAUDE.md`'s reference to `supabase/migrations/` is stale.
+- **`DocsView.tsx`**: added an "Import status & history" entry covering the app-wide status pill, `/api/import/jobs/active` reconnect, stay-until-dismissed behaviour, and the persistent Last import summary from `/api/import/jobs/latest`. Extended the Import VCF entry with GEO preservation (item-group matching, the single-address rule for card-level GEO, the `0;0` sentinel, and the `geocoded_at` stamp).
+- Also extended the **Export** entry with the per-address GEO behaviour from 2026-07-29, which DocsView had never picked up — describing GEO on import while the export entry stayed silent would have read as incoherent.
+
+**Why:**
+- `CLAUDE.md` requires `docs/database.md` to be updated by any schema change, but the file did not exist, so several changes (including `import_jobs` and `addresses_geotagged`) had nowhere to land. DocsView had likewise fallen behind the last three changes.
+
+**Files Modified:**
+- `docs/database.md` — new
+- `frontend/src/components/DocsView.tsx`
+
+---
+
+## 2026-07-30 — Persistent "last import" summary, and imports now keep vCard GEO
+
+**What Changed:**
+- **Closed the other half of the GEO round trip.** The 2026-07-29 change made export *write* per-address coordinates (`item1.ADR` + `item1.GEO`, plus `injectGeoIntoVcard` for the raw-vCard path), but `vcardParser` had no GEO handling at all — `ParsedAddress` carried no lat/lon. Exporting a geocoded Yello VCF and re-importing it therefore dropped every coordinate, forcing all those addresses back through the paid HERE geocoding API. `applyGeoToAddresses()` now parses GEO and the import persists it.
+- GEO matching is by Apple-style item group (`item1.ADR` ↔ `item1.GEO`), because vCard 3.0's bare `GEO` is card-level and cannot otherwise be tied to one of several addresses. Ungrouped `ADR` lines still consume a slot so grouped coordinates stay aligned with the address order ical.js produced. A card-level `GEO` is applied **only** when the card has exactly one address — with two or more, guessing is worse than leaving them ungeocoded.
+- Accepts vCard 3.0 `lat;lon`, vCard 4.0 `geo:lat,lon`, and comma-separated values. Rejects out-of-range values and `0;0`, which is the near-universal "geocoding failed" sentinel rather than a real point in the Atlantic.
+- Imported coordinates stamp `geocoded_at`, so the address-cleanup queue (which treats `geocoded_at IS NULL` as pending) counts them as done instead of re-geocoding them.
+- iCloud import shares the same parser and now carries coordinates through too (`routes/icloud.ts`). Google People API exposes no coordinates, so `googlePeopleService` maps them as null.
+- Added `addresses_geotagged` to `import_jobs` (plus an idempotent `ALTER TABLE` migration for existing databases) and `addressesGeotagged` to the job row, progress updates, and `ImportJobResult`.
+- **Added `GET /api/import/jobs/latest`** — the most recent `completed`/`failed` job, independent of the tracked-job lifecycle.
+- **The Import VCF section now keeps a persistent "Last import" summary** (`LastImportSummary`): imported / already present / photos / geotagged / failed, plus filename, timestamp, file size, and the truncated error list. Because it reads `/latest` rather than the tracked job, it survives dismissing the status pill, navigating away, and new sessions.
+- Restructured that section: the file picker and Import button are now **always** available, with the summary underneath, replacing the old either-form-or-result mode switch and its "Import Another File" button. Timestamps normalize SQLite's zone-less UTC before formatting — without the `Z` the browser reads them as local time and shows the wrong offset.
+
+**Why:**
+- Import results vanished as soon as the status indicator was dismissed, so there was no way to see what the last import actually did. Reporting a "geotagged" count also required the importer to stop discarding coordinates the exporter was already writing.
+
+**Files Modified:**
+- `backend/src/services/vcardParser.ts` — `applyGeoToAddresses`, `parseGeoValue`, lat/lon on `ParsedAddress`
+- `backend/src/services/importService.ts`, `backend/src/services/importJobService.ts`
+- `backend/src/services/userDatabase.ts` — `addresses_geotagged` column + migration
+- `backend/src/routes/import.ts`, `backend/src/schemas/import.ts`
+- `backend/src/routes/icloud.ts`, `backend/src/services/googlePeopleService.ts`
+- `backend/src/services/__tests__/geoRoundTrip.test.ts` — new
+- `backend/src/services/__tests__/importService.test.ts`, `backend/src/services/__tests__/importRecovery.test.ts`
+- `frontend/src/components/LastImportSummary.tsx` — new
+- `frontend/src/styles/pages/last-import.css` — new, imported from `styles/pages.css`
+- `frontend/src/components/SettingsView.tsx`, `frontend/src/api/hooks.ts`, `frontend/src/api/types.ts`
+
+---
+
+## 2026-07-29 — VCF export includes per-address geocode (GEO) data
+
+**What Changed:**
+- `generateVcard()` now emits a `GEO:lat;lon` property for each address with stored coordinates, tied to its `ADR`/`LABEL` via an Apple-style item group (`item1.ADR` + `item1.GEO`); ungeocoded addresses render unchanged. `ContactForVcard` addresses gained optional `latitude`/`longitude`.
+- New `injectGeoIntoVcard()` in `vcardGenerator.ts` injects GEO into stored raw vCards (mirroring the existing photo injection): matches DB addresses to `ADR` lines by street + city/postal with a positional fallback, reuses an ADR's existing group or adds a non-colliding `yelloN.` group (also grouping an adjacent ungrouped `LABEL`), and strips any pre-existing `GEO` lines first. Handles folded lines; skips addresses it can't confidently match.
+- `GET /api/contacts/export/vcf` wires both paths: `buildContactForVcard()` selects `latitude`/`longitude`, and the default (raw-vCard) branch fetches the contact's addresses and runs GEO injection before photo injection. Both export modes now carry coordinates.
+- Added `vcardGenerator.test.ts` (12 tests: grouped output, mixed geocoded/ungeocoded, parser round-trip, injection into grouped/ungrouped/folded ADRs, stale-GEO replacement, group-collision avoidance, no-match/no-coords no-ops).
+
+**Why:**
+- The address-cleanup feature geocodes addresses into `contact_addresses.latitude/longitude`, but exports silently dropped that data. User requested that VCF exports include it.
+
+**Files Modified:**
+- `backend/src/services/vcardGenerator.ts` — GEO emission + `injectGeoIntoVcard()`
+- `backend/src/routes/contacts.ts` — export route: coordinate selection + GEO injection
+- `backend/src/services/__tests__/vcardGenerator.test.ts` — new test file
+- `docs/readme.md` — new "VCF export" feature section
+
+---
+
 ## 2026-07-29 — Header: breadcrumbs, right-aligned search, dashboard Add Contact
 
 **What Changed:**

@@ -151,6 +151,8 @@ export interface ImportResult {
   skipped: number;
   failed: number;
   photosProcessed: number;
+  /** Addresses that arrived with coordinates. Absent on pre-GEO imports. */
+  addressesGeotagged?: number;
   /** Truncated by the backend — `failed` is the true count. */
   errors: Array<{ line: number; reason: string }>;
 }
@@ -172,6 +174,8 @@ export interface VcfImportJob {
   skippedCount: number;
   failedCount: number;
   photosProcessed: number;
+  addressesGeotagged: number;
+  fileSize: number | null;
   result: ImportResult | null;
   errorMessage: string | null;
   startedAt: string | null;
@@ -184,6 +188,10 @@ export interface StartImportResponse {
 }
 
 export interface ActiveImportJobResponse {
+  job: VcfImportJob | null;
+}
+
+export interface LatestImportJobResponse {
   job: VcfImportJob | null;
 }
 

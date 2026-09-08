@@ -5,10 +5,10 @@ import {
   useDeleteAllContacts,
   exportAllContacts
 } from '../api/settingsHooks';
-import { useStartVcfImport } from '../api/hooks';
+import { useStartVcfImport, useLatestVcfImportJob } from '../api/hooks';
 import { useImportStatus } from '../hooks/useImportStatus';
+import { LastImportSummary } from './LastImportSummary';
 import { useICloudSettings, useSaveICloudSettings, useDeleteICloudSettings } from '../api/icloudHooks';
-import type { ImportResult } from '../api/types';
 import type { OutletContext } from './Layout';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { useToast } from './ui/Toast';
@@ -33,7 +33,9 @@ export function SettingsView() {
   const [importPhase, setImportPhase] = useState<'uploading' | null>(null);
   const startImport = useStartVcfImport();
   // The job itself is tracked app-wide so it survives leaving this page.
-  const { job, startTracking, dismiss: dismissImport } = useImportStatus();
+  const { job, startTracking } = useImportStatus();
+  // Independent of the tracked job, so the summary outlives dismissing it.
+  const lastImport = useLatestVcfImportJob().data?.job ?? null;
   const [exportExpanded, setExportExpanded] = useState(false);
   const [dangerExpanded, setDangerExpanded] = useState(false);
   const [icloudExpanded, setIcloudExpanded] = useState(false);
@@ -74,9 +76,8 @@ export function SettingsView() {
     }
   }, [importFile, startImport, startTracking]);
 
-  // Derived from the shared job so this panel and the pill can never disagree.
-  const importResult: ImportResult | null =
-    job?.status === 'completed' ? job.result : null;
+  // Completed-run stats come from `lastImport`, not the tracked job, so they
+  // survive dismissing the indicator.
   const importError = uploadError
     ?? (job?.status === 'failed' ? (job.errorMessage ?? 'Import failed') : null);
   const isImportBusy = importPhase !== null || isImportRunning;
@@ -125,122 +126,80 @@ export function SettingsView() {
           </button>
           {importExpanded && (
             <div className="collapsible-content">
-              {!importResult ? (
-                <>
-                  <p className="settings-description">
-                    Import contacts from a VCF file exported from this app or another contacts application.
-                  </p>
-                  <div className="import-controls">
-                    <FilePicker
-                      id="vcf-input"
-                      accept=".vcf,text/vcard"
-                      file={importFile}
-                      onChange={(file) => { setImportFile(file); setUploadError(null); }}
-                      prompt="Choose VCF file"
-                      disabled={isImportBusy}
-                    />
-                    {importPhase === 'uploading' ? (
-                      <div className="import-progress-inline">
-                        <p className="settings-description">Uploading… {uploadProgress}%</p>
-                        <progress value={uploadProgress ?? 0} max={100} />
-                      </div>
-                    ) : isImportRunning && job ? (
-                      <div className="enrichment-progress">
-                        <div className="progress-header">
-                          <span className="progress-status">
-                            <Icon name="arrows-rotate" className="spinning" />
-                            Importing contacts…
-                          </span>
-                          <span className="progress-count">
-                            {job.cardsProcessed.toLocaleString()} of {job.totalCards.toLocaleString()}
-                          </span>
-                        </div>
-
-                        <div className="progress-bar-container">
-                          <div className="progress-bar-fill" style={{ width: `${importPercent}%` }} />
-                        </div>
-
-                        <div className="progress-current">
-                          This runs in the background — you can close this page and come back.
-                        </div>
-
-                        <div className="progress-stats">
-                          <span className="stat success">
-                            <Icon name="circle-check" />
-                            {job.importedCount.toLocaleString()} imported
-                          </span>
-                          {job.skippedCount > 0 && (
-                            <span className="stat skipped">
-                              <Icon name="circle-minus" />
-                              {job.skippedCount.toLocaleString()} already present
-                            </span>
-                          )}
-                          {job.failedCount > 0 && (
-                            <span className="stat error">
-                              <Icon name="circle-exclamation" />
-                              {job.failedCount.toLocaleString()} failed
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        className="secondary-button"
-                        onClick={handleImport}
-                        disabled={!importFile}
-                      >
-                        <Icon name="upload" />
-                        Import Contacts
-                      </button>
-                    )}
+              <p className="settings-description">
+                Import contacts from a VCF file exported from this app or another contacts application.
+                Cards that carry a vCard UID you already have are skipped, so re-importing is safe.
+              </p>
+              <div className="import-controls">
+                <FilePicker
+                  id="vcf-input"
+                  accept=".vcf,text/vcard"
+                  file={importFile}
+                  onChange={(file) => { setImportFile(file); setUploadError(null); }}
+                  prompt="Choose VCF file"
+                  disabled={isImportBusy}
+                />
+                {importPhase === 'uploading' ? (
+                  <div className="import-progress-inline">
+                    <p className="settings-description">Uploading… {uploadProgress}%</p>
+                    <progress value={uploadProgress ?? 0} max={100} />
                   </div>
-                  {importError && (
-                    <p className="import-error-text">{importError}</p>
-                  )}
-                </>
-              ) : (
-                <>
-                  <p className="settings-description">Import complete.</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: importResult.skipped > 0 ? '1fr 1fr 1fr' : '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--ds-bg-secondary)', borderRadius: '0.5rem' }}>
-                      <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--ds-color-primary)' }}>{importResult.imported}</div>
-                      <div style={{ fontSize: '0.875rem', color: 'var(--ds-text-secondary)' }}>Imported</div>
+                ) : isImportRunning && job ? (
+                  <div className="enrichment-progress">
+                    <div className="progress-header">
+                      <span className="progress-status">
+                        <Icon name="arrows-rotate" className="spinning" />
+                        Importing contacts…
+                      </span>
+                      <span className="progress-count">
+                        {job.cardsProcessed.toLocaleString()} of {job.totalCards.toLocaleString()}
+                      </span>
                     </div>
-                    {importResult.skipped > 0 && (
-                      <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--ds-bg-secondary)', borderRadius: '0.5rem' }}>
-                        <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{importResult.skipped}</div>
-                        <div style={{ fontSize: '0.875rem', color: 'var(--ds-text-secondary)' }}>Already present</div>
-                      </div>
-                    )}
-                    <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: 'var(--ds-bg-secondary)', borderRadius: '0.5rem' }}>
-                      <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{importResult.photosProcessed}</div>
-                      <div style={{ fontSize: '0.875rem', color: 'var(--ds-text-secondary)' }}>Photos</div>
+
+                    <div className="progress-bar-container">
+                      <div className="progress-bar-fill" style={{ width: `${importPercent}%` }} />
                     </div>
-                  </div>
-                  {importResult.failed > 0 && (
-                    <details style={{ marginBottom: '1rem' }}>
-                      <summary style={{ color: 'var(--ds-color-error)', cursor: 'pointer' }}>
-                        {importResult.failed} failed to import
-                      </summary>
-                      <ul style={{ fontSize: '0.875rem', maxHeight: '150px', overflow: 'auto' }}>
-                        {importResult.errors.map((err, i) => (
-                          <li key={i}>Card {err.line}: {err.reason}</li>
-                        ))}
-                      </ul>
-                      {importResult.failed > importResult.errors.length && (
-                        <p className="settings-description">
-                          Showing the first {importResult.errors.length} of {importResult.failed} errors.
-                        </p>
+
+                    <div className="progress-current">
+                      This runs in the background — you can close this page and come back.
+                    </div>
+
+                    <div className="progress-stats">
+                      <span className="stat success">
+                        <Icon name="circle-check" />
+                        {job.importedCount.toLocaleString()} imported
+                      </span>
+                      {job.skippedCount > 0 && (
+                        <span className="stat skipped">
+                          <Icon name="circle-minus" />
+                          {job.skippedCount.toLocaleString()} already present
+                        </span>
                       )}
-                    </details>
-                  )}
+                      {job.failedCount > 0 && (
+                        <span className="stat error">
+                          <Icon name="circle-exclamation" />
+                          {job.failedCount.toLocaleString()} failed
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
                   <button
                     className="secondary-button"
-                    onClick={() => { dismissImport(); setUploadError(null); }}
+                    onClick={handleImport}
+                    disabled={!importFile}
                   >
-                    Import Another File
+                    <Icon name="upload" />
+                    Import Contacts
                   </button>
-                </>
+                )}
+              </div>
+              {importError && (
+                <p className="import-error-text">{importError}</p>
+              )}
+
+              {lastImport && !isImportRunning && (
+                <LastImportSummary job={lastImport} />
               )}
             </div>
           )}

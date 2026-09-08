@@ -75,7 +75,8 @@ describe('resumeInterruptedImports', () => {
       importedCount: 2,
       skippedCount: 0,
       failedCount: 0,
-      photosProcessed: 0
+      photosProcessed: 0,
+      addressesGeotagged: 0
     });
 
     resumeInterruptedImports(log);

@@ -31,6 +31,7 @@ interface RunningTotals {
   skipped: number;
   failed: number;
   photosProcessed: number;
+  addressesGeotagged: number;
 }
 
 interface PendingPhoto {
@@ -138,9 +139,12 @@ function prepareStatements(db: DatabaseType): ImportStatements {
       INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, is_primary) VALUES (?, ?, ?, ?, ?, ?)
     `),
 
+    // geocoded_at is stamped alongside imported coordinates so the address
+    // cleanup queue (which treats geocoded_at IS NULL as pending) does not
+    // re-geocode them through the paid HERE API.
     insertAddress: db.prepare(`
-      INSERT INTO contact_addresses (contact_id, street, city, state, postal_code, country, type)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO contact_addresses (contact_id, street, city, state, postal_code, country, type, latitude, longitude, geocoded_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? IS NULL THEN NULL ELSE datetime('now') END)
     `),
 
     insertCategory: db.prepare(`
@@ -176,12 +180,16 @@ function prepareStatements(db: DatabaseType): ImportStatements {
   };
 }
 
+interface InsertedContact {
+  contactId: number;
+  addressesGeotagged: number;
+}
+
 /**
  * Inserts one contact and all of its child rows. Must be called inside a
- * transaction; returns the new contact id, or null if the card was skipped as
- * a duplicate.
+ * transaction; returns null if the card was skipped as a duplicate.
  */
-function insertContact(stmts: ImportStatements, db: DatabaseType, contact: ParsedContact): number | null {
+function insertContact(stmts: ImportStatements, db: DatabaseType, contact: ParsedContact): InsertedContact | null {
   // Stable-identifier dedupe: a re-import of the same export is a no-op for
   // any card carrying a UID we have already seen.
   if (contact.uid) {
@@ -211,8 +219,21 @@ function insertContact(stmts: ImportStatements, db: DatabaseType, contact: Parse
     stmts.insertPhone.run(contactId, phone.phone, phone.phoneDisplay, phone.countryCode, phone.type, phone.isPrimary ? 1 : 0);
   }
 
+  let addressesGeotagged = 0;
   for (const addr of contact.addresses) {
-    stmts.insertAddress.run(contactId, addr.street, addr.city, addr.state, addr.postalCode, addr.country, addr.type);
+    stmts.insertAddress.run(
+      contactId,
+      addr.street,
+      addr.city,
+      addr.state,
+      addr.postalCode,
+      addr.country,
+      addr.type,
+      addr.latitude,
+      addr.longitude,
+      addr.latitude
+    );
+    if (addr.latitude !== null && addr.longitude !== null) addressesGeotagged++;
   }
 
   for (const category of contact.categories) {
@@ -245,7 +266,7 @@ function insertContact(stmts: ImportStatements, db: DatabaseType, contact: Parse
 
   rebuildContactSearch(db, contactId);
 
-  return contactId;
+  return { contactId, addressesGeotagged };
 }
 
 /**
@@ -289,16 +310,17 @@ async function processBatch(
   db.transaction(() => {
     for (const { index, contact } of parsed) {
       try {
-        const contactId = insertContact(stmts, db, contact);
+        const inserted = insertContact(stmts, db, contact);
 
-        if (contactId === null) {
+        if (inserted === null) {
           totals.skipped++;
           continue;
         }
 
         totals.imported++;
+        totals.addressesGeotagged += inserted.addressesGeotagged;
         if (contact.photoBase64) {
-          pendingPhotos.push({ contactId, photoBase64: contact.photoBase64 });
+          pendingPhotos.push({ contactId: inserted.contactId, photoBase64: contact.photoBase64 });
         }
       } catch (e) {
         totals.failed++;
@@ -363,7 +385,8 @@ export async function runVcfImportJob(userId: number, jobId: string): Promise<Im
       imported: job.importedCount,
       skipped: job.skippedCount,
       failed: job.failedCount,
-      photosProcessed: job.photosProcessed
+      photosProcessed: job.photosProcessed,
+      addressesGeotagged: job.addressesGeotagged
     };
     const errors: Array<{ line: number; reason: string }> = job.result?.errors ?? [];
 
@@ -382,7 +405,8 @@ export async function runVcfImportJob(userId: number, jobId: string): Promise<Im
         importedCount: totals.imported,
         skippedCount: totals.skipped,
         failedCount: totals.failed,
-        photosProcessed: totals.photosProcessed
+        photosProcessed: totals.photosProcessed,
+        addressesGeotagged: totals.addressesGeotagged
       });
 
       await yieldToEventLoop();
@@ -405,6 +429,7 @@ export async function runVcfImportJob(userId: number, jobId: string): Promise<Im
       skipped: totals.skipped,
       failed: totals.failed,
       photosProcessed: totals.photosProcessed,
+      addressesGeotagged: totals.addressesGeotagged,
       errors
     };
 

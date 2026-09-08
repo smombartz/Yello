@@ -22,6 +22,9 @@ export interface ParsedAddress {
   postalCode: string | null;
   country: string | null;
   type: string | null;
+  /** From a GEO property tied to this ADR. Null unless the file carried one. */
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface ParsedInstantMessage {
@@ -81,6 +84,84 @@ export interface ParseResult {
  */
 export function unfoldLines(vcfContent: string): string {
   return vcfContent.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '');
+}
+
+/**
+ * Parses a GEO value into coordinates. Handles vCard 3.0 `lat;lon`, vCard 4.0
+ * `geo:lat,lon`, and the comma-separated form some clients emit.
+ */
+function parseGeoValue(raw: string): { latitude: number; longitude: number } | null {
+  const cleaned = raw.trim().replace(/^geo:/i, '');
+  const parts = cleaned.split(/[;,]/).map(p => p.trim());
+  if (parts.length < 2) return null;
+
+  const latitude = Number(parts[0]);
+  const longitude = Number(parts[1]);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+  // 0,0 is the overwhelmingly common "failed to geocode" sentinel, not the
+  // Atlantic — treating it as real would pin contacts off the coast of Africa.
+  if (latitude === 0 && longitude === 0) return null;
+
+  return { latitude, longitude };
+}
+
+/**
+ * Attaches GEO coordinates to their addresses in place.
+ *
+ * vCard 3.0's bare GEO is card-level, so per-address coordinates are carried by
+ * an Apple-style item group (`item1.ADR` + `item1.GEO`) — which is exactly what
+ * this app's own exporter writes. Matching is therefore by group; an ungrouped
+ * card-level GEO is only applied when the card has a single address, since
+ * anything else would be a guess.
+ */
+function applyGeoToAddresses(vcardText: string, addresses: ParsedAddress[]): void {
+  if (addresses.length === 0) return;
+
+  const groupOrder: string[] = [];
+  const geoByGroup = new Map<string, { latitude: number; longitude: number }>();
+  let cardLevelGeo: { latitude: number; longitude: number } | null = null;
+
+  for (const line of vcardText.split(/\r?\n/)) {
+    const adrMatch = line.match(/^([^.;:]+)\.ADR[;:]/i);
+    if (adrMatch) {
+      groupOrder.push(adrMatch[1].toLowerCase());
+      continue;
+    }
+
+    // An ADR with no group still consumes a slot, so grouped GEO stays aligned
+    // with the address order ical.js produced.
+    if (/^ADR[;:]/i.test(line)) {
+      groupOrder.push('');
+      continue;
+    }
+
+    const groupedGeo = line.match(/^([^.;:]+)\.GEO[;:](.+)$/i);
+    if (groupedGeo) {
+      const coords = parseGeoValue(groupedGeo[2]);
+      if (coords) geoByGroup.set(groupedGeo[1].toLowerCase(), coords);
+      continue;
+    }
+
+    const bareGeo = line.match(/^GEO[;:](.+)$/i);
+    if (bareGeo) {
+      cardLevelGeo = parseGeoValue(bareGeo[1]) ?? cardLevelGeo;
+    }
+  }
+
+  for (let i = 0; i < addresses.length; i++) {
+    const group = groupOrder[i];
+    const coords = group ? geoByGroup.get(group) : undefined;
+    if (coords) {
+      addresses[i].latitude = coords.latitude;
+      addresses[i].longitude = coords.longitude;
+    }
+  }
+
+  if (cardLevelGeo && addresses.length === 1 && addresses[0].latitude === null) {
+    addresses[0].latitude = cardLevelGeo.latitude;
+    addresses[0].longitude = cardLevelGeo.longitude;
+  }
 }
 
 function extractType(params: Record<string, string | string[]> | undefined): string | null {
@@ -187,10 +268,14 @@ export function parseSingleVcard(vcardText: string): ParsedContact | null {
         state: adrValue[4] || null,
         postalCode: adrValue[5] || null,
         country: adrValue[6] || null,
-        type: extractType(adrProp.toJSON()[1])
+        type: extractType(adrProp.toJSON()[1]),
+        latitude: null,
+        longitude: null
       });
     }
   }
+
+  applyGeoToAddresses(vcardText, addresses);
 
   const orgProp = comp.getFirstPropertyValue('org') as string | string[] | null;
   const company = Array.isArray(orgProp) ? orgProp[0] : orgProp;
