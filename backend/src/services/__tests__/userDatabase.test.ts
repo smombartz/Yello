@@ -51,7 +51,8 @@ describe('userDatabase', () => {
     expect(columnNames).toContain('notes');
     expect(columnNames).toContain('birthday');
     expect(columnNames).toContain('photo_hash');
-    expect(columnNames).toContain('raw_vcard');
+    // Retired: imported originals live in an archive file, not the database
+    expect(columnNames).not.toContain('raw_vcard');
     expect(columnNames).toContain('archived_at');
     expect(columnNames).toContain('gmail_history_id');
     expect(columnNames).toContain('gmail_last_sync_at');

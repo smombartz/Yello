@@ -79,8 +79,8 @@ describe('GEO export/import round trip', () => {
   });
 
   it('preserves coordinates through injectGeoIntoVcard on a raw vCard', () => {
-    // The default export path reuses each contact's stored raw_vcard and
-    // injects current coordinates, rather than regenerating the card.
+    // injectGeoIntoVcard served the export while it replayed stored raw
+    // cards. The export generates cards now, so nothing in the app calls it.
     const raw = [
       'BEGIN:VCARD',
       'VERSION:3.0',

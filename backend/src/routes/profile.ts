@@ -4,6 +4,7 @@ import { getUserDatabase } from '../services/userDatabase.js';
 import { getAuthDatabase } from '../services/authDatabase.js';
 import { rebuildContactSearch } from '../services/database.js';
 import { getPhotoUrl } from '../services/photoProcessor.js';
+import { preserveEntryAnnotations } from '../services/vcardModelStore.js';
 import {
   UserProfileSchema,
   UpdateUserProfileSchema,
@@ -781,6 +782,9 @@ export default async function profileRoutes(
         db.prepare(sql).run(...contactValues);
       }
 
+      // Keep labels and address hints on rows whose value survives the replace
+      const restoreAnnotations = preserveEntryAnnotations(db, profile.linked_contact_id);
+
       // Update emails (replace all)
       if (updates.emails !== undefined) {
         db.prepare('DELETE FROM contact_emails WHERE contact_id = ?').run(profile.linked_contact_id);
@@ -874,6 +878,8 @@ export default async function profileRoutes(
           `).run(profile.linked_contact_id, updates.website);
         }
       }
+
+      restoreAnnotations();
 
       // Rebuild contact search index
       rebuildContactSearch(db, profile.linked_contact_id);

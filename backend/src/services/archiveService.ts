@@ -73,7 +73,6 @@ export function getArchivedContacts(db: DatabaseType, limit: number, offset: num
       notes,
       birthday,
       photo_hash as photoHash,
-      raw_vcard as rawVcard,
       created_at as createdAt,
       updated_at as updatedAt,
       archived_at as archivedAt
@@ -91,7 +90,6 @@ export function getArchivedContacts(db: DatabaseType, limit: number, offset: num
     notes: string | null;
     birthday: string | null;
     photoHash: string | null;
-    rawVcard: string | null;
     createdAt: string;
     updatedAt: string;
     archivedAt: string;
@@ -221,19 +219,4 @@ export function deleteArchivedContacts(db: DatabaseType, contactIds: number[]): 
 
   const deletedCount = deleteInTransaction();
   return { deletedCount };
-}
-
-/**
- * Export archived contacts as VCF
- */
-export function exportArchivedContactsVcf(db: DatabaseType): string {
-
-  const rows = db.prepare(`
-    SELECT raw_vcard as rawVcard
-    FROM contacts
-    WHERE archived_at IS NOT NULL AND raw_vcard IS NOT NULL
-    ORDER BY archived_at DESC
-  `).all() as Array<{ rawVcard: string }>;
-
-  return rows.map(r => r.rawVcard).join('\n');
 }

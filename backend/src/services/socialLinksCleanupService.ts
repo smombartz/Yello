@@ -592,7 +592,6 @@ function getContactDetails(db: DatabaseType, contactIds: number[]): ContactDetai
       notes,
       birthday,
       photo_hash as photoHash,
-      raw_vcard as rawVcard,
       created_at as createdAt,
       updated_at as updatedAt
     FROM contacts
@@ -607,7 +606,6 @@ function getContactDetails(db: DatabaseType, contactIds: number[]): ContactDetai
     notes: string | null;
     birthday: string | null;
     photoHash: string | null;
-    rawVcard: string | null;
     createdAt: string;
     updatedAt: string;
   }>;

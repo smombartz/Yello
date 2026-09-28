@@ -1,12 +1,12 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { getUserDatabase } from '../services/userDatabase.js';
+import { contactPhotoReader, exportContactsAsVcf } from '../services/vcardExportService.js';
 import {
   archiveContacts,
   unarchiveContacts,
   getArchivedContacts,
   getArchivedCount,
-  deleteArchivedContacts,
-  exportArchivedContactsVcf
+  deleteArchivedContacts
 } from '../services/archiveService.js';
 import {
   ArchiveContactsBodySchema,
@@ -132,7 +132,7 @@ export default async function archiveRoutes(
   // GET /api/archive/export - Export archived contacts as VCF
   fastify.get('/export', async (request, reply) => {
     const db = getUserDatabase(request.user!.id);
-    const vcfContent = exportArchivedContactsVcf(db);
+    const vcfContent = exportContactsAsVcf(db, contactPhotoReader(request.user!.id), { archived: true });
 
     return reply
       .header('Content-Type', 'text/vcard; charset=utf-8')

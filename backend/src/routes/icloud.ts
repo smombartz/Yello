@@ -6,6 +6,7 @@ import { matchIncomingContacts } from '../services/icloudMatchingService.js';
 import type { ParsedContact } from '../services/vcardParser.js';
 import { processPhoto } from '../services/photoProcessor.js';
 import { rebuildContactSearch } from '../services/database.js';
+import { paramsJson, saveVcardModelFields } from '../services/vcardModelStore.js';
 
 export default async function icloudRoutes(
   fastify: FastifyInstance,
@@ -116,24 +117,31 @@ export default async function icloudRoutes(
     const errors: Array<{ line: number; reason: string }> = [];
 
     const insertContact = db.prepare(`
-      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, photo_hash, raw_vcard, icloud_uid)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, photo_hash, icloud_uid)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    const insertEmail = db.prepare('INSERT INTO contact_emails (contact_id, email, type, is_primary) VALUES (?, ?, ?, ?)');
-    const insertPhone = db.prepare('INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, is_primary) VALUES (?, ?, ?, ?, ?, ?)');
-    const insertAddress = db.prepare('INSERT INTO contact_addresses (contact_id, street, city, state, postal_code, country, type, latitude, longitude, geocoded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? IS NULL THEN NULL ELSE datetime(\'now\') END)');
+    const insertEmail = db.prepare('INSERT INTO contact_emails (contact_id, email, type, extra_types, label, params, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    const insertPhone = db.prepare('INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, extra_types, label, params, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    const insertAddress = db.prepare(`
+      INSERT INTO contact_addresses (
+        contact_id, street, city, state, postal_code, country, type, extra_types, label,
+        po_box, extended, sublocality, subadministrative_area, country_code, params,
+        latitude, longitude, geocoded_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? IS NULL THEN NULL ELSE datetime('now') END)
+    `);
     const insertCategory = db.prepare('INSERT INTO contact_categories (contact_id, category) VALUES (?, ?)');
-    const insertInstantMessage = db.prepare('INSERT INTO contact_instant_messages (contact_id, service, handle, type) VALUES (?, ?, ?, ?)');
-    const insertUrl = db.prepare('INSERT INTO contact_urls (contact_id, url, label, type) VALUES (?, ?, ?, ?)');
-    const insertRelatedPerson = db.prepare('INSERT INTO contact_related_people (contact_id, name, relationship) VALUES (?, ?, ?)');
-    const insertSocialProfile = db.prepare('INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url, type) VALUES (?, ?, ?, ?, ?)');
+    const insertInstantMessage = db.prepare('INSERT INTO contact_instant_messages (contact_id, service, handle, type, params) VALUES (?, ?, ?, ?, ?)');
+    const insertUrl = db.prepare('INSERT INTO contact_urls (contact_id, url, label, type, params) VALUES (?, ?, ?, ?, ?)');
+    const insertRelatedPerson = db.prepare('INSERT INTO contact_related_people (contact_id, name, relationship, params) VALUES (?, ?, ?, ?)');
+    const insertSocialProfile = db.prepare('INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url, type, params) VALUES (?, ?, ?, ?, ?, ?)');
 
     // --- Import new contacts ---
     for (const contact of (newContacts || [])) {
       try {
         const result = insertContact.run(
           contact.firstName, contact.lastName, contact.displayName,
-          contact.company, contact.title, contact.notes, contact.birthday, null, contact.rawVcard,
+          contact.company, contact.title, contact.notes, contact.birthday, null,
           contact.uid || null
         );
         const contactId = result.lastInsertRowid as number;
@@ -150,13 +158,27 @@ export default async function icloudRoutes(
           } catch { /* skip photo on error */ }
         }
 
-        for (const e of contact.emails) insertEmail.run(contactId, e.email, e.type, e.isPrimary ? 1 : 0);
-        for (const p of contact.phones) insertPhone.run(contactId, p.phone, p.phoneDisplay, p.countryCode, p.type, p.isPrimary ? 1 : 0);
-        for (const a of contact.addresses) insertAddress.run(contactId, a.street, a.city, a.state, a.postalCode, a.country, a.type, a.latitude, a.longitude, a.latitude);
+        for (const e of contact.emails) {
+          insertEmail.run(contactId, e.email, e.type, e.extraTypes ?? null, e.label ?? null, paramsJson(e.params), e.isPrimary ? 1 : 0);
+        }
+        for (const p of contact.phones) {
+          insertPhone.run(
+            contactId, p.phone, p.phoneDisplay, p.countryCode, p.type, p.extraTypes ?? null, p.label ?? null,
+            paramsJson(p.params), p.isPrimary ? 1 : 0
+          );
+        }
+        for (const a of contact.addresses) {
+          insertAddress.run(
+            contactId, a.street, a.city, a.state, a.postalCode, a.country, a.type,
+            a.extraTypes ?? null, a.label ?? null, a.poBox ?? null, a.extended ?? null,
+            a.sublocality ?? null, a.subadministrativeArea ?? null, a.countryCode ?? null, paramsJson(a.params),
+            a.latitude, a.longitude, a.latitude
+          );
+        }
         for (const c of contact.categories) insertCategory.run(contactId, c);
-        for (const im of contact.instantMessages) insertInstantMessage.run(contactId, im.service, im.handle, im.type);
-        for (const u of contact.urls) insertUrl.run(contactId, u.url, u.label, u.type);
-        for (const rp of contact.relatedPeople) insertRelatedPerson.run(contactId, rp.name, rp.relationship);
+        for (const im of contact.instantMessages) insertInstantMessage.run(contactId, im.service, im.handle, im.type, paramsJson(im.params));
+        for (const u of contact.urls) insertUrl.run(contactId, u.url, u.label, u.type, paramsJson(u.params));
+        for (const rp of contact.relatedPeople) insertRelatedPerson.run(contactId, rp.name, rp.relationship, paramsJson(rp.params));
         for (const sp of contact.socialProfiles) {
           let username = sp.username;
           if (!username && sp.url) {
@@ -164,9 +186,10 @@ export default async function icloudRoutes(
             username = m ? m[1] : sp.platform;
           }
           username = username || sp.platform;
-          insertSocialProfile.run(contactId, sp.platform, username, sp.url, null);
+          insertSocialProfile.run(contactId, sp.platform, username, sp.url, null, paramsJson(sp.params));
         }
 
+        saveVcardModelFields(db, contactId, contact);
         rebuildContactSearch(db, contactId);
         imported++;
       } catch (e) {

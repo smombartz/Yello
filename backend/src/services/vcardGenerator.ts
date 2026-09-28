@@ -2,10 +2,27 @@
  * vCard Generator
  * ================
  * Generates vCard 3.0 format from database contact records.
- * Used to regenerate vCards with properly formatted addresses.
+ *
+ * The database is the only source: typed columns for everything it models,
+ * and contact_vcard_properties for every other property of the imported card
+ * (PRODID, REV, X-ADDRESSING-GRAMMAR, ...). The stored raw_vcard is not read,
+ * so edits, merges and enrichment made after the import reach the export.
  */
 
+import zlib from 'zlib';
 import { formatAddress, type AddressInput } from './addressFormatter.js';
+import { LINKEDIN_ENRICHMENT_PROPERTY, type ParsedVcardProperty, type VcardParams } from './vcardParser.js';
+
+/** Fields an email, phone or address row carries alongside its value. */
+interface TypedEntry {
+  type: string | null;
+  /** TYPE values after the first, comma-joined */
+  extraTypes?: string | null;
+  /** X-ABLabel, as written */
+  label?: string | null;
+  /** Leftover vCard parameters, written after the ones above */
+  params?: VcardParams | null;
+}
 
 /**
  * Contact data for vCard generation
@@ -18,24 +35,34 @@ export interface ContactForVcard {
   title: string | null;
   notes: string | null;
   birthday: string | null;
-  emails: Array<{
+  middleName?: string | null;
+  namePrefix?: string | null;
+  nameSuffix?: string | null;
+  nickname?: string | null;
+  gender?: string | null;
+  /** ORG components after the company, `;`-joined */
+  department?: string | null;
+  isCompany?: boolean;
+  emails: Array<TypedEntry & {
     email: string;
-    type: string | null;
     isPrimary: boolean;
   }>;
-  phones: Array<{
+  phones: Array<TypedEntry & {
     phone: string;
     phoneDisplay: string;
-    type: string | null;
     isPrimary: boolean;
   }>;
-  addresses: Array<{
+  addresses: Array<TypedEntry & {
     street: string | null;
     city: string | null;
     state: string | null;
     postalCode: string | null;
     country: string | null;
-    type: string | null;
+    poBox?: string | null;
+    extended?: string | null;
+    sublocality?: string | null;
+    subadministrativeArea?: string | null;
+    countryCode?: string | null;
     latitude?: number | null;
     longitude?: number | null;
   }>;
@@ -43,9 +70,39 @@ export interface ContactForVcard {
     platform: string;
     username: string | null;
     profileUrl: string | null;
+    params?: VcardParams | null;
   }>;
   categories: string[];
   photoBase64?: string;
+  uid?: string | null;
+  urls?: Array<{
+    url: string;
+    label: string | null;
+    type: string | null;
+    params?: VcardParams | null;
+  }>;
+  instantMessages?: Array<{
+    service: string;
+    handle: string;
+    type: string | null;
+    params?: VcardParams | null;
+  }>;
+  relatedPeople?: Array<{
+    name: string;
+    relationship: string | null;
+    params?: VcardParams | null;
+  }>;
+  dates?: Array<{
+    date: string;
+    label: string | null;
+    params?: VcardParams | null;
+  }>;
+  /** contact_vcard_properties rows, in card order */
+  extraProperties?: ParsedVcardProperty[];
+  /** Leftover parameters of single-valued properties, keyed by property name */
+  vcardParams?: Record<string, VcardParams> | null;
+  /** linkedin_enrichment columns, written as one X-YELLO-LINKEDIN property. */
+  linkedinEnrichment?: Record<string, unknown> | null;
 }
 
 /**
@@ -91,27 +148,75 @@ function foldLine(line: string, maxLength: number = 75): string {
 }
 
 /**
- * Generate TYPE parameter string for vCard properties
+ * Generate TYPE parameters for vCard properties, one per type. `pref` is
+ * never a type here; preference is written separately as PREF=1.
  */
-function getTypeParam(type: string | null): string {
-  if (!type) return '';
-  const upperType = type.toUpperCase();
-  // Common vCard types
-  if (['HOME', 'WORK', 'CELL', 'VOICE', 'FAX', 'PAGER', 'OTHER'].includes(upperType)) {
-    return `;TYPE=${upperType}`;
-  }
-  // Custom types get wrapped in X-
-  return `;TYPE=${escapeVcardValue(type)}`;
+function getTypeParam(type: string | null, extraTypes?: string | null): string {
+  const types = [type, ...(extraTypes ?? '').split(',')]
+    .map(t => t?.trim())
+    .filter((t): t is string => !!t && t.toLowerCase() !== 'pref');
+
+  return types.map(t => {
+    const upperType = t.toUpperCase();
+    // Common vCard types
+    if (['HOME', 'WORK', 'CELL', 'VOICE', 'FAX', 'PAGER', 'OTHER', 'INTERNET', 'IPHONE', 'MAIN'].includes(upperType)) {
+      return `;TYPE=${upperType}`;
+    }
+    return `;TYPE=${escapeVcardValue(t)}`;
+  }).join('');
+}
+
+/**
+ * Format a parameter value. Parameters are not backslash-escaped like
+ * property values; a value holding a separator is quoted instead.
+ */
+function formatParamValue(value: string): string {
+  const cleaned = value.replace(/["\r\n]/g, '');
+  return /[;:,]/.test(cleaned) ? `"${cleaned}"` : cleaned;
+}
+
+/**
+ * Parameters as written after a property name: one `;NAME=value` per value,
+ * quoted when the value holds a separator, `;NAME` for a bare parameter.
+ */
+function formatParams(params: VcardParams | null | undefined): string {
+  return Object.entries(params ?? {})
+    .flatMap(([name, values]) => values.length === 0
+      ? [`;${name}`]
+      : values.map(value => `;${name}=${/[;:]/.test(value) ? `"${value.replace(/"/g, '')}"` : value}`))
+    .join('');
+}
+
+/**
+ * Lines for the contact's generic properties. Their item groups are renamed
+ * past the generator's own so the two can never collide; lines that shared a
+ * group keep sharing one.
+ */
+function extraPropertyLines(properties: ParsedVcardProperty[], nextGroup: () => string): string[] {
+  const renamed = new Map<string, string>();
+  return properties.map(property => {
+    let prefix = '';
+    if (property.group) {
+      let group = renamed.get(property.group);
+      if (!group) {
+        group = nextGroup();
+        renamed.set(property.group, group);
+      }
+      prefix = `${group}.`;
+    }
+
+    return `${prefix}${property.name}${formatParams(property.params)}:${property.value}`;
+  });
 }
 
 /**
  * Format an ADR (address) property value
  * Format: PO Box;Extended Address;Street;City;State;Postal Code;Country
  */
-function formatAdrValue(address: AddressInput): string {
+function formatAdrValue(address: AddressInput & { poBox?: string | null; extended?: string | null }): string {
   const parts = [
-    '',                                    // PO Box
-    '',                                    // Extended Address
+    escapeVcardValue(address.poBox ?? null),     // PO Box
+    escapeVcardValue(address.extended ?? null),  // Extended Address
     escapeVcardValue(address.street),      // Street
     escapeVcardValue(address.city),        // City
     escapeVcardValue(address.state),       // State/Province
@@ -141,48 +246,90 @@ export function generateVcard(contact: ContactForVcard): string {
   lines.push('VERSION:3.0');
 
   // FN (Formatted Name) - required
-  lines.push(`FN:${escapeVcardValue(contact.displayName)}`);
+  const vp = (name: string) => formatParams(contact.vcardParams?.[name]);
 
-  // N (Structured Name)
-  const firstName = escapeVcardValue(contact.firstName);
-  const lastName = escapeVcardValue(contact.lastName);
-  lines.push(`N:${lastName};${firstName};;;`);
+  lines.push(`FN${vp('FN')}:${escapeVcardValue(contact.displayName)}`);
 
-  // ORG (Organization)
-  if (contact.company) {
-    lines.push(`ORG:${escapeVcardValue(contact.company)}`);
+  // N (Structured Name): family;given;additional;prefix;suffix
+  lines.push(`N${vp('N')}:${[
+    contact.lastName,
+    contact.firstName,
+    contact.middleName,
+    contact.namePrefix,
+    contact.nameSuffix
+  ].map(part => escapeVcardValue(part ?? null)).join(';')}`);
+
+  if (contact.nickname) {
+    lines.push(`NICKNAME${vp('NICKNAME')}:${escapeVcardValue(contact.nickname)}`);
+  }
+
+  // ORG (Organization): company, then each organisational unit
+  if (contact.company || contact.department) {
+    const units = contact.department ? contact.department.split(';') : [];
+    lines.push(`ORG${vp('ORG')}:${[contact.company, ...units].map(part => escapeVcardValue(part ?? null)).join(';')}`);
+  }
+
+  if (contact.isCompany) {
+    lines.push(`X-ABShowAs${vp('X-ABSHOWAS')}:COMPANY`);
+  }
+
+  if (contact.gender) {
+    lines.push(`X-GENDER${vp('X-GENDER')}:${escapeVcardValue(contact.gender)}`);
   }
 
   // TITLE
   if (contact.title) {
-    lines.push(`TITLE:${escapeVcardValue(contact.title)}`);
+    lines.push(`TITLE${vp('TITLE')}:${escapeVcardValue(contact.title)}`);
   }
+
+  // Item groups tie a property to its annotations (X-ABLabel, GEO, ...)
+  let itemCounter = 0;
+  const nextGroup = () => `item${++itemCounter}`;
+  const labelLine = (group: string, label: string) => `${group}.X-ABLabel:${escapeVcardValue(label)}`;
 
   // EMAIL entries
   for (const email of contact.emails) {
-    const typeParam = getTypeParam(email.type);
+    if (!email.email) continue;
+    const typeParam = getTypeParam(email.type, email.extraTypes);
     const prefParam = email.isPrimary ? ';PREF=1' : '';
-    lines.push(`EMAIL${typeParam}${prefParam}:${email.email}`);
+    if (email.label) {
+      const group = nextGroup();
+      lines.push(`${group}.EMAIL${typeParam}${prefParam}${formatParams(email.params)}:${email.email}`);
+      lines.push(labelLine(group, email.label));
+    } else {
+      lines.push(`EMAIL${typeParam}${prefParam}${formatParams(email.params)}:${email.email}`);
+    }
   }
 
   // TEL entries
   for (const phone of contact.phones) {
-    const typeParam = getTypeParam(phone.type);
+    if (!phone.phoneDisplay && !phone.phone) continue;
+    const typeParam = getTypeParam(phone.type, phone.extraTypes);
     const prefParam = phone.isPrimary ? ';PREF=1' : '';
     // Use the display format which is more human-readable
-    lines.push(`TEL${typeParam}${prefParam}:${phone.phoneDisplay || phone.phone}`);
+    const value = phone.phoneDisplay || phone.phone;
+    if (phone.label) {
+      const group = nextGroup();
+      lines.push(`${group}.TEL${typeParam}${prefParam}${formatParams(phone.params)}:${value}`);
+      lines.push(labelLine(group, phone.label));
+    } else {
+      lines.push(`TEL${typeParam}${prefParam}${formatParams(phone.params)}:${value}`);
+    }
   }
 
   // ADR entries with country-formatted LABEL.
-  // Geocoded addresses get an Apple-style item group so a per-address GEO
-  // property can be tied to its ADR (vCard 3.0 GEO is otherwise card-level).
-  let itemCounter = 0;
+  // Annotated addresses get an Apple-style item group so a per-address GEO,
+  // label or country hint can be tied to its ADR (vCard 3.0 GEO is otherwise
+  // card-level).
   for (const address of contact.addresses) {
-    const typeParam = getTypeParam(address.type);
+    const typeParam = getTypeParam(address.type, address.extraTypes);
     const adrValue = formatAdrValue(address);
     const hasGeo = address.latitude != null && address.longitude != null;
-    const group = hasGeo ? `item${++itemCounter}.` : '';
-    lines.push(`${group}ADR${typeParam}:${adrValue}`);
+    const needsGroup = hasGeo || !!address.label || !!address.countryCode ||
+      !!address.sublocality || !!address.subadministrativeArea;
+    const groupName = needsGroup ? nextGroup() : null;
+    const group = groupName ? `${groupName}.` : '';
+    lines.push(`${group}ADR${typeParam}${formatParams(address.params)}:${adrValue}`);
 
     // Add LABEL with formatted address
     const labelValue = formatLabelValue(address);
@@ -193,32 +340,91 @@ export function generateVcard(contact: ContactForVcard): string {
     if (hasGeo) {
       lines.push(`${group}GEO:${address.latitude};${address.longitude}`);
     }
+    if (groupName && address.label) lines.push(labelLine(groupName, address.label));
+    if (address.countryCode) lines.push(`${group}X-ABADR:${escapeVcardValue(address.countryCode)}`);
+    if (address.sublocality) {
+      lines.push(`${group}X-APPLE-SUBLOCALITY:${escapeVcardValue(address.sublocality)}`);
+    }
+    if (address.subadministrativeArea) {
+      lines.push(`${group}X-APPLE-SUBADMINISTRATIVEAREA:${escapeVcardValue(address.subadministrativeArea)}`);
+    }
+  }
+
+  // URL entries. A label travels as the X-ABLabel of the URL's item group.
+  for (const url of contact.urls ?? []) {
+    const typeParam = getTypeParam(url.type);
+    const label = url.label;
+    if (label) {
+      const group = `item${++itemCounter}`;
+      lines.push(`${group}.URL${typeParam}${formatParams(url.params)}:${url.url}`);
+      lines.push(`${group}.X-ABLabel:${escapeVcardValue(label)}`);
+    } else {
+      lines.push(`URL${typeParam}${formatParams(url.params)}:${url.url}`);
+    }
+  }
+
+  // IMPP (instant messaging) entries
+  for (const im of contact.instantMessages ?? []) {
+    const scheme = im.service.toLowerCase().replace(/[^a-z0-9+.-]/g, '') || 'x-apple';
+    const typeParam = getTypeParam(im.type);
+    lines.push(`IMPP;X-SERVICE-TYPE=${formatParamValue(im.service)}${typeParam}${formatParams(im.params)}:${scheme}:${im.handle}`);
   }
 
   // BDAY (Birthday)
   if (contact.birthday) {
     // Try to format as ISO date (YYYY-MM-DD or YYYYMMDD)
     const bday = contact.birthday.replace(/-/g, '');
-    lines.push(`BDAY:${bday}`);
+    lines.push(`BDAY${vp('BDAY')}:${bday}`);
+  }
+
+  // Custom dates, labelled the way Apple writes them
+  for (const date of contact.dates ?? []) {
+    if (date.label) {
+      const group = nextGroup();
+      lines.push(`${group}.X-ABDATE${formatParams(date.params)}:${date.date}`);
+      lines.push(labelLine(group, date.label));
+    } else {
+      lines.push(`X-ABDATE${formatParams(date.params)}:${date.date}`);
+    }
   }
 
   // NOTE
   if (contact.notes) {
-    lines.push(`NOTE:${escapeVcardValue(contact.notes)}`);
+    lines.push(`NOTE${vp('NOTE')}:${escapeVcardValue(contact.notes)}`);
   }
 
   // CATEGORIES
   if (contact.categories.length > 0) {
-    lines.push(`CATEGORIES:${contact.categories.map(escapeVcardValue).join(',')}`);
+    lines.push(`CATEGORIES${vp('CATEGORIES')}:${contact.categories.map(escapeVcardValue).join(',')}`);
   }
 
-  // X-SOCIALPROFILE entries
+  // X-SOCIALPROFILE entries, in the form Apple writes them
   for (const profile of contact.socialProfiles) {
     if (profile.profileUrl) {
-      const platformParam = profile.platform ? `;X-SERVICE=${escapeVcardValue(profile.platform)}` : '';
-      const usernameParam = profile.username ? `;X-USER=${escapeVcardValue(profile.username)}` : '';
-      lines.push(`X-SOCIALPROFILE${platformParam}${usernameParam}:${profile.profileUrl}`);
+      const platformParam = profile.platform ? `;TYPE=${formatParamValue(profile.platform)}` : '';
+      const usernameParam = profile.username ? `;X-USER=${formatParamValue(profile.username)}` : '';
+      lines.push(`X-SOCIALPROFILE${platformParam}${usernameParam}${formatParams(profile.params)}:${profile.profileUrl}`);
     }
+  }
+
+  // X-ABRELATEDNAMES entries
+  for (const person of contact.relatedPeople ?? []) {
+    const typeParam = person.relationship ? `;TYPE=${formatParamValue(person.relationship)}` : '';
+    lines.push(`X-ABRELATEDNAMES${typeParam}${formatParams(person.params)}:${escapeVcardValue(person.name)}`);
+  }
+
+  // UID
+  if (contact.uid) {
+    lines.push(`UID${vp('UID')}:${contact.uid}`);
+  }
+
+  // Every other property of the imported card
+  lines.push(...extraPropertyLines(contact.extraProperties ?? [], nextGroup));
+
+  // LinkedIn enrichment, gzip-compressed so a full export stays uploadable
+  if (contact.linkedinEnrichment && Object.keys(contact.linkedinEnrichment).length > 0) {
+    const payload = zlib.gzipSync(JSON.stringify(contact.linkedinEnrichment)).toString('base64');
+    lines.push(`${LINKEDIN_ENRICHMENT_PROPERTY}:${payload}`);
   }
 
   // PHOTO (base64 JPEG)

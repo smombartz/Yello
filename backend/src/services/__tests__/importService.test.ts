@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
 import { runVcfImportJob } from '../importService.js';
 import { createImportJob, getImportJob, updateJobProgress } from '../importJobService.js';
 import { getUserDatabase, closeAllUserDatabases, getUserImportsPath } from '../userDatabase.js';
@@ -285,6 +286,44 @@ describe('runVcfImportJob', () => {
       .get() as { latitude: number; longitude: number };
     expect(row.latitude).toBeCloseTo(45.51223);
     expect(row.longitude).toBeCloseTo(-122.658722);
+  });
+
+  it('stores only known enrichment columns, against the imported contact', async () => {
+    // The payload comes from an uploaded file, so its keys are not trusted:
+    // they must never choose the row's owner or name a column.
+    const payload = zlib.gzipSync(JSON.stringify({
+      headline: 'Analyst',
+      followers_count: 12,
+      id: 999,
+      contact_id: 999,
+      'headline = (SELECT 1) --': 'x',
+      education: { nested: 'object' }
+    })).toString('base64');
+    const vcf = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      'FN:Enriched Person',
+      'N:Person;Enriched;;;',
+      `X-YELLO-LINKEDIN:${payload}`,
+      'END:VCARD'
+    ].join('\n');
+
+    const result = await runVcfImportJob(USER_ID, stageJob(vcf));
+    expect(result.imported).toBe(1);
+    expect(result.failed).toBe(0);
+
+    const db = getUserDatabase(USER_ID);
+    const contact = db.prepare('SELECT id FROM contacts').get() as { id: number };
+    const rows = db.prepare(
+      'SELECT contact_id, headline, followers_count, education FROM linkedin_enrichment'
+    ).all();
+
+    expect(rows).toEqual([
+      { contact_id: contact.id, headline: 'Analyst', followers_count: 12, education: null }
+    ]);
+    // Stored once, in linkedin_enrichment — not again as a generic property
+    expect(db.prepare(`SELECT COUNT(*) AS n FROM contact_vcard_properties WHERE name = 'X-YELLO-LINKEDIN'`).get())
+      .toEqual({ n: 0 });
   });
 
   it('marks the job failed when the staged file is missing', async () => {

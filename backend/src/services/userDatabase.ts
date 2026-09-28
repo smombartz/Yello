@@ -2,6 +2,9 @@ import Database from 'better-sqlite3';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
+import { backfillGroupedRelatedNames } from './relatedNamesBackfill.js';
+import { backfillVcardModel, backfillVcardModelV2 } from './vcardModelBackfill.js';
+import { retireRawVcards } from './rawVcardRetirement.js';
 
 const MAX_CACHE_SIZE = 50;
 
@@ -70,7 +73,14 @@ export function getUserDatabase(userId: number): DatabaseType {
       notes TEXT,
       birthday TEXT,
       photo_hash TEXT,
-      raw_vcard TEXT,
+      middle_name TEXT,
+      name_prefix TEXT,
+      name_suffix TEXT,
+      nickname TEXT,
+      gender TEXT,
+      department TEXT,
+      is_company INTEGER DEFAULT 0,
+      vcard_params TEXT,
       archived_at DATETIME DEFAULT NULL,
       gmail_history_id TEXT DEFAULT NULL,
       gmail_last_sync_at TEXT DEFAULT NULL,
@@ -83,7 +93,10 @@ export function getUserDatabase(userId: number): DatabaseType {
       contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
       email TEXT NOT NULL,
       type TEXT,
-      is_primary INTEGER DEFAULT 0
+      extra_types TEXT,
+      label TEXT,
+      is_primary INTEGER DEFAULT 0,
+      params TEXT
     );
 
     CREATE TABLE IF NOT EXISTS contact_phones (
@@ -93,7 +106,10 @@ export function getUserDatabase(userId: number): DatabaseType {
       phone_display TEXT NOT NULL,
       country_code TEXT DEFAULT NULL,
       type TEXT,
-      is_primary INTEGER DEFAULT 0
+      extra_types TEXT,
+      label TEXT,
+      is_primary INTEGER DEFAULT 0,
+      params TEXT
     );
 
     CREATE TABLE IF NOT EXISTS contact_addresses (
@@ -105,9 +121,17 @@ export function getUserDatabase(userId: number): DatabaseType {
       postal_code TEXT,
       country TEXT,
       type TEXT,
+      extra_types TEXT,
+      label TEXT,
+      po_box TEXT,
+      extended TEXT,
+      sublocality TEXT,
+      subadministrative_area TEXT,
+      country_code TEXT,
       latitude REAL DEFAULT NULL,
       longitude REAL DEFAULT NULL,
-      geocoded_at TEXT DEFAULT NULL
+      geocoded_at TEXT DEFAULT NULL,
+      params TEXT
     );
 
     CREATE TABLE IF NOT EXISTS contact_social_profiles (
@@ -116,7 +140,8 @@ export function getUserDatabase(userId: number): DatabaseType {
       platform TEXT NOT NULL,
       username TEXT NOT NULL,
       profile_url TEXT,
-      type TEXT
+      type TEXT,
+      params TEXT
     );
 
     CREATE TABLE IF NOT EXISTS contact_categories (
@@ -130,7 +155,8 @@ export function getUserDatabase(userId: number): DatabaseType {
       contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
       service TEXT NOT NULL,
       handle TEXT NOT NULL,
-      type TEXT
+      type TEXT,
+      params TEXT
     );
 
     CREATE TABLE IF NOT EXISTS contact_urls (
@@ -138,14 +164,38 @@ export function getUserDatabase(userId: number): DatabaseType {
       contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
       url TEXT NOT NULL,
       label TEXT,
-      type TEXT
+      type TEXT,
+      params TEXT
     );
 
     CREATE TABLE IF NOT EXISTS contact_related_people (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
-      relationship TEXT
+      relationship TEXT,
+      params TEXT
+    );
+
+    -- Custom dates (X-ABDATE, ANNIVERSARY). label is kept as written, e.g.
+    -- Apple's _$!<Anniversary>!$_, so it survives a round trip.
+    CREATE TABLE IF NOT EXISTS contact_dates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      label TEXT,
+      params TEXT
+    );
+
+    -- Every vCard property with no typed home above (PRODID, REV, X-IMAGEHASH,
+    -- X-ADDRESSING-GRAMMAR, unknown X- properties, ...), one row per line.
+    CREATE TABLE IF NOT EXISTS contact_vcard_properties (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+      position INTEGER NOT NULL,
+      group_name TEXT,
+      name TEXT NOT NULL,
+      params TEXT,
+      value TEXT NOT NULL
     );
 
     -- FTS5 virtual tables
@@ -215,6 +265,9 @@ export function getUserDatabase(userId: number): DatabaseType {
     CREATE INDEX IF NOT EXISTS idx_contact_instant_messages_contact_id ON contact_instant_messages(contact_id);
     CREATE INDEX IF NOT EXISTS idx_contact_urls_contact_id ON contact_urls(contact_id);
     CREATE INDEX IF NOT EXISTS idx_contact_related_people_contact_id ON contact_related_people(contact_id);
+    CREATE INDEX IF NOT EXISTS idx_contact_dates_contact_id ON contact_dates(contact_id);
+    CREATE INDEX IF NOT EXISTS idx_contact_vcard_properties_contact_id ON contact_vcard_properties(contact_id, position);
+    CREATE INDEX IF NOT EXISTS idx_contact_vcard_properties_name ON contact_vcard_properties(name);
 
     -- User settings (single row)
     CREATE TABLE IF NOT EXISTS user_settings (
@@ -229,6 +282,10 @@ export function getUserDatabase(userId: number): DatabaseType {
       icloud_app_password TEXT,
       apify_api_token TEXT,
       apify_username TEXT,
+      related_names_backfilled_at TEXT,
+      vcard_model_backfilled_at TEXT,
+      vcard_model_v2_backfilled_at TEXT,
+      raw_vcards_archived_at TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -383,6 +440,55 @@ export function getUserDatabase(userId: number): DatabaseType {
   try {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_contact_related_people_related_contact_id ON contact_related_people(related_contact_id) WHERE related_contact_id IS NOT NULL`);
   } catch { /* index already exists */ }
+
+  // Grouped related-names backfill — marker column plus the one-time repair
+  // itself, for contacts imported before grouped X-ABRELATEDNAMES were read.
+  try {
+    db.exec(`ALTER TABLE user_settings ADD COLUMN related_names_backfilled_at TEXT`);
+  } catch { /* column already exists */ }
+  backfillGroupedRelatedNames(db);
+
+  // Full vCard model — columns for person data the schema used to leave in
+  // raw_vcard, plus the one-time backfill that recovers them from it.
+  for (const statement of [
+    `ALTER TABLE contacts ADD COLUMN middle_name TEXT`,
+    `ALTER TABLE contacts ADD COLUMN name_prefix TEXT`,
+    `ALTER TABLE contacts ADD COLUMN name_suffix TEXT`,
+    `ALTER TABLE contacts ADD COLUMN nickname TEXT`,
+    `ALTER TABLE contacts ADD COLUMN gender TEXT`,
+    `ALTER TABLE contacts ADD COLUMN department TEXT`,
+    `ALTER TABLE contacts ADD COLUMN is_company INTEGER DEFAULT 0`,
+    `ALTER TABLE contact_emails ADD COLUMN extra_types TEXT`,
+    `ALTER TABLE contact_emails ADD COLUMN label TEXT`,
+    `ALTER TABLE contact_phones ADD COLUMN extra_types TEXT`,
+    `ALTER TABLE contact_phones ADD COLUMN label TEXT`,
+    `ALTER TABLE contact_addresses ADD COLUMN extra_types TEXT`,
+    `ALTER TABLE contact_addresses ADD COLUMN label TEXT`,
+    `ALTER TABLE contact_addresses ADD COLUMN po_box TEXT`,
+    `ALTER TABLE contact_addresses ADD COLUMN extended TEXT`,
+    `ALTER TABLE contact_addresses ADD COLUMN sublocality TEXT`,
+    `ALTER TABLE contact_addresses ADD COLUMN subadministrative_area TEXT`,
+    `ALTER TABLE contact_addresses ADD COLUMN country_code TEXT`,
+    `ALTER TABLE user_settings ADD COLUMN vcard_model_backfilled_at TEXT`,
+    // Leftover vCard parameters (X-APPLE-OMIT-YEAR, TYPE=pref on a URL, ...)
+    `ALTER TABLE contacts ADD COLUMN vcard_params TEXT`,
+    ...['contact_emails', 'contact_phones', 'contact_addresses', 'contact_social_profiles',
+      'contact_instant_messages', 'contact_urls', 'contact_related_people', 'contact_dates']
+      .map(table => `ALTER TABLE ${table} ADD COLUMN params TEXT`),
+    `ALTER TABLE user_settings ADD COLUMN vcard_model_v2_backfilled_at TEXT`,
+    `ALTER TABLE user_settings ADD COLUMN raw_vcards_archived_at TEXT`
+  ]) {
+    try {
+      db.exec(statement);
+    } catch { /* column already exists */ }
+  }
+  backfillVcardModel(db);
+  backfillVcardModelV2(db);
+
+  // With every property modeled, the imported originals move out of the
+  // database into a verified archive file, and the column is dropped. Must
+  // run after the backfills above, which read raw_vcard.
+  retireRawVcards(db, path.join(getUserDataPath(), String(userId), 'archive'));
 
   cache.set(userId, db);
   return db;

@@ -26,7 +26,9 @@ Two tiers of **SQLite** (`better-sqlite3`), both opened with `journal_mode = WAL
         ├── contacts.db            ← one full contact database per tenant
         ├── photos/                ← that user's CONTACT photos
         │   └── {thumbnail,small,medium,large}/<2-char prefix>/<md5>.jpg
-        └── imports/<jobId>.vcf    ← staged VCF uploads, deleted on success
+        ├── imports/<jobId>.vcf    ← staged VCF uploads, deleted on success
+        └── archive/original-cards-<date>.vcf.gz
+                                   ← imported originals, written once when raw_vcard was retired
 ```
 
 ### Tenancy has no tenant column
@@ -154,7 +156,13 @@ The root record. Everything else in this database hangs off it via `ON DELETE CA
 | `company`, `title`, `notes` | TEXT | |
 | `birthday` | TEXT | ISO-ish date string, not a DATE type |
 | `photo_hash` | TEXT | MD5 of `contact_id`; locates the file under the user's photos dir |
-| `raw_vcard` | TEXT | Original card, replayed on export unless `?regenerate=true` |
+| `middle_name`, `name_prefix`, `name_suffix` | TEXT | *(migration)* Components 3–5 of vCard `N` |
+| `nickname` | TEXT | *(migration)* vCard `NICKNAME` |
+| `gender` | TEXT | *(migration)* Apple `X-GENDER`, as written (`Male`, `Female`, …) |
+| `department` | TEXT | *(migration)* `ORG` components after the company, `;`-joined |
+| `is_company` | INTEGER DEFAULT 0 | *(migration)* Apple `X-ABShowAs:COMPANY` — the card is an organisation |
+| `vcard_params` | TEXT | *(migration)* JSON leftover parameters of the single-valued properties, keyed by property: `{"BDAY": {"X-APPLE-OMIT-YEAR": ["1604"]}}`. See *Leftover parameters* |
+| ~~`raw_vcard`~~ | — | **Retired 2026-09-27.** Held each card as imported. Dropped once every property was modeled; the originals are in `archive/original-cards-<date>.vcf.gz`. See *raw_vcard retirement* below |
 | `archived_at` | DATETIME DEFAULT NULL | **`NULL` means active.** Soft-delete — see below |
 | `gmail_history_id` | TEXT | Gmail incremental-sync cursor |
 | `gmail_last_sync_at` | TEXT | |
@@ -174,14 +182,40 @@ All share `contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE
 
 | Table | Columns beyond `id` / `contact_id` | Notes |
 | --- | --- | --- |
-| `contact_emails` | `email` NOT NULL, `type`, `is_primary` | Extra index on `email COLLATE NOCASE` |
-| `contact_phones` | `phone` NOT NULL, `phone_display` NOT NULL, `country_code`, `type`, `is_primary` | `phone` is E.164 (`libphonenumber-js`); `phone_display` is the formatted form. Extra index on `phone` |
-| `contact_addresses` | `street`, `city`, `state`, `postal_code`, `country`, `type`, `latitude`, `longitude`, `geocoded_at` | See geocoding below |
-| `contact_social_profiles` | `platform` NOT NULL, `username` NOT NULL, `profile_url`, `type` | Extra index on `(platform, username)` |
+| `contact_emails` | `email` NOT NULL, `type`, `extra_types`, `label`, `params`, `is_primary` | Extra index on `email COLLATE NOCASE` |
+| `contact_phones` | `phone` NOT NULL, `phone_display` NOT NULL, `country_code`, `type`, `extra_types`, `label`, `params`, `is_primary` | `phone` is E.164 (`libphonenumber-js`); `phone_display` is the formatted form. Extra index on `phone` |
+| `contact_addresses` | `street`, `city`, `state`, `postal_code`, `country`, `type`, `extra_types`, `label`, `po_box`, `extended`, `sublocality`, `subadministrative_area`, `country_code`, `params`, `latitude`, `longitude`, `geocoded_at` | See geocoding below. `po_box`/`extended` are `ADR` components 1–2; `sublocality`, `subadministrative_area`, `country_code` are Apple's `X-APPLE-SUBLOCALITY`, `X-APPLE-SUBADMINISTRATIVEAREA`, `X-ABADR` of the address's item group |
+| `contact_social_profiles` | `platform` NOT NULL, `username` NOT NULL, `profile_url`, `type`, `params` | Extra index on `(platform, username)` |
 | `contact_categories` | `category` NOT NULL | Free-text tags, from vCard `CATEGORIES` |
-| `contact_instant_messages` | `service` NOT NULL, `handle` NOT NULL, `type` | From vCard `IMPP` |
-| `contact_urls` | `url` NOT NULL, `label`, `type` | `label` carries Apple `X-ABLabel` grouped labels |
-| `contact_related_people` | `name` NOT NULL, `relationship`, `related_contact_id` | *(migration)* nullable FK → `contacts(id)` ON DELETE **SET NULL**, so free-text names keep a `NULL` link. Partial index `WHERE related_contact_id IS NOT NULL` |
+| `contact_instant_messages` | `service` NOT NULL, `handle` NOT NULL, `type`, `params` | From vCard `IMPP` |
+| `contact_urls` | `url` NOT NULL, `label`, `type`, `params` | `label` carries Apple `X-ABLabel` grouped labels |
+| `contact_related_people` | `name` NOT NULL, `relationship`, `related_contact_id`, `params` | *(migration)* nullable FK → `contacts(id)` ON DELETE **SET NULL**, so free-text names keep a `NULL` link. Partial index `WHERE related_contact_id IS NOT NULL` |
+| `contact_dates` | `date` NOT NULL, `label`, `params` | Apple `X-ABDATE` and vCard `ANNIVERSARY`. `date` and `label` are kept as written (Apple's built-ins look like `_$!<Anniversary>!$_`) |
+| `contact_vcard_properties` | `position` NOT NULL, `group_name`, `name` NOT NULL, `params`, `value` NOT NULL | Every vCard property with no typed home, one row per line in card order. `name` upper-cased; `params` JSON `{"PARAM": ["v", …]}` (a bare vCard 2.1 parameter maps to `[]`); `value` still vCard-escaped. Indexes `(contact_id, position)` and `name`. Read-only in the API |
+
+**`type` / `extra_types` / `label` (emails, phones, addresses).** `type` is the first vCard `TYPE` (what the edit form's select binds to); `extra_types` holds the rest, comma-joined (`fax` of `TYPE=HOME;TYPE=FAX`, `internet` of `TYPE=OTHER;TYPE=INTERNET`). `pref` is never stored as a type — preference is `is_primary`. `label` is the Apple `X-ABLabel` of the entry's item group ("Obsolete", "WhatsApp", `_$!<HomePage>!$_`). The edit endpoints replace child rows wholesale from forms that don't carry `label`/`extra_types`/address hints/`params`, so `PUT /api/contacts/:id` and the profile save wrap the replacement in `preserveEntryAnnotations()`, which restores them on rows whose value (email, E.164 phone, street+city+postcode, URL, IM, social URL, related name) survived.
+
+**Leftover parameters (`params`, `contacts.vcard_params`).** A typed column keeps a property's value but not every vCard parameter on it. Whatever parameters no column holds are stored as JSON in the row's `params` (or, for single-valued properties like `BDAY`, in `contacts.vcard_params` keyed by property name) and written back on export. In real Apple/BusyContacts data that is mostly `TYPE=pref` on URLs, addresses and IMs (which have no `is_primary`), `X-APPLE-OMIT-YEAR` on birthdays without a year (without it a birthday exports as year 1604), and Apple's `X-USERID` / `X-DISPLAYNAME` / `X-BUNDLEIDENTIFIERS` / `X-TEAMIDENTIFIER` on social profiles. Not stored: `TYPE` values already in `type`/`extra_types`, `PREF` (→ `is_primary`), the item group, and parameters other columns hold (`X-USER`, `X-SERVICE-TYPE`).
+
+### vCard coverage
+
+Every property of an imported card lands in exactly one place — a typed column/table above, or `contact_vcard_properties` — so export (`vcardExportService.ts`) builds the card from the database alone.
+
+| vCard property | Stored in |
+| --- | --- |
+| `FN`, `N`, `ORG`, `TITLE`, `NOTE`, `BDAY`, `NICKNAME`, `X-GENDER`, `X-ABShowAs`, `UID` | `contacts` columns (`UID` → `icloud_uid`) |
+| `EMAIL`, `TEL`, `ADR` (+ their `X-ABLabel`, `X-ABADR`, `X-APPLE-SUB*`, `GEO`) | `contact_emails` / `contact_phones` / `contact_addresses` |
+| `LABEL` | Not stored — the display form of an address, regenerated from its parts |
+| `URL`, `IMPP`, `X-SOCIALPROFILE`, `X-ABRELATEDNAMES`, `CATEGORIES` | Their child tables |
+| `X-ABDATE`, `ANNIVERSARY` | `contact_dates` |
+| `PHOTO` (inline) | Files on disk + `contact_photos`, re-encoded to at most 800 px (the larger originals are not kept — a deliberate choice) |
+| `X-YELLO-LINKEDIN` | `linkedin_enrichment` |
+| `VERSION` | Not stored — always written as `3.0` |
+| `X-YELLO-CONTACT-ID` | Not stored — tags cards in the `raw_vcard` archive; a contact id means nothing in another database |
+| Parameters no column holds | The row's `params`, or `contacts.vcard_params` |
+| **Everything else**: `PRODID`, `REV`, `X-CREATED`, `X-IMAGEHASH`, `X-IMAGETYPE`, `X-BUSYMAC-*`, `X-SHARED-PHOTO-DISPLAY-PREF`, `X-ADDRESSING-GRAMMAR`, `VND-63-*`, a `PHOTO` given as a URL, a repeat of a single-valued property, an `X-ABLabel` of a property with no label column (e.g. `IMPP`), unknown `X-` properties | `contact_vcard_properties` |
+
+These last ones get no typed column because they describe the file or the client that wrote it (sync revision, image hash, BusyContacts' last editor), or are an opaque vendor encoding (`X-ADDRESSING-GRAMMAR` is iOS 17's base64 plist of pronouns). Nothing in the app can meaningfully edit them; they only need to survive a round trip.
 
 **Geocoding (`contact_addresses`).** `latitude`/`longitude` are REAL, `geocoded_at` is TEXT. The address-cleanup queue reads these as a three-state machine:
 
@@ -219,9 +253,19 @@ Single row, enforced by `CHECK (id = 1)` and seeded with `INSERT OR IGNORE INTO 
 | `apify_api_token` | **Encrypted at rest** |
 | `apify_username` | |
 | `google_contacts_last_synced` | *(migration)* DATETIME |
+| `related_names_backfilled_at` | *(migration)* TEXT. Marker for the one-time related-names backfill; `NULL` means it has not run. See below |
+| `vcard_model_backfilled_at` | *(migration)* TEXT. Marker for the one-time vCard-model backfill. See below |
+| `vcard_model_v2_backfilled_at` | *(migration)* TEXT. Marker for the second vCard-model backfill |
+| `raw_vcards_archived_at` | *(migration)* TEXT. Marker for the `raw_vcard` retirement; set only after the archive is verified and the column dropped |
 | `created_at` / `updated_at` | |
 
 Encryption is `services/tokenEncryption.ts` (`encryptToken` / `decryptToken`), keyed off `SESSION_SECRET`. **Rotating `SESSION_SECRET` invalidates every stored third-party credential.**
+
+**Related-names backfill (data migration).** `getUserDatabase` runs `backfillGroupedRelatedNames()` after the schema migrations. While `related_names_backfilled_at` is `NULL` it scans contacts whose `raw_vcard` holds a grouped `X-ABRELATEDNAMES` line, inserts the names missing from `contact_related_people` (matched case-insensitively per contact), and stamps the marker — all in one transaction. Resetting the marker to `NULL` makes it run again on the next open, which would re-add any recovered name the user has since removed.
+
+**vCard-model backfill (data migration).** Right after it, `backfillVcardModel()` (`services/vcardModelBackfill.ts`) runs while `vcard_model_backfilled_at` is `NULL`: it re-parses every contact's `raw_vcard` and fills what older imports dropped — person fields, email/phone/address labels and extra types, address hints, URL labels, `icloud_uid`, `contact_dates` and `contact_vcard_properties` — then sets every stored `type = 'pref'` to `NULL`, all in one transaction (~0.9 s for 8000 contacts). It only fills gaps: columns are `COALESCE`d, rows are matched by value so a removed row stays removed, dates/properties are inserted only for contacts that have none, and name parts / department are taken only while first+last name / company still match the card. Then `backfillVcardModelV2()` (marker `vcard_model_v2_backfilled_at`) fills the leftover `params`, restores categories after the first where the contact still has the card's first category and none of the rest (the signature of the old importer keeping only the first), fills URL labels stored as `''`, and removes the stray `\;` ical.js left in titles and notes where that yields exactly the card's value. It matches rows with keys computed in JS, because SQLite's `LOWER()` folds ASCII only. These backfills and the retirement below are the only migrations that write contact data rather than schema. On a database created after the retirement there is no `raw_vcard`, so all of them only set their marker.
+
+**`raw_vcard` retirement (data migration).** Last, `retireRawVcards()` (`services/rawVcardRetirement.ts`) writes every non-empty `raw_vcard` — archived contacts included — to `/data/users/<id>/archive/original-cards-<date>.vcf.gz`, each card tagged `X-YELLO-CONTACT-ID:<id>`. The file goes to a temporary name, is fsynced, read back and compared byte-for-byte, then renamed. Only after that does it null the column, `DROP COLUMN raw_vcard`, set `raw_vcards_archived_at`, and `VACUUM` (`raw_vcard` was 40–70% of a database). If the archive or the drop fails it logs, leaves everything as it was, and tries again on the next open; it never throws out of `getUserDatabase`. `backend/scripts/checkVcardResidual.ts <userId>` compares the archive with what the database exports today — the differences are the app's own edits and cleanups, not losses.
 
 ### `linkedin_enrichment`
 
@@ -232,6 +276,8 @@ Numeric: `followers_count`.
 **JSON-encoded TEXT columns:** `education`, `skills`, `positions`, `certifications`, `languages`, `honors`, `raw_response`.
 
 The JSON columns are walked recursively by `collectJsonStrings()` when building search text, so nested values stay searchable.
+
+Rows are written by Apify enrichment and by VCF import, which restores them from an `X-YELLO-LINKEDIN` property. `services/linkedinEnrichmentColumns.ts` lists the columns that export carries and import accepts; **a column added to this table must be added there too**, or it will not survive an export/import.
 
 ### `linkedin_enrichment_failures`
 
@@ -341,7 +387,7 @@ This table has a **destructive migration**: legacy columns (`first_name`, `last_
 - **Timestamps are inconsistent by type.** Some columns are `DATETIME DEFAULT CURRENT_TIMESTAMP`, others `TEXT DEFAULT (datetime('now'))`. Both store zone-less UTC strings. Clients **must** append a `Z` before parsing, or the browser reads them as local time.
 - **Booleans are INTEGER `0`/`1`.** SQLite has no boolean type.
 - **`is_primary` is not enforced.** Nothing prevents two primary emails; ordering code treats it as a hint.
-- **Cascades are wide.** Deleting a contact removes every child row, its photos record, enrichment, and email history. Only `contact_related_people.related_contact_id` and `user_profiles.linked_contact_id` use SET NULL.
+- **Cascades are wide.** Deleting a contact removes every child row, its photos record, enrichment, email history, custom dates and generic vCard properties. A merge carries a secondary's person fields, dates and email/phone/address annotations to the survivor, but not its `contact_vcard_properties` (client metadata of a card that no longer exists). Only `contact_related_people.related_contact_id` and `user_profiles.linked_contact_id` use SET NULL.
 - **FTS is only as correct as the last `rebuildContactSearch` call** — `contacts_unified_fts` is contentless and trigger-free.
 - **No `updated_at` triggers.** Where it matters it is set explicitly in the query.
 - **Writes must go through the owning tenant's handle.** Re-acquire via `getUserDatabase(userId)` rather than caching a connection across awaits, because the 50-entry LRU may have closed it.

@@ -8,7 +8,6 @@ export interface Contact {
   notes: string | null;
   birthday: string | null;
   photoHash: string | null;
-  rawVcard: string | null;
   createdAt: string;
   updatedAt: string;
 }

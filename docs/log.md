@@ -1,5 +1,147 @@
 # Change Log
 
+## 2026-09-27 — Last imported vCard data captured; `raw_vcard` archived and dropped
+
+**What Changed:**
+- **Leftover vCard parameters are stored.**
+  - New `params` JSON column on emails, phones, addresses, URLs, IMs, social profiles, related people and dates, plus `contacts.vcard_params` for single-valued properties.
+  - They are written back on export, carried through merges, and kept across edits by `preserveEntryAnnotations()`, which now covers all child tables.
+  - In practice this is `TYPE=pref` on URLs, addresses and IMs, `X-APPLE-OMIT-YEAR` on year-less birthdays (which used to export as year 1604), and Apple's `X-USERID` / `X-DISPLAYNAME` / `X-BUNDLEIDENTIFIERS` / `X-TEAMIDENTIFIER` on social profiles.
+- **Backfill v2** (`backfillVcardModelV2`, marker `vcard_model_v2_backfilled_at`) fills those params from `raw_vcard` and fixes three older import problems:
+  - categories after the first, which the old importer dropped
+  - URL labels stored as `''`
+  - a stray `\;` in titles and notes
+- **`raw_vcard` retired** (`rawVcardRetirement.ts`, marker `raw_vcards_archived_at`):
+  - Every stored card is written to `/data/users/<id>/archive/original-cards-<date>.vcf.gz`, tagged with its contact id.
+  - The file is verified byte-for-byte before the column is dropped, then the database is vacuumed.
+  - On any failure nothing changes, and it retries on the next open.
+  - New databases no longer have the column. No importer writes it, and the API no longer returns `rawVcard`.
+- The parser ignores `X-YELLO-CONTACT-ID`, so a re-imported archive stores nothing foreign.
+- New `backend/scripts/checkVcardResidual.ts <userId>` compares the archive with what the database exports today.
+
+**Why:**
+- Goal: every piece of imported data about a person lives in the database, so the original cards can go. A per-contact comparison of `raw_vcard` against the DB export found the gaps above.
+- Everything else that differed was deliberate in-app edits. For user 3 that was 9,413 removed URLs, 6,542 URLs turned into social profiles, 1,653 "No street" addresses and 537 cleaned notes. The archive keeps those originals out of the database.
+- Photos stay at 800px. That was a deliberate choice; 29 originals in user 3 were larger.
+
+**Verified:**
+- 240 backend tests pass; backend `tsc` and the frontend build pass.
+- `docs/contacts.vcf` (12,116 cards): import → export → parse gives 0 differences, parameters included.
+- The dev server migrated the local databases. Their archives hold all 7,556 + 8,054 original cards byte-for-byte, and contact counts are unchanged.
+- Database size went from 124 → 72 MB (user 3) and 52 → 11 MB (user 12).
+- Residual check: user 12 differs from its originals in 1 value (a malformed Apple Instagram entry); user 3's differences are its cleanups.
+- Backups taken before the change: `backend/data/users-backup-2026-09-27-pre-raw-vcard-retirement/`.
+
+**Files Modified:**
+- `backend/src/services/vcardParser.ts` — `leftoverParams`, `params` / `vcardParams`, `ARCHIVE_CONTACT_ID_PROPERTY`
+- `backend/src/services/vcardGenerator.ts`, `vcardExportService.ts` — write params
+- `backend/src/services/vcardModelStore.ts`, `mergeService.ts`, `importService.ts`, `routes/icloud.ts` — store and carry params
+- `backend/src/services/vcardModelBackfill.ts` — v2 backfill; guarded for databases without `raw_vcard`
+- `backend/src/services/rawVcardRetirement.ts` *(new)* — archive, verify, drop
+- `backend/src/services/userDatabase.ts` — columns, markers, `raw_vcard` removed from `CREATE TABLE`, retirement hook
+- `backend/src/services/relatedNamesBackfill.ts` — guarded for databases without the column
+- `backend/src/routes/contacts.ts`, `routes/profile.ts`, `routes/googleContacts.ts`, `schemas/contact.ts`, `types/index.ts`, and the archive, cleanup, dedup and social-links services — `raw_vcard` / `rawVcard` removed
+- `backend/scripts/checkVcardResidual.ts` *(new)*
+- Tests: `rawVcardRetirement.test.ts` *(new)*, `vcardModelBackfill.test.ts`, `vcardGeneratorFromDatabase.test.ts`, `vcardParser.test.ts`, `vcardExportService.test.ts`, `relatedNamesBackfill.test.ts`, `importService.test.ts`, `userDatabase.test.ts`
+- `docs/database.md`, `docs/readme.md`, `docs/plans/2026-09-27-retire-raw-vcard.md` *(new)*
+
+---
+
+## 2026-09-27 — Every vCard property is modeled in the database
+
+**What Changed:**
+- **New columns** for person data that used to exist only in `raw_vcard`:
+  - `contacts`: `middle_name`, `name_prefix`, `name_suffix`, `nickname`, `gender`, `department`, `is_company`
+  - `contact_emails` / `contact_phones` / `contact_addresses`: `label` (Apple `X-ABLabel`, e.g. "Obsolete", "WhatsApp") and `extra_types` (every TYPE after the first, e.g. `fax`)
+  - `contact_addresses`: `po_box`, `extended`, `sublocality`, `subadministrative_area`, `country_code` (`X-ABADR`)
+- **New tables**:
+  - `contact_dates` holds `X-ABDATE` / `ANNIVERSARY` with their labels.
+  - `contact_vcard_properties` holds every other property, one row per line (`PRODID`, `REV`, `X-IMAGEHASH`, `X-ADDRESSING-GRAMMAR`, unknown `X-` properties, URL photos, repeats).
+- **Parser** reads all of the above. `collectExtraProperties()` returns every line no typed field consumed, so each property lands in exactly one place. `pref` is no longer stored as a type.
+- **Export** builds every card from the database alone and no longer reads `raw_vcard`. This removes the N/ORG raw-line reuse, the raw UID and URL-label fallbacks, and the raw passthrough. The **archive export** now uses the same function; it used to replay `raw_vcard` and skip contacts without one.
+- **Importers** (VCF job, iCloud) persist everything via the shared `saveVcardModelFields()`.
+- **One-time backfill** (`backfillVcardModel`, marker `user_settings.vcard_model_backfilled_at`) re-parses existing `raw_vcard`s and fills the new fields, only where empty. It also clears 634 `type = 'pref'` phones.
+- **Edits and merges keep the new data.** `preserveEntryAnnotations()` wraps the delete-and-reinsert in `PUT /api/contacts/:id` and the profile save. Merge carries a secondary's person fields, dates and annotations to the survivor.
+- **API**: contact detail returns the person fields, `dates`, read-only `extraProperties`, and `label`/`extraTypes` (plus address hints) on entries. Update accepts the person fields.
+- Nickname, middle name and department are searchable.
+- Fixed `PHOTO;VALUE=URL` being passed to the image processor as base64.
+
+**Why:**
+- The question was which vCard properties the database doesn't model. Measured on 12,116 real cards, the ones that only lived in `raw_vcard` were:
+  - 650 genders, 335 middle names, 81 nicknames, 59 company cards and 5 departments
+  - 465 email/phone/address labels, including "Obsolete" and "Old", which the export dropped even after the DB-generated export change
+  - fax/voice secondary types
+  - all client metadata
+
+  That data couldn't be edited or searched, didn't exist for contacts without a raw card, and was lost as soon as a name was edited.
+- Metadata such as `REV` or `X-IMAGEHASH` gets no typed column because it describes the file or client, not the person. It now lives in the generic table instead of only in `raw_vcard`.
+
+**Verified:**
+- 231 backend tests pass. Backend `tsc` and the frontend build pass.
+- Importing, exporting and re-parsing all 12,116 cards of `docs/contacts.vcf`: 0 errors, and every modeled field and generic property is equal on every card. The only diff is intended: usernames derived from social URLs.
+- Backfill on a copy of local user 12 (8,054 contacts) takes 0.9 s. It recovered 165 middle names, 52 nicknames, 498 genders, 194 email and 49 phone labels, and 25,273 generic properties, and left 0 `pref` types.
+
+**Files Modified:**
+- `backend/src/services/userDatabase.ts` — columns, tables, migrations, backfill hook
+- `backend/src/services/vcardParser.ts` — new fields, `extraTypes`, labels, `collectExtraProperties`, URL photos
+- `backend/src/services/vcardModelStore.ts` *(new)* — save/load helpers, `preserveEntryAnnotations`, `mergeVcardModelFields`, `withVcardFields`
+- `backend/src/services/vcardModelBackfill.ts` *(new)* — one-time backfill
+- `backend/src/services/vcardGenerator.ts` — emits every field from the DB; raw-card reading removed
+- `backend/src/services/vcardExportService.ts` — loads new fields; `archived` option; `contactPhotoReader`
+- `backend/src/services/importService.ts`, `backend/src/routes/icloud.ts` — persist new fields
+- `backend/src/services/mergeService.ts`, `backend/src/routes/profile.ts`, `backend/src/routes/contacts.ts` — keep annotations on merge/edit; API fields; export wiring
+- `backend/src/routes/archive.ts`, `backend/src/services/archiveService.ts` — archive export via DB
+- `backend/src/services/database.ts` — search text includes nickname, middle name, department
+- `backend/src/schemas/contact.ts` — detail and update schemas
+- `backend/src/services/__tests__/vcardGeneratorFromDatabase.test.ts`, `vcardExportService.test.ts`, `vcardModelBackfill.test.ts` *(new)*
+- `docs/database.md`, `docs/readme.md`, `docs/plans/2026-09-27-vcard-full-model.md` *(new)*
+
+---
+
+## 2026-09-27 — VCF export is generated from the database; import reads back everything it writes
+
+**What Changed:**
+- **Export builds every card from the database.** `GET /api/contacts/export/vcf` now calls `exportContactsAsVcf()`, which loads each contact with all child rows and generates the card. The stored `raw_vcard` contributes only properties the database has no column for (`NICKNAME`, `X-GENDER`, `X-ABDATE`, `REV`, …), extra `N`/`ORG` parts while the name/company is unchanged, the `UID`, and URL labels the database lacks. `?regenerate=true` is accepted but no longer changes anything.
+- **The generator writes more:** `UID`, `URL` with `X-ABLabel`, `IMPP`, `X-ABRELATEDNAMES`, and `X-SOCIALPROFILE` in Apple's `TYPE=` form (was `X-SERVICE=`, which the importer could not read). Parameter values are quoted instead of backslash-escaped. Phone and email rows with no value write no line.
+- **LinkedIn enrichment travels in the file** as gzip-compressed JSON in a private `X-YELLO-LINKEDIN` property. Import restores the `linkedin_enrichment` row from a fixed column list, always against the new contact, and strips the property from the stored `raw_vcard`.
+- **Importer fixes**, each a way data was lost or altered on the way in:
+  - only the first of several `CATEGORIES` was kept
+  - URL labels were never stored
+  - grouped `X-ABRELATEDNAMES` and `X-SOCIALPROFILE` lines were skipped
+  - a semicolon in `TITLE`, `NOTE` or `FN` arrived with a stray backslash
+  - `PREF` / `TYPE=pref` was ignored, so the first email/phone was always primary
+  - relationship capitalisation was lower-cased
+- **One-time related-names backfill** on database open copies related people that exist only in `raw_vcard` (grouped lines the old importer skipped) into `contact_related_people`. New column `user_settings.related_names_backfilled_at` marks it done.
+
+**Why:**
+- An export from local, imported on Railway, arrived with thinner contacts. The export replayed each contact's `raw_vcard`, which is written once at import and never updated, so everything edited, merged, enriched or cleaned up afterwards was missing. For the contact that surfaced it: 1 of 5 emails, no company, title, notes, categories or social profiles. Across 8054 contacts the file lacked 3019 notes, 3287 categories, 8624 social profiles and all 2981 enrichment rows.
+- Generating from the database exposed what the importer had been dropping, since those values now had to survive a real round trip.
+
+**Verified:**
+- 228 backend tests pass; backend type-check and frontend build pass.
+- Against a copy of the 8054-contact local database: the new export parses with 0 errors and matches the database value-for-value on every compared field, except 9 contacts with malformed phone numbers and 2 with malformed social URLs, which are normalised on import. File size 55.9 MB (limit 100 MB).
+
+**Not changed:**
+- Import still skips a card whose `UID` already exists, so the corrected export only takes effect in an account that does not hold those contacts yet.
+- `injectGeoIntoVcard()` has no caller any more and was left in place.
+- 23 titles in the local database already contain a stray `\;` from earlier imports; they are exported as stored.
+
+**Files Modified:**
+- `backend/src/services/vcardExportService.ts` — new; loads contacts and generates the VCF
+- `backend/src/services/vcardGenerator.ts` — new properties, raw-card passthrough, enrichment payload
+- `backend/src/services/vcardParser.ts` — importer fixes, `X-YELLO-LINKEDIN`, `parseGroupedRelatedNames`
+- `backend/src/services/importService.ts` — inserts the enrichment row
+- `backend/src/services/linkedinEnrichmentColumns.ts` — new; columns carried by export and accepted by import
+- `backend/src/services/relatedNamesBackfill.ts` — new; one-time backfill
+- `backend/src/services/userDatabase.ts` — `related_names_backfilled_at` column + migration, runs the backfill
+- `backend/src/routes/contacts.ts` — export route reduced to a call into the service
+- `backend/src/services/__tests__/vcardGeneratorFromDatabase.test.ts`, `vcardExportService.test.ts`, `relatedNamesBackfill.test.ts` — new
+- `backend/src/services/__tests__/vcardParser.test.ts`, `importService.test.ts`, `geoRoundTrip.test.ts`
+- `frontend/src/components/DocsView.tsx` — Export and Import VCF entries
+- `docs/readme.md`, `docs/database.md`, `docs/plans/2026-09-27-vcf-export-from-database.md`
+
+---
+
 ## 2026-07-30 — Pruned CLAUDE.md of another project's instructions
 
 **What Changed:**

@@ -37,11 +37,15 @@ export function buildSearchableText(database: DatabaseType, contactId: number): 
 
   // Contact main fields
   const contact = database.prepare(`
-    SELECT first_name, last_name, display_name, company, title, notes
+    SELECT first_name, last_name, display_name, company, title, notes,
+           middle_name, nickname, department
     FROM contacts WHERE id = ?
   `).get(contactId) as {
     first_name: string | null;
     last_name: string | null;
+    middle_name: string | null;
+    nickname: string | null;
+    department: string | null;
     display_name: string | null;
     company: string | null;
     title: string | null;
@@ -55,6 +59,9 @@ export function buildSearchableText(database: DatabaseType, contactId: number): 
     if (contact.company) parts.push(contact.company);
     if (contact.title) parts.push(contact.title);
     if (contact.notes) parts.push(contact.notes);
+    if (contact.middle_name) parts.push(contact.middle_name);
+    if (contact.nickname) parts.push(contact.nickname);
+    if (contact.department) parts.push(contact.department);
   }
 
   // Emails

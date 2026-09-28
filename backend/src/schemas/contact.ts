@@ -22,6 +22,8 @@ export const ContactEmailSchema = Type.Object({
   contactId: Type.Number(),
   email: Type.String(),
   type: Type.Union([Type.String(), Type.Null()]),
+  label: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  extraTypes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   isPrimary: Type.Boolean()
 });
 
@@ -32,6 +34,8 @@ export const ContactPhoneSchema = Type.Object({
   phoneDisplay: Type.String(),
   countryCode: Type.Union([Type.String(), Type.Null()]),
   type: Type.Union([Type.String(), Type.Null()]),
+  label: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  extraTypes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   isPrimary: Type.Boolean()
 });
 
@@ -43,7 +47,15 @@ export const ContactAddressSchema = Type.Object({
   state: Type.Union([Type.String(), Type.Null()]),
   postalCode: Type.Union([Type.String(), Type.Null()]),
   country: Type.Union([Type.String(), Type.Null()]),
-  type: Type.Union([Type.String(), Type.Null()])
+  type: Type.Union([Type.String(), Type.Null()]),
+  label: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  extraTypes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  poBox: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  extended: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  sublocality: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  subadministrativeArea: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  /** Apple's X-ABADR country-format hint (the phone row's countryCode is unrelated) */
+  addressCountryCode: Type.Optional(Type.Union([Type.String(), Type.Null()]))
 });
 
 export const ContactSocialProfileSchema = Type.Object({
@@ -141,7 +153,6 @@ export const ContactDetailSchema = Type.Object({
   notes: Type.Union([Type.String(), Type.Null()]),
   birthday: Type.Union([Type.String(), Type.Null()]),
   photoHash: Type.Union([Type.String(), Type.Null()]),
-  rawVcard: Type.Union([Type.String(), Type.Null()]),
   createdAt: Type.String(),
   updatedAt: Type.String(),
   emails: Type.Array(ContactEmailSchema),
@@ -160,7 +171,26 @@ export const ContactDetailSchema = Type.Object({
     url: Type.Union([Type.String(), Type.Null()]),
     isPrimary: Type.Boolean(),
   }))),
-  linkedinEnrichment: Type.Union([LinkedInEnrichmentSchema, Type.Null()])
+  linkedinEnrichment: Type.Union([LinkedInEnrichmentSchema, Type.Null()]),
+  middleName: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  namePrefix: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  nameSuffix: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  nickname: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  gender: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  department: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  isCompany: Type.Optional(Type.Boolean()),
+  dates: Type.Optional(Type.Array(Type.Object({
+    id: Type.Number(),
+    date: Type.String(),
+    label: Type.Union([Type.String(), Type.Null()])
+  }))),
+  /** Read-only: vCard properties with no typed field, as imported */
+  extraProperties: Type.Optional(Type.Array(Type.Object({
+    group: Type.Union([Type.String(), Type.Null()]),
+    name: Type.String(),
+    params: Type.Record(Type.String(), Type.Array(Type.String())),
+    value: Type.String()
+  })))
 });
 
 export const ContactCountResponseSchema = Type.Object({
@@ -253,6 +283,13 @@ export const UpdateContactBodySchema = Type.Object({
   title: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   notes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   birthday: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  middleName: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  namePrefix: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  nameSuffix: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  nickname: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  gender: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  department: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  isCompany: Type.Optional(Type.Boolean()),
   emails: Type.Optional(Type.Array(UpdateContactEmailSchema)),
   phones: Type.Optional(Type.Array(UpdateContactPhoneSchema)),
   addresses: Type.Optional(Type.Array(UpdateContactAddressSchema)),
