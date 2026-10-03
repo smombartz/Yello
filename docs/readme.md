@@ -12,6 +12,21 @@ Living reference for features, integrations, and architecture decisions. See `do
 
 Vite build-time variables must be present when `npm run build` runs. On Railway (Docker build), set `VITE_PUBLIC_URL` as a service variable — the `Dockerfile` declares it as an `ARG` in the frontend build stage so it reaches Vite. If the domain changes, update the variable and redeploy, then force a re-scrape in each platform's debugger (e.g. Facebook Sharing Debugger) since scrapers cache previews.
 
+## Desktop app (`electron/`)
+
+The macOS app opens the hosted deployment (`https://yello.up.railway.app`, overridable with `YELLO_URL`) in a window. It has no local backend or database, so desktop and web share one account and one set of data. Full guide: `electron/README.md`.
+
+**Sign-in handoff.** Google blocks OAuth inside embedded browsers, so the app sends the three Google flows (login, Gmail re-auth, Contacts re-auth) to the system browser:
+
+1. The app intercepts the in-window navigation and opens `/api/auth/desktop/start?flow=…&challenge=…` in the browser. `challenge` is a PKCE S256 challenge.
+2. The backend stores the challenge in a 10-minute `desktop_handoff` cookie and runs the normal flow.
+3. At the end of every Google callback, `finishSignIn()` (`routes/auth.ts`) sees the cookie. Instead of starting a browser session, it mints a one-time, 2-minute code (`services/desktopHandoff.ts`, in memory) and returns a page that opens `yello://auth?code=…`.
+4. The app loads `/api/auth/desktop/exchange?code=…&verifier=…`. The backend checks the verifier, burns the code, and sets `session_id` in the app's cookie jar.
+
+Codes are deleted on first use, even when the verifier is wrong. A server restart only drops codes that are seconds old.
+
+Up to 1.x the app spawned its own backend with local SQLite in `~/Library/Application Support/Yello/`. That mode is gone, and its files are left in place. See the migration note in `electron/README.md`.
+
 ## Features
 
 ### VCF import (background job)

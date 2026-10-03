@@ -17,3 +17,7 @@ backend/data/contacts.db-wal
 .env.local
 .env.*.local
 backend/.env
+
+# Electron build output
+electron/release/
+ELECTRON_SETUP.md

@@ -1,271 +1,139 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, session, shell } from 'electron';
 import * as path from 'path';
-import * as fs from 'fs';
-import { spawn, ChildProcess } from 'child_process';
-import * as crypto from 'crypto';
-import * as dotenv from 'dotenv';
+import { APP_URL, PROTOCOL, isAppUrl } from './config';
+import { exchangeUrlFor, flowForUrl, startSystemSignIn } from './desktopAuth';
 
-// Load .env from multiple locations with fallback
-const userDataDir = app.getPath('userData');
-const isDev = !app.isPackaged;
-const resourcesBase = isDev
-  ? path.join(__dirname, '..', '..')
-  : process.resourcesPath;
-
-const userEnvPath = path.join(userDataDir, '.env');
-const backendEnvPath = path.join(resourcesBase, 'backend', '.env');
-
-if (fs.existsSync(userEnvPath)) {
-  console.log('[Electron] Loading .env from user data:', userEnvPath);
-  dotenv.config({ path: userEnvPath });
-} else if (fs.existsSync(backendEnvPath)) {
-  console.log('[Electron] Loading .env from backend:', backendEnvPath);
-  dotenv.config({ path: backendEnvPath });
-} else {
-  console.log('[Electron] No .env file found (checked:', userEnvPath, 'and', backendEnvPath, ')');
-}
+// A window onto the hosted Yello deployment. There is no local backend: all
+// data lives on the server, and the session cookie lives in this app's
+// cookie jar (~/Library/Application Support/Yello).
 
 let mainWindow: BrowserWindow | null = null;
-let splashWindow: BrowserWindow | null = null;
-let backendProcess: ChildProcess | null = null;
 
-const serverPath = path.join(resourcesBase, 'backend', 'dist', 'server.js');
-const appUrl = 'http://localhost:3456';
+const offlinePage = path.join(__dirname, '..', 'pages', 'offline.html');
 
-/**
- * Get or create a persistent session secret stored in user data directory
- */
-function getOrCreateSessionSecret(dir: string): string {
-  const secretPath = path.join(dir, '.session-secret');
-  if (fs.existsSync(secretPath)) {
-    return fs.readFileSync(secretPath, 'utf8').trim();
-  }
-  const secret = crypto.randomBytes(64).toString('hex');
-  fs.writeFileSync(secretPath, secret, { mode: 0o600 });
-  return secret;
-}
+const EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'mailto:', 'tel:', 'sms:']);
 
-/**
- * Ensure user data directory exists
- */
-function ensureDataDir(dir: string): void {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+function openExternally(url: string): void {
+  try {
+    if (EXTERNAL_PROTOCOLS.has(new URL(url).protocol)) {
+      void shell.openExternal(url);
+    }
+  } catch {
+    // Not a URL; ignore
   }
 }
 
-/**
- * Spawn backend server with Electron environment
- */
-function spawnBackend(): ChildProcess {
-  ensureDataDir(userDataDir);
-
-  const env = {
-    ...process.env,
-    ELECTRON_RUN_AS_NODE: '1',
-    NODE_ENV: app.isPackaged ? 'production' : 'development',
-    PORT: '3456',
-    AUTH_DATABASE_PATH: path.join(userDataDir, 'auth.db'),
-    USER_DATA_PATH: path.join(userDataDir, 'users'),
-    APP_URL: appUrl,
-    SESSION_SECRET: getOrCreateSessionSecret(userDataDir),
-    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
-    HERE_API_KEY: process.env.HERE_API_KEY || '',
-    // Apify LinkedIn enrichment uses a per-user API key entered in-app (Tools → Enrich),
-    // stored encrypted in the user's database — no global env var.
-  };
-
-  console.log(`[Electron] Spawning backend: ${process.execPath} ${serverPath}`);
-  const backend = spawn(process.execPath, [serverPath], {
-    env,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-
-  // Log backend output for debugging
-  backend.stdout?.on('data', (data) => {
-    console.log(`[Backend] ${data.toString().trim()}`);
-  });
-
-  backend.stderr?.on('data', (data) => {
-    console.error(`[Backend Error] ${data.toString().trim()}`);
-  });
-
-  backend.on('error', (err) => {
-    console.error('[Electron] Failed to spawn backend:', err);
-  });
-
-  backend.on('exit', (code, signal) => {
-    console.log(`[Backend] Exited with code ${code}, signal ${signal}`);
-  });
-
-  return backend;
-}
-
-/**
- * Poll health endpoint until backend is ready
- */
-function waitForBackend(timeoutMs = 30_000): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const pollInterval = 200;
-
-    const poll = async () => {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-        const response = await fetch(`${appUrl}/health`, {
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          console.log('[Electron] Backend is ready');
-          resolve();
-          return;
-        }
-      } catch {
-        // Not ready yet, continue polling
-      }
-
-      if (Date.now() - startTime > timeoutMs) {
-        reject(new Error(`Backend did not become ready within ${timeoutMs}ms`));
-        return;
-      }
-
-      setTimeout(poll, pollInterval);
-    };
-
-    poll();
-  });
-}
-
-/**
- * Create splash screen
- */
-function createSplashWindow(): BrowserWindow {
-  const splash = new BrowserWindow({
-    width: 400,
-    height: 300,
-    show: false,
-    frame: false,
-    alwaysOnTop: true,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-    },
-  });
-
-  const splashPath = isDev
-    ? path.join(__dirname, '..', 'splash.html')
-    : path.join(process.resourcesPath, 'electron', 'splash.html');
-
-  splash.loadFile(splashPath);
-  splash.show();
-
-  return splash;
-}
-
-/**
- * Create main application window
- */
 function createMainWindow(): BrowserWindow {
-  const mainWin = new BrowserWindow({
+  const win = new BrowserWindow({
     width: 1200,
     height: 800,
     show: false,
     webPreferences: {
-      nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      sandbox: true,
     },
   });
 
-  // Strip Electron user agent for OAuth compatibility
-  const ua = mainWin.webContents.getUserAgent()
-    .replace(/Electron\/[\d.]+\s?/g, '')
-    .trim();
-  mainWin.webContents.setUserAgent(ua);
-
-  mainWin.loadURL(appUrl);
-
-  // Open external links in system browser
-  mainWin.webContents.setWindowOpenHandler(({ url }) => {
-    const isLocalhost = new URL(url).hostname === 'localhost';
-    if (!isLocalhost) {
-      require('electron').shell.openExternal(url);
-      return { action: 'deny' };
-    }
-    return { action: 'allow' };
+  win.once('ready-to-show', () => win.show());
+  win.on('closed', () => {
+    mainWindow = null;
   });
 
-  return mainWin;
+  // Server unreachable (offline, deploy in progress): show a retry page
+  // instead of a blank window. -3 is ERR_ABORTED, i.e. a cancelled navigation.
+  win.webContents.on('did-fail-load', (_event, errorCode, _description, url, isMainFrame) => {
+    if (!isMainFrame || errorCode === -3 || !isAppUrl(url)) return;
+    void win.loadFile(offlinePage, { query: { url: APP_URL } });
+  });
+
+  void win.loadURL(APP_URL);
+  return win;
 }
 
-/**
- * App initialization on Electron ready
- */
-async function initApp(): Promise<void> {
-  try {
-    // Show splash screen
-    splashWindow = createSplashWindow();
-
-    // Spawn backend
-    backendProcess = spawnBackend();
-
-    // Wait for backend to be ready
-    console.log('[Electron] Waiting for backend...');
-    await waitForBackend();
-
-    // Create main window
+function showMainWindow(): BrowserWindow {
+  if (!mainWindow) {
     mainWindow = createMainWindow();
-    mainWindow.show();
-
-    // Close splash
-    if (splashWindow) {
-      splashWindow.close();
-      splashWindow = null;
-    }
-
-    console.log('[Electron] App initialized');
-  } catch (error) {
-    console.error('[Electron] Initialization failed:', error);
-    if (splashWindow) {
-      splashWindow.close();
-    }
-    app.quit();
+  } else {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
   }
+  return mainWindow;
 }
 
-/**
- * Cleanup on app quit
- */
-function cleanup(): void {
-  if (backendProcess) {
-    console.log('[Electron] Terminating backend...');
-    backendProcess.kill('SIGTERM');
-    backendProcess = null;
-  }
+function handleDeepLink(url: string): void {
+  const win = showMainWindow();
+  const exchange = exchangeUrlFor(url);
+  if (exchange) void win.loadURL(exchange);
 }
 
-// App event handlers
-app.on('ready', initApp);
+// Every window, including same-origin popups: keep the app origin in-app,
+// send Google sign-in to the system browser, and everything else outside.
+app.on('web-contents-created', (_event, contents) => {
+  contents.on('will-navigate', (event) => {
+    const flow = flowForUrl(event.url);
+    if (flow) {
+      event.preventDefault();
+      void startSystemSignIn(flow);
+    } else if (!isAppUrl(event.url)) {
+      event.preventDefault();
+      openExternally(event.url);
+    }
+  });
 
-app.on('window-all-closed', () => {
-  cleanup();
-  if (process.platform !== 'darwin') {
-    app.quit();
+  contents.on('will-redirect', (event) => {
+    if (!isAppUrl(event.url)) {
+      event.preventDefault();
+      openExternally(event.url);
+    }
+  });
+
+  contents.setWindowOpenHandler(({ url }) => {
+    if (isAppUrl(url)) return { action: 'allow' };
+    openExternally(url);
+    return { action: 'deny' };
+  });
+});
+
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  // In dev the app runs as `electron .`, so register the script path too
+  if (process.defaultApp) {
+    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
+  } else {
+    app.setAsDefaultProtocolClient(PROTOCOL);
   }
-});
 
-app.on('before-quit', () => {
-  cleanup();
-});
+  // macOS delivers yello:// links here, possibly before the app is ready
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    void app.whenReady().then(() => handleDeepLink(url));
+  });
 
-app.on('activate', () => {
-  if (mainWindow === null) {
-    initApp();
-  }
-});
+  // Windows/Linux deliver them as an argument to a second launch
+  app.on('second-instance', (_event, argv) => {
+    const link = argv.find(arg => arg.startsWith(`${PROTOCOL}://`));
+    if (link) handleDeepLink(link);
+    else showMainWindow();
+  });
+
+  void app.whenReady().then(() => {
+    session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback, details) => {
+      callback(isAppUrl(details.requestingUrl));
+    });
+    session.defaultSession.setPermissionCheckHandler((_contents, _permission, requestingOrigin) =>
+      isAppUrl(requestingOrigin)
+    );
+
+    showMainWindow();
+  });
+
+  app.on('activate', () => {
+    if (app.isReady()) showMainWindow();
+  });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit();
+  });
+}

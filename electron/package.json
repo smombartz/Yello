@@ -1,21 +1,20 @@
 {
-  "name": "yello-electron",
-  "version": "1.0.0",
+  "name": "yello-desktop",
+  "productName": "Yello",
+  "version": "2.0.0",
+  "description": "Yello desktop app: a window onto the hosted Yello deployment",
+  "author": "Sascha",
   "private": true,
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
     "dev": "npm run build && electron .",
-    "rebuild": "electron-rebuild --module-dir ../backend"
+    "dist": "npm run build && electron-builder --config electron-builder.yml"
   },
   "devDependencies": {
-    "@electron/rebuild": "^3.6.0",
-    "electron": "^32.0.0",
-    "electron-builder": "^25.0.0",
-    "typescript": "^5.9.3",
-    "@types/node": "^20.0.0"
-  },
-  "dependencies": {
-    "dotenv": "^16.0.0"
+    "@types/node": "^22.20.5",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
+    "typescript": "^5.9.3"
   }
 }

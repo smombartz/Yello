@@ -17,6 +17,14 @@ import { getAuthDatabase } from '../services/authDatabase.js';
 import { createDemoUser, cleanupExpiredDemoUsers, DEMO_SESSION_DURATION_MS } from '../services/demoService.js';
 import { AuthMeResponseSchema, AuthErrorSchema } from '../schemas/auth.js';
 import { fetchAndStoreGoogleAvatar, fetchAndStoreGravatar, getProfileImages, getProfileImageUrl, enrichUsersFromGoogleContacts } from '../services/profileImageService.js';
+import {
+  DESKTOP_FLOWS,
+  isDesktopFlow,
+  isValidChallenge,
+  createHandoffCode,
+  consumeHandoffCode,
+  renderHandoffPage,
+} from '../services/desktopHandoff.js';
 
 // Google userinfo response type
 interface GoogleUserInfo {
@@ -164,6 +172,41 @@ function cleanupExpiredSessions(): void {
   db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')").run();
 }
 
+function setSessionCookie(reply: FastifyReply, sessionId: string, maxAgeMs = SESSION_DURATION_MS): void {
+  reply.setCookie('session_id', sessionId, {
+    path: '/',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: maxAgeMs / 1000, // maxAge is in seconds
+  });
+}
+
+/**
+ * End of every Google flow. In a browser, start a session and redirect. When
+ * the flow was started by the desktop app (desktop_handoff cookie), hand a
+ * one-time code back to the app instead; it creates its own session through
+ * /desktop/exchange.
+ */
+export function finishSignIn(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  userId: number,
+  redirectPath: string
+): FastifyReply {
+  cleanupExpiredSessions();
+
+  const challenge = request.cookies.desktop_handoff;
+  if (isValidChallenge(challenge)) {
+    reply.clearCookie('desktop_handoff', { path: '/' });
+    const code = createHandoffCode(userId, challenge, redirectPath);
+    return reply.type('text/html; charset=utf-8').send(renderHandoffPage(code));
+  }
+
+  setSessionCookie(reply, createSession(userId));
+  return reply.redirect(redirectPath);
+}
+
 // Extend Fastify instance type to include googleOAuth2 and getValidAccessToken
 declare module 'fastify' {
   interface FastifyInstance {
@@ -294,19 +337,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
             }
           );
 
-          // Create session
-          const sessionId = createSession(user.id);
-
-          reply.setCookie('session_id', sessionId, {
-            path: '/',
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: SESSION_DURATION_MS / 1000,
-          });
-
-          cleanupExpiredSessions();
-          return reply.redirect('/');
+          return finishSignIn(request, reply, user.id, '/');
         }
 
         const isContactsFlow = request.cookies.google_contacts_oauth_flow === '1';
@@ -383,19 +414,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
             }
           );
 
-          // Create session
-          const sessionId = createSession(user.id);
-
-          reply.setCookie('session_id', sessionId, {
-            path: '/',
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: SESSION_DURATION_MS / 1000,
-          });
-
-          cleanupExpiredSessions();
-          return reply.redirect('/google-contacts-import');
+          return finishSignIn(request, reply, user.id, '/google-contacts-import');
         }
 
         // --- Normal login flow (uses @fastify/oauth2 plugin) ---
@@ -445,24 +464,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
           }
         })();
 
-        // Create session
-        const sessionId = createSession(user.id);
-
-        // Set session cookie
-        reply.setCookie('session_id', sessionId, {
-          path: '/',
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: SESSION_DURATION_MS / 1000, // maxAge is in seconds
-        });
-
-        // Clean up old sessions periodically
-        cleanupExpiredSessions();
-
-        // Redirect to frontend - send new users to onboarding
-        const redirectUrl = user.has_onboarded ? '/dashboard' : '/onboarding';
-        return reply.redirect(redirectUrl);
+        // Send new users to onboarding
+        return finishSignIn(request, reply, user.id, user.has_onboarded ? '/dashboard' : '/onboarding');
       } catch (error) {
         fastify.log.error(error, 'OAuth callback error');
         return reply.redirect('/?error=auth_failed');
@@ -684,6 +687,38 @@ export default async function authRoutes(fastify: FastifyInstance) {
     return { success: true };
   });
 
+  // Desktop app sign-in, step 1 (opened in the system browser): remember the
+  // app's PKCE challenge, then run the normal Google flow.
+  fastify.get('/desktop/start', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request: FastifyRequest<{ Querystring: { flow?: string; challenge?: string } }>, reply: FastifyReply) => {
+    const { flow, challenge } = request.query;
+    if (!isDesktopFlow(flow) || !isValidChallenge(challenge)) {
+      return reply.status(400).send({ error: 'Invalid desktop sign-in request' });
+    }
+
+    reply.setCookie('desktop_handoff', challenge, {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 600, // 10 minutes
+    });
+
+    return reply.redirect(DESKTOP_FLOWS[flow]);
+  });
+
+  // Desktop app sign-in, step 2 (loaded in the app window via the yello://
+  // deep link): trade the one-time code and PKCE verifier for a session.
+  fastify.get('/desktop/exchange', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request: FastifyRequest<{ Querystring: { code?: string; verifier?: string } }>, reply: FastifyReply) => {
+    const { code, verifier } = request.query;
+    const handoff = code && verifier ? consumeHandoffCode(code, verifier) : null;
+    if (!handoff) {
+      return reply.redirect('/?error=auth_failed');
+    }
+
+    setSessionCookie(reply, createSession(handoff.userId));
+    return reply.redirect(handoff.redirectPath);
+  });
+
   // Demo account - create temporary demo user
   fastify.post('/demo', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (_request, reply) => {
     // Clean up expired demo users first
@@ -693,13 +728,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     const { sessionId } = await createDemoUser();
 
     // Set session cookie (2-hour expiry)
-    reply.setCookie('session_id', sessionId, {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: DEMO_SESSION_DURATION_MS / 1000,
-    });
+    setSessionCookie(reply, sessionId, DEMO_SESSION_DURATION_MS);
 
     return { success: true, isDemo: true };
   });

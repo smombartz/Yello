@@ -1,5 +1,68 @@
 # Change Log
 
+## 2026-10-02 — Desktop app rewritten as a thin client of the Railway deployment
+
+**What Changed:**
+- **No local backend any more.** `electron/src/main.ts` no longer spawns `backend/dist/server.js`, polls `/health` or shows a splash. It opens `https://yello.up.railway.app` (`electron/src/config.ts`; `YELLO_URL` overrides it) in a sandboxed window with no preload.
+- **Sign-in through the system browser** (`electron/src/desktopAuth.ts`):
+  - Navigations to the three Google flow paths are cancelled and reopened in the browser via `/api/auth/desktop/start` with a fresh PKCE challenge.
+  - `yello://auth?code=…` deep links (`open-url` on macOS, `second-instance` elsewhere) are redeemed at `/api/auth/desktop/exchange` with the pending verifier.
+- **Navigation rules:**
+  - Same-origin navigations and popups stay in the app.
+  - Other origins open in the default browser (`http(s)`, `mailto`, `tel` and `sms` only).
+  - Permissions are granted only to the app origin.
+  - If the server can't be reached, `electron/pages/offline.html` offers a retry.
+- **Single-instance lock.** `yello://` is registered via `setAsDefaultProtocolClient`, and in `Info.plist` via `protocols` in the builder config.
+- **Packaging:**
+  - The builder config moved to `electron/electron-builder.yml`. It packages only `dist/` and `pages/`; the backend, frontend and `node_modules` are no longer bundled.
+  - Output goes to `electron/release/`. The explicit (missing) icon path was dropped, so the default icon is used until `build-resources/icon.icns` exists.
+  - Root `electron:dev` / `electron:build` now just delegate to `electron/`.
+- **Dependencies:** Electron 32 → 44 and electron-builder 25 → 26. `dotenv` and `@electron/rebuild` were removed, as was the root `electron-builder` devDependency. Version bumped to 2.0.0.
+- **Removed:**
+  - `electron/src/preload.ts`, `electron/splash.html`, `electron/.env.example`
+  - the root `electron-builder.yml`
+  - `ELECTRON_SETUP.md`, `ELECTRON_TEST_RESULTS.md`
+  - `electron/data/`: 8 contact photos that had been committed by accident
+- The `network.server` entitlement was dropped, since there's no local server.
+- `electron/README.md` rewritten as the single desktop guide, including how to migrate 1.x local data. `docs/readme.md` gained a "Desktop app" section, and the Deployment line in `CLAUDE.md` was updated.
+
+**Why:**
+- The desktop app should show the same account and data as the web, without its own database, OAuth credentials, `.env` or native module rebuild.
+- Google blocks OAuth in embedded browsers. The old approach of stripping "Electron" from the user agent was a workaround Google can break at any time.
+- The app now renders remote content, so it should ship a current Chromium.
+
+**Files Modified:**
+- `electron/src/main.ts` — rewritten
+- `electron/src/config.ts`, `electron/src/desktopAuth.ts`, `electron/pages/offline.html`, `electron/electron-builder.yml` *(new)*
+- `electron/package.json`, `electron/package-lock.json`, `package.json`
+- `build-resources/entitlements.mac.plist`, `.gitignore`
+- `electron/README.md`, `docs/readme.md`, `CLAUDE.md`, `docs/plans/2026-10-02-electron-remote-client.md`
+
+---
+
+## 2026-10-02 — Desktop sign-in handoff (`/api/auth/desktop/*`)
+
+**What Changed:**
+- New `backend/src/services/desktopHandoff.ts`:
+  - In-memory, single-use sign-in codes (2-minute TTL), each bound to a PKCE S256 challenge
+  - A code is deleted before its verifier is checked, so a wrong guess burns it
+  - `renderHandoffPage()` returns a script-free page that opens `yello://auth?code=…` by meta refresh and shows an "Open Yello" button
+- `GET /api/auth/desktop/start?flow=login|gmail|contacts&challenge=…` stores the challenge in a 10-minute `desktop_handoff` cookie, then redirects into that Google flow.
+- `GET /api/auth/desktop/exchange?code=…&verifier=…` creates a session and redirects to the flow's destination. On failure it redirects to `/?error=auth_failed`.
+- The three Google callback endings (login, Gmail re-auth, Contacts re-auth) now go through `finishSignIn()`. Without the cookie it behaves exactly as before. With it, it renders the handoff page and sets no session in the browser.
+- The four copies of the `session_id` cookie options were folded into `setSessionCookie()`.
+
+**Why:**
+- The desktop app now runs Google sign-in in the system browser and needs a safe way to get the resulting session back into its own cookie jar. An intercepted `yello://` link is useless without the verifier, which only the app holds.
+- No schema change: Railway runs one process, and a restart only drops codes that are seconds old.
+
+**Files Modified:**
+- `backend/src/services/desktopHandoff.ts` *(new)*
+- `backend/src/routes/auth.ts` — `setSessionCookie`, `finishSignIn`, `/desktop/start`, `/desktop/exchange`
+- `backend/src/services/__tests__/desktopHandoff.test.ts`, `backend/src/routes/__tests__/desktopAuth.test.ts` *(new)*
+
+---
+
 ## 2026-09-27 — Last imported vCard data captured; `raw_vcard` archived and dropped
 
 **What Changed:**

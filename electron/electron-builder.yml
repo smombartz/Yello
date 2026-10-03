@@ -1,0 +1,23 @@
+appId: com.yello.crm
+productName: Yello
+directories:
+  output: release
+  buildResources: ../build-resources
+files:
+  - dist/**/*
+  - pages/**/*
+protocols:
+  - name: Yello
+    schemes:
+      - yello
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  category: public.app-category.productivity
+  hardenedRuntime: true
+  entitlements: ../build-resources/entitlements.mac.plist
+  entitlementsInherit: ../build-resources/entitlements.mac.plist
+publish: null
