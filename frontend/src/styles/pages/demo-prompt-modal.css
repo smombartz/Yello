@@ -47,7 +47,7 @@
   padding: var(--ds-space-3);
   background: none;
   border: none;
-  color: var(--ds-text-muted);
+  color: var(--ds-text-secondary);
   font-size: var(--ds-font-sm);
   cursor: pointer;
 }

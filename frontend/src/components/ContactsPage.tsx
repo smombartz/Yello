@@ -1,19 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { ContactList } from './ContactList';
 import { Icon } from './Icon';
+import { EXPANDED_CONTACT_PARAM, useSearchParamUpdater } from '../hooks/useSearchParamUpdater';
 import type { OutletContext } from './Layout';
 
 export function ContactsPage() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  // Seed search from the ?q= param (e.g. when arriving from the Dashboard search).
-  const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
+  const updateParams = useSearchParamUpdater();
   const [totalContacts, setTotalContacts] = useState<number>(0);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [sort, setSort] = useState('name-asc');
-  const [filters, setFilters] = useState<Set<string>>(new Set());
+
+  // The URL holds the list state so a copied link reproduces this exact view.
+  const search = searchParams.get('q') ?? '';
+  const sort = searchParams.get('sort') ?? 'name-asc';
+  const viewMode = searchParams.get('view') === 'grid' ? 'grid' : 'list';
+  const filterParam = searchParams.get('filter') ?? '';
+  const filters = useMemo(() => new Set(filterParam.split(',').filter(Boolean)), [filterParam]);
+
+  // Changing what the list shows also closes the expanded contact, which may no longer be in it.
+  const setSearch = useCallback((q: string) => {
+    updateParams({ q, [EXPANDED_CONTACT_PARAM]: null });
+  }, [updateParams]);
+
+  const setSort = useCallback((value: string) => {
+    updateParams({ sort: value === 'name-asc' ? null : value, [EXPANDED_CONTACT_PARAM]: null });
+  }, [updateParams]);
+
+  const setViewMode = useCallback((mode: 'list' | 'grid') => {
+    updateParams({ view: mode === 'grid' ? 'grid' : null, [EXPANDED_CONTACT_PARAM]: null });
+  }, [updateParams]);
+
+  const setFilters = useCallback((next: Set<string>) => {
+    updateParams({ filter: Array.from(next).join(','), [EXPANDED_CONTACT_PARAM]: null });
+  }, [updateParams]);
 
   useEffect(() => {
     setHeaderConfig({
@@ -32,9 +53,7 @@ export function ContactsPage() {
         </button>
       ),
     });
-  }, [setHeaderConfig, search, totalContacts, navigate]);
-
-  const filterString = Array.from(filters).join(',') || undefined;
+  }, [setHeaderConfig, search, setSearch, totalContacts, navigate]);
 
   return (
     <ContactList
@@ -46,7 +65,7 @@ export function ContactsPage() {
       onSortChange={setSort}
       filters={filters}
       onFiltersChange={setFilters}
-      filterString={filterString}
+      filterString={filterParam || undefined}
     />
   );
 }

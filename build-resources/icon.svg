@@ -1,0 +1,13 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- macOS app icon: the favicon mark (frontend/public/favicon.svg) on Apple's
+       icon grid (824px rounded square, 100px margin). Regenerate with make-icon.sh. -->
+  <defs>
+    <filter id="shadow" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#5F27E3" filter="url(#shadow)"/>
+  <g transform="translate(100 100) scale(17.913)">
+    <path d="M29.0219 37.914L27.6792 32.1526C35.7662 29.4724 39.1091 25.5822 38.6927 18.4398C38.2763 11.2974 30.7413 7.65903 22.7342 8.12586C14.727 8.5927 6.79013 13.1331 7.29617 21.8127C8.07807 35.2238 24.62 37.639 29.0219 37.914Z" fill="white"/>
+  </g>
+</svg>

@@ -134,7 +134,7 @@ export function GoogleContactsImportContent() {
         <h3>Import from Google Contacts</h3>
         <p>Fetch your contacts from Google. We'll check for duplicates before importing.</p>
         {fetchContacts.isError && (
-          <p style={{ color: 'var(--ds-color-error)', fontSize: '0.875rem' }}>
+          <p style={{ color: 'var(--ds-color-error)', fontSize: 'var(--ds-font-sm)' }}>
             {fetchContacts.error?.message || 'Failed to fetch contacts'}
           </p>
         )}
@@ -196,7 +196,7 @@ export function GoogleContactsImportContent() {
             <summary style={{ color: 'var(--ds-color-error)', cursor: 'pointer' }}>
               {result.errors.length} errors
             </summary>
-            <ul style={{ fontSize: '0.875rem', maxHeight: '150px', overflow: 'auto' }}>
+            <ul style={{ fontSize: 'var(--ds-font-sm)', maxHeight: '150px', overflow: 'auto' }}>
               {result.errors.map((err, i) => (
                 <li key={i}>#{err.line}: {err.reason}</li>
               ))}

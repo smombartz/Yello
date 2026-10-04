@@ -94,7 +94,7 @@
 
 .docs-tool-location {
   font-size: var(--ds-font-xs);
-  color: var(--ds-text-tertiary);
+  color: var(--ds-text-secondary);
   font-family: var(--ds-font-mono, monospace);
 }
 
@@ -146,7 +146,7 @@
   font-weight: var(--ds-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--ds-text-tertiary);
+  color: var(--ds-text-secondary);
 }
 
 .docs-how {
@@ -289,7 +289,7 @@
   font-weight: var(--ds-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--ds-text-tertiary);
+  color: var(--ds-text-secondary);
 }
 
 .docs-toc-group {
@@ -350,7 +350,7 @@
 .docs-toc-sublink {
   padding-left: var(--ds-space-4);
   font-size: var(--ds-font-2xs);
-  color: var(--ds-text-tertiary);
+  color: var(--ds-text-secondary);
 }
 
 /* ===== Responsive: drop the TOC on narrow viewports ===== */

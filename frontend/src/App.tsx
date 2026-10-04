@@ -97,6 +97,7 @@ function AppRoutes() {
         <Route path="cleanup" element={<CleanupView />} />
         <Route path="archived" element={<ArchivedView />} />
         <Route path="groups" element={<GroupsView />} />
+        <Route path="groups/:category" element={<GroupsView />} />
         <Route path="map" element={<MapView />} />
         <Route path="tools" element={<SettingsView />} />
         <Route path="profile" element={<UserProfilePage />} />

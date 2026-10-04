@@ -4,6 +4,7 @@ import type { ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, 
 import { getCountryFlag, getCountryName } from '../lib/phoneUtils';
 import { formatAddressLines } from '../lib/addressUtils';
 import { Icon } from './Icon';
+import { useToast } from './ui/Toast';
 import { RelatedPersonNameField } from './RelatedPersonNameField';
 import {
   formatBirthday,
@@ -43,11 +44,13 @@ function SectionHeading({ icon, label, iconStyle, zodiacSign }: {
   );
 }
 
-function InfoField({ icon, iconStyle, children, flagEmoji }: {
+function InfoField({ icon, iconStyle, children, flagEmoji, actions }: {
   icon?: string;
   iconStyle?: 'solid' | 'regular' | 'brands';
   children: React.ReactNode;
   flagEmoji?: string;
+  /** Rendered beside the value (not inside it) so a long value truncates without hiding them. */
+  actions?: React.ReactNode;
 }) {
   return (
     <div className="info-field">
@@ -61,27 +64,76 @@ function InfoField({ icon, iconStyle, children, flagEmoji }: {
       <div className="info-field-value">
         {children}
       </div>
+      {actions && <div className="info-field-actions">{actions}</div>}
     </div>
   );
 }
 
-/** WhatsApp quick-link shown next to a phone number. wa.me wants a digits-only number. */
-function WhatsAppLink({ phone }: { phone: string }) {
-  const number = phone.replace(/\D/g, '');
-  if (!number) return null;
+/** A contact value (phone, email) that copies itself to the clipboard on click. */
+function CopyableValue({ value, title }: { value: string; title?: string }) {
+  const { showToast } = useToast();
+  const copy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(value);
+      showToast(`Copied ${value}`, { duration: 2000 });
+    } catch {
+      showToast("Couldn't copy to clipboard", { type: 'error' });
+    }
+  };
+  return (
+    <button type="button" className="copyable-value" onClick={copy} title={title ?? 'Click to copy'}>
+      {value}
+    </button>
+  );
+}
+
+function ContactActionLink({ href, icon, iconStyle, label, external, className }: {
+  href: string;
+  icon: string;
+  iconStyle?: 'solid' | 'regular' | 'brands';
+  label: string;
+  external?: boolean;
+  className?: string;
+}) {
   return (
     <a
-      href={`https://wa.me/${number}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="whatsapp-link"
-      title="Message on WhatsApp"
-      aria-label="Message on WhatsApp"
+      href={href}
+      className={`contact-action-link${className ? ` ${className}` : ''}`}
+      title={label}
+      aria-label={label}
       onClick={(e) => e.stopPropagation()}
+      {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
     >
-      <Icon name="whatsapp" style="brands" />
+      <Icon name={icon} style={iconStyle} />
     </a>
   );
+}
+
+/** Text / call / WhatsApp links for a phone number. wa.me wants a digits-only number. */
+function PhoneActions({ phone }: { phone: string }) {
+  const dialable = phone.replace(/[^\d+]/g, '');
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return null;
+  return (
+    <>
+      <ContactActionLink href={`sms:${dialable}`} icon="comment-sms" label="Send text" />
+      <ContactActionLink href={`tel:${dialable}`} icon="phone" label="Call" />
+      <ContactActionLink
+        href={`https://wa.me/${digits}`}
+        icon="whatsapp"
+        iconStyle="brands"
+        label="Message on WhatsApp"
+        external
+        className="whatsapp"
+      />
+    </>
+  );
+}
+
+function EmailActions({ email }: { email: string }) {
+  if (!email) return null;
+  return <ContactActionLink href={`mailto:${email}`} icon="envelope" label="Send email" />;
 }
 
 function getEmailIcon(email: string): { icon: string; style?: 'solid' | 'regular' | 'brands' } {
@@ -299,12 +351,17 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
       <SectionHeading icon="phone" label="Phone" />
       {visible.map((phone, i) => {
         const flag = getCountryFlag(phone.countryCode);
+        const countryName = getCountryName(phone.countryCode);
         const field = (
-          <InfoField flagEmoji={flag || undefined} icon={!flag ? 'phone' : undefined}>
-            <a href={`tel:${phone.phone}`} title={getCountryName(phone.countryCode) || undefined}>
-              {phone.phoneDisplay}
-            </a>
-            <WhatsAppLink phone={phone.phone} />
+          <InfoField
+            flagEmoji={flag || undefined}
+            icon={!flag ? 'phone' : undefined}
+            actions={<PhoneActions phone={phone.phone} />}
+          >
+            <CopyableValue
+              value={phone.phoneDisplay}
+              title={countryName ? `${countryName} · Click to copy` : undefined}
+            />
           </InfoField>
         );
         return renderItemSuffix ? (
@@ -415,8 +472,8 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
       {visible.map((email, i) => {
         const { icon, style } = getEmailIcon(email.email);
         const field = (
-          <InfoField icon={icon} iconStyle={style}>
-            <a href={`mailto:${email.email}`}>{email.email}</a>
+          <InfoField icon={icon} iconStyle={style} actions={<EmailActions email={email.email} />}>
+            <CopyableValue value={email.email} />
           </InfoField>
         );
         return renderItemSuffix ? (
@@ -558,11 +615,9 @@ export function ContactInfoSection({ emails, phones, isEditMode, onEmailsChange,
             <div key={`phone-${i}`} className="expanded-item">
               <Icon name="phone" />
               <div className="expanded-item-content">
-                <a href={`tel:${phone.phone}`} className="phone-display">
-                  {flag && <span className="phone-flag" title={countryName}>{flag}</span>}
-                  <span>{phone.phoneDisplay}</span>
-                </a>
-                <WhatsAppLink phone={phone.phone} />
+                {flag && <span className="phone-flag" title={countryName}>{flag}</span>}
+                <CopyableValue value={phone.phoneDisplay} />
+                <PhoneActions phone={phone.phone} />
                 {phone.type && <span className="item-type">{phone.type}</span>}
               </div>
             </div>
@@ -572,7 +627,8 @@ export function ContactInfoSection({ emails, phones, isEditMode, onEmailsChange,
           <div key={`email-${i}`} className="expanded-item">
             <Icon name="envelope" />
             <div className="expanded-item-content">
-              <a href={`mailto:${email.email}`}>{email.email}</a>
+              <CopyableValue value={email.email} />
+              <EmailActions email={email.email} />
               {email.type && <span className="item-type">{email.type}</span>}
             </div>
           </div>

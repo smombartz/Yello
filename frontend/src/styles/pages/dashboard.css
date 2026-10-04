@@ -52,7 +52,7 @@
 
   .stat-icon.countries { background: var(--ds-color-success); }
   .stat-icon.cities { background: var(--ds-color-warning); }
-  .stat-icon.photos { background: var(--ds-color-purple); }
+  .stat-icon.photos { background: var(--ds-color-info); }
   .stat-icon.birthdays { background: var(--ds-color-error); }
 
   .stat-info {
@@ -124,7 +124,7 @@
     gap: var(--ds-space-3);
     padding: 12px 20px;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color var(--ds-duration-normal) var(--ds-easing-default);
   }
 
   .contact-item:hover {

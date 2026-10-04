@@ -29,7 +29,7 @@
   border-radius: var(--ds-radius-lg);
   box-shadow: var(--ds-shadow-md);
 
-  animation: backgroundJobPillIn 0.25s ease;
+  animation: backgroundJobPillIn var(--ds-duration-slow) var(--ds-easing-out);
 }
 
 @keyframes backgroundJobPillIn {
@@ -127,7 +127,7 @@
 .background-job-pill__progress-fill {
   height: 100%;
   background: var(--ds-color-primary);
-  transition: width 0.3s ease;
+  transition: width var(--ds-duration-slow) var(--ds-easing-default);
 }
 
 @media (max-width: 768px) {

@@ -117,7 +117,7 @@
   border: 1px solid var(--ds-border-color);
   background: var(--ds-bg-primary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--ds-duration-normal) var(--ds-easing-default);
 }
 
 .enrich-stat-card:hover {
@@ -144,7 +144,7 @@
 .enrich-stat-enriched .enrich-stat-count { color: var(--ds-color-success); }
 .enrich-stat-ready .enrich-stat-count { color: var(--ds-color-primary); }
 .enrich-stat-failed .enrich-stat-count { color: var(--ds-color-error); }
-.enrich-stat-no-linkedin .enrich-stat-count { color: var(--ds-text-tertiary); }
+.enrich-stat-no-linkedin .enrich-stat-count { color: var(--ds-text-secondary); }
 
 .enrich-category-panel {
   border: 1px solid var(--ds-border-color);
@@ -201,7 +201,7 @@
   background: none;
   text-align: left;
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background var(--ds-duration-fast) var(--ds-easing-default);
   font-size: 0.8125rem;
   color: var(--ds-text-primary);
 }
@@ -229,7 +229,7 @@
 }
 
 .enrich-category-contact-date {
-  color: var(--ds-text-tertiary);
+  color: var(--ds-text-secondary);
   font-size: var(--ds-font-xs);
   margin-left: auto;
 }
@@ -447,7 +447,7 @@
 
 .result-errors .more-errors {
   font-style: italic;
-  color: var(--ds-text-tertiary);
+  color: var(--ds-text-secondary);
 }
 
 .enriched-contacts-section {
@@ -622,7 +622,7 @@
 
 .gmail-discovery-more {
   font-size: var(--ds-font-xs);
-  color: var(--ds-text-tertiary);
+  color: var(--ds-text-secondary);
   font-style: italic;
   padding-top: 8px;
 }

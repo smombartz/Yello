@@ -12,13 +12,14 @@
   /* ============================================
    * COLORS - Primary Brand
    * ============================================ */
-  --ds-color-primary: #7c3aed;
-  --ds-color-primary-hover: #6d28d9;
-  --ds-color-primary-light: rgba(124, 58, 237, 0.1);
-  --ds-color-primary-dark: #5b21b6;
+  --ds-color-primary: #5F27E3;       /* Signal Violet — the logo, favicon and app-icon violet */
+  --ds-color-primary-hover: #530bce; /* derived: one OKLCH lightness step (−5) below primary */
+  --ds-color-primary-light: rgba(95, 39, 227, 0.1);
+  --ds-color-primary-dark: #4304ab;  /* derived: OKLCH lightness −11 below primary */
 
   /* Brand gradient — single source for decorative brand gradients.
-   * Canonical brand pair; all in-app gradients reference these. */
+   * Front doors only (login, public card, onboarding, launch, demo prompt).
+   * The from-stop (Iris) is the pre-2026-10 UI violet and survives only here. */
   --ds-gradient-brand-from: #7c3aed;
   --ds-gradient-brand-to: #273de3;
   --ds-gradient-brand: linear-gradient(135deg, var(--ds-gradient-brand-from), var(--ds-gradient-brand-to));
@@ -49,12 +50,6 @@
   --ds-color-info-hover: #1d4ed8;
   --ds-color-info-light: #dbeafe;
   --ds-color-info-dark: #1e40af;
-
-  /* Purple (accent) */
-  --ds-color-purple: #9f7aea;
-  --ds-color-purple-hover: #805ad5;
-  --ds-color-purple-light: #e9d8fd;
-  --ds-color-purple-dark: #6b46c1;
 
   /* Third-party brand colors */
   --ds-color-whatsapp: #25d366;
@@ -185,7 +180,7 @@
    * TRANSITIONS
    * ============================================ */
   --ds-duration-fast: 100ms;
-  --ds-duration-normal: 200ms;
+  --ds-duration-normal: 150ms;   /* default for state changes */
   --ds-duration-slow: 300ms;
   --ds-easing-default: cubic-bezier(0.4, 0, 0.2, 1);
   --ds-easing-in: cubic-bezier(0.4, 0, 1, 1);

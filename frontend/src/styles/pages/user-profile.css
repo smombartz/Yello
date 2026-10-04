@@ -17,11 +17,11 @@
     padding: 8px 16px;
     background: none;
     border: 1px solid var(--ds-border-color);
-    border-radius: var(--ds-radius-lg);
+    border-radius: var(--ds-btn-radius);
     font-size: 0.8125rem;
     color: var(--ds-text-secondary);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all var(--ds-duration-normal) var(--ds-easing-default);
   }
   .logout-btn:hover:not(:disabled) {
     background: var(--ds-bg-secondary);
@@ -93,7 +93,7 @@
     border-radius: var(--ds-radius-xl);
     cursor: pointer;
     text-align: left;
-    transition: all 0.2s;
+    transition: all var(--ds-duration-normal) var(--ds-easing-default);
   }
 
   .setup-option:hover {
@@ -190,11 +190,11 @@
     padding: 8px 16px;
     background: transparent;
     border: 1px solid var(--ds-border-color);
-    border-radius: var(--ds-radius-lg);
+    border-radius: var(--ds-btn-radius);
     cursor: pointer;
     color: var(--ds-text-secondary);
     font-size: var(--ds-font-sm);
-    transition: all 0.2s;
+    transition: all var(--ds-duration-normal) var(--ds-easing-default);
   }
 
   .unlink-btn:hover {
@@ -273,7 +273,7 @@
     border: none;
     cursor: pointer;
     text-align: left;
-    transition: background 0.2s;
+    transition: background var(--ds-duration-normal) var(--ds-easing-default);
   }
 
   .result-item:hover {
@@ -461,11 +461,11 @@
     padding: 8px 16px;
     background: transparent;
     border: 1px solid var(--ds-border-color);
-    border-radius: var(--ds-radius-lg);
+    border-radius: var(--ds-btn-radius);
     cursor: pointer;
     color: var(--ds-text-secondary);
     font-size: var(--ds-font-sm);
-    transition: all 0.2s;
+    transition: all var(--ds-duration-normal) var(--ds-easing-default);
   }
 
   .hide-all-btn:hover {
@@ -496,7 +496,7 @@
     cursor: pointer;
     inset: 0;
     background-color: var(--ds-border-color);
-    transition: 0.3s;
+    transition: all var(--ds-duration-slow) var(--ds-easing-default);
     border-radius: 28px;
   }
 
@@ -508,7 +508,7 @@
     left: 3px;
     bottom: 3px;
     background-color: white;
-    transition: 0.3s;
+    transition: all var(--ds-duration-slow) var(--ds-easing-default);
     border-radius: 50%;
   }
 
@@ -558,10 +558,10 @@
     padding: var(--ds-space-2);
     background: var(--ds-bg-primary);
     border: 1px solid var(--ds-border-color);
-    border-radius: var(--ds-radius-lg);
+    border-radius: var(--ds-btn-radius);
     cursor: pointer;
     color: var(--ds-text-secondary);
-    transition: all 0.2s;
+    transition: all var(--ds-duration-normal) var(--ds-easing-default);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -585,7 +585,7 @@
     border: none;
     border-radius: var(--ds-radius-lg);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--ds-duration-normal) var(--ds-easing-default);
     margin-top: var(--ds-space-5);
   }
 
@@ -727,7 +727,7 @@
     background: var(--ds-border-color);
     border-radius: 50%;
     color: var(--ds-text-secondary);
-    transition: all 0.2s;
+    transition: all var(--ds-duration-normal) var(--ds-easing-default);
   }
 
   .preview-social-link:hover {
@@ -756,31 +756,6 @@
     font-size: var(--ds-font-sm);
   }
 
-  /* Buttons */
-  .primary-button {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 20px;
-    background: var(--ds-color-primary);
-    color: white;
-    border: none;
-    border-radius: var(--ds-radius-lg);
-    cursor: pointer;
-    font-size: var(--ds-font-sm);
-    font-weight: var(--ds-weight-medium);
-    transition: all 0.2s;
-  }
-
-  .primary-button:hover:not(:disabled) {
-    background: var(--ds-color-primary-hover);
-  }
-
-  .primary-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
   .profile-secondary-button {
     padding: 8px 16px;
     background: transparent;
@@ -789,7 +764,7 @@
     cursor: pointer;
     font-size: var(--ds-font-sm);
     color: var(--ds-text-secondary);
-    transition: all 0.2s;
+    transition: all var(--ds-duration-normal) var(--ds-easing-default);
   }
 
   .profile-secondary-button:hover {
@@ -823,11 +798,11 @@
     padding: 10px 20px;
     background: transparent;
     border: 1px solid var(--ds-border-color);
-    border-radius: var(--ds-radius-lg);
+    border-radius: var(--ds-btn-radius);
     cursor: pointer;
     font-size: var(--ds-font-sm);
     color: var(--ds-text-secondary);
-    transition: all 0.2s;
+    transition: all var(--ds-duration-normal) var(--ds-easing-default);
   }
 
   .logout-button:hover:not(:disabled) {

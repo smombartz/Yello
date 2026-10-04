@@ -1,0 +1,633 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-04T22:02:49+00:00",
+  "title": "Design System: Yello",
+  "extensions": {
+    "colorMeta": {
+      "signal-violet": {
+        "role": "primary",
+        "displayName": "Signal Violet",
+        "canonical": "oklch(48.6% 0.253 285.7)",
+        "tonalRamp": [
+          "#0c002d",
+          "#250067",
+          "#410ca4",
+          "#5e24e1",
+          "#785afb",
+          "#978dfc",
+          "#c2c0fd",
+          "#ecedff"
+        ],
+        "note": "Primary: the logo, favicon, app-icon and --ds-color-primary violet."
+      },
+      "signal-violet-deep": {
+        "role": "primary",
+        "displayName": "Deep Signal Violet",
+        "canonical": "oklch(43.5% 0.247 285.9)",
+        "tonalRamp": [
+          "#0c002d",
+          "#250266",
+          "#4105a7",
+          "#5e28de",
+          "#7958fe",
+          "#978cfe",
+          "#c2bfff",
+          "#ededfe"
+        ],
+        "note": "--ds-color-primary-hover: one OKLCH lightness step (-5) below Signal Violet."
+      },
+      "signal-violet-tint": {
+        "role": "primary",
+        "displayName": "Signal Tint",
+        "canonical": "rgba(95, 39, 227, 0.1)",
+        "tonalRamp": [
+          "#0c002d",
+          "#250067",
+          "#410ca4",
+          "#5e24e1",
+          "#785afb",
+          "#978dfc",
+          "#c2c0fd",
+          "#ecedff"
+        ]
+      },
+      "gradient-iris": {
+        "role": "secondary",
+        "displayName": "Iris",
+        "canonical": "oklch(54.1% 0.247 293.0)",
+        "tonalRamp": [
+          "#0f002a",
+          "#2b035f",
+          "#4b069d",
+          "#6c1ed7",
+          "#8a4cfe",
+          "#a486fe",
+          "#c9bcff",
+          "#efecfe"
+        ],
+        "note": "Brand gradient first stop only (pre-2026-10 UI violet)."
+      },
+      "gradient-cobalt": {
+        "role": "secondary",
+        "displayName": "Cobalt",
+        "canonical": "oklch(47.5% 0.246 267.8)",
+        "tonalRamp": [
+          "#020133",
+          "#0b0175",
+          "#1802be",
+          "#283fe5",
+          "#466cff",
+          "#7598fe",
+          "#b0c6ff",
+          "#e8eefe"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Blue-Black Ink",
+        "canonical": "oklch(24.3% 0.025 264.0)",
+        "tonalRamp": [
+          "#1a202c",
+          "#4b5563",
+          "#6b7280",
+          "#9ca3af",
+          "#d1d5db",
+          "#e5e7eb",
+          "#f3f4f6",
+          "#f9fafb"
+        ]
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "oklch(55.1% 0.023 264.4)",
+        "tonalRamp": [
+          "#1a202c",
+          "#4b5563",
+          "#6b7280",
+          "#9ca3af",
+          "#d1d5db",
+          "#e5e7eb",
+          "#f3f4f6",
+          "#f9fafb"
+        ]
+      },
+      "pewter": {
+        "role": "neutral",
+        "displayName": "Pewter",
+        "canonical": "oklch(71.4% 0.019 261.3)",
+        "tonalRamp": [
+          "#1a202c",
+          "#4b5563",
+          "#6b7280",
+          "#9ca3af",
+          "#d1d5db",
+          "#e5e7eb",
+          "#f3f4f6",
+          "#f9fafb"
+        ]
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Strong Rule",
+        "canonical": "oklch(87.2% 0.009 258.3)",
+        "tonalRamp": [
+          "#1a202c",
+          "#4b5563",
+          "#6b7280",
+          "#9ca3af",
+          "#d1d5db",
+          "#e5e7eb",
+          "#f3f4f6",
+          "#f9fafb"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline Rule",
+        "canonical": "oklch(92.8% 0.006 264.5)",
+        "tonalRamp": [
+          "#1a202c",
+          "#4b5563",
+          "#6b7280",
+          "#9ca3af",
+          "#d1d5db",
+          "#e5e7eb",
+          "#f3f4f6",
+          "#f9fafb"
+        ]
+      },
+      "wash": {
+        "role": "neutral",
+        "displayName": "Gray Wash",
+        "canonical": "oklch(96.7% 0.003 264.5)",
+        "tonalRamp": [
+          "#1a202c",
+          "#4b5563",
+          "#6b7280",
+          "#9ca3af",
+          "#d1d5db",
+          "#e5e7eb",
+          "#f3f4f6",
+          "#f9fafb"
+        ]
+      },
+      "paper-shade": {
+        "role": "neutral",
+        "displayName": "Shaded Paper",
+        "canonical": "oklch(98.5% 0.002 247.8)",
+        "tonalRamp": [
+          "#1a202c",
+          "#4b5563",
+          "#6b7280",
+          "#9ca3af",
+          "#d1d5db",
+          "#e5e7eb",
+          "#f3f4f6",
+          "#f9fafb"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Desk White",
+        "canonical": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#1a202c",
+          "#4b5563",
+          "#6b7280",
+          "#9ca3af",
+          "#d1d5db",
+          "#e5e7eb",
+          "#f3f4f6",
+          "#f9fafb"
+        ]
+      },
+      "error": {
+        "role": "semantic",
+        "displayName": "Error",
+        "canonical": "oklch(57.7% 0.215 27.3)",
+        "tonalRamp": [
+          "#1e0001",
+          "#4b0103",
+          "#7c0108",
+          "#b10410",
+          "#e12c2a",
+          "#fc675b",
+          "#fdb1a8",
+          "#ffe9e6"
+        ]
+      },
+      "error-deep": {
+        "role": "semantic",
+        "displayName": "Deep Error",
+        "canonical": "oklch(50.5% 0.190 27.5)",
+        "tonalRamp": [
+          "#1f0000",
+          "#4a0203",
+          "#7b0509",
+          "#b00c13",
+          "#d73f37",
+          "#ff6458",
+          "#feb0a6",
+          "#fee9e6"
+        ]
+      },
+      "error-tint": {
+        "role": "semantic",
+        "displayName": "Error Tint",
+        "canonical": "oklch(93.6% 0.031 17.7)",
+        "tonalRamp": [
+          "#1e0001",
+          "#4b0103",
+          "#7c0108",
+          "#b10410",
+          "#e12c2a",
+          "#fc675b",
+          "#fdb1a8",
+          "#ffe9e6"
+        ]
+      },
+      "success": {
+        "role": "semantic",
+        "displayName": "Success",
+        "canonical": "oklch(62.7% 0.170 149.2)",
+        "tonalRamp": [
+          "#001003",
+          "#012d0f",
+          "#034e1f",
+          "#087130",
+          "#0f9643",
+          "#3bba60",
+          "#6be588",
+          "#d4fad9"
+        ]
+      },
+      "success-tint": {
+        "role": "semantic",
+        "displayName": "Success Tint",
+        "canonical": "oklch(96.2% 0.043 156.7)",
+        "tonalRamp": [
+          "#001003",
+          "#012d0f",
+          "#034e1f",
+          "#087130",
+          "#0f9643",
+          "#3bba60",
+          "#6be588",
+          "#d4fad9"
+        ]
+      },
+      "warning": {
+        "role": "semantic",
+        "displayName": "Warning",
+        "canonical": "oklch(66.6% 0.157 58.3)",
+        "tonalRamp": [
+          "#160700",
+          "#3a1b00",
+          "#603204",
+          "#8a4b0a",
+          "#b76512",
+          "#e5821f",
+          "#fdb57e",
+          "#ffeadb"
+        ]
+      },
+      "warning-tint": {
+        "role": "semantic",
+        "displayName": "Warning Tint",
+        "canonical": "oklch(96.2% 0.058 95.6)",
+        "tonalRamp": [
+          "#160700",
+          "#3a1b00",
+          "#603204",
+          "#8a4b0a",
+          "#b76512",
+          "#e5821f",
+          "#fdb57e",
+          "#ffeadb"
+        ]
+      },
+      "info": {
+        "role": "semantic",
+        "displayName": "Info",
+        "canonical": "oklch(54.6% 0.215 262.9)",
+        "tonalRamp": [
+          "#00062b",
+          "#001a61",
+          "#002f9f",
+          "#104dd4",
+          "#3271fa",
+          "#6b9cfb",
+          "#acc8fd",
+          "#e6efff"
+        ]
+      },
+      "info-tint": {
+        "role": "semantic",
+        "displayName": "Info Tint",
+        "canonical": "oklch(93.2% 0.032 255.6)",
+        "tonalRamp": [
+          "#00062b",
+          "#001a61",
+          "#002f9f",
+          "#104dd4",
+          "#3271fa",
+          "#6b9cfb",
+          "#acc8fd",
+          "#e6efff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Front-door headlines only (onboarding hero, launch)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "A contact's name on the detail page; large section and modal titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Page title in the header and settings section headings. One line, ellipsized."
+      },
+      "subtitle": {
+        "displayName": "Subtitle",
+        "purpose": "A contact's name in list rows and cards."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Base reading text; company lines on the detail page."
+      },
+      "body-sm": {
+        "displayName": "Body Small",
+        "purpose": "The workhorse: roles, detail values, inputs, search, descriptions."
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "Buttons, tabs and filter controls."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Badges, counts and metadata."
+      },
+      "overline": {
+        "displayName": "Overline",
+        "purpose": "Uppercase section labels on the contact detail and in settings groups."
+      }
+    },
+    "shadows": [
+      {
+        "name": "hairline-ambient",
+        "value": "0 1px 2px rgba(0, 0, 0, 0.05)",
+        "purpose": "Resting cards and rows, with the border (--ds-shadow-xs)."
+      },
+      {
+        "name": "hover-lift",
+        "value": "0 2px 16px 0 rgba(0, 0, 0, 0.05)",
+        "purpose": "Cards and list rows on hover, 150ms."
+      },
+      {
+        "name": "floating",
+        "value": "0 4px 12px rgba(0, 0, 0, 0.2)",
+        "purpose": "The toast."
+      },
+      {
+        "name": "modal",
+        "value": "0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04)",
+        "purpose": "Modals and dialogs (--ds-shadow-xl)."
+      },
+      {
+        "name": "front-door-card",
+        "value": "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+        "purpose": "Sign-in card on the brand gradient."
+      },
+      {
+        "name": "violet-glow",
+        "value": "0 4px 12px color-mix(in srgb, var(--ds-color-primary) 30%, transparent)",
+        "purpose": "Phone add button only."
+      },
+      {
+        "name": "tab-bar-edge",
+        "value": "0 -2px 10px rgba(0, 0, 0, 0.05)",
+        "purpose": "Bottom tab bar top edge."
+      },
+      {
+        "name": "focus-halo",
+        "value": "0 0 0 3px var(--ds-color-primary-light)",
+        "purpose": "Focus ring halo with a 2px violet outline or border shift."
+      }
+    ],
+    "motion": [
+      {
+        "name": "duration-fast",
+        "value": "100ms",
+        "purpose": "Button color and border changes (--ds-duration-fast)."
+      },
+      {
+        "name": "duration-normal",
+        "value": "150ms",
+        "purpose": "Default state-change duration (--ds-duration-normal)."
+      },
+      {
+        "name": "duration-slow",
+        "value": "300ms",
+        "purpose": "Progress fills, toast and job-pill entrances (--ds-duration-slow)."
+      },
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Default easing (--ds-easing-default)."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0, 0, 0.2, 1)",
+        "purpose": "Entrances (--ds-easing-out)."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "640px"
+      },
+      {
+        "name": "tablet",
+        "value": "768px",
+        "note": "App-shell switch: rail -> bottom tab bar."
+      },
+      {
+        "name": "desktop",
+        "value": "1024px"
+      },
+      {
+        "name": "wide",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one filled action per view.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 14 14\" fill=\"none\" aria-hidden=\"true\"><path d=\"M7 1.5v11M1.5 7h11\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg> Add contact</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 32px; padding: 0 16px; border: 1px solid transparent; border-radius: 6px; font-family: var(--ds-font-family, 'Geist', system-ui, sans-serif); font-size: 14px; font-weight: 500; line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color 100ms cubic-bezier(0.4, 0, 0.2, 1), border-color 100ms cubic-bezier(0.4, 0, 0.2, 1), color 100ms cubic-bezier(0.4, 0, 0.2, 1); background: var(--ds-color-primary, #5F27E3); color: #fff; } .ds-btn-primary:hover { background: var(--ds-color-primary-hover, #530bce); } .ds-btn-primary:focus-visible { outline: 2px solid var(--ds-color-primary, #5F27E3); outline-offset: 2px; box-shadow: 0 0 0 3px var(--ds-color-primary-light, rgba(95, 39, 227, 0.1)); } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "The default button: bordered, neutral, most actions.",
+      "html": "<button class=\"ds-btn-secondary\">Export</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 32px; padding: 0 16px; border: 1px solid transparent; border-radius: 6px; font-family: var(--ds-font-family, 'Geist', system-ui, sans-serif); font-size: 14px; font-weight: 500; line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color 100ms cubic-bezier(0.4, 0, 0.2, 1), border-color 100ms cubic-bezier(0.4, 0, 0.2, 1), color 100ms cubic-bezier(0.4, 0, 0.2, 1); background: var(--ds-bg-primary, #ffffff); color: var(--ds-text-primary, #1a202c); border-color: var(--ds-border-color, #e5e7eb); } .ds-btn-secondary:hover { background: var(--ds-bg-secondary, #f9fafb); border-color: var(--ds-border-dark, #d1d5db); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--ds-color-primary, #5F27E3); outline-offset: 2px; box-shadow: 0 0 0 3px var(--ds-color-primary-light, rgba(95, 39, 227, 0.1)); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Low-stakes in-context action, no frame.",
+      "html": "<button class=\"ds-btn-ghost\">Skip</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 32px; padding: 0 16px; border: 1px solid transparent; border-radius: 6px; font-family: var(--ds-font-family, 'Geist', system-ui, sans-serif); font-size: 14px; font-weight: 500; line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color 100ms cubic-bezier(0.4, 0, 0.2, 1), border-color 100ms cubic-bezier(0.4, 0, 0.2, 1), color 100ms cubic-bezier(0.4, 0, 0.2, 1); background: transparent; color: var(--ds-text-secondary, #6b7280); } .ds-btn-ghost:hover { background: rgba(0, 0, 0, 0.04); color: var(--ds-text-primary, #1a202c); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--ds-color-primary, #5F27E3); outline-offset: 2px; box-shadow: 0 0 0 3px var(--ds-color-primary-light, rgba(95, 39, 227, 0.1)); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "32px field; violet border shift and tint halo on focus.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Company\" />",
+      "css": ".ds-input { height: 32px; width: 240px; padding: 0 12px; border: 1px solid var(--ds-border-color, #e5e7eb); border-radius: 6px; background: var(--ds-bg-primary, #ffffff); color: var(--ds-text-primary, #1a202c); font-family: var(--ds-font-family, 'Geist', system-ui, sans-serif); font-size: 14px; transition: border-color 150ms, box-shadow 150ms; } .ds-input::placeholder { color: var(--ds-text-secondary, #6b7280); } .ds-input:hover { border-color: var(--ds-border-dark, #d1d5db); } .ds-input:focus-visible { outline: none; border-color: var(--ds-color-primary, #5F27E3); box-shadow: 0 0 0 3px var(--ds-color-primary-light, rgba(95, 39, 227, 0.1)); }"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "search-bar",
+      "description": "Inset search on Shaded Paper; caps at 300px in the header.",
+      "html": "<label class=\"ds-search\"><span class=\"ds-search-icon\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" aria-hidden=\"true\"><circle cx=\"7\" cy=\"7\" r=\"5\" stroke=\"currentColor\" stroke-width=\"2\"/><path d=\"M11 11l3.5 3.5\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg></span><input class=\"ds-search-input\" type=\"search\" placeholder=\"Search contacts\" /></label>",
+      "css": ".ds-search { display: flex; align-items: center; gap: 4px; height: 32px; max-width: 300px; padding: 0 8px; background: var(--ds-bg-secondary, #f9fafb); border: 1px solid var(--ds-border-dark, #d1d5db); border-radius: 8px; transition: border-color 150ms, box-shadow 150ms; } .ds-search:focus-within { border-color: var(--ds-color-primary, #5F27E3); box-shadow: 0 0 0 3px var(--ds-color-primary-light, rgba(95, 39, 227, 0.1)); } .ds-search-icon { display: flex; color: var(--ds-text-muted, #9ca3af); } .ds-search-input { flex: 1; min-width: 0; border: none; background: transparent; outline: none; padding: 0 8px; font-family: var(--ds-font-family, 'Geist', system-ui, sans-serif); font-size: 14px; color: var(--ds-text-primary, #1a202c); } .ds-search-input::placeholder { color: var(--ds-text-muted, #9ca3af); }"
+    },
+    {
+      "name": "Badges",
+      "kind": "chip",
+      "refersTo": "badge-neutral",
+      "description": "Tinted status labels (4px corners) and round count pills.",
+      "html": "<span class=\"ds-badges\"><span class=\"ds-badge\">Archived</span><span class=\"ds-badge ds-badge--brand\">Public</span><span class=\"ds-badge ds-badge--success\">Geocoded</span><span class=\"ds-badge ds-badge--warning\">Review</span><span class=\"ds-badge ds-badge--error\">Invalid</span><span class=\"ds-badge-count\">128</span></span>",
+      "css": ".ds-badges { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; } .ds-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-family: var(--ds-font-family, 'Geist', system-ui, sans-serif); font-size: 12px; font-weight: 500; line-height: 1.4; background: var(--ds-bg-tertiary, #f3f4f6); color: var(--ds-text-secondary, #6b7280); } .ds-badge--brand { background: var(--ds-color-primary-light, rgba(95, 39, 227, 0.1)); color: var(--ds-color-primary, #5F27E3); } .ds-badge--success { background: var(--ds-color-success-light, #dcfce7); color: var(--ds-color-success-dark, #166534); } .ds-badge--warning { background: var(--ds-color-warning-light, #fef3c7); color: var(--ds-color-warning-dark, #92400e); } .ds-badge--error { background: var(--ds-color-error-light, #fee2e2); color: var(--ds-color-error-dark, #991b1b); } .ds-badge-count { display: inline-flex; justify-content: center; min-width: 20px; padding: 2px 8px; border-radius: 9999px; background: var(--ds-text-secondary, #6b7280); color: #fff; font-family: var(--ds-font-family, 'Geist', system-ui, sans-serif); font-size: 12px; font-weight: 500; line-height: 1.4; }"
+    },
+    {
+      "name": "Filter Chips",
+      "kind": "chip",
+      "refersTo": "chip-filter",
+      "description": "Pill filters; active takes Signal Tint with a violet border.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip ds-chip--active\">All</button><button class=\"ds-chip\">Missing email</button><button class=\"ds-chip\">No photo</button></div>",
+      "css": ".ds-chips { display: flex; gap: 8px; } .ds-chip { height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid var(--ds-border-color, #e5e7eb); background: transparent; color: var(--ds-text-secondary, #6b7280); font-family: var(--ds-font-family, 'Geist', system-ui, sans-serif); font-size: 13px; font-weight: 500; cursor: pointer; transition: border-color 150ms, color 150ms, background-color 150ms; } .ds-chip:hover { border-color: var(--ds-color-primary, #5F27E3); color: var(--ds-color-primary, #5F27E3); } .ds-chip--active { background: var(--ds-color-primary-light, rgba(95, 39, 227, 0.1)); border-color: var(--ds-color-primary, #5F27E3); color: var(--ds-color-primary, #5F27E3); } .ds-chip:focus-visible { outline: 2px solid var(--ds-color-primary, #5F27E3); outline-offset: 2px; box-shadow: 0 0 0 3px var(--ds-color-primary-light, rgba(95, 39, 227, 0.1)); }"
+    },
+    {
+      "name": "Underline Tabs",
+      "kind": "nav",
+      "refersTo": "tab-underline",
+      "description": "Mode switcher on a hairline; active is violet with a 2px underline and tinted count.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\"><button class=\"ds-tab ds-tab--active\" role=\"tab\" aria-selected=\"true\">Recommended <span class=\"ds-tab-count\">42</span></button><button class=\"ds-tab\" role=\"tab\">Email <span class=\"ds-tab-count\">17</span></button><button class=\"ds-tab\" role=\"tab\">Phone <span class=\"ds-tab-count\">9</span></button></div>",
+      "css": ".ds-tabs { display: flex; border-bottom: 1px solid var(--ds-border-color, #e5e7eb); } .ds-tab { display: flex; align-items: center; gap: 8px; padding: 12px 16px; margin-bottom: -1px; border: none; border-bottom: 2px solid transparent; background: transparent; color: var(--ds-text-secondary, #6b7280); font-family: var(--ds-font-family, 'Geist', system-ui, sans-serif); font-size: 14px; font-weight: 500; cursor: pointer; transition: color 150ms, border-color 150ms; } .ds-tab:hover { color: var(--ds-text-primary, #1a202c); } .ds-tab--active, .ds-tab--active:hover { color: var(--ds-color-primary, #5F27E3); border-bottom-color: var(--ds-color-primary, #5F27E3); } .ds-tab:focus-visible { outline: 2px solid var(--ds-color-primary, #5F27E3); outline-offset: -2px; } .ds-tab-count { padding: 1px 7px; border-radius: 9999px; background: var(--ds-bg-tertiary, #f3f4f6); color: var(--ds-text-secondary, #6b7280); font-size: 12px; font-weight: 600; } .ds-tab--active .ds-tab-count { background: var(--ds-color-primary-light, rgba(95, 39, 227, 0.1)); color: var(--ds-color-primary, #5F27E3); }"
+    },
+    {
+      "name": "Nav Rail",
+      "kind": "nav",
+      "refersTo": "nav-rail-item",
+      "description": "Floating icon column; hover reveals the label in violet, active is Signal Tint.",
+      "html": "<nav class=\"ds-rail\"><a class=\"ds-rail-item\" href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z\"/></svg><span class=\"ds-rail-label\">Dashboard</span></a><a class=\"ds-rail-item ds-rail-item--active\" href=\"#\" aria-current=\"page\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><circle cx=\"9\" cy=\"8\" r=\"4\"/><path d=\"M1 20c0-4.4 3.6-7 8-7s8 2.6 8 7z\"/><circle cx=\"17.5\" cy=\"8.5\" r=\"3\"/><path d=\"M18.5 13.2c2.7.5 4.5 2.6 4.5 5.8h-4.6c0-2.3-.7-4.3-2-5.6z\"/></svg><span class=\"ds-rail-label\">Contacts</span></a><a class=\"ds-rail-item\" href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M12 2a7 7 0 00-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 00-7-7zm0 9.5A2.5 2.5 0 1112 6.5a2.5 2.5 0 010 5z\"/></svg><span class=\"ds-rail-label\">Map</span></a></nav>",
+      "css": ".ds-rail { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px; } .ds-rail-item { display: flex; align-items: center; gap: 8px; width: 40px; height: 40px; padding: 8px; border-radius: 8px; color: var(--ds-text-muted, #9ca3af); text-decoration: none; overflow: hidden; transition: background-color 150ms, color 150ms, width 150ms; } .ds-rail-item svg { flex-shrink: 0; } .ds-rail-label { display: none; font-family: var(--ds-font-family, 'Geist', system-ui, sans-serif); font-size: 14px; font-weight: 500; white-space: nowrap; color: var(--ds-color-primary, #5F27E3); } .ds-rail-item:hover { width: auto; color: var(--ds-color-primary, #5F27E3); } .ds-rail-item:hover .ds-rail-label { display: inline; } .ds-rail-item--active { background: var(--ds-color-primary-light, rgba(95, 39, 227, 0.1)); color: var(--ds-color-primary, #5F27E3); } .ds-rail-item:focus-visible { outline: 2px solid var(--ds-color-primary, #5F27E3); outline-offset: -2px; }"
+    },
+    {
+      "name": "Contact Row",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Signature list unit: avatar, bold name, detail columns, hairline-divided action strip.",
+      "html": "<div class=\"ds-row\" tabindex=\"0\"><div class=\"ds-row-main\"><div class=\"ds-avatar\" style=\"background: hsl(212, 65%, 45%)\">MR</div><div class=\"ds-row-info\"><h3 class=\"ds-row-name\">Maya Rosen</h3><p class=\"ds-row-role\">Partner, Northfield Studio</p></div></div><div class=\"ds-row-details\"><span class=\"ds-row-detail\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M1 3h14v10H1zM2.5 4.5v.4L8 8.6l5.5-3.7v-.4z\"/></svg><span>maya@northfield.studio</span></span><span class=\"ds-row-detail\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M4.2 1.5l2 3-1.4 1.6a9 9 0 005.1 5.1l1.6-1.4 3 2-1 2.7C7 14.2 1.8 9 1.5 2.5z\"/></svg><span>+1 415 555 0142</span></span></div><div class=\"ds-row-actions\"><span class=\"ds-row-action\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M1 3h14v10H1zM2.5 4.5v.4L8 8.6l5.5-3.7v-.4z\"/></svg></span><span class=\"ds-row-action\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M4.2 1.5l2 3-1.4 1.6a9 9 0 005.1 5.1l1.6-1.4 3 2-1 2.7C7 14.2 1.8 9 1.5 2.5z\"/></svg></span></div></div>",
+      "css": ".ds-row { display: flex; align-items: stretch; gap: 24px; padding: 12px 16px; max-width: 960px; background: var(--ds-bg-primary, #ffffff); border: 1px solid var(--ds-border-color, #e5e7eb); border-radius: 8px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); cursor: pointer; transition: box-shadow 150ms; font-family: var(--ds-font-family, 'Geist', system-ui, sans-serif); } .ds-row:hover { box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.05); } .ds-row:focus-visible { outline: 2px solid var(--ds-color-primary, #5F27E3); outline-offset: 2px; box-shadow: 0 0 0 3px var(--ds-color-primary-light, rgba(95, 39, 227, 0.1)); } .ds-row-main { display: flex; align-items: center; gap: 16px; flex: 1; min-width: 0; } .ds-avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 19px; flex-shrink: 0; } .ds-row-info { min-width: 0; } .ds-row-name { margin: 0; font-size: 16px; font-weight: 700; color: var(--ds-text-primary, #1a202c); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-row-role { margin: 2px 0 0; font-size: 14px; color: var(--ds-text-secondary, #6b7280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-row-details { display: flex; align-items: center; gap: 32px; } .ds-row-detail { display: flex; align-items: center; gap: 8px; width: 200px; font-size: 14px; color: var(--ds-text-secondary, #6b7280); overflow: hidden; } .ds-row-detail span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-row-detail svg { flex-shrink: 0; } .ds-row-actions { display: flex; align-items: center; gap: 16px; padding-left: 17px; border-left: 1px solid var(--ds-border-color, #e5e7eb); color: var(--ds-text-secondary, #6b7280); } .ds-row-action { display: flex; } .ds-row-action:hover { color: var(--ds-text-primary, #1a202c); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Connector's Desk",
+    "overview": "Yello is the desk a super connector works at. It's a clean, well-lit surface where thousands of people are laid out in order and the right one is in reach within seconds. The furniture is neutral: white paper, gray hairlines and one family of type. Warmth comes from the people on it, through their photos, their initials on per-name colors, their names set bold. The desk itself stays calm.\n\nThe mood is **calm, crisp, utilitarian**. Density is moderate, tuned for long sessions over 10K-contact books as well as quick lookups on a phone. Controls are compact (32px) and quiet. Bordered neutral buttons do most of the work, with one filled violet action per view. Components feel **refined and restrained**: precise alignment, consistent heights and a shared content column count for more than density or decoration.\n\nViolet is a signal, not a theme. It marks what is active, selected or actionable, and almost nothing else. The violet-to-cobalt brand gradient is kept for the app's front doors (sign-in, the public card, onboarding), the moments when someone arrives rather than works.",
+    "keyCharacteristics": [
+      "Light-only, white canvas, gray hairline structure",
+      "One accent (Signal Violet), used sparingly for state and action",
+      "Geist throughout. Hierarchy from size and weight, never a second family",
+      "Uniform 32px control height; 4px spacing grid",
+      "Flat surfaces with a soft touch: hairline borders, ambient lift on hover, real shadows only on things that float",
+      "One centered 960px column shared by the header and the content",
+      "People supply the color: photos and hash-hued initial avatars"
+    ],
+    "rules": [
+      {
+        "name": "The Mark Leads Rule",
+        "body": "The UI's primary is the mark's own violet: Signal Violet (#5F27E3) is the logo, favicon, app icon and `--ds-color-primary` alike. There is one violet in the product. Iris appears only inside the front-door gradient.",
+        "section": "colors"
+      },
+      {
+        "name": "The Signal Only Rule",
+        "body": "Violet marks what is active, selected or actionable. It never fills a panel, tints a section header or decorates. If a screen reads as \"violet,\" too much is lit.",
+        "section": "colors"
+      },
+      {
+        "name": "The Front Door Rule",
+        "body": "The Iris → Cobalt gradient appears only on surfaces outside the app shell: sign-in, the public card page, onboarding, launch and the demo prompt. Inside the shell there are no gradients, and gradients never sit on text.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Family Rule",
+        "body": "Geist only, at weights 400, 500, 600 and 700. Hierarchy comes from size and weight. Never add a second family for display or labels.",
+        "section": "typography"
+      },
+      {
+        "name": "The Scale Floor Rule",
+        "body": "Sizes come from the `--ds-font-*` scale (11–30px). The only sanctioned literals are 13px and 15px for compact densities. Nothing a person reads goes below 11px, including tab-bar labels and photo captions.",
+        "section": "typography"
+      },
+      {
+        "name": "The Shared Column Rule",
+        "body": "The header's center column and the page content share one 960px column, so the title, search, counts and list edges line up vertically on every page. Never offset one without the other.",
+        "section": "layout"
+      },
+      {
+        "name": "The 32px Rule",
+        "body": "Every control is 32px tall, whether button, input, select, chip or tab pill. Mixing heights on one row is a bug.",
+        "section": "layout"
+      },
+      {
+        "name": "The Float Earns Shadow Rule",
+        "body": "A surface gets a real shadow only when it floats above the desk: overlay, toast or fixed control. Anything in the flow stays at hairline-ambient or below.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Radius Ladder Rule",
+        "body": "The bigger the surface, the softer the corner: 4 → 6 → 8 → 12 → 16/24. A small control never gets a big radius, and a modal never gets a sharp one.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do reach for `--ds-color-primary` (Signal Violet, #5F27E3) and `--ds-color-primary-hover` (#530bce) rather than any literal violet.",
+      "Do keep exactly one filled primary button per view. Everything else is secondary, ghost or icon.",
+      "Do build every control at 32px (`--ds-control-height`), with 6px corners and 14px medium labels.",
+      "Do separate surfaces with 1px Hairline Rule borders and tone. Let a card lift on hover with the 16px ambient shadow.",
+      "Do align new pages to the shared 960px column so the header title, search and content edges line up.",
+      "Do let people carry the color. Use real photos where present, and otherwise the name-hashed initial avatar.",
+      "Do use the existing `--ds-*` tokens and the four breakpoints (640/768/1024/1280) only.",
+      "Do use Graphite (#6b7280) or darker for any text a person must read, placeholders included.",
+      "Do show selection the same way everywhere: a 2px Signal Violet ring on the card and a violet check badge on the avatar.",
+      "Do write transitions with the duration and easing tokens (`var(--ds-duration-normal) var(--ds-easing-default)`), never literal seconds."
+    ],
+    "donts": [
+      "Don't introduce another violet, indigo or purple. Iris (#7c3aed) exists only as the gradient's first stop, and the old purple accent token is gone.",
+      "Don't put the brand gradient inside the app shell, or on text. It is for front doors only.",
+      "Don't fill panels, section headers or large areas with violet or Signal Tint. Tint is for selected states.",
+      "Don't set readable text in Pewter (#9ca3af, 2.5:1 on white). It is for icons, placeholders and disabled states.",
+      "Don't give in-flow cards anything heavier than the hairline ambient shadow at rest.",
+      "Don't add a second typeface or set text off the `--ds-font-*` scale.",
+      "Don't fill a button with Success green or Info blue, or fade a button with opacity on hover.",
+      "Don't redefine a canonical class (`.primary-button`, `.btn`, `.card`) in a page stylesheet. Page CSS loads globally, so the override leaks app-wide.",
+      "Don't add a dark theme ad hoc. The system is light-only today, and a dark mode needs its own token pass."
+    ]
+  }
+}

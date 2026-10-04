@@ -207,7 +207,7 @@
   margin: 0;
   text-align: center;
   font-size: var(--ds-font-sm);
-  color: var(--ds-text-tertiary);
+  color: var(--ds-text-secondary);
 }
 
 @media (max-width: 640px) {

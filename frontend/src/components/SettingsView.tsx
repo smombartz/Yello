@@ -305,7 +305,7 @@ export function SettingsView() {
                       disabled={saveICloudSettings.isPending}
                     />
                     {saveICloudSettings.isError && (
-                      <p style={{ color: 'var(--ds-color-error)', fontSize: '0.875rem', margin: 0 }}>
+                      <p style={{ color: 'var(--ds-color-error)', fontSize: 'var(--ds-font-sm)', margin: 0 }}>
                         {saveICloudSettings.error?.message || 'Connection failed'}
                       </p>
                     )}

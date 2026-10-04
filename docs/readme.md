@@ -27,7 +27,51 @@ Codes are deleted on first use, even when the verifier is wrong. A server restar
 
 Up to 1.x the app spawned its own backend with local SQLite in `~/Library/Application Support/Yello/`. That mode is gone, and its files are left in place. See the migration note in `electron/README.md`.
 
+## Design system
+
+`DESIGN.md` (repo root) documents the visual system for anyone building new UI, people and AI agents alike. Its YAML frontmatter holds the normative tokens, and the body covers colors, type, layout, depth, shapes, components and do's/don'ts. `.impeccable/design.json` is a machine-read sidecar with tonal ramps, shadows, motion and drop-in component snippets. `PRODUCT.md` holds the product context (users, positioning, principles) that the design serves. The implementation lives in `frontend/src/styles/design-system.css` (`--ds-*` tokens).
+
+**One violet.** The primary is **Signal Violet `#5F27E3`**, the violet of the logo, favicon and app icon (`--ds-color-primary`). Its hover is `#530bce` and its dark step `#4304ab`, both derived in OKLCH. The old UI violet `#7c3aed` survives only as the brand gradient's first stop.
+
+**Conventions the CSS now follows** (aligned on 2026-10-04):
+
+- Filled buttons are Signal Violet or Error only. Every in-app button has 6px corners and a medium-weight label.
+- Selection is a 2px Signal Violet ring plus a violet avatar check.
+- No text is smaller than 11px.
+- Readable text is never `--ds-text-muted`. That color is for icons and zero states only.
+- Every transition uses `--ds-duration-*` and `--ds-easing-*`. `--ds-duration-normal` (150ms) is the default.
+- Page stylesheets must not redefine canonical classes like `.primary-button`. `pages.css` loads globally, so an override leaks app-wide.
+
 ## Features
+
+### Shareable URLs for views and expanded contacts
+
+Copying the address bar reproduces what you're looking at, not only which view you're in. The URL holds the state: pages read it from `useParams` / `useSearchParams` rather than `useState`, so nothing has to keep the two in sync.
+
+| View | URL |
+|---|---|
+| Contacts list | `/contacts?q=smith&sort=newest&filter=no-email,has-photo&view=grid` |
+| Expanded contact | adds `contact=<id>` to whichever list it's in |
+| Group | `/groups/<encoded category>`, plus `?q=` and `&contact=<id>` |
+| Contact detail | `/contacts/<id>` |
+
+Defaults are omitted (`sort=name-asc`, `view=list`, no filters).
+
+- **History:** opening a group adds a history entry, so Back returns to the groups grid. Searching, sorting, filtering, toggling list/grid and expanding or collapsing a row replace the current entry.
+- **Opening a link with `?contact=`:** `ContactList` resolves it once, when the first results arrive. If the contact is in the list, it expands and is scrolled into view. If not, the app opens `/contacts/<id>`, replacing the history entry. The list loads only the first 100 matches, so this happens for contacts further down or filtered out. Changing search, sort, filter or view while a row is open clears `contact` instead of redirecting.
+- **Copy link** in the expanded card copies `window.location.href`. On the detail page, the same component copies `/contacts/<id>`. The desktop app has no address bar, but it loads the Railway URL, so the copied link also opens in a browser.
+- **Updating params:** `useSearchParamUpdater` (`frontend/src/hooks/`) applies several changes in a single `setSearchParams` call, replacing the history entry by default. React Router v7's setter has no update queue: two calls in the same tick overwrite each other.
+
+No server change was needed. The Fastify SPA fallback already serves `index.html` for any non-API path, so a deep link survives a reload.
+
+### Contact detail: copy on click, reach-out icons
+
+In the contact card view (contact detail page, expanded list row, Profile page), clicking a phone number or email **copies it to the clipboard** and shows a short toast. It no longer opens the dialer or mail app. The reach-out links sit as icons beside each value:
+
+- **Phone:** text (`sms:`), call (`tel:`) and WhatsApp (`https://wa.me/<digits>`). `sms:` and `tel:` use the number with everything but digits and `+` stripped, since manually edited numbers aren't normalized to E.164.
+- **Email:** send email (`mailto:`).
+
+The components are `CopyableValue`, `PhoneActions` and `EmailActions` in `frontend/src/components/ContactFormSections.tsx`; the icons render through `InfoField`'s `actions` slot, beside the value, so long values truncate without hiding them. The desktop app hands `sms:` and `mailto:` to the OS default app (`EXTERNAL_PROTOCOLS` in `electron/src/main.ts`). On macOS it opens `tel:` in FaceTime explicitly, so the call rings out through the iPhone whatever app has claimed `tel:`. In a browser, `tel:` goes to the Mac's default handler; if that isn't FaceTime (Chrome claims it on some Macs), set FaceTime → Settings → General → Default for calls. The public card (`/p/:slug`) keeps tap-to-call/email links.
 
 ### VCF import (background job)
 

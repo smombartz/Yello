@@ -101,7 +101,7 @@
     align-items: center;
     justify-content: center;
     color: var(--ds-color-primary);
-    transition: all 0.2s ease;
+    transition: all var(--ds-duration-normal) var(--ds-easing-default);
     box-shadow: var(--ds-shadow-sm);
   }
 
@@ -147,7 +147,7 @@
   /* Location */
   .profile-location {
     font-size: var(--ds-font-sm);
-    color: var(--ds-text-muted);
+    color: var(--ds-text-secondary);
     margin: 0 0 24px 0;
   }
 
@@ -169,7 +169,7 @@
     text-decoration: none;
     color: var(--ds-text-primary);
     font-size: var(--ds-font-sm);
-    transition: background 0.2s ease;
+    transition: background var(--ds-duration-normal) var(--ds-easing-default);
   }
 
   a.contact-item:hover {
@@ -208,7 +208,7 @@
     align-items: center;
     justify-content: center;
     color: var(--ds-text-secondary);
-    transition: all 0.2s ease;
+    transition: all var(--ds-duration-normal) var(--ds-easing-default);
   }
 
   .social-link:hover {
@@ -251,7 +251,7 @@
     font-size: var(--ds-font-md);
     font-weight: var(--ds-weight-semibold);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--ds-duration-normal) var(--ds-easing-default);
     box-shadow: 0 4px 14px color-mix(in srgb, var(--ds-color-primary) 40%, transparent);
   }
 

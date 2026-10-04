@@ -1,30 +1,37 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import type { OutletContext } from './Layout';
 import { useGroups } from '../api/hooks';
 import { ContactList } from './ContactList';
 import { Icon } from './Icon';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { EmptyState } from './ui/EmptyState';
+import { EXPANDED_CONTACT_PARAM, useSearchParamUpdater } from '../hooks/useSearchParamUpdater';
 
 export function GroupsView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  const navigate = useNavigate();
+  // The open group is the route (/groups/:category) and the search is ?q=, so both survive a copied link.
+  const { category: selectedCategory = null } = useParams<{ category: string }>();
+  const [searchParams] = useSearchParams();
+  const updateParams = useSearchParamUpdater();
+  const search = searchParams.get('q') ?? '';
   const [viewMode] = useState<'list' | 'grid'>(() => {
     return (localStorage.getItem('contactViewMode') as 'list' | 'grid') || 'list';
   });
   const { data, isLoading, error } = useGroups();
 
+  const setSearch = useCallback((q: string) => {
+    updateParams({ q, [EXPANDED_CONTACT_PARAM]: null });
+  }, [updateParams]);
+
   const handleGroupClick = (category: string) => {
-    setSearch('');
-    setSelectedCategory(category);
+    navigate(`/groups/${encodeURIComponent(category)}`);
   };
 
   const handleBackToGroups = useCallback(() => {
-    setSearch('');
-    setSelectedCategory(null);
-  }, []);
+    navigate('/groups');
+  }, [navigate]);
 
   useEffect(() => {
     if (selectedCategory) {
@@ -44,7 +51,7 @@ export function GroupsView() {
         info: data?.groups ? <span>{data.groups.length} groups</span> : undefined,
       });
     }
-  }, [setHeaderConfig, selectedCategory, search, handleBackToGroups, data?.groups]);
+  }, [setHeaderConfig, selectedCategory, search, setSearch, handleBackToGroups, data?.groups]);
 
   const filteredGroups = (data?.groups ?? []).filter((group) =>
     group.category.toLowerCase().includes(search.trim().toLowerCase())

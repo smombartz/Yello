@@ -17,6 +17,7 @@ electron/
 
 - **Same-origin pages** load in the app window. Same-origin `window.open` / `target="_blank"` opens another app window.
 - **Other origins** (LinkedIn, mailto:, maps, …) open in the default browser. Only `http(s)`, `mailto`, `tel` and `sms` links are handed off.
+- **`tel:` on macOS** always opens in FaceTime (`open -b com.apple.FaceTime <url>`), so calls ring out through the iPhone ("Calls from iPhone") even when Chrome, Zoom or Teams has claimed `tel:` as the system default. If that fails it falls back to the default handler.
 - **Server unreachable**: the window shows `pages/offline.html`, whose "Try again" link reloads the app.
 - **Permissions** (notifications etc.) are granted only to the app origin.
 - One instance at a time. Opening the app again focuses the existing window.
@@ -63,7 +64,7 @@ npm run electron:build      # from the repo root; same as: cd electron && npm ru
 
 This produces `electron/release/Yello-<version>-arm64.dmg` (Apple Silicon) and `Yello-<version>.dmg` (Intel).
 
-- **Icon:** drop `icon.icns` into `build-resources/` (see `build-resources/ICON_README.md`). Without it, the default Electron icon is used.
+- **Icon:** `build-resources/icon.icns`, generated from `icon.svg` (the favicon mark on the macOS icon grid) by `build-resources/make-icon.sh`. See `build-resources/ICON_README.md`.
 - **Signing:** electron-builder signs with the Developer ID certificate in the keychain, if there is one, with hardened runtime.
 - **Notarization:** not set up. A locally built app opens fine. A dmg downloaded on another Mac is blocked by Gatekeeper until it is notarized: add `notarize` to the `mac` config and set `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID`.
 - **Deep links:** macOS registers `yello://` once the app has been launched from `/Applications`.

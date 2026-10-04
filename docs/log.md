@@ -1,5 +1,176 @@
 # Change Log
 
+## 2026-10-04 — Align the CSS with DESIGN.md (one violet, one button system, one motion scale)
+
+**What Changed:**
+- **Primary color.** `--ds-color-primary` moved from `#7c3aed` to Signal Violet `#5F27E3`, the logo's violet. Hover is now `#530bce`, dark `#4304ab` (both OKLCH-derived), and light is `rgba(95, 39, 227, 0.1)`. Removed the unused `--ds-color-purple` family. The Dashboard "photos" stat icon is now Info.
+- **Stray violets and indigos.** Replaced them with tokens: the `#616189` metadata text, the `#9333ea` nickname indicator, the `#faf5ff` badge, the `#e0e7ff`/`#4338ca` address issue tag, and the demo button's `rgba(124, 58, 237, 0.3)` glow.
+- **Selection.** Contact list and grid cards now use a 2px Signal Violet ring instead of a light-blue Info ring, matching Cleanup, Archive and Merge. The avatar check badge, avatar focus ring and patterns-input focus are violet too.
+- **Buttons.** Search and Restore were filled blue and green; they are now primary. Header actions, Edit, Merge, Keep separate, pagination, Fix all, Geocode, Add item, profile buttons and the expanded-row action button now use the 6px button radius. Header and Edit labels went from bold to medium with 16px padding. The `.action-button` hover now changes the fill instead of fading opacity.
+- **Duplicate rules.** Deleted three dead `.back-button` definitions (the class isn't used in any component) and the first of two `.merge-all-button` definitions, which was a blue copy the later one overrode. Deleted the `.primary-button` override in `user-profile.css`, which leaked app-wide and gave every Enrich primary button 10px/20px padding.
+- **Type scale.** Nothing is below 11px now. Raised the 8px, 9.6px and 10px labels (section labels, "show more", metadata, photo source, email direction, primary badge, tab-bar labels) to `--ds-font-2xs`. Snapped the 0.7, 0.8, 0.85 and 0.9rem literals in iCloud import and LinkedIn to the scale, and moved the inline 0.875rem sizes to `var(--ds-font-sm)`.
+- **Contrast.** About 24 places that used `--ds-text-muted` (#9ca3af, 2.5:1) for readable text now use `--ds-text-secondary` (4.8:1). This covers breadcrumbs, dates, footnotes, overlines, the login divider and footer, the docs TOC, and the search and enrich placeholders.
+- **Badges.** Warning badge text now uses `--ds-color-warning-dark`, like every other status badge.
+- **Cards.** `.card` now carries `--ds-shadow-xs` at rest ("flat, but softer"). That token was previously unused.
+- **Motion.** `--ds-duration-normal` is now 150ms, the app's de-facto default. All 98 literal transitions now use `--ds-duration-*` + `--ds-easing-*`, and so do the toast and job-pill entrances. Removed the duplicate `@keyframes spin` and the separate 0.8s `icloud-spin`.
+- **Docs.** Updated `DESIGN.md` and regenerated `.impeccable/design.json` to describe the aligned system. Replaced the "open migration" note in `docs/readme.md` with the conventions.
+
+**Why:**
+- The user asked to fix every inconsistency that writing `DESIGN.md` surfaced. The logo violet is canonical, so the UI now uses one violet, one button system, one selection treatment, one type floor and one motion scale.
+
+**Files Modified:**
+- `frontend/src/styles/design-system.css` — primary family, purple removed, `--ds-duration-normal`
+- `frontend/src/index.css` — selection, buttons, dead duplicates, type floor, contrast, badges, card shadow, motion
+- `frontend/src/styles/pages/user-profile.css` — removed leaking `.primary-button`, button radii
+- `frontend/src/styles/pages/{dashboard,login,demo-prompt-modal,docs,enrich,launch,onboarding,public-contact-card,admin,background-job-pill,last-import}.css` — colors, contrast, motion tokens
+- `frontend/src/components/{ICloudImportView,SettingsView,GoogleContactsImportContent}.tsx` — inline font size token
+- `DESIGN.md`, `.impeccable/design.json`, `docs/readme.md`
+
+---
+
+## 2026-10-04 — DESIGN.md: document the visual design system
+
+**What Changed:**
+- Added `DESIGN.md` at the repo root, in the DESIGN.md spec format. The YAML frontmatter holds tokens (22 colors, 9 type roles, radius and spacing scales, 24 component variants). The body has eight sections: Overview, Colors, Typography, Layout, Elevation & Depth, Shapes, Components, Do's and Don'ts.
+- Extracted from the shipped `--ds-*` tokens and component CSS. The descriptive language was confirmed with the user: North Star "The Connector's Desk", the mood "calm, crisp, utilitarian", components "refined and restrained", elevation "flat, but softer".
+- Recorded the decision that the logo's violet **`#5F27E3` (Signal Violet) is the canonical primary**. The shipped `--ds-color-primary` family (`#7c3aed`) is documented as lagging, with a derived hover step (`#530bce`). No CSS was changed.
+- Added the `.impeccable/design.json` sidecar: OKLCH tonal ramps, shadow, motion and breakpoint tokens, 10 drop-in component snippets, and the narrative extracted from `DESIGN.md`.
+- Added a "Design system" section to `docs/readme.md` that points to these files and notes the open primary-color migration.
+
+**Why:**
+- Before this, the visual system lived only in CSS. New screens built by people or agents had no written rules for color, density, depth or component use. The doc also surfaced drift: two violets, unused `--ds-shadow-xs`, off-scale 8px labels, and a 150ms literal used everywhere instead of the duration tokens.
+
+**Files Modified:**
+- `DESIGN.md` — new
+- `.impeccable/design.json` — new
+- `docs/readme.md` — "Design system" section
+
+---
+
+## 2026-10-04 — Shareable URLs for groups, expanded contacts and list state
+
+**What Changed:**
+- Groups have their own route, `/groups/<encoded category>`. Clicking a group navigates there instead of setting local state, and the "Groups" breadcrumb navigates back.
+- An expanded contact row is now `?contact=<id>` on whichever list it's in (`/contacts`, `/groups/…`). Opening such a link expands the row and scrolls to it. If the contact isn't in the loaded results (the list loads only the first 100), it opens `/contacts/<id>`. This check runs once, on first load; later list changes clear the param and never redirect.
+- Contacts search, sort, filters and list/grid view are now `?q=`, `?sort=`, `?filter=` and `?view=`. Defaults are omitted. Group search is `?q=` too.
+- Opening a group adds a history entry. Search, sort, filter, view and row toggles replace the current one.
+- Added a **Copy link** button next to **Edit** in the expanded contact card (and on the detail page). It copies the current URL, which covers the desktop app's missing address bar.
+- New `useSearchParamUpdater` hook that applies several param changes in one `setSearchParams` call, since React Router v7's setter has no update queue.
+
+**Why:**
+- Feature request: every view should have a URL, so copying it and opening it later lands on the same group or the same expanded contact.
+
+**Files Modified:**
+- `frontend/src/hooks/useSearchParamUpdater.ts` — new: `useSearchParamUpdater`, `EXPANDED_CONTACT_PARAM`
+- `frontend/src/App.tsx` — `groups/:category` route
+- `frontend/src/components/GroupsView.tsx` — group from the route, search from `?q=`
+- `frontend/src/components/ContactsPage.tsx` — search/sort/filter/view from the URL
+- `frontend/src/components/ContactList.tsx` — expanded row from `?contact=`, first-load scroll-to / fallback
+- `frontend/src/components/ContactRowExpanded.tsx` — Copy link button
+- `frontend/src/index.css` — gap in `.expanded-bottom-actions`
+- `docs/readme.md` — "Shareable URLs" section
+- `docs/plans/2026-10-04-url-addressable-views.md` — plan
+
+---
+
+## 2026-10-04 — Fix product name typos ("Yellow", "Ello" → "Yello")
+
+**What Changed:**
+- The `<title>` in `frontend/index.html` read "Yellow". It now reads "Yello", matching the `og:title` and `twitter:title` tags beside it.
+- `introduction.mdx` called the product "Ello" in five places: the heading, the intro paragraph, "Why Ello?", the comparison paragraph and the quickstart card. All five now say "Yello".
+
+**Why:**
+- The browser tab title and the docs introduction showed the wrong product name.
+
+**Files Modified:**
+- `frontend/index.html`
+- `introduction.mdx`
+
+---
+
+## 2026-10-04 — PRODUCT.md: durable product context for design work
+
+**What Changed:**
+- Added `PRODUCT.md` at the repo root, written by `/impeccable init` after an interview. It covers the primary users (super connectors and freelancers), their jobs, the four positioning pillars, and the "relationships win" tiebreaker. It also covers operating context (desktop for long sessions, phone for lookup and reach-out), constraints (one book per user, 10K+ scale, vCard fidelity, paid APIs, a public card only by consent), brand assets, evidence on hand, and five product principles.
+
+**Why:**
+- Design work on this repo had no product record. The legacy `.impeccable.md` from July described the audience as "owner-operator today". The interview replaced that with the current audience and positioning.
+
+**Files Modified:**
+- `PRODUCT.md` (new)
+
+---
+
+## 2026-10-04 — Group contact list no longer clips its first card
+
+**What Changed:**
+- `.groups-filtered` (a group opened from Groups) now sets `height: auto; overflow: visible`, so the contact list scrolls with the window as it does on the Contacts page, instead of inside the 100vh `.groups-view` scroller.
+
+**Why:**
+- `ContactList`'s toolbar is `position: sticky; top: var(--ds-header-height)`. Inside the nested scroller, that 64px offset is measured from the scroller's top rather than the viewport. That pushed the opaque toolbar down over the first card even before any scrolling.
+- The same nested scroller also hid rows from `useWindowVirtualizer`. It only tracks window scroll, so in a large group, rows past the first screenful never rendered.
+
+**Files Modified:**
+- `frontend/src/index.css` — `.groups-filtered`
+
+---
+
+## 2026-10-04 — Desktop app opens tel: links in FaceTime on macOS
+
+**What Changed:**
+- `electron/src/main.ts` `openExternally` now sends `tel:` URLs on macOS to FaceTime with `open -b com.apple.FaceTime <url>` (through `execFile`, with no shell involved). If that fails it falls back to `shell.openExternal`. Other schemes and platforms are unchanged.
+
+**Why:**
+- The contact card's new call icon opened Chrome instead of FaceTime. `shell.openExternal` uses the system's `tel:` handler, and Chrome (or Zoom/Teams) can claim it. FaceTime declares `tel:` itself, so naming it explicitly gets the normal "Call from iPhone" flow, which reaches any number.
+- The browser can't pick a handler, so it still follows the Mac's default. `docs/readme.md` notes how to point that at FaceTime.
+
+**Files Modified:**
+- `electron/src/main.ts` — `openTelInFaceTime`, `openExternally`
+- `electron/README.md`, `docs/readme.md` — `tel:` handling notes
+
+---
+
+## 2026-10-03 — Contact details copy on click, with text/call/WhatsApp/email icons
+
+**What Changed:**
+- In the contact card view, phone numbers and emails are now buttons that copy the value to the clipboard and show a toast (`Copied …`). They used to be `tel:`/`mailto:` links.
+- Each phone number has text (`sms:`), call (`tel:`) and WhatsApp (`wa.me`) icons beside it. Each email has a send-email (`mailto:`) icon.
+- `InfoField` has a new `actions` slot rendered beside the value, so long emails truncate with an ellipsis and the icons stay visible.
+- New components `CopyableValue`, `ContactActionLink`, `PhoneActions` and `EmailActions`. `WhatsAppLink` is gone; its link is now one of the phone actions.
+- `sms:`/`tel:` hrefs strip everything but digits and `+`, because manually edited numbers are stored as typed.
+- The phone's country-name tooltip moved from the old `tel:` link to the copy button's title.
+- CSS: `.copyable-value`, `.info-field-actions`, `.contact-action-link` (with a `.whatsapp` variant) replace `a.whatsapp-link`.
+
+**Why:**
+- Feature request: on a desktop CRM, clicking a number or address usually means wanting to copy it, not launch the dialer or mail app. Calling, texting and emailing stay one click away through the icons.
+
+**Files Modified:**
+- `frontend/src/components/ContactFormSections.tsx` — new copy/action components; `PhoneSection`, `EmailSection` and legacy `ContactInfoSection` view modes use them
+- `frontend/src/index.css` — copy button and action icon styles
+- `docs/readme.md` — Contact detail section
+- `docs/plans/2026-10-03-contact-detail-copy-and-actions.md` *(new)*
+
+---
+
+## 2026-10-03 — Desktop app icon from the favicon mark
+
+**What Changed:**
+- New `build-resources/icon.svg`: the favicon mark (white blob on `#5F27E3`, from `frontend/public/favicon.svg`) laid out on Apple's macOS icon grid. That's an 824px rounded square with a 100px margin and a soft drop shadow, inside a 1024px canvas.
+- New `build-resources/make-icon.sh`: renders every iconset size straight from the SVG with `rsvg-convert`, then builds `icon.icns` with `iconutil`. It also writes a 1024px `icon.png`.
+- `icon.icns` is picked up by electron-builder through `directories.buildResources` for the app bundle and the dmg. `electron/src/main.ts` sets `icon.png` as the Dock icon in dev (`process.defaultApp`).
+- `build-resources/ICON_README.md` and `electron/README.md` now describe the generator instead of the manual `sips` steps.
+
+**Why:**
+- The packaged app and the dev build showed Electron's default icon.
+- The favicon's near-square corners (`rx=4` on 46px) would look oversized next to other Dock icons, so the mark sits on the standard rounded-square grid instead.
+
+**Files Modified:**
+- `build-resources/icon.svg`, `build-resources/make-icon.sh`, `build-resources/icon.icns`, `build-resources/icon.png` *(new)*
+- `build-resources/ICON_README.md`, `electron/README.md`
+- `electron/src/main.ts` — dev Dock icon
+
+---
+
 ## 2026-10-02 — Desktop app rewritten as a thin client of the Railway deployment
 
 **What Changed:**

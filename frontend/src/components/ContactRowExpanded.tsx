@@ -6,6 +6,7 @@ import { EditableField, LinkedInSection } from './ContactFormSections';
 import { ContactCardView } from './ContactCardView';
 import { EmailHistorySection } from './EmailHistorySection';
 import { ContactPhotoGallery } from './ContactPhotoGallery';
+import { useToast } from './ui/Toast';
 
 interface ContactRowExpandedProps {
   contact: ContactDetail;
@@ -34,6 +35,18 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const updateContactMutation = useUpdateContact();
+  const { showToast } = useToast();
+
+  // The URL already points at this contact (?contact= in a list, /contacts/:id on
+  // the detail page). Copying it here also covers the desktop app, which has no address bar.
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      showToast('Link copied', { duration: 2000 });
+    } catch {
+      showToast("Couldn't copy to clipboard", { type: 'error' });
+    }
+  };
 
   const handleEnterEditMode = () => {
     setEditForm({
@@ -248,8 +261,12 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
         <ContactPhotoGallery contactId={contact.id} photos={contact.photos} />
       )}
 
-      {/* Bottom: Edit button right-aligned */}
+      {/* Bottom: Copy link + Edit, right-aligned */}
       <div className="expanded-bottom-actions">
+        <button type="button" className="action-button secondary" onClick={handleCopyLink}>
+          <Icon name="link" />
+          Copy link
+        </button>
         <button className="edit-button-primary" onClick={handleEnterEditMode}>
           Edit
         </button>

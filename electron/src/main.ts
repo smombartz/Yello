@@ -1,4 +1,5 @@
 import { app, BrowserWindow, session, shell } from 'electron';
+import { execFile } from 'child_process';
 import * as path from 'path';
 import { APP_URL, PROTOCOL, isAppUrl } from './config';
 import { exchangeUrlFor, flowForUrl, startSystemSignIn } from './desktopAuth';
@@ -13,9 +14,22 @@ const offlinePage = path.join(__dirname, '..', 'pages', 'offline.html');
 
 const EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'mailto:', 'tel:', 'sms:']);
 
+// tel: goes to whatever app last claimed it (Chrome, Zoom, Teams...). On macOS,
+// hand it to FaceTime explicitly so calls ring out through the iPhone
+// ("Calls from iPhone"); fall back to the default handler if that fails.
+function openTelInFaceTime(url: string): void {
+  execFile('open', ['-b', 'com.apple.FaceTime', url], (error) => {
+    if (error) void shell.openExternal(url);
+  });
+}
+
 function openExternally(url: string): void {
   try {
-    if (EXTERNAL_PROTOCOLS.has(new URL(url).protocol)) {
+    const { protocol } = new URL(url);
+    if (!EXTERNAL_PROTOCOLS.has(protocol)) return;
+    if (protocol === 'tel:' && process.platform === 'darwin') {
+      openTelInFaceTime(url);
+    } else {
       void shell.openExternal(url);
     }
   } catch {
@@ -125,6 +139,11 @@ if (!app.requestSingleInstanceLock()) {
     session.defaultSession.setPermissionCheckHandler((_contents, _permission, requestingOrigin) =>
       isAppUrl(requestingOrigin)
     );
+
+    // Packaged builds get the icon from icon.icns; in dev the Dock would show Electron's
+    if (process.defaultApp) {
+      app.dock?.setIcon(path.join(__dirname, '..', '..', 'build-resources', 'icon.png'));
+    }
 
     showMainWindow();
   });

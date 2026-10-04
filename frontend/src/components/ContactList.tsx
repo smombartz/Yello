@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useContacts, useMergePreview, useMergeSelectedContacts } from '../api/hooks';
 import { useDeleteContacts } from '../api/cleanupHooks';
@@ -11,6 +11,7 @@ import { Icon } from './Icon';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { EmptyState } from './ui/EmptyState';
 import { useToast } from './ui/Toast';
+import { EXPANDED_CONTACT_PARAM, useSearchParamUpdater } from '../hooks/useSearchParamUpdater';
 import type { MergeConflict, ContactDetail } from '../api/types';
 
 interface ContactListProps {
@@ -35,7 +36,16 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
   const navigate = useNavigate();
   const { showToast } = useToast();
   const listRef = useRef<HTMLDivElement>(null);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [searchParams] = useSearchParams();
+  const updateParams = useSearchParamUpdater();
+
+  // The expanded row lives in ?contact= so the URL can be copied to reopen it.
+  // Grid view has no expansion, so the param only applies to the list.
+  const expandedParam = Number(searchParams.get(EXPANDED_CONTACT_PARAM));
+  const expandedId = viewMode === 'list' && Number.isInteger(expandedParam) && expandedParam > 0
+    ? expandedParam
+    : null;
+  const deepLinkResolved = useRef(false);
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -68,8 +78,8 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
   }, [data?.total, onTotalChange]);
 
   const handleToggle = useCallback((id: number) => {
-    setExpandedId(prev => prev === id ? null : id);
-  }, []);
+    updateParams({ [EXPANDED_CONTACT_PARAM]: id === expandedId ? null : String(id) });
+  }, [updateParams, expandedId]);
 
   // Selection handlers
   const handleToggleSelect = useCallback((contactId: number) => {
@@ -211,6 +221,22 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
     scrollMargin: listRef.current?.offsetTop ?? 0,
     measureElement: (el) => el.getBoundingClientRect().height,
   });
+
+  // Resolve a linked contact once, when the first results arrive. Scroll to it if
+  // it's in this list. Otherwise (outside the first page, or filtered out) open
+  // its detail page. Later changes to the list never redirect.
+  useEffect(() => {
+    if (deepLinkResolved.current || !data) return;
+    deepLinkResolved.current = true;
+    if (expandedId === null) return;
+
+    const index = data.contacts.findIndex(c => c.id === expandedId);
+    if (index === -1) {
+      navigate(`/contacts/${expandedId}`, { replace: true });
+    } else {
+      virtualizer.scrollToIndex(index, { align: 'start' });
+    }
+  }, [data, expandedId, navigate, virtualizer]);
 
   if (isLoading) {
     return (
