@@ -5,6 +5,7 @@ import { useFetchContactPhotosStream } from '../api/settingsHooks';
 import { useGmailSyncSummary, useGmailDiscover, useGmailBulkSync } from '../api/gmailEnrichHooks';
 import type { GmailDiscoveredContact } from '../api/types';
 import { LoadingSpinner } from './ui/LoadingSpinner';
+import { Button } from './ui/Button';
 import { Icon } from './Icon';
 import { useToast } from './ui/Toast';
 
@@ -242,14 +243,15 @@ export function EnrichToolsContent() {
                     onChange={(e) => setApifyKey(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleConnectApify(); }}
                   />
-                  <button
-                    className="primary-button"
+                  <Button
+                    variant="primary"
+                    icon="link"
+                    loading={saveApifyKey.isPending}
                     onClick={handleConnectApify}
                     disabled={!apifyKey.trim() || saveApifyKey.isPending}
                   >
-                    <Icon name={saveApifyKey.isPending ? 'arrows-rotate' : 'link'} className={saveApifyKey.isPending ? 'spinning' : ''} />
                     {saveApifyKey.isPending ? 'Connecting...' : 'Connect'}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -262,13 +264,13 @@ export function EnrichToolsContent() {
                 <div className="apify-connected-row">
                   <Icon name="circle-check" className="apify-connected-icon" />
                   <span>Connected to Apify as <strong>{summary.apifyUsername ?? 'Apify user'}</strong></span>
-                  <button
-                    className="secondary-button apify-disconnect-button"
+                  <Button
+                    className="apify-disconnect-button"
                     onClick={handleDisconnectApify}
                     disabled={isEnriching || isRecovering || deleteApifyKey.isPending}
                   >
                     {deleteApifyKey.isPending ? 'Disconnecting...' : 'Disconnect'}
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Summary Stats */}
@@ -491,22 +493,21 @@ export function EnrichToolsContent() {
                 {/* Action Button */}
                 <div className="enrichment-actions">
                   {isEnriching ? (
-                    <button className="secondary-button" onClick={cancel}>
-                      <Icon name="xmark" />
+                    <Button icon="xmark" onClick={cancel}>
                       Cancel
-                    </button>
+                    </Button>
                   ) : (
-                    <button
-                      className="primary-button"
+                    <Button
+                      variant="primary"
+                      icon="rocket"
                       onClick={handleStartEnrichment}
                       disabled={summary.pendingEnrichment === 0}
                     >
-                      <Icon name="rocket" />
                       Start Enrichment
                       {summary.pendingEnrichment > 0 && (
                         <span className="button-badge">{summary.pendingEnrichment}</span>
                       )}
-                    </button>
+                    </Button>
                   )}
                 </div>
 
@@ -526,8 +527,9 @@ export function EnrichToolsContent() {
                       className="limit-input recovery-input"
                       disabled={isRecovering || isEnriching}
                     />
-                    <button
-                      className="secondary-button"
+                    <Button
+                      icon="download"
+                      loading={isRecovering}
                       onClick={() => {
                         resetRecovery();
                         startRecovery(
@@ -541,9 +543,8 @@ export function EnrichToolsContent() {
                       }}
                       disabled={!datasetId.trim() || isRecovering || isEnriching}
                     >
-                      <Icon name={isRecovering ? 'arrows-rotate' : 'download'} className={isRecovering ? 'spinning' : ''} />
                       {isRecovering ? 'Recovering...' : 'Recover'}
-                    </button>
+                    </Button>
                   </div>
 
                   {isRecovering && recoveryProgress && (
@@ -638,13 +639,11 @@ export function EnrichToolsContent() {
                 </div>
               </div>
             )}
-            <button
-              className="secondary-button"
-              onClick={isStreaming ? cancelFetching : handleFetchPhotos}
-            >
+            {/* Not `loading`: while streaming this same button is the Cancel action, so it must stay enabled */}
+            <Button onClick={isStreaming ? cancelFetching : handleFetchPhotos}>
               <Icon name={isStreaming ? 'arrows-rotate' : 'cloud-arrow-down'} className={isStreaming ? 'spinning' : ''} />
               {isStreaming ? 'Cancel' : 'Fetch Contact Photos'}
-            </button>
+            </Button>
           </div>
         )}
       </section>
@@ -843,41 +842,40 @@ export function EnrichToolsContent() {
                 {/* Action Buttons */}
                 <div className="enrichment-actions">
                   {isGmailSyncing ? (
-                    <button className="secondary-button" onClick={() => { cancelGmailSync(); setDiscoveryPhase('idle'); }}>
-                      <Icon name="xmark" />
+                    <Button icon="xmark" onClick={() => { cancelGmailSync(); setDiscoveryPhase('idle'); }}>
                       Cancel
-                    </button>
+                    </Button>
                   ) : (
                     <>
                       {(gmailStrategy === 'recent' || gmailStrategy === 'frequent') && discoveryPhase !== 'discovered' && (
-                        <button
-                          className="primary-button"
+                        <Button
+                          variant="primary"
+                          icon="magnifying-glass"
+                          loading={discoveryPhase === 'discovering'}
                           onClick={handleGmailDiscover}
                           disabled={discoveryPhase === 'discovering'}
                         >
-                          <Icon name={discoveryPhase === 'discovering' ? 'arrows-rotate' : 'magnifying-glass'} className={discoveryPhase === 'discovering' ? 'spinning' : ''} />
                           {discoveryPhase === 'discovering' ? 'Discovering...' : 'Discover Contacts'}
-                        </button>
+                        </Button>
                       )}
                       {((gmailStrategy === 'recent' || gmailStrategy === 'frequent') && discoveryPhase === 'discovered' && discoveredContacts.length > 0) && (
-                        <button className="primary-button" onClick={handleGmailSync}>
-                          <Icon name="rocket" />
+                        <Button variant="primary" icon="rocket" onClick={handleGmailSync}>
                           Start Sync
                           <span className="button-badge">{Math.min(discoveredContacts.length, gmailLimit)}</span>
-                        </button>
+                        </Button>
                       )}
                       {(gmailStrategy === 'all' || gmailStrategy === 'unsynced') && (
-                        <button
-                          className="primary-button"
+                        <Button
+                          variant="primary"
+                          icon="rocket"
                           onClick={handleGmailSync}
                           disabled={gmailStrategy === 'unsynced' && gmailSummary.notSynced === 0}
                         >
-                          <Icon name="rocket" />
                           Start Sync
                           {gmailStrategy === 'unsynced' && gmailSummary.notSynced > 0 && (
                             <span className="button-badge">{Math.min(gmailSummary.notSynced, gmailLimit)}</span>
                           )}
-                        </button>
+                        </Button>
                       )}
                     </>
                   )}

@@ -1,4 +1,4 @@
-import { Icon } from './Icon';
+import { Tabs } from './ui/Tabs';
 import type { CleanupMode, CleanupSummary, SocialLinksSummary, AddressCleanupSummary } from '../api/types';
 
 interface CleanupModeSelectorProps {
@@ -10,7 +10,7 @@ interface CleanupModeSelectorProps {
   isLoading: boolean;
 }
 
-const MODE_CONFIG: { mode: CleanupMode; label: string; icon: string; iconStyle?: 'solid' | 'regular' | 'brands' }[] = [
+const MODE_CONFIG: { mode: CleanupMode; label: string; icon: string }[] = [
   { mode: 'empty', label: 'Empty Contacts', icon: 'user-slash' },
   { mode: 'problematic', label: 'Problematic Emails', icon: 'triangle-exclamation' },
   { mode: 'social-links', label: 'Social Links', icon: 'share-nodes' },
@@ -42,26 +42,12 @@ export function CleanupModeSelector({
   };
 
   return (
-    <div className="cleanup-mode-selector" role="tablist">
-      {MODE_CONFIG.map(({ mode, label, icon, iconStyle }) => {
-        const count = getCount(mode);
-        const isActive = mode === selectedMode;
-
-        return (
-          <button
-            key={mode}
-            className={`cleanup-mode-tab ${isActive ? 'active' : ''}`}
-            onClick={() => onModeChange(mode)}
-            disabled={isLoading}
-            role="tab"
-            aria-selected={isActive}
-          >
-            <Icon name={icon} style={iconStyle} />
-            <span className="cleanup-mode-label">{label}</span>
-            {count !== null && <span className="cleanup-mode-count">{count}</span>}
-          </button>
-        );
-      })}
-    </div>
+    <Tabs
+      items={MODE_CONFIG.map(({ mode, label, icon }) => ({ id: mode, label, icon, count: getCount(mode) }))}
+      value={selectedMode}
+      onChange={onModeChange}
+      disabled={isLoading}
+      aria-label="Cleanup category"
+    />
   );
 }

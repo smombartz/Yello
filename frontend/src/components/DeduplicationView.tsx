@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Icon } from './Icon';
 import { ModeSelector } from './ModeSelector';
 import { DuplicateGroupList } from './DuplicateGroupList';
 import { ConfidenceFilter } from './ConfidenceFilter';
@@ -11,6 +10,7 @@ import type { ConfidenceLevel, DeduplicationMode, DuplicateGroup } from '../api/
 import type { OutletContext } from './Layout';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { LoadingSpinner } from './ui/LoadingSpinner';
+import { Button } from './ui/Button';
 import { useToast } from './ui/Toast';
 
 const ALL_CONFIDENCE_LEVELS: Set<ConfidenceLevel> = new Set(['very_high', 'high', 'medium']);
@@ -266,51 +266,51 @@ export function DeduplicationView() {
             <div className="dedup-action-buttons">
               {selectedContactIds.size > 0 && (
                 <>
-                  <button
-                    className="archive-selected-button"
+                  <Button
+                    variant="primary"
+                    icon="box-archive"
                     onClick={() => setShowArchiveConfirm(true)}
                     disabled={archiveMutation.isPending}
                   >
-                    <Icon name="box-archive" />
                     {archiveMutation.isPending
                       ? 'Archiving...'
                       : `Archive (${selectedContactIds.size})`}
-                  </button>
-                  <button
-                    className="delete-selected-button"
+                  </Button>
+                  <Button
+                    variant="danger"
+                    icon="trash"
                     onClick={() => setShowDeleteConfirm(true)}
                     disabled={deleteMutation.isPending}
                   >
-                    <Icon name="trash" />
                     {deleteMutation.isPending
                       ? 'Deleting...'
                       : `Delete (${selectedContactIds.size})`}
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
             {visibleCount > 0 && (
               <div className="merge-buttons">
-                <button
-                  className="merge-all-button"
+                <Button
+                  variant="primary"
+                  icon="code-merge"
                   onClick={() => setShowMergeAllConfirm(true)}
                   disabled={mergeMutation.isPending || mergeAllProgress !== null || mergeAllGlobalProgress !== null}
                 >
-                  <Icon name="code-merge" />
                   {mergeAllProgress
                     ? `Merging ${mergeAllProgress.current}/${mergeAllProgress.total}...`
                     : `Merge Page (${visibleCount})`}
-                </button>
-                <button
-                  className="merge-all-button merge-all-global"
+                </Button>
+                <Button
+                  variant="danger"
+                  icon="code-merge"
                   onClick={() => setShowMergeAllGlobalConfirm(true)}
                   disabled={mergeMutation.isPending || mergeAllProgress !== null || mergeAllGlobalProgress !== null}
                 >
-                  <Icon name="code-merge" />
                   {mergeAllGlobalProgress
                     ? `Merging ${mergeAllGlobalProgress.current}/${mergeAllGlobalProgress.total}...`
                     : `Merge All (${totalGroups})`}
-                </button>
+                </Button>
               </div>
             )}
           </div>

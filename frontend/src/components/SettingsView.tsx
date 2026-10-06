@@ -11,6 +11,7 @@ import { LastImportSummary } from './LastImportSummary';
 import { useICloudSettings, useSaveICloudSettings, useDeleteICloudSettings } from '../api/icloudHooks';
 import type { OutletContext } from './Layout';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { Button } from './ui/Button';
 import { useToast } from './ui/Toast';
 import { LinkedInImportContent } from './LinkedInImportContent';
 import { GoogleContactsImportContent } from './GoogleContactsImportContent';
@@ -184,14 +185,13 @@ export function SettingsView() {
                     </div>
                   </div>
                 ) : (
-                  <button
-                    className="secondary-button"
+                  <Button
+                    icon="upload"
                     onClick={handleImport}
                     disabled={!importFile}
                   >
-                    <Icon name="upload" />
                     Import Contacts
-                  </button>
+                  </Button>
                 )}
               </div>
               {importError && (
@@ -266,21 +266,20 @@ export function SettingsView() {
                     Connected as <strong>{icloudSettings.data.email}</strong>
                   </p>
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                    <Link to="/icloud-import" className="secondary-button" style={{ textDecoration: 'none' }}>
+                    <Link to="/icloud-import" className="btn btn--secondary" style={{ textDecoration: 'none' }}>
                       <Icon name="cloud-arrow-down" />
                       Import from iCloud
                     </Link>
-                    <button
-                      className="secondary-button"
+                    <Button
+                      icon="link-slash"
                       onClick={() => deleteICloudSettings.mutate(undefined, {
                         onSuccess: () => showToast('iCloud disconnected'),
                         onError: () => showToast('Failed to disconnect', { type: 'error' }),
                       })}
                       disabled={deleteICloudSettings.isPending}
                     >
-                      <Icon name="link-slash" />
                       {deleteICloudSettings.isPending ? 'Disconnecting...' : 'Disconnect'}
-                    </button>
+                    </Button>
                   </div>
                 </>
               ) : (
@@ -309,8 +308,8 @@ export function SettingsView() {
                         {saveICloudSettings.error?.message || 'Connection failed'}
                       </p>
                     )}
-                    <button
-                      className="secondary-button"
+                    <Button
+                      icon="plug"
                       onClick={() => saveICloudSettings.mutate(
                         { email: icloudEmail, appPassword: icloudPassword },
                         {
@@ -323,9 +322,8 @@ export function SettingsView() {
                       )}
                       disabled={!icloudEmail || !icloudPassword || saveICloudSettings.isPending}
                     >
-                      <Icon name="plug" />
                       {saveICloudSettings.isPending ? 'Connecting...' : 'Connect'}
-                    </button>
+                    </Button>
                   </div>
                 </>
               )}
@@ -382,10 +380,9 @@ export function SettingsView() {
               <p className="settings-description">
                 Download all your contacts as a VCF file that can be imported into other applications.
               </p>
-              <button className="secondary-button" onClick={handleExport}>
-                <Icon name="download" />
+              <Button icon="download" onClick={handleExport}>
                 Export All Contacts (VCF)
-              </button>
+              </Button>
             </div>
           )}
         </section>
@@ -410,12 +407,13 @@ export function SettingsView() {
                   <h3>Delete All Contacts</h3>
                   <p>Permanently delete all contacts from the database. This action cannot be undone.</p>
                 </div>
-                <button
-                  className="danger-button"
+                <Button
+                  variant="danger"
+                  className="danger-zone-button"
                   onClick={() => setShowDeleteConfirm(true)}
                 >
                   Delete All Contacts
-                </button>
+                </Button>
               </div>
             </div>
           )}

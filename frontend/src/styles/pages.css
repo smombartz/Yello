@@ -10,6 +10,7 @@
 @import './pages/dashboard.css';
 @import './pages/admin.css';
 @import './pages/docs.css';
+@import './pages/styleguide.css';
 @import './pages/enrich.css';
 @import './pages/public-contact-card.css';
 @import './pages/user-profile.css';
@@ -18,3 +19,4 @@
 @import './pages/onboarding.css';
 @import './pages/background-job-pill.css';
 @import './pages/last-import.css';
+@import './pages/landing.css';

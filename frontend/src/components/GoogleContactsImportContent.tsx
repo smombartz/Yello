@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from './Icon';
+import { Button } from './ui/Button';
+import { LoadingSpinner } from './ui/LoadingSpinner';
 import {
   useGoogleContactsStatus,
   useFetchGoogleContacts,
@@ -119,7 +121,7 @@ export function GoogleContactsImportContent() {
         <p>
           {contactsStatus.data.reason || 'You need to grant permission to access your Google Contacts.'}
         </p>
-        <a href="/api/auth/google/contacts" className="secondary-button" style={{ textDecoration: 'none' }}>
+        <a href="/api/auth/google/contacts" className="btn btn--secondary" style={{ textDecoration: 'none' }}>
           <Icon name="right-to-bracket" /> Grant Access
         </a>
       </div>
@@ -138,9 +140,9 @@ export function GoogleContactsImportContent() {
             {fetchContacts.error?.message || 'Failed to fetch contacts'}
           </p>
         )}
-        <button type="button" className="secondary-button" onClick={handleFetch}>
-          <Icon name="cloud-arrow-down" /> Fetch from Google Contacts
-        </button>
+        <Button icon="cloud-arrow-down" onClick={handleFetch}>
+          Fetch from Google Contacts
+        </Button>
       </div>
     );
   }
@@ -149,7 +151,7 @@ export function GoogleContactsImportContent() {
   if (fetchContacts.isPending || previewImport.isPending) {
     return (
       <div className="icloud-empty-state">
-        <div className="icloud-spinner" />
+        <LoadingSpinner size={32} />
         <h3>{fetchContacts.isPending ? 'Fetching from Google...' : 'Analyzing contacts...'}</h3>
         <p>{fetchContacts.isPending
           ? 'Fetching your contacts from Google. This may take a moment for large address books.'
@@ -163,7 +165,7 @@ export function GoogleContactsImportContent() {
   if (executeImport.isPending) {
     return (
       <div className="icloud-empty-state">
-        <div className="icloud-spinner" />
+        <LoadingSpinner size={32} />
         <h3>Importing contacts...</h3>
         <p>Please wait while your contacts are being imported and merged.</p>
       </div>
@@ -203,9 +205,9 @@ export function GoogleContactsImportContent() {
             </ul>
           </details>
         )}
-        <button type="button" className="secondary-button" onClick={() => navigate('/contacts')} style={{ marginTop: '1rem' }}>
-          <Icon name="address-book" /> Go to Contacts
-        </button>
+        <Button icon="address-book" onClick={() => navigate('/contacts')} style={{ marginTop: '1rem' }}>
+          Go to Contacts
+        </Button>
       </div>
     );
   }
@@ -250,12 +252,12 @@ export function GoogleContactsImportContent() {
           <div className="icloud-section-header">
             <h3>Potential Duplicates ({matchResult.matches.length})</h3>
             <div className="icloud-bulk-actions">
-              <button type="button" className="icloud-bulk-btn" onClick={() => handleSetAllMatches('merge')}>
+              <Button size="sm" onClick={() => handleSetAllMatches('merge')}>
                 Merge All
-              </button>
-              <button type="button" className="icloud-bulk-btn" onClick={() => handleSetAllMatches('skip')}>
+              </Button>
+              <Button size="sm" onClick={() => handleSetAllMatches('skip')}>
                 Skip All
-              </button>
+              </Button>
             </div>
           </div>
           <div className="icloud-match-list">
@@ -279,12 +281,12 @@ export function GoogleContactsImportContent() {
           <div className="icloud-section-header">
             <h3>New Contacts ({matchResult.newContacts.length})</h3>
             <div className="icloud-bulk-actions">
-              <button type="button" className="icloud-bulk-btn" onClick={() => handleSelectAllNew(true)}>
+              <Button size="sm" onClick={() => handleSelectAllNew(true)}>
                 Select All
-              </button>
-              <button type="button" className="icloud-bulk-btn" onClick={() => handleSelectAllNew(false)}>
+              </Button>
+              <Button size="sm" onClick={() => handleSelectAllNew(false)}>
                 Deselect All
-              </button>
+              </Button>
             </div>
           </div>
           <div className="icloud-new-contacts-list">
@@ -305,15 +307,13 @@ export function GoogleContactsImportContent() {
         <div className="icloud-import-summary-text">
           {totalToImport} to import ({selectedNewCount} new, {mergeCount} merge, {importAsNewCount} as new) &middot; {skipCount + (matchResult.newContacts.length - selectedNewCount)} skipped
         </div>
-        <button
-          type="button"
-          className="secondary-button"
+        <Button
+          icon="file-import"
           onClick={handleImport}
           disabled={totalToImport === 0}
         >
-          <Icon name="file-import" />
           Import {totalToImport} Contacts
-        </button>
+        </Button>
       </div>
     </>
   );

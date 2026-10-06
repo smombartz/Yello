@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Icon } from './Icon';
+import { Button } from './ui/Button';
 import type { AddressCleanupContact, AddressFix, AddressWithIssues, DuplicateAddressConfidence } from '../api/types';
 import { formatAddress } from '../lib/addressUtils';
 
@@ -330,21 +331,21 @@ export function AddressCleanupCard({
       </div>
 
       <div className="address-cleanup-actions">
-        <button
-          className="address-skip-button"
+        <Button
+          variant="secondary"
           onClick={onSkip}
           disabled={isApplying}
         >
           Skip
-        </button>
-        <button
-          className="address-apply-button"
+        </Button>
+        <Button
+          variant="primary"
+          icon="check"
           onClick={handleApply}
           disabled={isApplying}
         >
-          <Icon name="check" />
           {isApplying ? 'Applying...' : 'Apply Changes'}
-        </button>
+        </Button>
       </div>
     </div>
   );

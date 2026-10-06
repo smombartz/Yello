@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
-import { Icon } from './Icon';
 import { CleanupModeSelector } from './CleanupModeSelector';
 import { ThresholdSelector } from './ThresholdSelector';
 import { CleanupFilters } from './CleanupFilters';
@@ -15,6 +14,7 @@ import { useAddressCleanupSummary } from '../api/addressCleanupHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { LoadingSpinner } from './ui/LoadingSpinner';
+import { Button } from './ui/Button';
 import { useToast } from './ui/Toast';
 import type {
   CleanupMode,
@@ -223,26 +223,26 @@ export function CleanupView() {
                 </div>
                 {selectedIds.size > 0 && (
                   <div className="cleanup-action-buttons">
-                    <button
-                      className="archive-selected-button"
+                    <Button
+                      variant="primary"
+                      icon="box-archive"
                       onClick={() => setShowArchiveConfirm(true)}
                       disabled={archiveMutation.isPending}
                     >
-                      <Icon name="box-archive" />
                       {archiveMutation.isPending
                         ? 'Archiving...'
                         : `Archive (${selectedIds.size})`}
-                    </button>
-                    <button
-                      className="delete-selected-button"
+                    </Button>
+                    <Button
+                      variant="danger"
+                      icon="trash"
                       onClick={() => setShowDeleteConfirm(true)}
                       disabled={deleteMutation.isPending}
                     >
-                      <Icon name="trash" />
                       {deleteMutation.isPending
                         ? 'Deleting...'
                         : `Delete (${selectedIds.size})`}
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>

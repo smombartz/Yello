@@ -512,7 +512,7 @@
 }
 
 /* Count badge inside a primary button (buttons themselves use the canonical .btn system) */
-.primary-button .button-badge {
+.btn .button-badge {
   background: rgba(255, 255, 255, 0.3);
   padding: 2px 8px;
   border-radius: var(--ds-radius-xl);
@@ -632,8 +632,7 @@
     flex-direction: column;
   }
 
-  .enrichment-actions .primary-button,
-  .enrichment-actions .secondary-button {
+  .enrichment-actions .btn {
     width: 100%;
     justify-content: center;
   }

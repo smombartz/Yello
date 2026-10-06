@@ -1,4 +1,5 @@
 import { Icon } from './Icon';
+import { Button } from './ui/Button';
 import { CleanupContactCard } from './CleanupContactCard';
 import { Pagination } from './Pagination';
 import type { CleanupContact, CleanupMode } from '../api/types';
@@ -55,30 +56,33 @@ export function CleanupContactList({
     <div className="cleanup-list">
       <div className="cleanup-list-actions">
         <div className="cleanup-selection-actions">
-          <button
-            className="cleanup-action-button"
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="square-check"
             onClick={onSelectPage}
             disabled={isLoading || allOnPageSelected || isSelectingAll}
           >
-            <Icon name="square-check" />
             Select Page
-          </button>
-          <button
-            className="cleanup-action-button"
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="square-check"
             onClick={onSelectAll}
             disabled={isLoading || allSelected || isSelectingAll}
           >
-            <Icon name="square-check" />
             {isSelectingAll ? 'Selecting...' : `Select All (${totalContacts})`}
-          </button>
-          <button
-            className="cleanup-action-button"
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onSelectNone}
             disabled={isLoading || !someSelected || isSelectingAll}
           >
             <Icon name="square" style="regular" />
             Select None
-          </button>
+          </Button>
         </div>
         {someSelected && (
           <span className="cleanup-selection-count">

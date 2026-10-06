@@ -193,10 +193,11 @@ export default function OnboardingView() {
           />
           <Button
             variant="secondary"
+            icon="camera"
+            loading={uploadImage.isPending}
             onClick={() => photoInputRef.current?.click()}
             disabled={uploadImage.isPending}
           >
-            <Icon name={uploadImage.isPending ? 'arrows-rotate' : 'camera'} className={uploadImage.isPending ? 'spinning' : ''} />
             {uploadImage.isPending ? 'Uploading...' : completed.profile ? 'Change Photo' : 'Upload Photo'}
           </Button>
         </div>
@@ -225,10 +226,11 @@ export default function OnboardingView() {
             />
             <Button
               variant="secondary"
+              icon="upload"
+              loading={isVcfBusy}
               onClick={handleVcfImport}
               disabled={!vcfFile || isVcfBusy}
             >
-              <Icon name={isVcfBusy ? 'arrows-rotate' : 'upload'} className={isVcfBusy ? 'spinning' : ''} />
               {isVcfBusy ? 'Importing...' : 'Import Contacts'}
             </Button>
           </div>

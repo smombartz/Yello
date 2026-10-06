@@ -11,6 +11,7 @@ import {
   getZodiacSign,
   getPlatformIcon,
   getPlatformIconStyle,
+  detectSocialProfile,
   getServiceIcon,
   getUrlIcon,
   getDisplayLabel,
@@ -169,21 +170,74 @@ export function EditableField({
   );
 }
 
+/** A failed save: the server's message, and/or the entries that stopped the save (`buildContactLists`). */
+export function SaveErrors({ message, problems }: { message: string | null; problems: string[] }) {
+  if (!message && problems.length === 0) return null;
+  return (
+    <div className="edit-error" role="alert">
+      <Icon name="circle-exclamation" />
+      <div className="edit-error-body">
+        {message && <p>{message}</p>}
+        {problems.length > 0 && (
+          <>
+            <p>Nothing was saved. Fill in or remove:</p>
+            <ul>
+              {problems.map((problem, i) => <li key={i}>{problem}</li>)}
+            </ul>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Without `onRemove` (an auto-added blank row) a spacer keeps the inputs aligned with the rows above. */
 export function EditableArrayItem({
   children,
   onRemove
 }: {
   children: React.ReactNode;
-  onRemove: () => void;
+  onRemove?: () => void;
 }) {
   return (
     <div className="editable-array-item">
       {children}
-      <button type="button" className="remove-item-btn" onClick={onRemove} title="Remove">
-        <Icon name="xmark" />
-      </button>
+      {onRemove ? (
+        <button type="button" className="remove-item-btn" onClick={onRemove} title="Remove">
+          <Icon name="xmark" />
+        </button>
+      ) : (
+        <span className="remove-item-spacer" aria-hidden="true" />
+      )}
     </div>
   );
+}
+
+// ─── Auto-added blank row ────────────────────────────────────────
+
+/**
+ * Edit lists have no "Add …" button: they always end in one blank row. Typing
+ * into it makes it a real entry and a fresh blank appears beneath. Blank rows
+ * never reach the parent's state — trailing blanks are trimmed on every change,
+ * so clearing the last entry turns it back into the blank.
+ */
+function autoRows<T>(
+  items: T[],
+  isBlank: (item: T) => boolean,
+  makeBlank: () => T,
+  onChange?: (items: T[]) => void,
+) {
+  const blankIndex = items.length === 0 || !isBlank(items[items.length - 1]) ? items.length : -1;
+  const rows = blankIndex === -1 ? items : [...items, makeBlank()];
+
+  const commit = (next: T[]) => {
+    if (!onChange) return;
+    let end = next.length;
+    while (end > 0 && isBlank(next[end - 1])) end--;
+    onChange(next.slice(0, end));
+  };
+
+  return { rows, blankIndex, commit };
 }
 
 // ─── Drag-and-drop support ───────────────────────────────────────
@@ -230,6 +284,7 @@ function DraggableArrayItem({
   onDragOver,
   onDrop,
   onRemove,
+  isBlankRow,
   children,
 }: {
   index: number;
@@ -240,8 +295,18 @@ function DraggableArrayItem({
   onDragOver: (index: number) => void;
   onDrop: (fromIndex: number, toIndex: number) => void;
   onRemove: () => void;
+  /** The auto-added blank row: not draggable, not a drop target, nothing to remove. */
+  isBlankRow?: boolean;
   children: React.ReactNode;
 }) {
+  if (isBlankRow) {
+    return (
+      <div className="draggable-array-item">
+        <EditableArrayItem>{children}</EditableArrayItem>
+      </div>
+    );
+  }
+
   return (
     <div
       draggable
@@ -262,7 +327,7 @@ function DraggableArrayItem({
   );
 }
 
-// ─── PhoneSection (new, for expanded card view mode) ─────────────
+// ─── PhoneSection ────────────────────────────────────────────────
 
 export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit = 3, renderItemSuffix }: {
   phones: ContactPhone[];
@@ -273,42 +338,38 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
 }) {
   const [showAll, setShowAll] = useState(false);
 
+  const dragState = useDragState();
+
   if (!isEditMode && !phones.length) return null;
 
-  const addPhone = () => {
-    if (onPhonesChange) {
-      onPhonesChange([...phones, { phone: '', phoneDisplay: '', countryCode: null, type: null, isPrimary: phones.length === 0 }]);
-    }
-  };
+  const newPhone = (): ContactPhone => ({ phone: '', phoneDisplay: '', countryCode: null, type: null, isPrimary: phones.length === 0 });
+  const { rows, blankIndex, commit } = autoRows(
+    phones, p => !p.phone && !p.phoneDisplay && !p.type, newPhone, onPhonesChange,
+  );
+
 
   const updatePhone = (index: number, field: keyof ContactPhone, value: string | boolean) => {
-    if (onPhonesChange) {
-      const updated = [...phones];
-      updated[index] = { ...updated[index], [field]: value };
-      if (field === 'phone') {
-        updated[index].phoneDisplay = value as string;
-      }
-      onPhonesChange(updated);
+    const updated = [...rows];
+    updated[index] = { ...updated[index], [field]: value };
+    if (field === 'phone') {
+      updated[index].phoneDisplay = value as string;
     }
+    commit(updated);
   };
 
-  const removePhone = (index: number) => {
-    if (onPhonesChange) {
-      onPhonesChange(phones.filter((_, i) => i !== index));
-    }
-  };
+  const removePhone = (index: number) => commit(phones.filter((_, i) => i !== index));
 
-  const dragState = useDragState();
 
   if (isEditMode) {
     return (
       <div className="expanded-section">
         <h4 className="section-header">Phone</h4>
         <div className="section-content edit-section-content">
-          {phones.map((phone, i) => (
+          {rows.map((phone, i) => (
             <div key={`phone-${i}`} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
               <DraggableArrayItem
                 index={i}
+                isBlankRow={i === blankIndex}
                 draggedIndex={dragState.draggedIndex}
                 dropZoneIndex={dragState.dropZoneIndex}
                 onDragStart={dragState.handleDragStart}
@@ -331,13 +392,9 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
                   />
                 </div>
               </DraggableArrayItem>
-              {renderItemSuffix?.(i)}
+              {i !== blankIndex && renderItemSuffix?.(i)}
             </div>
           ))}
-          <button type="button" className="add-item-btn" onClick={addPhone}>
-            <Icon name="plus" />
-            Add Phone
-          </button>
         </div>
       </div>
     );
@@ -384,7 +441,7 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
   );
 }
 
-// ─── EmailSection (new, for expanded card view mode) ─────────────
+// ─── EmailSection ────────────────────────────────────────────────
 
 export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit = 3, renderItemSuffix }: {
   emails: ContactEmail[];
@@ -395,39 +452,33 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
 }) {
   const [showAll, setShowAll] = useState(false);
 
+  const dragState = useDragState();
+
   if (!isEditMode && !emails.length) return null;
 
-  const addEmail = () => {
-    if (onEmailsChange) {
-      onEmailsChange([...emails, { email: '', type: null, isPrimary: emails.length === 0 }]);
-    }
-  };
+  const newEmail = (): ContactEmail => ({ email: '', type: null, isPrimary: emails.length === 0 });
+  const { rows, blankIndex, commit } = autoRows(emails, e => !e.email && !e.type, newEmail, onEmailsChange);
+
 
   const updateEmail = (index: number, field: keyof ContactEmail, value: string | boolean) => {
-    if (onEmailsChange) {
-      const updated = [...emails];
-      updated[index] = { ...updated[index], [field]: value };
-      onEmailsChange(updated);
-    }
+    const updated = [...rows];
+    updated[index] = { ...updated[index], [field]: value };
+    commit(updated);
   };
 
-  const removeEmail = (index: number) => {
-    if (onEmailsChange) {
-      onEmailsChange(emails.filter((_, i) => i !== index));
-    }
-  };
+  const removeEmail = (index: number) => commit(emails.filter((_, i) => i !== index));
 
-  const dragState = useDragState();
 
   if (isEditMode) {
     return (
       <div className="expanded-section">
         <h4 className="section-header">Email</h4>
         <div className="section-content edit-section-content">
-          {emails.map((email, i) => (
+          {rows.map((email, i) => (
             <div key={`email-${i}`} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
               <DraggableArrayItem
                 index={i}
+                isBlankRow={i === blankIndex}
                 draggedIndex={dragState.draggedIndex}
                 dropZoneIndex={dragState.dropZoneIndex}
                 onDragStart={dragState.handleDragStart}
@@ -451,13 +502,9 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
                   />
                 </div>
               </DraggableArrayItem>
-              {renderItemSuffix?.(i)}
+              {i !== blankIndex && renderItemSuffix?.(i)}
             </div>
           ))}
-          <button type="button" className="add-item-btn" onClick={addEmail}>
-            <Icon name="plus" />
-            Add Email
-          </button>
         </div>
       </div>
     );
@@ -496,148 +543,6 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
   );
 }
 
-// ─── ContactInfoSection (legacy, used by AddContactPage) ─────────
-
-export function ContactInfoSection({ emails, phones, isEditMode, onEmailsChange, onPhonesChange }: {
-  emails: ContactEmail[];
-  phones: ContactPhone[];
-  isEditMode: boolean;
-  onEmailsChange?: (emails: ContactEmail[]) => void;
-  onPhonesChange?: (phones: ContactPhone[]) => void;
-}) {
-  if (!isEditMode && !emails.length && !phones.length) return null;
-
-  const addEmail = () => {
-    if (onEmailsChange) {
-      onEmailsChange([...emails, { email: '', type: null, isPrimary: emails.length === 0 }]);
-    }
-  };
-
-  const addPhone = () => {
-    if (onPhonesChange) {
-      onPhonesChange([...phones, { phone: '', phoneDisplay: '', countryCode: null, type: null, isPrimary: phones.length === 0 }]);
-    }
-  };
-
-  const updateEmail = (index: number, field: keyof ContactEmail, value: string | boolean) => {
-    if (onEmailsChange) {
-      const updated = [...emails];
-      updated[index] = { ...updated[index], [field]: value };
-      onEmailsChange(updated);
-    }
-  };
-
-  const removeEmail = (index: number) => {
-    if (onEmailsChange) {
-      onEmailsChange(emails.filter((_, i) => i !== index));
-    }
-  };
-
-  const updatePhone = (index: number, field: keyof ContactPhone, value: string | boolean) => {
-    if (onPhonesChange) {
-      const updated = [...phones];
-      updated[index] = { ...updated[index], [field]: value };
-      if (field === 'phone') {
-        updated[index].phoneDisplay = value as string;
-      }
-      onPhonesChange(updated);
-    }
-  };
-
-  const removePhone = (index: number) => {
-    if (onPhonesChange) {
-      onPhonesChange(phones.filter((_, i) => i !== index));
-    }
-  };
-
-  if (isEditMode) {
-    return (
-      <div className="expanded-section">
-        <h4 className="section-header">Contact Info</h4>
-        <div className="section-content edit-section-content">
-          {phones.map((phone, i) => (
-            <EditableArrayItem key={`phone-${i}`} onRemove={() => removePhone(i)}>
-              <Icon name="phone" />
-              <div className="edit-field-group">
-                <EditableField
-                  value={phone.phoneDisplay}
-                  onChange={(v) => updatePhone(i, 'phone', v)}
-                  placeholder="Phone number"
-                />
-                <EditableField
-                  value={phone.type || ''}
-                  onChange={(v) => updatePhone(i, 'type', v)}
-                  placeholder="Type (home, work...)"
-                />
-              </div>
-            </EditableArrayItem>
-          ))}
-          <button type="button" className="add-item-btn" onClick={addPhone}>
-            <Icon name="plus" />
-            Add Phone
-          </button>
-
-          {emails.map((email, i) => (
-            <EditableArrayItem key={`email-${i}`} onRemove={() => removeEmail(i)}>
-              <Icon name="envelope" />
-              <div className="edit-field-group">
-                <EditableField
-                  value={email.email}
-                  onChange={(v) => updateEmail(i, 'email', v)}
-                  placeholder="Email address"
-                  type="email"
-                />
-                <EditableField
-                  value={email.type || ''}
-                  onChange={(v) => updateEmail(i, 'type', v)}
-                  placeholder="Type (home, work...)"
-                />
-              </div>
-            </EditableArrayItem>
-          ))}
-          <button type="button" className="add-item-btn" onClick={addEmail}>
-            <Icon name="plus" />
-            Add Email
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="expanded-section">
-      <h4 className="section-header">Contact Info</h4>
-      <div className="section-content">
-        {phones.map((phone, i) => {
-          const flag = getCountryFlag(phone.countryCode);
-          const countryName = getCountryName(phone.countryCode);
-          return (
-            <div key={`phone-${i}`} className="expanded-item">
-              <Icon name="phone" />
-              <div className="expanded-item-content">
-                {flag && <span className="phone-flag" title={countryName}>{flag}</span>}
-                <CopyableValue value={phone.phoneDisplay} />
-                <PhoneActions phone={phone.phone} />
-                {phone.type && <span className="item-type">{phone.type}</span>}
-              </div>
-            </div>
-          );
-        })}
-        {emails.map((email, i) => (
-          <div key={`email-${i}`} className="expanded-item">
-            <Icon name="envelope" />
-            <div className="expanded-item-content">
-              <CopyableValue value={email.email} />
-              <EmailActions email={email.email} />
-              {email.type && <span className="item-type">{email.type}</span>}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── LocationsSection ────────────────────────────────────────────
 
 export function LocationsSection({ addresses, isEditMode, onAddressesChange, renderItemSuffix }: {
@@ -646,39 +551,38 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange, ren
   onAddressesChange?: (addresses: ContactAddress[]) => void;
   renderItemSuffix?: (index: number) => React.ReactNode;
 }) {
+  const dragState = useDragState();
+
   if (!isEditMode && !addresses.length) return null;
 
-  const addAddress = () => {
-    if (onAddressesChange) {
-      onAddressesChange([...addresses, { street: null, city: null, state: null, postalCode: null, country: null, type: null }]);
-    }
-  };
+  const newAddress = (): ContactAddress => ({ street: null, city: null, state: null, postalCode: null, country: null, type: null });
+  const { rows, blankIndex, commit } = autoRows(
+    addresses,
+    a => !a.street && !a.city && !a.state && !a.postalCode && !a.country && !a.type,
+    newAddress,
+    onAddressesChange,
+  );
+
 
   const updateAddress = (index: number, field: keyof ContactAddress, value: string | null) => {
-    if (onAddressesChange) {
-      const updated = [...addresses];
-      updated[index] = { ...updated[index], [field]: value || null };
-      onAddressesChange(updated);
-    }
+    const updated = [...rows];
+    updated[index] = { ...updated[index], [field]: value || null };
+    commit(updated);
   };
 
-  const removeAddress = (index: number) => {
-    if (onAddressesChange) {
-      onAddressesChange(addresses.filter((_, i) => i !== index));
-    }
-  };
+  const removeAddress = (index: number) => commit(addresses.filter((_, i) => i !== index));
 
-  const dragState = useDragState();
 
   if (isEditMode) {
     return (
       <div className="expanded-section">
         <h4 className="section-header">Address</h4>
         <div className="section-content edit-section-content">
-          {addresses.map((addr, i) => (
+          {rows.map((addr, i) => (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
               <DraggableArrayItem
                 index={i}
+                isBlankRow={i === blankIndex}
                 draggedIndex={dragState.draggedIndex}
                 dropZoneIndex={dragState.dropZoneIndex}
                 onDragStart={dragState.handleDragStart}
@@ -725,13 +629,9 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange, ren
                   />
                 </div>
               </DraggableArrayItem>
-              {renderItemSuffix?.(i)}
+              {i !== blankIndex && renderItemSuffix?.(i)}
             </div>
           ))}
-          <button type="button" className="add-item-btn" onClick={addAddress}>
-            <Icon name="plus" />
-            Add Address
-          </button>
         </div>
       </div>
     );
@@ -777,39 +677,58 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
   onSocialProfilesChange?: (profiles: ContactSocialProfile[]) => void;
   renderItemSuffix?: (index: number) => React.ReactNode;
 }) {
+  const dragState = useDragState();
+
   if (!isEditMode && !socialProfiles.length) return null;
 
-  const addProfile = () => {
-    if (onSocialProfilesChange) {
-      onSocialProfilesChange([...socialProfiles, { id: 0, contactId: 0, platform: '', username: '', profileUrl: null, type: null }]);
-    }
-  };
+  const newProfile = (): ContactSocialProfile => ({ id: 0, contactId: 0, platform: '', username: '', profileUrl: null, type: null });
+  const { rows, blankIndex, commit } = autoRows(
+    socialProfiles,
+    p => !p.platform && !p.username && !p.profileUrl && !p.type,
+    newProfile,
+    onSocialProfilesChange,
+  );
+
 
   const updateProfile = (index: number, field: keyof ContactSocialProfile, value: string | null) => {
-    if (onSocialProfilesChange) {
-      const updated = [...socialProfiles];
-      updated[index] = { ...updated[index], [field]: value };
-      onSocialProfilesChange(updated);
-    }
+    const updated = [...rows];
+    updated[index] = { ...updated[index], [field]: value };
+    commit(updated);
   };
 
-  const removeProfile = (index: number) => {
-    if (onSocialProfilesChange) {
-      onSocialProfilesChange(socialProfiles.filter((_, i) => i !== index));
-    }
+  // A recognised URL fills in platform and username. Either is only replaced while
+  // it is empty or still what the previous URL implied, so a typed value is kept;
+  // an unrecognised (or cleared) URL leaves both alone.
+  const updateProfileUrl = (index: number, url: string) => {
+    const current = rows[index];
+    const before = detectSocialProfile(current.profileUrl ?? '');
+    const after = detectSocialProfile(url);
+    const tracksUrl = (value: string, implied: string | null | undefined) =>
+      !value.trim() || value.trim().toLowerCase() === implied?.toLowerCase();
+
+    const updated = [...rows];
+    updated[index] = {
+      ...current,
+      profileUrl: url || null,
+      platform: after && tracksUrl(current.platform, before?.platform) ? after.platform : current.platform,
+      username: after && tracksUrl(current.username, before?.username) ? after.username ?? '' : current.username,
+    };
+    commit(updated);
   };
 
-  const dragState = useDragState();
+  const removeProfile = (index: number) => commit(socialProfiles.filter((_, i) => i !== index));
+
 
   if (isEditMode) {
     return (
       <div className="expanded-section">
         <h4 className="section-header">Social Links</h4>
         <div className="section-content edit-section-content">
-          {socialProfiles.map((profile, i) => (
+          {rows.map((profile, i) => (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
               <DraggableArrayItem
                 index={i}
+                isBlankRow={i === blankIndex}
                 draggedIndex={dragState.draggedIndex}
                 dropZoneIndex={dragState.dropZoneIndex}
                 onDragStart={dragState.handleDragStart}
@@ -821,6 +740,12 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
                 <Icon name={getPlatformIcon(profile.platform)} style={getPlatformIconStyle(profile.platform)} />
                 <div className="edit-field-group">
                   <EditableField
+                    value={profile.profileUrl || ''}
+                    onChange={(v) => updateProfileUrl(i, v)}
+                    placeholder="Profile URL"
+                    type="url"
+                  />
+                  <EditableField
                     value={profile.platform}
                     onChange={(v) => updateProfile(i, 'platform', v)}
                     placeholder="Platform (LinkedIn, Twitter...)"
@@ -830,20 +755,11 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
                     onChange={(v) => updateProfile(i, 'username', v)}
                     placeholder="Username"
                   />
-                  <EditableField
-                    value={profile.profileUrl || ''}
-                    onChange={(v) => updateProfile(i, 'profileUrl', v)}
-                    placeholder="Profile URL"
-                  />
                 </div>
               </DraggableArrayItem>
-              {renderItemSuffix?.(i)}
+              {i !== blankIndex && renderItemSuffix?.(i)}
             </div>
           ))}
-          <button type="button" className="add-item-btn" onClick={addProfile}>
-            <Icon name="plus" />
-            Add Social Profile
-          </button>
         </div>
       </div>
     );
@@ -940,39 +856,33 @@ export function CategoriesSection({ categories, isEditMode, onCategoriesChange, 
   onCategoriesChange?: (categories: ContactCategory[]) => void;
   renderItemSuffix?: (index: number) => React.ReactNode;
 }) {
+  const dragState = useDragState();
+
   if (!isEditMode && !categories.length) return null;
 
-  const addCategory = () => {
-    if (onCategoriesChange) {
-      onCategoriesChange([...categories, { id: 0, contactId: 0, category: '' }]);
-    }
-  };
+  const newCategory = (): ContactCategory => ({ id: 0, contactId: 0, category: '' });
+  const { rows, blankIndex, commit } = autoRows(categories, c => !c.category, newCategory, onCategoriesChange);
+
 
   const updateCategory = (index: number, value: string) => {
-    if (onCategoriesChange) {
-      const updated = [...categories];
-      updated[index] = { ...updated[index], category: value };
-      onCategoriesChange(updated);
-    }
+    const updated = [...rows];
+    updated[index] = { ...updated[index], category: value };
+    commit(updated);
   };
 
-  const removeCategory = (index: number) => {
-    if (onCategoriesChange) {
-      onCategoriesChange(categories.filter((_, i) => i !== index));
-    }
-  };
+  const removeCategory = (index: number) => commit(categories.filter((_, i) => i !== index));
 
-  const dragState = useDragState();
 
   if (isEditMode) {
     return (
       <div className="expanded-section">
         <h4 className="section-header">Categories</h4>
         <div className="section-content edit-section-content">
-          {categories.map((cat, i) => (
+          {rows.map((cat, i) => (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
               <DraggableArrayItem
                 index={i}
+                isBlankRow={i === blankIndex}
                 draggedIndex={dragState.draggedIndex}
                 dropZoneIndex={dragState.dropZoneIndex}
                 onDragStart={dragState.handleDragStart}
@@ -987,13 +897,9 @@ export function CategoriesSection({ categories, isEditMode, onCategoriesChange, 
                   placeholder="Category name"
                 />
               </DraggableArrayItem>
-              {renderItemSuffix?.(i)}
+              {i !== blankIndex && renderItemSuffix?.(i)}
             </div>
           ))}
-          <button type="button" className="add-item-btn" onClick={addCategory}>
-            <Icon name="plus" />
-            Add Category
-          </button>
         </div>
       </div>
     );
@@ -1023,39 +929,35 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
   onInstantMessagesChange?: (messages: ContactInstantMessage[]) => void;
   renderItemSuffix?: (index: number) => React.ReactNode;
 }) {
+  const dragState = useDragState();
+
   if (!isEditMode && !instantMessages.length) return null;
 
-  const addIM = () => {
-    if (onInstantMessagesChange) {
-      onInstantMessagesChange([...instantMessages, { id: 0, contactId: 0, service: '', handle: '', type: null }]);
-    }
-  };
+  const newIM = (): ContactInstantMessage => ({ id: 0, contactId: 0, service: '', handle: '', type: null });
+  const { rows, blankIndex, commit } = autoRows(
+    instantMessages, im => !im.service && !im.handle && !im.type, newIM, onInstantMessagesChange,
+  );
+
 
   const updateIM = (index: number, field: keyof ContactInstantMessage, value: string | null) => {
-    if (onInstantMessagesChange) {
-      const updated = [...instantMessages];
-      updated[index] = { ...updated[index], [field]: value };
-      onInstantMessagesChange(updated);
-    }
+    const updated = [...rows];
+    updated[index] = { ...updated[index], [field]: value };
+    commit(updated);
   };
 
-  const removeIM = (index: number) => {
-    if (onInstantMessagesChange) {
-      onInstantMessagesChange(instantMessages.filter((_, i) => i !== index));
-    }
-  };
+  const removeIM = (index: number) => commit(instantMessages.filter((_, i) => i !== index));
 
-  const dragState = useDragState();
 
   if (isEditMode) {
     return (
       <div className="expanded-section">
         <h4 className="section-header">Instant Messages</h4>
         <div className="section-content edit-section-content">
-          {instantMessages.map((im, i) => (
+          {rows.map((im, i) => (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
               <DraggableArrayItem
                 index={i}
+                isBlankRow={i === blankIndex}
                 draggedIndex={dragState.draggedIndex}
                 dropZoneIndex={dragState.dropZoneIndex}
                 onDragStart={dragState.handleDragStart}
@@ -1078,13 +980,9 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
                   />
                 </div>
               </DraggableArrayItem>
-              {renderItemSuffix?.(i)}
+              {i !== blankIndex && renderItemSuffix?.(i)}
             </div>
           ))}
-          <button type="button" className="add-item-btn" onClick={addIM}>
-            <Icon name="plus" />
-            Add Instant Message
-          </button>
         </div>
       </div>
     );
@@ -1110,39 +1008,33 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange, renderItemSuffix }
   onUrlsChange?: (urls: ContactUrl[]) => void;
   renderItemSuffix?: (index: number) => React.ReactNode;
 }) {
+  const dragState = useDragState();
+
   if (!isEditMode && !urls.length) return null;
 
-  const addUrl = () => {
-    if (onUrlsChange) {
-      onUrlsChange([...urls, { id: 0, contactId: 0, url: '', label: null, type: null }]);
-    }
-  };
+  const newUrl = (): ContactUrl => ({ id: 0, contactId: 0, url: '', label: null, type: null });
+  const { rows, blankIndex, commit } = autoRows(urls, u => !u.url && !u.label && !u.type, newUrl, onUrlsChange);
+
 
   const updateUrl = (index: number, field: keyof ContactUrl, value: string | null) => {
-    if (onUrlsChange) {
-      const updated = [...urls];
-      updated[index] = { ...updated[index], [field]: value };
-      onUrlsChange(updated);
-    }
+    const updated = [...rows];
+    updated[index] = { ...updated[index], [field]: value };
+    commit(updated);
   };
 
-  const removeUrl = (index: number) => {
-    if (onUrlsChange) {
-      onUrlsChange(urls.filter((_, i) => i !== index));
-    }
-  };
+  const removeUrl = (index: number) => commit(urls.filter((_, i) => i !== index));
 
-  const dragState = useDragState();
 
   if (isEditMode) {
     return (
       <div className="expanded-section">
         <h4 className="section-header">Web Links</h4>
         <div className="section-content edit-section-content">
-          {urls.map((u, i) => (
+          {rows.map((u, i) => (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
               <DraggableArrayItem
                 index={i}
+                isBlankRow={i === blankIndex}
                 draggedIndex={dragState.draggedIndex}
                 dropZoneIndex={dragState.dropZoneIndex}
                 onDragStart={dragState.handleDragStart}
@@ -1165,13 +1057,9 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange, renderItemSuffix }
                   />
                 </div>
               </DraggableArrayItem>
-              {renderItemSuffix?.(i)}
+              {i !== blankIndex && renderItemSuffix?.(i)}
             </div>
           ))}
-          <button type="button" className="add-item-btn" onClick={addUrl}>
-            <Icon name="plus" />
-            Add Link
-          </button>
         </div>
       </div>
     );
@@ -1211,57 +1099,51 @@ export function RelatedPeopleSection({ relatedPeople, linkedFrom, isEditMode, on
   renderItemSuffix?: (index: number) => React.ReactNode;
   excludeContactId?: number;
 }) {
+  const dragState = useDragState();
   const reverseLinks = linkedFrom ?? [];
   if (!isEditMode && !relatedPeople.length && !reverseLinks.length) return null;
 
-  const addPerson = () => {
-    if (onRelatedPeopleChange) {
-      onRelatedPeopleChange([...relatedPeople, { id: 0, contactId: 0, name: '', relationship: null, relatedContactId: null }]);
-    }
-  };
+  const newPerson = (): ContactRelatedPerson => ({ id: 0, contactId: 0, name: '', relationship: null, relatedContactId: null });
+  const { rows, blankIndex, commit } = autoRows(
+    relatedPeople,
+    p => !p.name && !p.relationship && p.relatedContactId == null,
+    newPerson,
+    onRelatedPeopleChange,
+  );
+
 
   const updatePerson = (index: number, field: keyof ContactRelatedPerson, value: string | null) => {
-    if (onRelatedPeopleChange) {
-      const updated = [...relatedPeople];
-      updated[index] = { ...updated[index], [field]: value };
-      onRelatedPeopleChange(updated);
-    }
+    const updated = [...rows];
+    updated[index] = { ...updated[index], [field]: value };
+    commit(updated);
   };
 
   // Linking must set the name and target id together in one state update.
   const linkPerson = (index: number, contact: ContactSearchResult) => {
-    if (onRelatedPeopleChange) {
-      const updated = [...relatedPeople];
-      updated[index] = { ...updated[index], name: contact.displayName, relatedContactId: contact.id };
-      onRelatedPeopleChange(updated);
-    }
+    const updated = [...rows];
+    updated[index] = { ...updated[index], name: contact.displayName, relatedContactId: contact.id };
+    commit(updated);
   };
 
   const unlinkPerson = (index: number) => {
-    if (onRelatedPeopleChange) {
-      const updated = [...relatedPeople];
-      updated[index] = { ...updated[index], relatedContactId: null };
-      onRelatedPeopleChange(updated);
-    }
+    const updated = [...rows];
+    updated[index] = { ...updated[index], relatedContactId: null };
+    commit(updated);
   };
 
-  const removePerson = (index: number) => {
-    if (onRelatedPeopleChange) {
-      onRelatedPeopleChange(relatedPeople.filter((_, i) => i !== index));
-    }
-  };
+  const removePerson = (index: number) => commit(relatedPeople.filter((_, i) => i !== index));
 
-  const dragState = useDragState();
 
   if (isEditMode) {
     return (
       <div className="expanded-section">
         <h4 className="section-header">Related People</h4>
         <div className="section-content edit-section-content">
-          {relatedPeople.map((person, i) => (
+          {rows.map((person, i) => (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
               <DraggableArrayItem
                 index={i}
+                isBlankRow={i === blankIndex}
                 draggedIndex={dragState.draggedIndex}
                 dropZoneIndex={dragState.dropZoneIndex}
                 onDragStart={dragState.handleDragStart}
@@ -1287,13 +1169,9 @@ export function RelatedPeopleSection({ relatedPeople, linkedFrom, isEditMode, on
                   />
                 </div>
               </DraggableArrayItem>
-              {renderItemSuffix?.(i)}
+              {i !== blankIndex && renderItemSuffix?.(i)}
             </div>
           ))}
-          <button type="button" className="add-item-btn" onClick={addPerson}>
-            <Icon name="plus" />
-            Add Related Person
-          </button>
         </div>
       </div>
     );

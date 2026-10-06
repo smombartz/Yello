@@ -3,16 +3,18 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useContacts, useMergePreview, useMergeSelectedContacts } from '../api/hooks';
 import { useDeleteContacts } from '../api/cleanupHooks';
-import { useArchiveContacts } from '../api/archiveHooks';
+import { useArchiveContacts, useUnarchiveContacts } from '../api/archiveHooks';
 import { ContactRow } from './ContactRow';
 import { ContactGridCard } from './ContactGridCard';
 import { ContactFilters, getFilterLabel } from './ContactFilters';
 import { Icon } from './Icon';
+import { Button } from './ui/Button';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { Modal } from './ui/Modal';
 import { EmptyState } from './ui/EmptyState';
 import { useToast } from './ui/Toast';
 import { EXPANDED_CONTACT_PARAM, useSearchParamUpdater } from '../hooks/useSearchParamUpdater';
-import type { MergeConflict, ContactDetail } from '../api/types';
+import type { MergeConflict, ContactDetail, ContactListItem } from '../api/types';
 
 interface ContactListProps {
   search?: string;
@@ -62,6 +64,9 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
   const { data, isLoading, error } = useContacts(1, PAGE_SIZE, search || undefined, categoryFilter, sort, filterString);
   const deleteMutation = useDeleteContacts();
   const archiveMutation = useArchiveContacts();
+  // Separate instances so archiving one row from its menu doesn't drive the bulk button's pending state
+  const archiveOneMutation = useArchiveContacts();
+  const unarchiveMutation = useUnarchiveContacts();
   const mergePreviewMutation = useMergePreview();
   const mergeMutation = useMergeSelectedContacts();
 
@@ -142,6 +147,34 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
 
     setShowArchiveConfirm(false);
   }, [selectedIds, archiveMutation, showToast]);
+
+  // Single contact, from the row menu. Reversible, so it acts at once and offers
+  // Undo in the toast instead of asking for confirmation like the bulk action.
+  const handleArchiveOne = useCallback((contact: ContactListItem) => {
+    if (contact.id === expandedId) {
+      updateParams({ [EXPANDED_CONTACT_PARAM]: null });
+    }
+
+    archiveOneMutation.mutate([contact.id], {
+      onSuccess: () => {
+        setSelectedIds(prev => {
+          if (!prev.has(contact.id)) return prev;
+          const next = new Set(prev);
+          next.delete(contact.id);
+          return next;
+        });
+        showToast(`Archived ${contact.displayName}`, {
+          action: {
+            label: 'Undo',
+            onClick: () => unarchiveMutation.mutate([contact.id], {
+              onError: () => showToast(`Couldn't restore ${contact.displayName}`, { type: 'error' }),
+            }),
+          },
+        });
+      },
+      onError: () => showToast(`Couldn't archive ${contact.displayName}`, { type: 'error' }),
+    });
+  }, [expandedId, updateParams, archiveOneMutation, unarchiveMutation, showToast]);
 
   const handleMergeClick = useCallback(() => {
     if (selectedIds.size < 2) return;
@@ -345,37 +378,37 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
         {selectedIds.size > 0 && (
           <div className="contact-action-buttons">
             {selectedIds.size >= 2 && (
-              <button
-                className="merge-selected-button"
+              <Button
+                variant="primary"
+                icon="code-merge"
                 onClick={handleMergeClick}
                 disabled={mergePreviewMutation.isPending || mergeMutation.isPending}
               >
-                <Icon name="code-merge" />
                 {mergePreviewMutation.isPending
                   ? 'Loading...'
                   : `Merge (${selectedIds.size})`}
-              </button>
+              </Button>
             )}
-            <button
-              className="archive-selected-button"
+            <Button
+              variant="secondary"
+              icon="box-archive"
               onClick={() => setShowArchiveConfirm(true)}
               disabled={archiveMutation.isPending}
             >
-              <Icon name="box-archive" />
               {archiveMutation.isPending
                 ? 'Archiving...'
                 : `Archive (${selectedIds.size})`}
-            </button>
-            <button
-              className="delete-selected-button"
+            </Button>
+            <Button
+              variant="danger"
+              icon="trash"
               onClick={() => setShowDeleteConfirm(true)}
               disabled={deleteMutation.isPending}
             >
-              <Icon name="trash" />
               {deleteMutation.isPending
                 ? 'Deleting...'
                 : `Delete (${selectedIds.size})`}
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -413,6 +446,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
                     isSelected={selectedIds.has(contact.id)}
                     onToggleSelect={handleToggleSelect}
                     selectionEnabled={selectionEnabled}
+                    onArchive={handleArchiveOne}
                   />
                 </div>
               );
@@ -459,112 +493,112 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
 
       {/* Merge conflict resolution modal */}
       {showMergeModal && (
-        <div className="modal-overlay" onClick={handleMergeCancel}>
-          <div className="modal-content merge-conflict-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="merge-modal-header">
-              <h3>Merge {mergeContacts.length} Contacts</h3>
-              <button className="close-button" onClick={handleMergeCancel}>
-                <Icon name="xmark" />
-              </button>
+        <Modal
+          label={`Merge ${mergeContacts.length} contacts`}
+          onClose={handleMergeCancel}
+          className="merge-conflict-modal"
+        >
+          <div className="merge-modal-header">
+            <h3>Merge {mergeContacts.length} Contacts</h3>
+            <Button variant="icon" icon="xmark" aria-label="Close" onClick={handleMergeCancel} />
+          </div>
+
+          <div className="merge-modal-body">
+            {/* Primary contact selector */}
+            <div className="merge-primary-section">
+              <p className="merge-section-label">Select primary contact (click to select):</p>
+              <div className="merge-contact-cards">
+                {mergeContacts.map((contact) => (
+                  <div
+                    key={contact.id}
+                    className={`merge-contact-card ${mergePrimaryId === contact.id ? 'primary' : ''}`}
+                    onClick={() => setMergePrimaryId(contact.id)}
+                  >
+                    {mergePrimaryId === contact.id && (
+                      <div className="primary-badge">Primary</div>
+                    )}
+                    <div className="merge-contact-avatar">
+                      {contact.photoUrl ? (
+                        <img src={contact.photoUrl} alt={contact.displayName} />
+                      ) : (
+                        <Icon name="user" />
+                      )}
+                    </div>
+                    <div className="merge-contact-info">
+                      <div className="merge-contact-name">{contact.displayName}</div>
+                      {contact.company && (
+                        <div className="merge-contact-company">{contact.company}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="merge-modal-body">
-              {/* Primary contact selector */}
-              <div className="merge-primary-section">
-                <p className="merge-section-label">Select primary contact (click to select):</p>
-                <div className="merge-contact-cards">
-                  {mergeContacts.map((contact) => (
-                    <div
-                      key={contact.id}
-                      className={`merge-contact-card ${mergePrimaryId === contact.id ? 'primary' : ''}`}
-                      onClick={() => setMergePrimaryId(contact.id)}
-                    >
-                      {mergePrimaryId === contact.id && (
-                        <div className="primary-badge">Primary</div>
-                      )}
-                      <div className="merge-contact-avatar">
-                        {contact.photoUrl ? (
-                          <img src={contact.photoUrl} alt={contact.displayName} />
-                        ) : (
-                          <Icon name="user" />
-                        )}
-                      </div>
-                      <div className="merge-contact-info">
-                        <div className="merge-contact-name">{contact.displayName}</div>
-                        {contact.company && (
-                          <div className="merge-contact-company">{contact.company}</div>
-                        )}
-                      </div>
+            {/* Conflict resolution */}
+            {mergeConflicts.length > 0 && (
+              <div className="merge-conflicts-section">
+                <p className="merge-section-label">Resolve conflicts:</p>
+                {mergeConflicts.map((conflict) => (
+                  <div key={conflict.field} className="merge-conflict-field">
+                    <div className="conflict-field-name">
+                      {conflict.field === 'firstName' && 'First Name'}
+                      {conflict.field === 'lastName' && 'Last Name'}
+                      {conflict.field === 'company' && 'Company'}
+                      {conflict.field === 'title' && 'Title'}
+                      {conflict.field === 'birthday' && 'Birthday'}
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Conflict resolution */}
-              {mergeConflicts.length > 0 && (
-                <div className="merge-conflicts-section">
-                  <p className="merge-section-label">Resolve conflicts:</p>
-                  {mergeConflicts.map((conflict) => (
-                    <div key={conflict.field} className="merge-conflict-field">
-                      <div className="conflict-field-name">
-                        {conflict.field === 'firstName' && 'First Name'}
-                        {conflict.field === 'lastName' && 'Last Name'}
-                        {conflict.field === 'company' && 'Company'}
-                        {conflict.field === 'title' && 'Title'}
-                        {conflict.field === 'birthday' && 'Birthday'}
-                      </div>
-                      <div className="conflict-options">
-                        {conflict.values.map((option) => (
-                          <label key={`${conflict.field}-${option.contactId}`} className="conflict-option">
-                            <input
-                              type="radio"
-                              name={conflict.field}
-                              value={option.value}
-                              checked={mergeResolutions[conflict.field] === option.value}
-                              onChange={() => handleResolutionChange(conflict.field, option.value)}
-                            />
-                            <span className="option-value">"{option.value}"</span>
-                            <span className="option-source">from {option.contactName}</span>
-                          </label>
-                        ))}
-                        <label className="conflict-option">
+                    <div className="conflict-options">
+                      {conflict.values.map((option) => (
+                        <label key={`${conflict.field}-${option.contactId}`} className="conflict-option">
                           <input
                             type="radio"
                             name={conflict.field}
-                            value=""
-                            checked={mergeResolutions[conflict.field] === null}
-                            onChange={() => handleResolutionChange(conflict.field, null)}
+                            value={option.value}
+                            checked={mergeResolutions[conflict.field] === option.value}
+                            onChange={() => handleResolutionChange(conflict.field, option.value)}
                           />
-                          <span className="option-value empty">Keep empty</span>
+                          <span className="option-value">"{option.value}"</span>
+                          <span className="option-source">from {option.contactName}</span>
                         </label>
-                      </div>
+                      ))}
+                      <label className="conflict-option">
+                        <input
+                          type="radio"
+                          name={conflict.field}
+                          value=""
+                          checked={mergeResolutions[conflict.field] === null}
+                          onChange={() => handleResolutionChange(conflict.field, null)}
+                        />
+                        <span className="option-value empty">Keep empty</span>
+                      </label>
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
+            )}
 
-              {mergeConflicts.length === 0 && (
-                <div className="merge-no-conflicts">
-                  <Icon name="circle-check" />
-                  <p>No conflicts detected. Contacts can be merged directly.</p>
-                </div>
-              )}
-            </div>
-
-            <div className="merge-modal-footer">
-              <button className="cancel-button" onClick={handleMergeCancel}>
-                Cancel
-              </button>
-              <button
-                className="confirm-button"
-                onClick={handleMergeConfirm}
-                disabled={mergeMutation.isPending || !mergePrimaryId}
-              >
-                {mergeMutation.isPending ? 'Merging...' : 'Merge Contacts'}
-              </button>
-            </div>
+            {mergeConflicts.length === 0 && (
+              <div className="merge-no-conflicts">
+                <Icon name="circle-check" />
+                <p>No conflicts detected. Contacts can be merged directly.</p>
+              </div>
+            )}
           </div>
-        </div>
+
+          <div className="merge-modal-footer">
+            <Button variant="secondary" onClick={handleMergeCancel}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleMergeConfirm}
+              disabled={mergeMutation.isPending || !mergePrimaryId}
+            >
+              {mergeMutation.isPending ? 'Merging...' : 'Merge Contacts'}
+            </Button>
+          </div>
+        </Modal>
       )}
     </div>
   );

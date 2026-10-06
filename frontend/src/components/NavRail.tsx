@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Icon } from './Icon';
+import { isAdmin } from '../lib/admin';
 
 interface NavRailItemProps {
   to: string;
@@ -46,10 +47,11 @@ export function NavRail() {
       <NavRailItem to="/groups" icon="users" label="Groups" />
       <NavRailItem to="/tools" icon="screwdriver-wrench" label="Tools" />
 
-      {user?.email === 's@mombartz.com' && (
+      {isAdmin(user) && (
         <>
           <NavRailItem to="/admin" icon="shield-halved" label="Admin" end />
           <NavRailItem to="/admin/docs" icon="book" label="Docs" />
+          <NavRailItem to="/styleguide" icon="swatchbook" label="Style guide" />
         </>
       )}
 

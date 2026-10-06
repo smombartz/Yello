@@ -9,6 +9,7 @@ import 'leaflet.markercluster';
 import { useMapMarkers, useMapStats, useGeocode } from '../api/mapHooks';
 import type { MapMarker } from '../api/mapHooks';
 import type { OutletContext } from './Layout';
+import { Button } from './ui/Button';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { EmptyState } from './ui/EmptyState';
 import { useToast } from './ui/Toast';
@@ -185,14 +186,15 @@ export function MapView() {
         <span>{mapData.geocodedCount} of {mapData.totalContacts} on map</span>
       ) : undefined,
       actions: statsData && statsData.pendingAddresses > 0 ? (
-        <button
-          className="header-action-btn"
+        <Button
+          variant="primary"
+          icon="location-crosshairs"
+          loading={geocodeMutation.isPending}
           onClick={handleGeocode}
           disabled={geocodeMutation.isPending}
         >
-          <Icon name={geocodeMutation.isPending ? 'arrows-rotate' : 'location-crosshairs'} className={geocodeMutation.isPending ? 'spinning' : ''} />
           {geocodeMutation.isPending ? 'Geocoding...' : `Geocode ${statsData.pendingAddresses}`}
-        </button>
+        </Button>
       ) : undefined,
     });
   }, [setHeaderConfig, searchQuery, mapData, statsData, geocodeMutation.isPending, handleGeocode]);
@@ -219,10 +221,9 @@ export function MapView() {
             }
             action={
               statsData && statsData.pendingAddresses > 0 ? (
-                <button className="geocode-button primary" onClick={handleGeocode}>
-                  <Icon name="location-crosshairs" />
+                <Button variant="secondary" icon="location-crosshairs" onClick={handleGeocode}>
                   Geocode {statsData.pendingAddresses} addresses
-                </button>
+                </Button>
               ) : undefined
             }
           />

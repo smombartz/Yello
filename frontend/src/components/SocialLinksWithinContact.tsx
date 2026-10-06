@@ -4,6 +4,7 @@ import { Pagination } from './Pagination';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { EmptyState } from './ui/EmptyState';
+import { Button } from './ui/Button';
 import { useToast } from './ui/Toast';
 import { useSocialLinksWithinContact, useFixAllSocialLinks } from '../api/socialLinksHooks';
 
@@ -69,14 +70,14 @@ export function SocialLinksWithinContact() {
         <div className="social-links-stats">
           {total} contact{total !== 1 ? 's' : ''} with social links in the URLs table
         </div>
-        <button
-          className="fix-all-button"
+        <Button
+          variant="primary"
+          icon="wand-magic-sparkles"
           onClick={() => setShowConfirm(true)}
           disabled={fixAllMutation.isPending}
         >
-          <Icon name="wand-magic-sparkles" />
           {fixAllMutation.isPending ? 'Fixing...' : `Fix All (${total})`}
-        </button>
+        </Button>
       </div>
 
       <div className="within-contact-list">

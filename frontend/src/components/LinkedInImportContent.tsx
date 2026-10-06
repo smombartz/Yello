@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useImportLinkedInStream, parseLinkedInCsv } from '../api/settingsHooks';
 import { Icon } from './Icon';
+import { Button } from './ui/Button';
 import { useToast } from './ui/Toast';
 import { FilePicker } from './ui/FilePicker';
 
@@ -55,14 +56,14 @@ export function LinkedInImportContent() {
           disabled={isImportingLinkedIn}
         />
 
-        <button
-          className="secondary-button"
+        {/* Not `loading`: while importing this same button is the Cancel action, so it must stay enabled */}
+        <Button
           onClick={isImportingLinkedIn ? cancelLinkedInImport : handleLinkedInImport}
           disabled={!linkedInFile && !isImportingLinkedIn}
         >
           <Icon name={isImportingLinkedIn ? 'arrows-rotate' : 'upload'} className={isImportingLinkedIn ? 'spinning' : ''} />
           {isImportingLinkedIn ? 'Cancel' : 'Import Contacts'}
-        </button>
+        </Button>
       </div>
 
       {(isImportingLinkedIn || linkedInResult || linkedInError) && (

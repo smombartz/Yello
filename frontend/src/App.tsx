@@ -14,9 +14,11 @@ import { DashboardView } from './components/DashboardView';
 import { WelcomeView } from './components/WelcomeView';
 import { AdminView } from './components/AdminView';
 import { DocsView } from './components/DocsView';
+import { StyleGuideView } from './components/StyleGuideView';
 import OnboardingView from './components/OnboardingView';
 import { ICloudImportView } from './components/ICloudImportView';
 import { LoginPage } from './components/LoginPage';
+import { LandingPage } from './components/LandingPage';
 import { PublicContactCard } from './components/PublicContactCard';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
@@ -24,6 +26,7 @@ import { ImportStatusProvider } from './contexts/ImportStatusProvider';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { useAuth } from './hooks/useAuth';
 import { DemoPromptModal } from './components/DemoPromptModal';
+import { isAdmin } from './lib/admin';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -49,6 +52,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Admin-only pages. Runs inside ProtectedRoute, so the user is already signed in. */
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (!isAdmin(user)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <>{children}</>;
+}
+
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -64,9 +76,37 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// The desktop app is a thin client of this deployment and keeps Electron's
+// default user agent. It has no use for the marketing page.
+const isDesktopApp = typeof navigator !== 'undefined' && navigator.userAgent.includes('Electron');
+
+/** `/`: the landing page for signed-out visitors, the dashboard for everyone else. */
+function LandingRoute() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isDesktopApp) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Render nothing rather than a spinner: the auth check is quick, and a
+  // spinner flashing before the landing page reads as a broken front door.
+  if (isLoading) {
+    return null;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <LandingPage />;
+}
+
 function AppRoutes() {
   return (
     <Routes>
+      {/* Public landing page - signed-out visitors only */}
+      <Route path="/" element={<LandingRoute />} />
+
       {/* Public contact card - no auth required */}
       <Route path="/p/:slug" element={<PublicContactCard />} />
 
@@ -101,8 +141,9 @@ function AppRoutes() {
         <Route path="map" element={<MapView />} />
         <Route path="tools" element={<SettingsView />} />
         <Route path="profile" element={<UserProfilePage />} />
-        <Route path="admin" element={<AdminView />} />
-        <Route path="admin/docs" element={<DocsView />} />
+        <Route path="admin" element={<AdminRoute><AdminView /></AdminRoute>} />
+        <Route path="admin/docs" element={<AdminRoute><DocsView /></AdminRoute>} />
+        <Route path="styleguide" element={<AdminRoute><StyleGuideView /></AdminRoute>} />
         <Route path="onboarding" element={<OnboardingView />} />
         <Route path="icloud-import" element={<ICloudImportView />} />
       </Route>

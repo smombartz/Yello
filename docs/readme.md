@@ -14,7 +14,7 @@ Vite build-time variables must be present when `npm run build` runs. On Railway 
 
 ## Desktop app (`electron/`)
 
-The macOS app opens the hosted deployment (`https://yello.up.railway.app`, overridable with `YELLO_URL`) in a window. It has no local backend or database, so desktop and web share one account and one set of data. Full guide: `electron/README.md`.
+The macOS app opens the hosted deployment (`https://yello.up.railway.app`, overridable with `YELLO_URL`) in a window. It loads `/`, and the web app sends a signed-out desktop window to `/login` rather than the landing page (see Landing page below). It has no local backend or database, so desktop and web share one account and one set of data. Full guide: `electron/README.md`.
 
 **Sign-in handoff.** Google blocks OAuth inside embedded browsers, so the app sends the three Google flows (login, Gmail re-auth, Contacts re-auth) to the system browser:
 
@@ -40,9 +40,68 @@ Up to 1.x the app spawned its own backend with local SQLite in `~/Library/Applic
 - No text is smaller than 11px.
 - Readable text is never `--ds-text-muted`. That color is for icons and zero states only.
 - Every transition uses `--ds-duration-*` and `--ds-easing-*`. `--ds-duration-normal` (150ms) is the default.
-- Page stylesheets must not redefine canonical classes like `.primary-button`. `pages.css` loads globally, so an override leaks app-wide.
+- Page stylesheets must not redefine canonical classes like `.btn`. `pages.css` loads globally, so an override leaks app-wide.
+
+**Style guide (`/styleguide`).** A live specimen book of the design system, linked in the nav rail for the admin account beside Admin and Docs.
+- **It can't drift.** `lib/designTokens.ts` reads every `--ds-*` token from the loaded stylesheets at runtime, so a new token in `design-system.css` appears automatically. Anything no section claims falls into an "Other tokens" list.
+- **Using it.** Click any specimen to copy its `var(--ds-…)`. The header search filters tokens by name or value. Text colors show their live WCAG contrast against `--ds-bg-primary`.
+- **What it covers.** The `components/ui` primitives render live in every variant and state, with DESIGN.md's named rules and do's/don'ts beside them. Those rules are quoted in `StyleGuideView.tsx`, so when DESIGN.md's rules change, update them there too.
+- **Access.** Admin-only. `AdminRoute` in `App.tsx` redirects anyone else to the dashboard, and `/admin` and `/admin/docs` use the same guard. Both the guard and the nav rail read `isAdmin()` from `lib/admin.ts`. It mirrors the backend's `ADMIN_EMAIL`, which is what actually protects the admin API.
+
+**Primitives (`frontend/src/components/ui/`).** Build with these before writing new markup:
+
+| Primitive | Use for | Notes |
+| --- | --- | --- |
+| `Button` | Every action button | `variant` (primary/secondary/danger/ghost/icon), `size` (`md`/`sm`/`lg`), `icon`, `loading`. `lg` (48px, 12px corners, 16px label) is for front doors only (the landing page uses it today); never use it inside the app shell. Links styled as buttons use `btn btn--{variant}`. |
+| `Tabs` | Underline tab bars | Accessible tablist with Arrow/Home/End keys. Merge and Cleanup use it. |
+| `Modal` | Every overlay | Escape, overlay click, `aria-modal`, focus in and focus return, `useLayoutModal`. Omit `onClose` for a blocking progress dialog. |
+| `ConfirmDialog` | Yes/no confirmations | A `Modal` with secondary plus primary/danger actions. |
+| `LoadingSpinner`, `EmptyState`, `Badge`, `SearchBar`, `Toast`, `FilePicker` | Their namesakes | |
 
 ## Features
+
+### Landing page (`/`)
+
+`/` is the public front door. Signed-out visitors see the landing page (`components/LandingPage.tsx`, vignettes in `components/landing/`, styles in `styles/pages/landing.css`).
+
+**Routing (`LandingRoute` in `App.tsx`):**
+- Signed-in users go to `/dashboard`.
+- The desktop app goes to `/login`. It is detected by Electron's default `Electron/…` user agent, which the app doesn't override.
+- While the auth check is in flight the route renders nothing, not a spinner.
+- The catch-all route and `/login` are unchanged.
+
+**Actions:**
+- The primary is **Sign in with Google** (`useAuth().login`). It also works in the desktop app, because the app intercepts `/api/auth/google`.
+- **Try the demo** calls `startDemo()`, the same as the login page. The route redirects once the session lands.
+
+**Every picture on the page is real Yello UI.** It is built from the demo book's 20 invented people, copied from `demoService.ts` into `components/landing/sampleBook.ts`.
+- **Hero:** a small working copy of the app (`SampleBookFrame.tsx`, views in `SampleViews.tsx`):
+  - **Rail:** switches Dashboard, Contacts, Map, Groups and Tools. It is the app's icons with hover labels, and becomes a bottom tab bar on phones.
+  - **Contacts:** rows expand in place into the app's real `ContactCardView` (with `LinkedInSection` for enriched people), so copy-on-click works. Every link inside an expanded card (call, text, WhatsApp, email, maps) is blocked with a toast, because some demo domains may be real businesses.
+  - **Dashboard:** stat cards, upcoming birthdays and top cities. Each item opens a person or a city search.
+  - **Map:** the map with clickable pins and clusters that list their people.
+  - **Groups:** the three demo groups (vCard categories), each opening its members.
+  - **Tools:** the Tools sections in the app's own words, each offering sign-in.
+  - **Scrolling:** the body scrolls only after the visitor clicks or tabs into the frame. It lets go on mouse leave, on blur, or when the hero leaves the viewport, so page scrolling is never trapped.
+- **Merge:** a duplicate pair that folds into one record when the tile scrolls into view. This is the page's one authored motion, and it doesn't auto-play under reduced motion.
+- **Sources:** the import list.
+- **Birthdays:** upcoming birthdays, computed from today's date.
+- **Map:** the sample book pinned and clustered on a static map.
+- **Public card:** per-field visibility switches.
+- **Export:** a vCard 3.0 excerpt.
+- **Maker's note:** a first-person note signed "Sascha". It is a draft, waiting for the owner's edit.
+
+**Content rules:**
+- Claims are limited to what `PRODUCT.md` records. The one number is the 12,116-card lossless round trip.
+- Avatars are initials only, because the demo photos have no recorded licence.
+- Never put real contacts from `docs/` on this page.
+
+**Map asset.** `assets/landing/us-map.webp` is a static OpenStreetMap snapshot, not live tiles.
+- It is stitched from zoom-5 tiles, cropped to the continental US, grayscaled and lightened.
+- Its provenance is in `us-map.webp.json`, and the "© OpenStreetMap contributors" credit sits on the map.
+- Pins are projected at runtime with Web Mercator using the crop constants in `Vignettes.tsx` (`MAP`). If you regenerate the image, update those constants.
+
+**Display type.** The page uses front-door display sizes beyond the app's 30px ceiling. They are defined as `--lp-*` custom properties on `.landing` and are not global tokens.
 
 ### Shareable URLs for views and expanded contacts
 
@@ -72,6 +131,32 @@ In the contact card view (contact detail page, expanded list row, Profile page),
 - **Email:** send email (`mailto:`).
 
 The components are `CopyableValue`, `PhoneActions` and `EmailActions` in `frontend/src/components/ContactFormSections.tsx`; the icons render through `InfoField`'s `actions` slot, beside the value, so long values truncate without hiding them. The desktop app hands `sms:` and `mailto:` to the OS default app (`EXTERNAL_PROTOCOLS` in `electron/src/main.ts`). On macOS it opens `tel:` in FaceTime explicitly, so the call rings out through the iPhone whatever app has claimed `tel:`. In a browser, `tel:` goes to the Mac's default handler; if that isn't FaceTime (Chrome claims it on some Macs), set FaceTime → Settings → General → Default for calls. The public card (`/p/:slug`) keeps tap-to-call/email links.
+
+### Contact forms: always-open fields, social URL detection
+
+On **New Contact** (`AddContactPage`) and in the three-column contact edit view (`ContactCardView`), every list section (phone, email, address, social, categories, instant messages, web links, related people) ends in an empty row ready to type into. There are no "Add …" buttons. Filling in any field of the last row adds a fresh blank row beneath it. On New Contact, each entry's fields share one line and wrap when the screen is narrow; the address uses two lines (Street · City · State, then Postal Code · Country · Type). The edit view's columns are narrow, so its fields stay stacked.
+
+- **How it works:** in edit mode every list section runs through `autoRows()` in `ContactFormSections.tsx`. It adds the blank row only when rendering. On every change it trims trailing blank rows, so blank rows never reach form state, and clearing the last entry turns it back into the blank row. The blank row can't be dragged or removed. The flat row layout CSS is scoped to `.add-contact-content`.
+- **Social URL detection:** pasting or typing a profile URL fills **Platform** and **Username** (`detectSocialProfile` in `utils/contactFormatters.ts`), so `https://www.instagram.com/tinymapsforbigliving/` gives `instagram` / `tinymapsforbigliving`. Platform keys are the lowercase ones the backend uses (`linkedin`, `facebook`, `twitter` for both twitter.com and x.com, `instagram`, `youtube`, `tiktok`, `pinterest`, `snapchat`, `reddit`, `github`, `threads`), so the "Has Instagram" filter matches. Detection compares the hostname exactly, so `dropbox.com` doesn't count as `x.com`. Platform and Username only change while they are empty or still hold what the previous URL implied: a value you typed yourself is kept, and an unrecognised or cleared URL changes neither. This applies in the contact edit view too, where Profile URL is now the first field.
+### Saving a contact never silently drops data
+
+New Contact and the contact edit form build their save payload with `buildContactLists` (`frontend/src/utils/contactPayload.ts`). This matters most when editing: the update route deletes each list and re-inserts it from the payload, so a row left out of the payload is deleted from the database.
+
+- **A fully empty row** (every field blank or whitespace) is skipped. It holds no data.
+- **A row with some data but no main value** blocks the save. Examples: an email type with no address, an address with only a type, an instant message without a handle or a service, a web link label with no URL, a relationship with no name. An error box lists each one by the value it does have, for example `Email “work” has no email address.`, under "Nothing was saved". Once shown, the list re-checks as you type and disappears when everything is fixed. On New Contact the box also scrolls into view, since Save is in the header.
+- **Social links:** a profile URL alone is enough. If Platform or Username is empty, `socialProfileFromUrl` fills it at save time, following VCF import's rule: a recognised platform, otherwise the host (`bsky.app`); the username from the URL, otherwise its last path segment, otherwise the host. Without a URL, a social link needs both a platform and a username.
+- Server errors appear in the same box (`SaveErrors` in `ContactFormSections.tsx`).
+
+### Contact row menu (⋮)
+
+The three-dot button at the end of each list row opens a menu that works without expanding the card first:
+
+- **Open contact page** is a link to `/contacts/<id>`, so Cmd/Ctrl-click opens it in a new tab.
+- **Edit** expands the row if needed and opens the edit form. `ContactRow` bumps an `editRequest` counter that `ContactRowExpanded` picks up during render. The counter resets when the row collapses, so expanding it again later shows view mode.
+- **Copy link** copies the current list URL with `contact=<id>` set. That's the same link the expanded card's Copy link gives (see *Shareable URLs* above).
+- **Archive** archives the contact right away. The toast has an **Undo** that unarchives it. Archive is reversible, so there's no confirm dialog. Bulk Archive still asks for confirmation. If the row was expanded, `contact` is cleared from the URL.
+
+The menu is the generic `ActionMenu` (`frontend/src/components/ui/ActionMenu.tsx`). It's portaled to `<body>` with fixed positioning, because `.contact-card` is `overflow: hidden` and each virtual row is transformed, which would clip it or stack it under the next row. React click events still bubble through the portal to the card, so both the trigger and the menu stop propagation. It supports arrow keys, Home and End. It closes on outside click, Escape (captured so Layout doesn't navigate away), Tab, scroll and resize. Below 640px the row's action icons are hidden, menu included.
 
 ### VCF import (background job)
 

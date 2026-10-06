@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
+import { Button } from './ui/Button';
 import { DuplicateContactCard } from './DuplicateContactCard';
 import type { DuplicateGroup as DuplicateGroupType, ConfidenceLevel } from '../api/types';
 
@@ -99,20 +100,20 @@ export function DuplicateGroup({
           <span className="contact-count">{group.contacts.length} contacts</span>
         </div>
         <div className="duplicate-group-actions">
-          <button
-            className="merge-button"
+          <Button
+            variant="primary"
             onClick={handleMerge}
             disabled={isMerging}
           >
             {isMerging ? 'Merging...' : 'Merge'}
-          </button>
-          <button
-            className="keep-separate-button"
+          </Button>
+          <Button
+            variant="secondary"
             onClick={() => onKeepSeparate(group.id)}
             disabled={isMerging}
           >
             Keep Separate
-          </button>
+          </Button>
         </div>
       </div>
 

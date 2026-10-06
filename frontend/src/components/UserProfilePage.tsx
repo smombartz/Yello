@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Icon } from './Icon';
+import { Button } from './ui/Button';
+import { LoadingSpinner } from './ui/LoadingSpinner';
 import { ContactCardView } from './ContactCardView';
 import type { ContactCardViewData, SectionSuffixes } from './ContactCardView';
 import type {
@@ -476,17 +478,16 @@ function UnlinkedProfileState({
               }}
             />
             <div className="create-actions">
-              <button type="button" className="profile-secondary-button" onClick={() => setShowCreateInput(false)}>
+              <Button variant="secondary" onClick={() => setShowCreateInput(false)}>
                 Cancel
-              </button>
-              <button
-                type="button"
-                className="primary-button"
+              </Button>
+              <Button
+                variant="primary"
                 onClick={handleCreate}
                 disabled={!newName.trim()}
               >
                 Create Profile
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -515,24 +516,23 @@ function LinkedProfileHeader({
         </div>
       </div>
       {!showConfirmUnlink ? (
-        <button
-          type="button"
-          className="unlink-btn"
+        <Button
+          variant="secondary"
+          icon="link-slash"
           onClick={() => setShowConfirmUnlink(true)}
         >
-          <Icon name="link-slash" />
           Unlink
-        </button>
+        </Button>
       ) : (
         <div className="unlink-confirm">
           <p>Unlink this contact?</p>
           <div className="profile-confirm-actions">
-            <button type="button" className="profile-secondary-button" onClick={() => setShowConfirmUnlink(false)}>
+            <Button variant="secondary" onClick={() => setShowConfirmUnlink(false)}>
               Cancel
-            </button>
-            <button type="button" className="profile-danger-button" onClick={onUnlink}>
+            </Button>
+            <Button variant="danger" onClick={onUnlink}>
               Unlink
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -562,15 +562,15 @@ export function UserProfilePage() {
           {user?.email && (
             <span className="header-user-email">{user.email}</span>
           )}
-          <button
-            type="button"
-            className="logout-btn"
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="right-from-bracket"
             onClick={logout}
             disabled={isLoggingOut}
           >
-            <Icon name="right-from-bracket" />
             {isLoggingOut ? 'Logging out...' : 'Logout'}
-          </button>
+          </Button>
         </>
       ),
     });
@@ -800,8 +800,7 @@ export function UserProfilePage() {
   if (isLoading) {
     return (
       <div className="profile-loading">
-        <div className="loading-spinner" />
-        <p>Loading profile...</p>
+        <LoadingSpinner message="Loading profile..." />
       </div>
     );
   }
@@ -887,15 +886,15 @@ export function UserProfilePage() {
                 </div>
 
                 {form.isPublic && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
+                    icon="eye-slash"
                     className="hide-all-btn"
                     disabled={updateProfileMutation.isPending}
                     onClick={hideAllVisibility}
                   >
-                    <Icon name="eye-slash" />
                     Hide All Fields
-                  </button>
+                  </Button>
                 )}
 
                 {form.isPublic && profile?.publicUrl && (
@@ -914,14 +913,13 @@ export function UserProfilePage() {
                       >
                         <Icon name="arrow-up-right-from-square" />
                       </a>
-                      <button
-                        type="button"
-                        className="copy-url-btn"
+                      <Button
+                        variant="icon"
+                        icon={copySuccess ? 'check' : 'copy'}
                         onClick={handleCopyUrl}
                         title="Copy URL"
-                      >
-                        <Icon name={copySuccess ? 'check' : 'copy'} />
-                      </button>
+                        aria-label={copySuccess ? 'URL copied' : 'Copy URL'}
+                      />
                     </div>
                   </div>
                 )}
@@ -974,15 +972,14 @@ export function UserProfilePage() {
                   Signed in as <strong>{user.email}</strong>
                 </p>
               )}
-              <button
-                type="button"
-                className="logout-button"
+              <Button
+                variant="secondary"
+                icon="right-from-bracket"
                 onClick={logout}
                 disabled={isLoggingOut}
               >
-                <Icon name="right-from-bracket" />
                 {isLoggingOut ? 'Signing out...' : 'Sign Out'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

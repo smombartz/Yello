@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
 import { Icon } from './Icon';
 import { LoadingSpinner } from './ui/LoadingSpinner';
+import { Button } from './ui/Button';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { EmptyState } from './ui/EmptyState';
 import { Pagination } from './Pagination';
@@ -107,10 +108,9 @@ export function ArchivedView() {
       breadcrumbs: [{ label: 'Tools', to: '/tools' }],
       info: <span>{archivedCount} contacts</span>,
       actions: archivedCount > 0 ? (
-        <button className="header-action-btn secondary" onClick={handleExport}>
-          <Icon name="download" />
+        <Button variant="secondary" icon="download" onClick={handleExport}>
           Export VCF
-        </button>
+        </Button>
       ) : undefined,
     });
   }, [setHeaderConfig, archivedCount, handleExport]);
@@ -128,26 +128,26 @@ export function ArchivedView() {
     <div className="archived-view">
       {selectedIds.size > 0 && (
         <div className="archived-actions">
-          <button
-            className="restore-button"
+          <Button
+            variant="primary"
+            icon="box-open"
             onClick={() => setShowRestoreConfirm(true)}
             disabled={unarchiveMutation.isPending}
           >
-            <Icon name="box-open" />
             {unarchiveMutation.isPending
               ? 'Restoring...'
               : `Restore (${selectedIds.size})`}
-          </button>
-          <button
-            className="delete-selected-button"
+          </Button>
+          <Button
+            variant="danger"
+            icon="trash-can"
             onClick={() => setShowDeleteConfirm(true)}
             disabled={deleteMutation.isPending}
           >
-            <Icon name="trash-can" />
             {deleteMutation.isPending
               ? 'Deleting...'
               : `Delete Permanently (${selectedIds.size})`}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -164,22 +164,24 @@ export function ArchivedView() {
           <div className="archived-list">
             <div className="archived-list-actions">
               <div className="archived-selection-actions">
-                <button
-                  className="cleanup-action-button"
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="square-check"
                   onClick={handleSelectPage}
                   disabled={isFetching}
                 >
-                  <Icon name="square-check" />
                   Select Page
-                </button>
+                </Button>
                 {selectedIds.size > 0 && (
-                  <button
-                    className="cleanup-action-button"
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={handleSelectNone}
                   >
                     <Icon name="square" style="regular" />
                     Select None
-                  </button>
+                  </Button>
                 )}
               </div>
               {selectedIds.size > 0 && (

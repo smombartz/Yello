@@ -1,4 +1,5 @@
 import { Icon } from './Icon';
+import { Button } from './ui/Button';
 
 interface PaginationProps {
   currentPage: number;
@@ -23,29 +24,29 @@ export function Pagination({
 
   return (
     <div className="pagination">
-      <button
-        className="pagination-button"
+      <Button
+        variant="secondary"
+        icon="chevron-left"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={!canGoPrevious || isLoading}
         aria-label="Previous page"
       >
-        <Icon name="chevron-left" />
         <span>Prev</span>
-      </button>
+      </Button>
 
       <span className="pagination-indicator">
         Page {currentPage} of {totalPages}
       </span>
 
-      <button
-        className="pagination-button"
+      <Button
+        variant="secondary"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={!canGoNext || isLoading}
         aria-label="Next page"
       >
         <span>Next</span>
         <Icon name="chevron-right" />
-      </button>
+      </Button>
     </div>
   );
 }

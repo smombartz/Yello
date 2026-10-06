@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import type { ContactDetail, ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, UpdateContactRequest } from '../api/types';
 import { useUpdateContact } from '../api/hooks';
-import { Icon } from './Icon';
-import { EditableField, LinkedInSection } from './ContactFormSections';
+import { Button } from './ui/Button';
+import { EditableField, LinkedInSection, SaveErrors } from './ContactFormSections';
 import { ContactCardView } from './ContactCardView';
 import { EmailHistorySection } from './EmailHistorySection';
 import { ContactPhotoGallery } from './ContactPhotoGallery';
-import { useToast } from './ui/Toast';
+import { useCopyLink } from '../hooks/useCopyLink';
+import { buildContactLists } from '../utils/contactPayload';
 
 interface ContactRowExpandedProps {
   contact: ContactDetail;
+  /** Increment to open the edit form from outside (the card's menu). Ignored while already editing. */
+  editRequest?: number;
 }
 
 // Edit form state interface
@@ -30,23 +33,20 @@ interface EditFormState {
   relatedPeople: ContactRelatedPerson[];
 }
 
-export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
+export function ContactRowExpanded({ contact, editRequest = 0 }: ContactRowExpandedProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Once a save has been refused, the problem list re-checks as the form is edited.
+  const [showProblems, setShowProblems] = useState(false);
+  const problems = showProblems && editForm ? buildContactLists(editForm).problems : [];
+  const [handledEditRequest, setHandledEditRequest] = useState(0);
   const updateContactMutation = useUpdateContact();
-  const { showToast } = useToast();
+  const copyLink = useCopyLink();
 
   // The URL already points at this contact (?contact= in a list, /contacts/:id on
   // the detail page). Copying it here also covers the desktop app, which has no address bar.
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      showToast('Link copied', { duration: 2000 });
-    } catch {
-      showToast("Couldn't copy to clipboard", { type: 'error' });
-    }
-  };
+  const handleCopyLink = () => copyLink(window.location.href);
 
   const handleEnterEditMode = () => {
     setEditForm({
@@ -67,18 +67,33 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
     });
     setIsEditMode(true);
     setError(null);
+    setShowProblems(false);
   };
+
+  // Adjusted during render rather than in an effect, so the form opens in the same pass
+  if (editRequest !== handledEditRequest) {
+    setHandledEditRequest(editRequest);
+    if (editRequest > 0 && !isEditMode) handleEnterEditMode();
+  }
 
   const handleCancel = () => {
     setIsEditMode(false);
     setEditForm(null);
     setError(null);
+    setShowProblems(false);
   };
 
   const handleSave = async () => {
     if (!editForm) return;
 
     setError(null);
+
+    // Each list is replaced wholesale on save, so a row left out here would be deleted.
+    const { lists, problems } = buildContactLists(editForm);
+    if (problems.length) {
+      setShowProblems(true);
+      return;
+    }
 
     const updateData: UpdateContactRequest = {
       firstName: editForm.firstName,
@@ -87,58 +102,14 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
       title: editForm.title,
       notes: editForm.notes,
       birthday: editForm.birthday,
-      emails: editForm.emails.filter(e => e.email.trim()).map(e => ({
-        email: e.email,
-        type: e.type,
-        isPrimary: e.isPrimary,
-      })),
-      phones: editForm.phones.filter(p => p.phone.trim()).map(p => ({
-        phone: p.phone,
-        phoneDisplay: p.phoneDisplay,
-        countryCode: p.countryCode,
-        type: p.type,
-        isPrimary: p.isPrimary,
-      })),
-      addresses: editForm.addresses.filter(a =>
-        a.street || a.city || a.state || a.postalCode || a.country
-      ).map(a => ({
-        street: a.street,
-        city: a.city,
-        state: a.state,
-        postalCode: a.postalCode,
-        country: a.country,
-        type: a.type,
-      })),
-      socialProfiles: editForm.socialProfiles.filter(s => s.platform.trim() && s.username.trim()).map(s => ({
-        platform: s.platform,
-        username: s.username,
-        profileUrl: s.profileUrl,
-        type: s.type,
-      })),
-      categories: editForm.categories.filter(c => c.category.trim()).map(c => ({
-        category: c.category,
-      })),
-      instantMessages: editForm.instantMessages.filter(im => im.service.trim() && im.handle.trim()).map(im => ({
-        service: im.service,
-        handle: im.handle,
-        type: im.type,
-      })),
-      urls: editForm.urls.filter(u => u.url.trim()).map(u => ({
-        url: u.url,
-        label: u.label,
-        type: u.type,
-      })),
-      relatedPeople: editForm.relatedPeople.filter(rp => rp.name.trim()).map(rp => ({
-        name: rp.name,
-        relationship: rp.relationship,
-        relatedContactId: rp.relatedContactId ?? null,
-      })),
+      ...lists,
     };
 
     try {
       await updateContactMutation.mutateAsync({ id: contact.id, data: updateData });
       setIsEditMode(false);
       setEditForm(null);
+      setShowProblems(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save changes');
     }
@@ -173,39 +144,26 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
             />
           </div>
           <div className="expanded-actions">
-            <button
-              className="action-button secondary"
+            <Button
+              variant="secondary"
               onClick={handleCancel}
               disabled={updateContactMutation.isPending}
             >
               Cancel
-            </button>
-            <button
-              className="action-button primary"
+            </Button>
+            <Button
+              variant="primary"
+              icon="floppy-disk"
+              loading={updateContactMutation.isPending}
               onClick={handleSave}
               disabled={updateContactMutation.isPending}
             >
-              {updateContactMutation.isPending ? (
-                <>
-                  <Icon name="arrows-rotate" className="spinning" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Icon name="floppy-disk" />
-                  Save
-                </>
-              )}
-            </button>
+              {updateContactMutation.isPending ? 'Saving...' : 'Save'}
+            </Button>
           </div>
         </div>
 
-        {error && (
-          <div className="edit-error">
-            <Icon name="circle-exclamation" />
-            {error}
-          </div>
-        )}
+        <SaveErrors message={error} problems={problems} />
 
         <ContactCardView
           data={contact}
@@ -263,13 +221,12 @@ export function ContactRowExpanded({ contact }: ContactRowExpandedProps) {
 
       {/* Bottom: Copy link + Edit, right-aligned */}
       <div className="expanded-bottom-actions">
-        <button type="button" className="action-button secondary" onClick={handleCopyLink}>
-          <Icon name="link" />
+        <Button variant="secondary" icon="link" onClick={handleCopyLink}>
           Copy link
-        </button>
-        <button className="edit-button-primary" onClick={handleEnterEditMode}>
+        </Button>
+        <Button variant="primary" onClick={handleEnterEditMode}>
           Edit
-        </button>
+        </Button>
       </div>
     </div>
   );

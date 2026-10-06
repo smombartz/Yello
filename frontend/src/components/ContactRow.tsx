@@ -1,9 +1,14 @@
+import { useState } from 'react';
 import { Avatar } from './Avatar';
 import { ContactRowExpanded } from './ContactRowExpanded';
 import { Icon } from './Icon';
+import { ActionMenu } from './ui/ActionMenu';
+import type { ActionMenuItem } from './ui/ActionMenu';
 import { useContactDetail } from '../api/hooks';
 import type { ContactListItem } from '../api/types';
 import { getCountryFlag, getCountryName } from '../lib/phoneUtils';
+import { useCopyLink } from '../hooks/useCopyLink';
+import { EXPANDED_CONTACT_PARAM } from '../hooks/useSearchParamUpdater';
 
 interface ContactRowProps {
   contact: ContactListItem;
@@ -12,6 +17,7 @@ interface ContactRowProps {
   isSelected?: boolean;
   onToggleSelect?: (id: number) => void;
   selectionEnabled?: boolean;
+  onArchive?: (contact: ContactListItem) => void;
 }
 
 export function ContactRow({
@@ -20,9 +26,52 @@ export function ContactRow({
   onToggle,
   isSelected = false,
   onToggleSelect,
-  selectionEnabled = false
+  selectionEnabled = false,
+  onArchive
 }: ContactRowProps) {
   const { data: detailedContact, isLoading } = useContactDetail(isExpanded ? contact.id : null);
+  const copyLink = useCopyLink();
+
+  // Bumped by the menu's Edit. Reset on collapse (tracked during render, not in an
+  // effect), so re-expanding the card later opens it in view mode.
+  const [editRequest, setEditRequest] = useState(0);
+  const [wasExpanded, setWasExpanded] = useState(isExpanded);
+  if (isExpanded !== wasExpanded) {
+    setWasExpanded(isExpanded);
+    if (!isExpanded) setEditRequest(0);
+  }
+
+  const menuItems: ActionMenuItem[] = [
+    {
+      label: 'Open contact page',
+      icon: 'up-right-and-down-left-from-center',
+      to: `/contacts/${contact.id}`,
+    },
+    {
+      label: 'Edit',
+      icon: 'pen',
+      onSelect: () => {
+        if (!isExpanded) onToggle(contact.id);
+        setEditRequest(n => n + 1);
+      },
+    },
+    {
+      label: 'Copy link',
+      icon: 'link',
+      // The same link the expanded card's Copy link gives: this list, with the row open
+      onSelect: () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set(EXPANDED_CONTACT_PARAM, String(contact.id));
+        copyLink(url.toString());
+      },
+    },
+    ...(onArchive ? [{
+      label: 'Archive',
+      icon: 'box-archive',
+      dividerBefore: true,
+      onSelect: () => onArchive(contact),
+    }] : []),
+  ];
 
   return (
     <div
@@ -89,9 +138,11 @@ export function ContactRow({
               </a>
             ) : null}
           </span>
-          <button className="contact-action-icon" onClick={(e) => e.stopPropagation()}>
-            <Icon name="ellipsis-vertical" />
-          </button>
+          <ActionMenu
+            items={menuItems}
+            label={`Actions for ${contact.displayName}`}
+            triggerClassName="contact-action-icon"
+          />
         </div>
       </div>
 
@@ -105,7 +156,7 @@ export function ContactRow({
             </div>
           )}
           {detailedContact && (
-            <ContactRowExpanded contact={detailedContact} />
+            <ContactRowExpanded contact={detailedContact} editRequest={editRequest} />
           )}
         </>
       )}

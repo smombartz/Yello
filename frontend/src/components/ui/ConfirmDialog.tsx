@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { useLayoutModal } from '../../hooks/useLayoutModal';
 import { Button } from './Button';
+import { Modal } from './Modal';
 
 interface ConfirmDialogProps {
   title: string;
@@ -18,8 +17,7 @@ interface ConfirmDialogProps {
 
 /**
  * Shared confirmation dialog. Render conditionally: `{show && <ConfirmDialog .../>}`.
- * Signals Layout via useLayoutModal so the global Escape handler doesn't
- * navigate away while the dialog is open; Escape closes the dialog instead.
+ * Built on Modal, so Escape and overlay clicks cancel.
  */
 export function ConfirmDialog({
   title,
@@ -32,52 +30,28 @@ export function ConfirmDialog({
   onCancel,
   children,
 }: ConfirmDialogProps) {
-  const { setModalOpen } = useLayoutModal();
-
-  useEffect(() => {
-    setModalOpen(true);
-    return () => setModalOpen(false);
-    // setModalOpen only dispatches a window event; safe to run once per mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onCancel();
-      }
-    };
-    // Capture phase so this wins over Layout's window-level Escape handler
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [onCancel]);
-
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div
-        className={`modal-content confirm-dialog${danger ? ' danger' : ''}`}
-        role="alertdialog"
-        aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3>{title}</h3>
-        {message && <p>{message}</p>}
-        {children}
-        <div className="confirm-actions">
-          <Button variant="secondary" onClick={onCancel} autoFocus>
-            {cancelLabel}
-          </Button>
-          <Button
-            variant={danger ? 'danger' : 'primary'}
-            onClick={onConfirm}
-            disabled={confirmDisabled}
-          >
-            {confirmLabel}
-          </Button>
-        </div>
+    <Modal
+      label={title}
+      role="alertdialog"
+      onClose={onCancel}
+      className={`confirm-dialog${danger ? ' danger' : ''}`}
+    >
+      <h3>{title}</h3>
+      {message && <p>{message}</p>}
+      {children}
+      <div className="confirm-actions">
+        <Button variant="secondary" onClick={onCancel} autoFocus>
+          {cancelLabel}
+        </Button>
+        <Button
+          variant={danger ? 'danger' : 'primary'}
+          onClick={onConfirm}
+          disabled={confirmDisabled}
+        >
+          {confirmLabel}
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 }

@@ -1,4 +1,4 @@
-import { Icon } from './Icon';
+import { Tabs } from './ui/Tabs';
 import type { DeduplicationMode, DuplicateSummary } from '../api/types';
 
 interface ModeSelectorProps {
@@ -27,29 +27,24 @@ const MODE_ICONS: Record<DeduplicationMode, string> = {
 const MODES: DeduplicationMode[] = ['recommended', 'email', 'phone', 'address', 'social-links'];
 
 export function ModeSelector({ selectedMode, onModeChange, summary, isLoading }: ModeSelectorProps) {
-  return (
-    <div className="mode-selector">
-      {MODES.map((mode) => {
-        const count = mode === 'recommended'
-          ? (summary?.recommended?.total ?? 0)
-          : mode === 'social-links'
-            ? (summary?.socialLinks ?? 0)
-            : (summary?.[mode] ?? 0);
-        const isActive = mode === selectedMode;
+  const items = MODES.map((mode) => ({
+    id: mode,
+    label: MODE_LABELS[mode],
+    icon: MODE_ICONS[mode],
+    count: mode === 'recommended'
+      ? (summary?.recommended?.total ?? 0)
+      : mode === 'social-links'
+        ? (summary?.socialLinks ?? 0)
+        : (summary?.[mode] ?? 0),
+  }));
 
-        return (
-          <button
-            key={mode}
-            className={`mode-pill ${isActive ? 'active' : ''}`}
-            onClick={() => onModeChange(mode)}
-            disabled={isLoading}
-          >
-            <Icon name={MODE_ICONS[mode]} />
-            <span className="mode-label">{MODE_LABELS[mode]}</span>
-            <span className="mode-count">{count}</span>
-          </button>
-        );
-      })}
-    </div>
+  return (
+    <Tabs
+      items={items}
+      value={selectedMode}
+      onChange={onModeChange}
+      disabled={isLoading}
+      aria-label="Duplicate matching strategy"
+    />
   );
 }

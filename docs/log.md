@@ -1,5 +1,262 @@
 # Change Log
 
+## 2026-10-06 — Landing hero: a working sample app
+
+**What Changed:**
+- The hero's contact list is now a small working copy of Yello, filled with the 20 invented demo people:
+  - The left rail switches **Dashboard, Contacts, Map, Groups and Tools**. It has hover labels, and becomes a bottom tab bar on phones.
+  - **Contacts:** rows expand into the app's real `ContactCardView` and `LinkedInSection`. Links in an expanded card are blocked with a toast; copying values still works.
+  - **Dashboard:** birthdays open that person; Top Cities searches the city.
+  - **Map:** pins open a list of the people there.
+  - **Groups:** each group opens its members, with a Groups breadcrumb back.
+  - **Tools:** sections expand to the app's descriptions with a sign-in button.
+- The frame scrolls internally only after a click or keyboard focus, so it never traps page scrolling.
+- `sampleBook.ts` now carries the full demo records (addresses, notes, groups, LinkedIn data), regenerated from `demoService.ts`.
+- `MapVignette` gained a `fill` variant. Pins are now positioned in pixels to match the image's cover crop.
+
+**Why:**
+- User request: let visitors use the left-side menu and expand contacts in the hero.
+
+**Files Modified:**
+- `frontend/src/components/landing/SampleBookFrame.tsx`: rewritten as the sample app shell
+- `frontend/src/components/landing/SampleViews.tsx` (new): contact list with expansion, dashboard, groups, tools
+- `frontend/src/components/landing/Vignettes.tsx`: `MapVignette` `variant="fill"`, clickable pins and popover
+- `frontend/src/components/landing/sampleBook.ts`: full records, `SAMPLE_GROUPS`, `SAMPLE_TOP_CITIES`
+- `frontend/src/components/LandingPage.tsx`: passes `onSignIn` to the frame
+- `frontend/src/styles/pages/landing.css`: rail, body, rows, map popover, phone tab bar
+- `docs/readme.md`, `.impeccable/surfaces/frontend-src-components-landingpage-tsx.md`
+
+---
+
+## 2026-10-06 — Landing page at /
+
+**What Changed:**
+- **New public landing page at `/`** for signed-out visitors. It is quiet and Apple-inspired, with a first-person maker's note in the spirit of liumichelle.com/about.
+  - **Hero:** "Everyone you know. One book.", Sign in with Google as the primary action, and Try the demo.
+  - **Product shot:** the Contacts view at real scale, with a live search over the 20 demo people.
+  - **Highlights:** six uneven tiles of working UI: Merge, Sources, Birthdays, Map, Public card and Export.
+  - **Then:** a maker's note, a closing call to action and a footer.
+- **`LandingRoute` in `App.tsx`:**
+  - Signed-in users go to `/dashboard`.
+  - The Electron desktop app, detected by its user agent, goes to `/login`.
+  - The route renders nothing while the auth check runs.
+- **Tiles:**
+  - **Merge** folds a duplicate pair into one record when it scrolls into view. This is the page's one animation. It doesn't auto-play under reduced motion, and the Merge/Undo button repeats it.
+  - **Birthdays** are computed from today's date.
+  - **Map** pins are projected onto a static OpenStreetMap snapshot and re-clustered at a constant on-screen radius.
+  - **Public card** has working per-field visibility switches.
+  - **Export** shows a vCard 3.0 excerpt next to the 12,116-card lossless round-trip proof.
+- **`Button` gained `size="lg"`** (48px, 12px corners, 16px label) for front doors only. **`SearchBar` gained an optional `ariaLabel`.**
+- **Finish-review fixes:**
+  - The search placeholder now invites a query.
+  - Text on the Gray Wash band meets AA.
+  - Map clusters adapt to the tile's width.
+  - Demo errors announce once, the demo can't start twice, and loading can't hang.
+  - The card button says "Add to Contacts", like the real card.
+  - The lede no longer calls Gmail a contacts source.
+  - The flag emoji is replaced by the phone icon.
+  - The display floor is 44px.
+  - The vCard excerpt wraps on phones instead of scrolling sideways.
+- **DESIGN.md and `.impeccable/design.json`** now record the landing page's additions:
+  - `/` is added to the Front Door Rule, with the gradient only inside the public-card stage.
+  - The `--lp-*` front-door display steps are the one scoped exception to the Scale Floor Rule.
+  - `button-primary-lg` is documented.
+  - The front-door float shadow is documented.
+  - The Merge fold is the front-door motion exception.
+  - New **Ink On Wash** rule: Graphite on Gray Wash is 4.39:1, so text there uses Ink.
+
+**Why:**
+- Feature request: a landing page that is "simple, quiet" and shows the product's highlights.
+- Until now every signed-out visitor landed on the bare login card.
+
+**Files Modified:**
+- `frontend/src/components/LandingPage.tsx` (new)
+- `frontend/src/components/landing/SampleBookFrame.tsx`, `Vignettes.tsx`, `sampleBook.ts`, `GoogleMark.tsx` (new)
+- `frontend/src/styles/pages/landing.css` (new), `frontend/src/styles/pages.css` (import)
+- `frontend/src/assets/landing/us-map.webp` + `us-map.webp.json` (provenance), `frontend/src/assets/landing/mark.svg` (new)
+- `frontend/src/App.tsx`: `LandingRoute` at `/`
+- `frontend/src/components/ui/Button.tsx`, `frontend/src/index.css`: `size="lg"` / `.btn.btn--lg`
+- `frontend/src/components/ui/SearchBar.tsx`: `ariaLabel`
+- `DESIGN.md`, `.impeccable/design.json`
+- `docs/readme.md`, `docs/plans/2026-10-06-landing-page.md`, `.impeccable/surfaces/frontend-src-components-landingpage-tsx.md`
+
+---
+
+## 2026-10-05 — Style guide page at /styleguide
+
+**What Changed:**
+- New admin-linked page `/styleguide`, a live specimen book of the design system, using the Docs layout with a sticky table of contents.
+- **Foundations:** color, typography, spacing, shape, depth, motion, layout and component tokens.
+  - Every token renders as its effect: a swatch, a type sample, a spacing bar, a radius tile, a shadow tile, a breakpoint ruler, a z-index ladder.
+  - Motion has playable tracks driven by the duration and easing tokens themselves, and they respect `prefers-reduced-motion`.
+  - Text colors show live WCAG contrast badges.
+  - Clicking any specimen copies `var(--ds-…)` and confirms with the app's toast. The header search filters tokens by name or value.
+- **Components:** live `Button` (variant × size × disabled/loading matrix, an interactive loading demo, icon buttons), `Badge`, `Tabs`, `SearchBar`, `.edit-input`, `FilePicker`, `Avatar`, `LoadingSpinner`, `Toast` triggers, `EmptyState`, `Modal` and `ConfirmDialog`. Each has a usage snippet and its source path.
+- DESIGN.md's named rules and do's/don'ts sit beside the specimens they govern.
+- `lib/designTokens.ts` (new): a runtime reader for `--ds-*` declarations (walking `:root` rules, including `@import`ed sheets), plus colour parsing and contrast.
+- Added the `--ds-font-mono` token: a system monospace stack for code and token names. `docs.css` already referenced it, but it was undefined.
+- **Finish-review fixes:**
+  - DESIGN.md's rules now sit under the token group each governs, and all 11 Do's and 11 Don'ts appear once each.
+  - Dimension and alias tokens render as true-size specimens.
+  - Inverse text is shown and measured on Signal Violet.
+  - Hover cues now have matching keyboard-focus cues.
+  - Sample names are labelled.
+  - New sections show the contact row (the real selection ring, check badge and `ActionMenu`), filter chips and subtab pills, and a disabled field.
+- **Admin guard:** `/styleguide`, `/admin` and `/admin/docs` now redirect non-admins through a new `AdminRoute`. Before, only the nav links were hidden. `lib/admin.ts` holds the shared `isAdmin()` check.
+- **DESIGN.md:**
+  - Recorded `--ds-font-mono` as the code-only exception to the One Family Rule.
+  - Fixed the Pewter Don't, which still listed placeholders.
+  - Pointed to `/styleguide` as the live reference.
+
+**Why:**
+- Feature request: a page that renders the real tokens and components, so the system can be browsed, copied from and checked against DESIGN.md without reading CSS.
+
+**Files Modified:**
+- `frontend/src/components/StyleGuideView.tsx` (new)
+- `frontend/src/lib/designTokens.ts` (new)
+- `frontend/src/styles/pages/styleguide.css` (new), `frontend/src/styles/pages.css`
+- `frontend/src/App.tsx` — `styleguide` route
+- `frontend/src/components/NavRail.tsx` — admin "Style guide" item
+- `frontend/src/lib/admin.ts` (new) — `isAdmin()`
+- `DESIGN.md`, `.impeccable/design.json` — mono token, Pewter wording, style guide pointer
+- `frontend/src/styles/design-system.css` — `--ds-font-mono`
+- `docs/readme.md` — style guide notes
+- `.impeccable/surfaces/frontend-src-components-styleguideview-tsx.md` — surface brief and direction contract
+
+---
+
+## 2026-10-05 — Contact edit view: auto-added empty rows replace the Add buttons
+
+**What Changed:**
+- The three-column contact edit view (`ContactCardView` edit mode) now ends every list section in an empty row, like New Contact: phone, address, social, email, related people, web links, categories and instant messages. Typing in it adds the next row.
+- The auto-added empty row is now the only edit-list behaviour, since nothing used the Add-button mode any more.
+  - Removed the `autoAddRow` prop and the `enabled` flag on `autoRows()`.
+  - Removed the eight `add…` handlers and "Add …" buttons, and the now-unused `.add-item-btn` CSS.
+- The edit view keeps its stacked fields. The one-line row layout stays scoped to New Contact, because the edit columns are too narrow for it.
+
+**Why:**
+- User request: remove the Add buttons in the contact's three-column edit layout and use the auto-added empty row pattern there too.
+
+**Files Modified:**
+- `frontend/src/components/ContactFormSections.tsx` — `autoRows` always on in edit mode; Add buttons and handlers removed
+- `frontend/src/components/ContactCardView.tsx`, `frontend/src/components/AddContactPage.tsx` — dropped the `autoAddRow` prop
+- `frontend/src/index.css` — removed `.add-item-btn`
+- `docs/readme.md` — "Contact forms: always-open fields" section
+
+---
+
+## 2026-10-05 — Contact saves never silently drop entries; URL-only social links are kept; New Contact render loop fixed
+
+**What Changed:**
+- **New `buildContactLists`** (`utils/contactPayload.ts`) replaces the duplicated `.filter(...)` chains in `AddContactPage` and `ContactRowExpanded`.
+  - Rows left completely empty are skipped.
+  - A row with some data but no main value is no longer dropped. It is reported, and the save is refused. Before, a phone/email/link/relationship typed without its main value was thrown away. The same happened to an instant message missing either its service or its handle, and to a social profile without both a platform and a username.
+- **Visible errors**: the new `SaveErrors` component lists each problem ("Nothing was saved…", then e.g. `Email “work” has no email address.`) with `role="alert"`.
+  - After a refused save, the list re-checks live as the form changes.
+  - New Contact scrolls the box into view, since Save is in the header.
+  - The missing-name check joined the same list. Server errors show in the same box.
+- **Social links with only a URL are saved.** `socialProfileFromUrl` fills an empty platform/username the way VCF import does: the detected platform or the host, and the extracted username, the last path segment, or the host. `detectSocialProfile` now shares `parseLooseUrl`/`pathSegments` with it.
+- **Render-loop fix on New Contact**: `handleSave` depended on the `useMutation` result object, which is new every render. So the header effect called `setHeaderConfig` after every render. That re-rendered `Layout`, which passes a fresh outlet context, which re-rendered the page, forever ("Maximum update depth exceeded"). The page now depends on the stable `mutateAsync` and `isPending`.
+- CSS: multi-line `.edit-error` (icon pinned to the first line, bulleted list).
+
+**Why:**
+- User request: don't drop social links whose platform/username weren't filled in, and never drop data silently — always show an error.
+- In the edit form this was real data loss: the update route replaces each list wholesale, so a filtered-out row was deleted from the database on an unrelated edit.
+
+**Files Modified:**
+- `frontend/src/utils/contactPayload.ts` (new) — `buildContactLists`
+- `frontend/src/utils/contactFormatters.ts` — `socialProfileFromUrl`, shared URL parsing helpers
+- `frontend/src/components/ContactFormSections.tsx` — `SaveErrors`
+- `frontend/src/components/AddContactPage.tsx` — validation, live problem list, scroll-to-error, stable mutation deps
+- `frontend/src/components/ContactRowExpanded.tsx` — validation and problem list in the edit form
+- `frontend/src/index.css` — `.edit-error` list layout
+- `docs/readme.md` — "Saving a contact never silently drops data"
+
+---
+
+## 2026-10-05 — Add Contact: always-open fields that add rows as you type; social URL auto-detection
+
+**What Changed:**
+- **Always-open list fields on New Contact**: phone, email, address, social, categories, instant messages, web links and related people each start with an empty row. Filling in any field of the last row adds another beneath it, and the "Add …" buttons are gone from this page.
+  - New opt-in `autoAddRow` prop on the list sections. `autoRows()` adds the blank row only when rendering and trims trailing blanks on every change, so form state never holds empty entries.
+  - The blank row has no remove button (a spacer keeps the columns aligned) and can't be dragged or used as a drop target.
+- **One-row layout** (scoped to `.add-contact-content`): each entry is a flat row with its fields side by side, wrapping when narrow, instead of a padded card with the fields stacked. The address takes two lines instead of four, or three on a phone.
+- **Phone and Email are now separate sections on New Contact.** The page used the legacy combined `ContactInfoSection`, which had no other users, so it was deleted. The page now uses `PhoneSection` and `EmailSection`, like the edit view, which also lets you reorder entries by dragging.
+- **Social URL detection**: the new `detectSocialProfile(url)` matches the hostname against the backend's platform list and pulls the username out of the path (`/in/x`, `/@x`, `profile.php?id=`, …).
+  - Typing a URL into the Social section fills Platform and Username, using lowercase platform keys like the stored data.
+  - A field is only overwritten while it is empty or still holds what the previous URL implied.
+  - Profile URL is now the first field, with `type="url"`. This also applies in the contact edit view.
+- Moved `useDragState()` above the early `return null` in the eight list sections. This fixes eight pre-existing `react-hooks/rules-of-hooks` lint errors (a conditional hook call).
+
+**Why:**
+- Feature request: entering a contact meant pressing "Add Email", "Add Phone" and so on before every field, and the stacked per-entry cards took a lot of vertical space.
+- Feature request: the platform label should come from the pasted profile URL. For example, `https://www.instagram.com/tinymapsforbigliving/` → Instagram.
+
+**Files Modified:**
+- `frontend/src/components/ContactFormSections.tsx` — `autoRows`, `autoAddRow` on the list sections, blank-row handling in `EditableArrayItem`/`DraggableArrayItem`, `updateProfileUrl`, removed `ContactInfoSection`
+- `frontend/src/components/AddContactPage.tsx` — `PhoneSection` + `EmailSection`, `autoAddRow` on every list section
+- `frontend/src/utils/contactFormatters.ts` — `detectSocialProfile`
+- `frontend/src/index.css` — `.add-contact-content` row layout, `.remove-item-spacer`
+- `docs/readme.md` — "Add Contact form" section
+
+---
+
+## 2026-10-05 — Extract the design system: Button sizes/loading, Tabs, Modal; migrate ~110 call sites
+
+**What Changed:**
+- **`Button`**: added `size="sm"` (13px label and 12px padding, still 32px tall), `loading` (spinner icon, `disabled`, `aria-busy`) and a `ref` prop.
+- **New `ui/Tabs`**: an accessible tablist (roving tabindex; Arrow, Home and End keys). `ModeSelector` and `CleanupModeSelector` now render it. Their two duplicate CSS blocks (`.mode-pill`, `.cleanup-mode-tab`) became one canonical `.tabs`/`.tab`/`.tab-count`.
+- **New `ui/Modal`**: handles `aria-modal`, Escape in the capture phase, overlay-click close, initial focus, focus return and `useLayoutModal`.
+  - `ConfirmDialog` is now built on it.
+  - The merge-conflict modal, the geocoding progress modal and the demo prompt moved from hand-rolled overlays to it. The demo prompt now also closes on Escape and on an overlay click.
+- **Button migration**: about 100 legacy `<button>`s with roughly 40 bespoke classes (`header-action-btn`, `fix-all-button`, `secondary-button`, `icloud-bulk-btn`, …) now render `<Button>`.
+  - Ten busy-icon ternaries are now `loading`.
+  - Two links styled as buttons now use `btn btn--secondary`.
+  - In the contact selection toolbar, Archive is now secondary, so Merge is the only primary.
+  - The copy-URL button is now a square `icon` button with an `aria-label`.
+- **Spinners**: the hand-rolled spinners in Admin, Dashboard, Profile, Geocoding, iCloud import and Google import now use `<LoadingSpinner>`. Removed `.icloud-spinner`.
+- **CSS cleanup**: `index.css` went from 7,901 to 6,651 lines.
+  - Deleted the rules for every unreferenced legacy button class, along with dead empty/loading/tab/modal rules for views already on the primitives.
+  - Deleted the descendant `.geocoding-*-actions button` overrides.
+  - Replaced 44 `white` literals with `--ds-text-inverse` and `--ds-bg-primary`.
+  - Moved the bottom tab bar and toast from a literal `z-index: 1000` onto the scale (`--ds-z-fixed`, `--ds-z-toast`). Modal overlays now cover the phone tab bar.
+- **Docs**: `DESIGN.md` gained the `control-sm` type token, the `button-secondary-sm` component and guidance for Button size/loading, Tabs and Modal. Regenerated `.impeccable/design.json` with a Small Button snippet. `docs/readme.md` got a primitives table.
+
+**Why:**
+- `/impeccable extract`. The design system existed, but almost nothing used it. 176 raw buttons rebuilt the same three variants about 40 ways, and 13 of the class names were dead or duplicated. Routing every action through the primitives makes the DESIGN.md rules enforceable rather than aspirational, and it brings Escape/focus handling and tab semantics to every overlay and tab bar.
+
+**Files Modified:**
+- `frontend/src/components/ui/Button.tsx`, `Tabs.tsx` (new), `Modal.tsx` (new), `ConfirmDialog.tsx`, `FilePicker.tsx` (comment)
+- `frontend/src/components/` — ModeSelector, CleanupModeSelector, AddressCleanupCard, AddressDuplicates, AddressGeocoding, AddressNormalize, InvalidLinksCleanup, SocialLinksWithinContact, CleanupContactList, CleanupView, DuplicateGroup, DeduplicationView, ArchivedView, EnrichToolsContent, GoogleContactsImportContent, ICloudImportView, ImportMatchCards, LinkedInImportContent, SettingsView, EmailHistorySection, AdminView, AddContactPage, ContactDetailPage, ContactsPage, DashboardView, MapView, ContactList, ContactRowExpanded, Pagination, UserProfilePage, OnboardingView, DemoPromptModal
+- `frontend/src/index.css`; `frontend/src/styles/pages/{admin,demo-prompt-modal,enrich,login,user-profile}.css`
+- `DESIGN.md`, `.impeccable/design.json`, `docs/readme.md`, `docs/plans/2026-10-05-design-system-extraction.md` (new)
+
+---
+
+## 2026-10-04 — Contact row ⋮ menu: Open contact page, Edit, Copy link, Archive
+
+**What Changed:**
+- The three-dot button on each contact list row now opens a menu. Since the February design redo it had only stopped click propagation, so it did nothing.
+- **Open contact page** links to `/contacts/<id>`. **Edit** expands the row if needed and opens the edit form. **Copy link** copies the list URL with `contact=<id>`. **Archive** archives immediately, with an Undo in the toast.
+- New `ActionMenu` UI primitive (`ui/ActionMenu.tsx`). It's portaled to `<body>` with fixed positioning, flips above the trigger near the bottom of the viewport, and has ARIA menu roles and arrow-key navigation. It closes on outside click, Escape, Tab, scroll and resize.
+- `ContactRowExpanded` takes an optional `editRequest` counter that opens the edit form when bumped. `ContactRow` resets it when the row collapses.
+- Moved the clipboard-and-toast logic into a `useCopyLink` hook, shared by the expanded card's Copy link and the menu.
+- `ContactList` has `handleArchiveOne`. It uses its own mutation instance, so the bulk Archive button doesn't show "Archiving…". It also drops the contact from the selection and clears `?contact=` if the row was open.
+
+**Why:**
+- The user reported that the dots had no effect. It was a placeholder from the design redo that was never wired up, and the user asked for these four actions.
+
+**Files Modified:**
+- `frontend/src/components/ui/ActionMenu.tsx` (new) — generic action menu
+- `frontend/src/hooks/useCopyLink.ts` (new) — copy URL + toast
+- `frontend/src/components/ContactRow.tsx` — menu items, edit request
+- `frontend/src/components/ContactRowExpanded.tsx` — `editRequest` prop, uses `useCopyLink`
+- `frontend/src/components/ContactList.tsx` — single-contact archive with Undo
+- `frontend/src/index.css` — `.action-menu*` styles, active state for the trigger
+- `docs/readme.md` — "Contact row menu" section
+
+---
+
 ## 2026-10-04 — Align the CSS with DESIGN.md (one violet, one button system, one motion scale)
 
 **What Changed:**

@@ -3,6 +3,8 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
 import { useDashboardStats } from '../api/dashboardHooks';
 import { Icon } from './Icon';
+import { Button } from './ui/Button';
+import { LoadingSpinner } from './ui/LoadingSpinner';
 import { LaunchBanner } from './LaunchBanner';
 
 function getPhotoUrl(photoHash: string | null): string | null {
@@ -101,13 +103,13 @@ export function DashboardView() {
       onSearchSubmit: goToContacts,
       searchPlaceholder: 'Search contacts...',
       actions: (
-        <button
-          className="header-action-btn"
+        <Button
+          variant="primary"
+          icon="circle-plus"
           onClick={() => navigate('/contacts/new')}
         >
-          <Icon name="circle-plus" />
           Add Contact
-        </button>
+        </Button>
       ),
     });
   }, [setHeaderConfig, search, navigate]);
@@ -120,8 +122,7 @@ export function DashboardView() {
     return (
       <div className="dashboard-view">
         <div className="dashboard-loading">
-          <div className="loading-spinner" />
-          <p>Loading dashboard...</p>
+          <LoadingSpinner message="Loading dashboard..." />
         </div>
       </div>
     );

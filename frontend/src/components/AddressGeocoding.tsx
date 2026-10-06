@@ -13,6 +13,9 @@ import type { GeocodingFilter, GeocodingContact, GeocodingAddress } from '../api
 import { formatAddress } from '../lib/addressUtils';
 import { useToast } from './ui/Toast';
 import { EmptyState } from './ui/EmptyState';
+import { Button } from './ui/Button';
+import { Modal } from './ui/Modal';
+import { LoadingSpinner } from './ui/LoadingSpinner';
 
 interface BulkProgress {
   processed: number;
@@ -104,12 +107,12 @@ function AddressEditForm({ address, onSave, onCancel, isSaving }: AddressEditFor
         </div>
       </div>
       <div className="geocoding-edit-actions">
-        <button type="button" onClick={onCancel} disabled={isSaving}>
+        <Button variant="secondary" onClick={onCancel} disabled={isSaving}>
           Cancel
-        </button>
-        <button type="submit" className="primary" disabled={isSaving}>
+        </Button>
+        <Button type="submit" variant="primary" disabled={isSaving}>
           {isSaving ? 'Saving...' : 'Save & Retry'}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -179,35 +182,41 @@ function GeocodingAddressItem({
       </div>
       <div className="geocoding-address-actions">
         {address.status === 'pending' && (
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="location-crosshairs"
             className="geocoding-action-btn"
             onClick={() => onRetry(address.id)}
             disabled={isRetrying}
             title="Geocode Now"
           >
-            <Icon name="location-crosshairs" />
             <span className="btn-text">Geocode Now</span>
-          </button>
+          </Button>
         )}
         {address.status === 'failed' && (
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="pen-to-square"
             className="geocoding-action-btn"
             onClick={() => onEdit(address.id)}
             title="Edit"
           >
-            <Icon name="pen-to-square" />
             <span className="btn-text">Edit</span>
-          </button>
+          </Button>
         )}
         {address.status === 'geocoded' && address.latitude !== null && address.longitude !== null && (
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="map"
             className="geocoding-action-btn"
             onClick={() => onViewMap(address.latitude!, address.longitude!)}
             title="View Map"
           >
-            <Icon name="map" />
             <span className="btn-text">View Map</span>
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -300,30 +309,28 @@ function BulkProgressModal({ progress, onCancel }: BulkProgressModalProps) {
   const percent = progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content geocoding-progress-modal">
-        <h3>Geocoding Addresses...</h3>
-        <div className="geocoding-progress-bar">
-          <div className="geocoding-progress-fill" style={{ width: `${percent}%` }} />
-        </div>
-        <div className="geocoding-progress-count">
-          {progress.processed} / {progress.total}
-        </div>
-        <div className="geocoding-progress-stats">
-          <span className="geocoding-stat success">
-            <Icon name="circle-check" />
-            {progress.successful} successful
-          </span>
-          <span className="geocoding-stat error">
-            <Icon name="circle-exclamation" />
-            {progress.failed} failed
-          </span>
-        </div>
-        <div className="geocoding-progress-actions">
-          <button className="cancel-button" onClick={onCancel}>Cancel</button>
-        </div>
+    <Modal label="Geocoding addresses" className="geocoding-progress-modal">
+      <h3>Geocoding Addresses...</h3>
+      <div className="geocoding-progress-bar">
+        <div className="geocoding-progress-fill" style={{ width: `${percent}%` }} />
       </div>
-    </div>
+      <div className="geocoding-progress-count">
+        {progress.processed} / {progress.total}
+      </div>
+      <div className="geocoding-progress-stats">
+        <span className="geocoding-stat success">
+          <Icon name="circle-check" />
+          {progress.successful} successful
+        </span>
+        <span className="geocoding-stat error">
+          <Icon name="circle-exclamation" />
+          {progress.failed} failed
+        </span>
+      </div>
+      <div className="geocoding-progress-actions">
+        <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+      </div>
+    </Modal>
   );
 }
 
@@ -458,10 +465,7 @@ export function AddressGeocoding() {
 
   if (isLoading) {
     return (
-      <div className="geocoding-loading">
-        <Icon name="arrows-rotate" className="spinning" />
-        <p>Loading addresses...</p>
-      </div>
+      <LoadingSpinner message="Loading addresses..." />
     );
   }
 
@@ -517,14 +521,14 @@ export function AddressGeocoding() {
           </button>
         </div>
         {pendingCount > 0 && (
-          <button
-            className="geocoding-bulk-btn"
+          <Button
+            variant="primary"
+            icon="location-crosshairs"
             onClick={handleBulkGeocode}
             disabled={batchMutation.isPending}
           >
-            <Icon name="location-crosshairs" />
             Geocode All Pending ({pendingCount})
-          </button>
+          </Button>
         )}
       </div>
 

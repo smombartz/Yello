@@ -5,8 +5,7 @@
     max-width: 1200px;
     margin: 0 auto;
   }
-  .admin-loading,
-  .admin-error {
+    .admin-error {
     display: flex;
     flex-direction: column;
     align-items: center;

@@ -1,0 +1,660 @@
+/* Style guide (/styleguide): a live specimen book for the --ds-* tokens and the
+   components/ui primitives. Reuses the Docs layout and contents rail (docs.css). */
+
+.sg-view code,
+.sg-code,
+.sg-token-name,
+.sg-token-value,
+.sg-source,
+.sg-ruler-label,
+.sg-ruler-end {
+  font-family: var(--ds-font-mono);
+}
+
+/* Inline code in prose */
+.sg-view .docs-intro code,
+.sg-rule code,
+.sg-guidance code,
+.sg-note code,
+.sg-try-hint code,
+.sg-view .empty-state-description code {
+  padding: 1px 4px;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-bg-tertiary);
+  color: var(--ds-text-primary);
+  font-size: 0.9em;
+}
+
+/* docs.css tints .docs-intro strong as a status colour; here it names the North Star */
+.sg-view .docs-intro strong {
+  color: var(--ds-text-primary);
+}
+
+/* ===== Sections ===== */
+.sg-section {
+  scroll-margin-top: calc(var(--ds-header-height) + var(--ds-space-4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-5);
+  padding-top: var(--ds-space-8);
+  border-top: 1px solid var(--ds-border-color);
+}
+
+.sg-section-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.sg-section-head h2 {
+  margin: 0;
+  font-size: var(--ds-font-2xl);
+  font-weight: var(--ds-weight-semibold);
+  line-height: var(--ds-leading-tight);
+  color: var(--ds-text-primary);
+}
+
+.sg-section-lead {
+  margin: 0;
+  max-width: 65ch;
+  font-size: var(--ds-font-md);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-text-secondary);
+}
+
+.sg-source {
+  font-size: var(--ds-font-xs);
+  color: var(--ds-text-secondary);
+}
+
+/* Rules from DESIGN.md: quiet notes on Shaded Paper with a run-in name */
+.sg-rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.sg-rule {
+  margin: 0;
+  max-width: 72ch;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-bg-secondary);
+  font-size: var(--ds-font-sm);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-text-secondary);
+}
+
+.sg-rule strong {
+  color: var(--ds-text-primary);
+  font-weight: var(--ds-weight-semibold);
+}
+
+/* ===== Token groups ===== */
+.sg-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.sg-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ds-space-1) var(--ds-space-3);
+}
+
+.sg-group-head h3 {
+  margin: 0;
+  font-size: var(--ds-font-md);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text-primary);
+}
+
+.sg-group-note {
+  margin: 0;
+  font-size: var(--ds-font-sm);
+  color: var(--ds-text-secondary);
+}
+
+/* One hairline sheet per specimen set; sheets are never nested */
+.sg-sheet {
+  padding: var(--ds-space-4);
+  background: var(--ds-bg-primary);
+  border: 1px solid var(--ds-border-color);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-xs);
+}
+
+.sg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: var(--ds-space-4);
+}
+
+.sg-grid--shadow {
+  gap: var(--ds-space-6);
+  padding: var(--ds-space-6);
+  background: var(--ds-bg-secondary);
+}
+
+.sg-rows {
+  display: flex;
+  flex-direction: column;
+  padding: var(--ds-space-1) 0;
+}
+
+/* ===== Copy targets: every specimen copies var(--token) ===== */
+.sg-swatch,
+.sg-row,
+.sg-gradient,
+.sg-motion-label {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: copy;
+}
+
+.sg-token-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sg-token-name {
+  font-size: var(--ds-font-xs);
+  color: var(--ds-text-primary);
+  overflow-wrap: anywhere;
+  transition: color var(--ds-duration-normal) var(--ds-easing-default);
+}
+
+.sg-token-value {
+  font-size: var(--ds-font-2xs);
+  color: var(--ds-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* Keyboard focus gets the same cue as hover: the copyable name turns violet */
+.sg-swatch:hover .sg-token-name,
+.sg-swatch:focus-visible .sg-token-name,
+.sg-row:hover .sg-token-name,
+.sg-row:focus-visible .sg-token-name,
+.sg-gradient:hover .sg-token-name,
+.sg-gradient:focus-visible .sg-token-name,
+.sg-motion-label:hover .sg-token-name,
+.sg-motion-label:focus-visible .sg-token-name {
+  color: var(--ds-color-primary);
+}
+
+/* Swatches and tiles */
+.sg-swatch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  min-width: 0;
+  border-radius: var(--ds-radius-md);
+}
+
+.sg-swatch-chip {
+  display: block;
+  height: 56px;
+  border-radius: var(--ds-radius-md);
+  box-shadow: inset 0 0 0 1px var(--ds-border-light);
+}
+
+.sg-swatch-chip.is-border {
+  background: var(--ds-bg-primary);
+  border-width: 2px;
+  border-style: solid;
+  box-shadow: none;
+}
+
+.sg-radius-tile {
+  display: block;
+  height: 56px;
+  background: var(--ds-bg-tertiary);
+  border: 1px solid var(--ds-border-dark);
+}
+
+.sg-shadow-tile {
+  display: block;
+  height: 64px;
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-bg-primary);
+}
+
+/* Gradient strip */
+.sg-gradient {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.sg-gradient-strip {
+  display: block;
+  height: 72px;
+  border-radius: var(--ds-radius-xl);
+}
+
+/* Rows: sample · name/value · extra */
+.sg-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 220px) auto;
+  align-items: center;
+  gap: var(--ds-space-4);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-border-light);
+  transition: background-color var(--ds-duration-normal) var(--ds-easing-default);
+}
+
+.sg-rows > .sg-row:last-child {
+  border-bottom: none;
+}
+
+.sg-row:hover,
+.sg-row:focus-visible {
+  background-color: var(--ds-bg-secondary);
+}
+
+.sg-row--tall {
+  align-items: start;
+}
+
+.sg-row-sample {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ds-text-primary);
+}
+
+.sg-text-sample {
+  font-size: var(--ds-font-lg);
+  font-weight: var(--ds-weight-semibold);
+}
+
+.sg-family-sample {
+  font-size: var(--ds-font-xl);
+}
+
+.sg-size-sample {
+  line-height: var(--ds-leading-tight);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sg-weight-sample {
+  font-size: var(--ds-font-lg);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sg-leading-sample {
+  max-width: 38ch;
+  font-size: var(--ds-font-sm);
+}
+
+/* Measurement bars stay neutral: violet is for what you can act on */
+.sg-space-bar,
+.sg-z-bar,
+.sg-measure-bar {
+  display: block;
+  height: 12px;
+  min-width: 1px;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-border-dark);
+}
+
+/* Measured dimensions and aliases: drawn at true size */
+.sg-measure {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+.sg-measure-box {
+  display: block;
+  width: 96px;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-border-dark);
+}
+
+.sg-measure-text {
+  line-height: var(--ds-leading-tight);
+  color: var(--ds-text-primary);
+}
+
+.sg-mini-chip,
+.sg-mini-radius,
+.sg-mini-shadow {
+  display: block;
+  width: 48px;
+  height: 28px;
+}
+
+.sg-mini-chip {
+  border-radius: var(--ds-radius-sm);
+  box-shadow: inset 0 0 0 1px var(--ds-border-light);
+}
+
+.sg-mini-radius {
+  background: var(--ds-bg-tertiary);
+  border: 1px solid var(--ds-border-dark);
+}
+
+.sg-mini-shadow {
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-bg-primary);
+}
+
+/* Inverse text is shown on the filled control it is made for */
+.sg-text-sample.is-inverse {
+  display: inline-block;
+  padding: var(--ds-space-1) var(--ds-space-3);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-color-primary);
+}
+
+/* ===== Motion ===== */
+.sg-motion-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-3);
+  margin-bottom: var(--ds-space-3);
+}
+
+.sg-motion-hint,
+.sg-try-hint,
+.sg-note {
+  margin: 0;
+  font-size: var(--ds-font-sm);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-text-secondary);
+}
+
+.sg-motion-row {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--ds-space-4);
+  padding: var(--ds-space-2) 0;
+}
+
+.sg-motion-track {
+  position: relative;
+  display: block;
+  height: 12px;
+  overflow: hidden;
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-bg-tertiary);
+}
+
+/* The runner spans the track, so translateX(100%) is one track length */
+.sg-motion-runner {
+  position: absolute;
+  inset: 0;
+  transform: translateX(0);
+  transition-property: transform;
+}
+
+.sg-motion-track.is-played .sg-motion-runner {
+  transform: translateX(calc(100% - 12px));
+}
+
+.sg-motion-dot {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ds-text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-motion-runner {
+    transition-duration: 0s !important; /* inline duration comes from the token under test */
+  }
+}
+
+/* ===== Breakpoint ruler ===== */
+.sg-ruler {
+  position: relative;
+  height: 40px;
+  margin: var(--ds-space-2) var(--ds-space-6) var(--ds-space-4) 0;
+  border-bottom: 1px solid var(--ds-border-dark);
+}
+
+.sg-ruler-mark {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: 16px;
+  background: var(--ds-text-primary);
+}
+
+.sg-ruler-label,
+.sg-ruler-end {
+  position: absolute;
+  bottom: 20px;
+  font-size: var(--ds-font-2xs);
+  color: var(--ds-text-secondary);
+  white-space: nowrap;
+}
+
+.sg-ruler-label {
+  transform: translateX(-50%);
+}
+
+.sg-ruler-end {
+  right: calc(-1 * var(--ds-space-6));
+}
+
+/* ===== Component specimens ===== */
+.sg-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.sg-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+}
+
+.sg-inline--wrap {
+  flex-wrap: wrap;
+}
+
+.sg-matrix {
+  overflow-x: auto;
+  padding: 0;
+}
+
+.sg-matrix-row {
+  display: grid;
+  grid-template-columns: 88px repeat(4, minmax(max-content, 1fr));
+  align-items: center;
+  gap: var(--ds-space-3);
+  min-width: 600px;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-border-light);
+}
+
+.sg-matrix-row:last-child {
+  border-bottom: none;
+}
+
+.sg-matrix-head {
+  font-size: var(--ds-font-xs);
+  font-weight: var(--ds-weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ds-text-secondary);
+}
+
+.sg-matrix-row code {
+  font-size: var(--ds-font-xs);
+  color: var(--ds-text-primary);
+}
+
+.sg-try {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-3);
+}
+
+.sg-code {
+  margin: 0;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  overflow-x: auto;
+  border: 1px solid var(--ds-border-light);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-bg-secondary);
+  font-size: var(--ds-font-xs);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-text-primary);
+  white-space: pre;
+}
+
+.sg-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--ds-space-4);
+}
+
+.sg-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  min-width: 0;
+}
+
+.sg-field-label {
+  font-size: var(--ds-font-xs);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text-secondary);
+}
+
+.sg-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-space-2);
+  width: 88px;
+}
+
+.sg-avatar-name {
+  font-size: var(--ds-font-xs);
+  color: var(--ds-text-secondary);
+  text-align: center;
+}
+
+.sg-feedback {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ds-space-5);
+}
+
+.sg-feedback-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+/* Spinners sit inline in the specimen cell, not in their usual padded block */
+.sg-feedback .loading-spinner-container {
+  padding: 0;
+}
+
+.sg-feedback-empty {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--ds-border-light);
+}
+
+.sg-feedback-empty .empty-state {
+  padding: var(--ds-space-8) var(--ds-space-4) var(--ds-space-4);
+}
+
+.sg-guidance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  max-width: 72ch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sg-guidance-item {
+  display: flex;
+  gap: var(--ds-space-2);
+  font-size: var(--ds-font-sm);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-text-secondary);
+}
+
+.sg-guidance-item [class*="fa-"] {
+  margin-top: 3px;
+  font-size: var(--ds-font-sm);
+}
+
+.sg-guidance-item.is-do [class*="fa-"] {
+  color: var(--ds-color-success);
+}
+
+.sg-guidance-item.is-dont [class*="fa-"] {
+  color: var(--ds-color-error);
+}
+
+.sg-guidance-item strong {
+  color: var(--ds-text-primary);
+  font-weight: var(--ds-weight-semibold);
+}
+
+.sg-modal {
+  width: 420px;
+}
+
+.sg-modal h3 {
+  margin: 0 0 var(--ds-space-2);
+  font-size: var(--ds-font-lg);
+}
+
+.sg-modal p {
+  margin: 0 0 var(--ds-space-5);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-text-secondary);
+}
+
+.sg-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ===== Phone widths ===== */
+@media (max-width: 640px) {
+  .sg-row,
+  .sg-motion-row,
+  .sg-feedback {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sg-row {
+    gap: var(--ds-space-2);
+  }
+
+  .sg-grid {
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  }
+
+  /* Marks stay; the values are listed under the ruler */
+  .sg-ruler-label {
+    display: none;
+  }
+}

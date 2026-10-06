@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
+import { Button } from './ui/Button';
 import { useSearchInvalidLinks, useRemoveInvalidLinks } from '../api/invalidLinksHooks';
 import type { InvalidLinkMatch } from '../api/types';
 
@@ -76,23 +77,15 @@ export function InvalidLinksCleanup() {
             disabled={searchMutation.isPending || removeMutation.isPending}
             className="patterns-input"
           />
-          <button
+          <Button
+            variant="primary"
+            icon="magnifying-glass"
+            loading={searchMutation.isPending}
             onClick={handleSearch}
             disabled={searchMutation.isPending || removeMutation.isPending || !inputValue.trim()}
-            className="search-button"
           >
-            {searchMutation.isPending ? (
-              <>
-                <Icon name="arrows-rotate" className="spinning" />
-                Searching...
-              </>
-            ) : (
-              <>
-                <Icon name="magnifying-glass" />
-                Search
-              </>
-            )}
-          </button>
+            {searchMutation.isPending ? 'Searching...' : 'Search'}
+          </Button>
         </div>
 
         {hasSearched && (
@@ -102,23 +95,16 @@ export function InvalidLinksCleanup() {
               {matches.length > 0 && ` across ${groupedList.length} contact${groupedList.length !== 1 ? 's' : ''}`}
             </span>
             {matches.length > 0 && (
-              <button
+              <Button
+                variant="danger"
+                size="sm"
+                icon="trash"
+                loading={removeMutation.isPending}
                 onClick={handleRemoveAll}
                 disabled={removeMutation.isPending}
-                className="remove-all-button"
               >
-                {removeMutation.isPending ? (
-                  <>
-                    <Icon name="arrows-rotate" className="spinning" />
-                    Removing...
-                  </>
-                ) : (
-                  <>
-                    <Icon name="trash" />
-                    Remove All ({matches.length})
-                  </>
-                )}
-              </button>
+                {removeMutation.isPending ? 'Removing...' : `Remove All (${matches.length})`}
+              </Button>
             )}
           </div>
         )}

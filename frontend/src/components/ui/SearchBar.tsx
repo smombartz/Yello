@@ -5,6 +5,8 @@ interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  /** Accessible name for the field when no visible label sits beside it */
+  ariaLabel?: string;
   /** 'boxed' = bordered pill (default); 'plain' = borderless row for use inside a card */
   variant?: 'boxed' | 'plain';
   /**
@@ -26,6 +28,7 @@ export function SearchBar({
   value,
   onChange,
   placeholder = 'Search...',
+  ariaLabel,
   variant = 'boxed',
   trailing = 'clear',
   onCancel,
@@ -53,6 +56,7 @@ export function SearchBar({
           if (e.key === 'Enter') onSubmit?.();
         }}
         placeholder={placeholder}
+        aria-label={ariaLabel}
         autoFocus={autoFocus}
         disabled={disabled}
       />

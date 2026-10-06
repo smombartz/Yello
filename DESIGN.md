@@ -60,6 +60,11 @@ typography:
     fontSize: "14px"
     fontWeight: 500
     lineHeight: 1
+  control-sm:
+    fontFamily: "Geist, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: "13px"
+    fontWeight: 500
+    lineHeight: 1
   label:
     fontFamily: "Geist, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     fontSize: "12px"
@@ -97,6 +102,12 @@ components:
     height: "32px"
   button-primary-hover:
     backgroundColor: "{colors.signal-violet-deep}"
+  button-primary-lg:
+    backgroundColor: "{colors.signal-violet}"
+    textColor: "{colors.paper}"
+    rounded: "{rounded.xl}"
+    padding: "0 24px"
+    height: "48px"
   button-secondary:
     backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
@@ -106,6 +117,13 @@ components:
     height: "32px"
   button-secondary-hover:
     backgroundColor: "{colors.paper-shade}"
+  button-secondary-sm:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    typography: "{typography.control-sm}"
+    rounded: "{rounded.md}"
+    padding: "0 12px"
+    height: "32px"
   button-ghost:
     backgroundColor: "transparent"
     textColor: "{colors.graphite}"
@@ -217,7 +235,9 @@ Yello is the desk a super connector works at. It's a clean, well-lit surface whe
 
 The mood is **calm, crisp, utilitarian**. Density is moderate, tuned for long sessions over 10K-contact books as well as quick lookups on a phone. Controls are compact (32px) and quiet. Bordered neutral buttons do most of the work, with one filled violet action per view. Components feel **refined and restrained**: precise alignment, consistent heights and a shared content column count for more than density or decoration.
 
-Violet is a signal, not a theme. It marks what is active, selected or actionable, and almost nothing else. The violet-to-cobalt brand gradient is kept for the app's front doors (sign-in, the public card, onboarding), the moments when someone arrives rather than works.
+Violet is a signal, not a theme. It marks what is active, selected or actionable, and almost nothing else. The violet-to-cobalt brand gradient is kept for the app's front doors (the landing page, sign-in, the public card, onboarding), the moments when someone arrives rather than works.
+
+**Live reference:** `/styleguide` (admin) renders every `--ds-*` token from the shipped stylesheets, plus every `components/ui` primitive in its variants and states, with these rules set beside them.
 
 **Key Characteristics:**
 - Light-only, white canvas, gray hairline structure
@@ -246,7 +266,7 @@ A neutral gray desk with a single violet signal. Color appears where meaning doe
 - **Pewter** (`pewter`): Muted icons, inactive nav-rail icons, dismiss and clear glyphs, zero-value stats. At 2.5:1 on white it is never used for text a person must read.
 - **Strong Rule** (`rule-strong`): Search-field border, hover border on secondary buttons, disabled text.
 - **Hairline Rule** (`rule`): The default 1px border on cards, inputs, buttons, dividers and the tab bar's top edge.
-- **Gray Wash** (`wash`): Neutral badge fill, count pills, initials backdrop for the user's own avatar.
+- **Gray Wash** (`wash`): Neutral badge fill, count pills, initials backdrop for the user's own avatar, and the landing page's highlights band.
 - **Shaded Paper** (`paper-shade`): Inset fields (search), hover fill for secondary buttons, the page body behind the shell.
 - **Desk White** (`paper`): The app canvas, the header, cards, modals and inputs.
 
@@ -261,31 +281,43 @@ A neutral gray desk with a single violet signal. Color appears where meaning doe
 
 **The Signal Only Rule.** Violet marks what is active, selected or actionable. It never fills a panel, tints a section header or decorates. If a screen reads as "violet," too much is lit.
 
-**The Front Door Rule.** The Iris → Cobalt gradient appears only on surfaces outside the app shell: sign-in, the public card page, onboarding, launch and the demo prompt. Inside the shell there are no gradients, and gradients never sit on text.
+**The Front Door Rule.** The Iris → Cobalt gradient appears only on surfaces outside the app shell: the landing page at `/` (and there only inside the public-card tile's stage), sign-in, the public card page, onboarding, launch and the demo prompt. Inside the shell there are no gradients, and gradients never sit on text.
+
+**The Ink On Wash Rule.** Text on Gray Wash (#f3f4f6) is Ink, not Graphite. Graphite on Gray Wash is 4.4:1 and fails AA for body text.
 
 ## Typography
 
 **Display Font:** Geist (with system-ui, -apple-system, Segoe UI, Roboto fallback)
 **Body Font:** Geist
 **Label Font:** Geist
+**Code Font:** the system monospace stack (`--ds-font-mono`: ui-monospace, SF Mono, Menlo, Consolas). It is used only for code, token names and file paths, and has nothing to load.
 
 **Character:** A single neo-grotesque doing every job. Geist is clean and slightly technical, so it stays legible at 12px and composed at 30px. It suits a desk where names are the content and the type around them is plumbing.
 
 ### Hierarchy
-- **Display** (700, 30px, 1.25): Front-door headlines only (onboarding hero, launch).
+- **Display** (700, 30px, 1.25): Front-door headlines only (onboarding hero, launch). The landing page uses its own larger steps (see Front-Door Display).
 - **Headline** (600, 24px, 1.25): A contact's name on the detail page, large section and modal titles.
 - **Title** (700, 20px, 20px line): The page title in the header, and settings section headings. One line, ellipsized.
 - **Subtitle** (700, 16px, 1.5): A contact's name in list rows and cards. The bold name is the row's anchor.
 - **Body** (400, 16px, 1.5): Base reading text and company lines on the detail page.
 - **Body Small** (400, 14px, 1.5): The workhorse: roles, detail values, inputs, search, descriptions, header counts.
 - **Control** (500, 14px, line-height 1): Buttons, tabs and filter controls.
+- **Control Small** (500, 13px, line-height 1): Small buttons in dense rows and toolbars.
 - **Label** (500, 12px, 1.4): Badges, counts and metadata.
 - **Overline** (600, 12px, 0.05em tracking, uppercase): Section labels on the contact detail and in settings groups. A denser 11px variant labels filter groups.
 
 ### Named Rules
-**The One Family Rule.** Geist only, at weights 400, 500, 600 and 700. Hierarchy comes from size and weight. Never add a second family for display or labels.
+**The One Family Rule.** Geist only, at weights 400, 500, 600 and 700. Hierarchy comes from size and weight. Never add a second family for display or labels. The system monospace stack (`--ds-font-mono`) is reserved for code, token names and file paths.
 
-**The Scale Floor Rule.** Sizes come from the `--ds-font-*` scale (11–30px). The only sanctioned literals are 13px and 15px for compact densities. Nothing a person reads goes below 11px, including tab-bar labels and photo captions.
+### Front-Door Display (landing page only)
+The landing page at `/` sets type above the app's 30px ceiling. These steps are `--lp-*` custom properties defined on `.landing`. They are not `--ds-*` tokens, and the app shell never uses them.
+- **Display** (600, 44–88px fluid, 1.02, −0.04em tracking): The hero headline.
+- **Headline** (600, 32–56px fluid, 1.06, −0.03em, max 16ch, centered): Section headlines.
+- **Tile title** (600, 24–32px fluid, 1.15, −0.02em): Highlight tile titles and the maker's note title.
+- **Lede** (400, 18–21px fluid, 1.5, Graphite, max 34rem): The paragraph under a headline.
+- **Body** (400, 17px, 1.55): Tile copy, capped at 40ch.
+
+**The Scale Floor Rule.** Sizes come from the `--ds-font-*` scale (11–30px). The only sanctioned literals are 13px and 15px for compact densities. Nothing a person reads goes below 11px, including tab-bar labels and photo captions. The one sanctioned exception is the landing page's Front-Door Display steps, which are scoped to `.landing` and are never available to the app shell.
 
 ## Layout
 
@@ -298,7 +330,7 @@ The shell is a fixed **64px white header**, a **floating icon rail** on the left
 ### Named Rules
 **The Shared Column Rule.** The header's center column and the page content share one 960px column, so the title, search, counts and list edges line up vertically on every page. Never offset one without the other.
 
-**The 32px Rule.** Every control is 32px tall, whether button, input, select, chip or tab pill. Mixing heights on one row is a bug.
+**The 32px Rule.** Every control is 32px tall, whether button, input, select, chip or tab pill. Mixing heights on one row is a bug. The one exception is the 48px Large button (`size="lg"`), which is for front doors and never appears inside the shell.
 
 ## Elevation & Depth
 
@@ -310,16 +342,17 @@ The shell is a fixed **64px white header**, a **floating icon rail** on the left
 - **Floating** (`box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2)`): The toast.
 - **Modal** (`box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04)`): Modals and dialogs over the 50% black overlay.
 - **Front-door card** (`box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25)`): The sign-in card on the brand gradient.
+- **Front-door float** (`box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 32px 64px -24px rgba(26, 32, 44, 0.22)`): The landing page's hero product frame, a window of the Contacts view floating over the white hero. Landing page only.
 - **Violet glow** (`box-shadow: 0 4px 12px color-mix(in srgb, var(--ds-color-primary) 30%, transparent)`): The phone add button only. It tightens to 2px/8px when pressed.
 - **Tab bar edge** (`box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05)`): The bottom tab bar's top edge.
 - **Focus halo** (`box-shadow: 0 0 0 3px var(--ds-color-primary-light)`): Paired with a 2px Signal Violet outline on buttons, or with a violet border shift on inputs.
 
 ### Named Rules
-**The Float Earns Shadow Rule.** A surface gets a real shadow only when it floats above the desk: overlay, toast or fixed control. Anything in the flow stays at hairline-ambient or below.
+**The Float Earns Shadow Rule.** A surface gets a real shadow only when it floats above the desk: overlay, toast or fixed control. Anything in the flow stays at hairline-ambient or below. On a front door, a product frame shown as an object above the page (the landing page's hero window) counts as floating and takes the front-door float.
 
 ## Shapes
 
-Gently curved, never pillowy. Radius grows with the size of the surface. Badges use 4px corners. Buttons, inputs and icon buttons use 6px. Cards, list rows, the search field, nav-rail items and the toast use 8px. Modals use 12px, and front-door cards use 16px (sign-in) to 24px (public card). Full circles are kept for avatars and the phone's add button. Full pills are kept for count badges, and filter chips round to a 16px pill.
+Gently curved, never pillowy. Radius grows with the size of the surface. Badges use 4px corners. Buttons, inputs and icon buttons use 6px. Cards, list rows, the search field, nav-rail items and the toast use 8px. Modals use 12px, and front-door cards use 16px (sign-in) to 24px (public card). On the landing page the hero product window uses 16px, and the highlight tiles take 24px, the top of the ladder as on the public card. Full circles are kept for avatars and the phone's add button. Full pills are kept for count badges, and filter chips round to a 16px pill.
 
 Borders are 1px hairlines everywhere. A 2px line appears only as the active-tab underline, the focus outline, and the Signal Violet selection ring. Icons are Font Awesome Solid, loaded via the project kit: 16px inline, 18px inside buttons, 24px on the nav rail and tab bar.
 
@@ -329,13 +362,16 @@ Borders are 1px hairlines everywhere. A 2px line appears only as the active-tab 
 ## Components
 
 ### Buttons
-Refined and restrained: compact, bordered by default, with exactly one filled action per view.
+Refined and restrained: compact, bordered by default, with exactly one filled action per view. Every action button renders through `<Button variant size icon loading>` (`components/ui/Button.tsx`). A link that has to look like a button uses the same classes (`btn btn--secondary`).
 - **Shape:** Gently curved (6px), 32px tall, 16px horizontal padding, 8px gap between icon and label. This holds for every in-app button, including the header actions. Only front-door buttons (sign-in, the public card) are larger.
 - **Primary:** Signal Violet fill, white Control-weight label. Use one per view, for the action the screen exists for.
 - **Secondary (default):** Desk White with a Hairline Rule border and Ink label. Most actions are secondary.
 - **Ghost:** No fill or border, with a Graphite label. For low-stakes, in-context actions.
-- **Danger:** Error fill with a white label, used only for destructive confirmation. Signal Violet and Error are the only button fills: Restore, Search and Merge are primary actions, not Success or Info.
-- **Icon:** A 32×32 square in the secondary style, with an 18px Graphite icon.
+- **Danger:** Error fill with a white label, for destructive actions (Delete, Remove all, Merge all globally) and their confirmations. Signal Violet and Error are the only button fills: Restore, Search and Merge are primary actions, not Success or Info.
+- **Icon:** A 32×32 square in the secondary style, with an 18px Graphite icon. Icon-only buttons always carry an `aria-label`.
+- **Large (`size="lg"`):** Front doors only (the landing page and sign-in), never inside the app shell. 48px tall, 12px corners (`--ds-radius-xl`), 24px horizontal padding and a 16px label, with the same variants and states. The Google sign-in button is a primary Large button that carries Google's four-colour G on a 36px white tile (8px corners), inset 6px from the button's left edge.
+- **Small (`size="sm"`):** The same variants at a compact density: 13px label, 12px padding, still 32px tall. Used for dense rows and toolbars such as cleanup row actions, import match cards, the address editor and bulk selection.
+- **Loading (`loading`):** Swaps the leading icon for a spinning arrows-rotate, disables the button and sets `aria-busy`. The label may change to the present participle ("Saving…"). A button that becomes Cancel while busy keeps its own spinner instead, because `loading` would disable it.
 - **Hover / Focus:** Fills deepen to the next step (never an opacity fade) and secondary borders strengthen to Strong Rule, over 100ms with the standard ease. Keyboard focus draws a 2px Signal Violet outline offset 2px, plus the 3px tint halo. Disabled buttons drop to 50% opacity.
 
 ### Badges & Counts
@@ -343,7 +379,7 @@ Refined and restrained: compact, bordered by default, with exactly one filled ac
 - **Count badge:** A full pill at least 20px wide, Graphite fill with white text. Brand counts on active subtabs switch to Signal Violet.
 
 ### Chips & Tabs
-- **Underline tabs** (mode switchers such as Merge strategies): Graphite Control labels with 12px × 16px padding, sitting on the container's hairline. The active tab turns Signal Violet with a 2px Signal Violet underline, and its inline count pill turns to Signal Tint.
+- **Underline tabs** (`<Tabs>`, used by the Merge strategies and Cleanup categories): Graphite Control labels with 12px × 16px padding, sitting on the container's hairline. They form a real tablist: `role="tab"`, roving tabindex, and Arrow/Home/End to move and select. The active tab turns Signal Violet with a 2px Signal Violet underline, and its inline count pill turns to Signal Tint.
 - **Subtab pills:** 32px bordered 8px-radius pills. Hover strengthens the border to violet, and the active pill is Signal Tint with a violet border and label.
 - **Filter chips:** 32px, a 16px-pill radius, a Hairline border and Graphite 13px medium text. Hover turns the border and text violet, and the active chip takes Signal Tint with a violet border.
 
@@ -377,13 +413,21 @@ People supply the color. A photo is cropped to a full circle. Without a photo, t
 
 ### Toast & Modals
 - **Toast:** A dark floating pill-card (#333, 8px corners) at the bottom center, sliding up 1rem over 300ms. It carries a success- or error-colored leading icon, a 15px message, and an optional white semibold undo action.
-- **Modal:** Desk White, 12px corners, 24px padding and the Modal shadow, over a 50% black overlay. Confirm dialogs cap at 400px wide, left-aligned, with a Graphite explanation and a Danger primary when the action is destructive.
+- **Modal:** Every overlay renders through `<Modal>` (`components/ui/Modal.tsx`): Desk White, 12px corners, 24px padding and the Modal shadow, over a 50% black overlay. It handles `aria-modal`, Escape (captured before Layout's global handler), overlay-click close, initial focus and focus return. Progress dialogs omit `onClose` and can't be dismissed. `ConfirmDialog` is a Modal with a secondary and a primary or danger action. Confirm dialogs cap at 400px wide, left-aligned, with a Graphite explanation and a Danger primary when the action is destructive.
 
 ### Public Card (front door)
 The card at `/p/:slug`, which strangers see. It is a centered 380px Desk White card with 24px corners and the Modal shadow, sitting on the full-bleed brand gradient. Its content is centered. It is the most expressive surface in the system and still holds the same type, color and control rules.
 
+### Landing Page (front door)
+The page at `/`, shown to signed-out visitors only. Signed-in visitors go to the dashboard, and the desktop app goes straight to sign-in. It sits outside the shell, on its own 1080px column rather than the shared 960px one.
+- **Hero:** White, with the Front-Door Display headline, a lede and a Large primary sign-in button. Below it sits the product frame: a working miniature of the Contacts view (rail, header bar, live search and contact rows built with the in-app row vocabulary) in a 16px-corner window with a hairline border and the front-door float.
+- **Highlights band:** A full-width Gray Wash band holding white tiles of uneven width (7 and 5 of 12 columns, one column below 1024px). Each tile has a 1px Hairline border, 24px corners and no shadow. The vignettes inside tiles reuse the in-app card vocabulary: Desk White, hairline border, 12px corners and the hairline ambient shadow.
+- **Gradient:** It appears only inside the public-card tile's stage (16px corners), behind a miniature public card. Nowhere else on the page.
+
 ### Motion
 Motion is quick and functional, with no choreography. Every transition uses the tokens. Fast (100ms) is for button fills, normal (150ms) is the default for state changes (color, border, background, shadow), and slow (300ms) is for progress fills and entrances. All of them use the standard ease, `cubic-bezier(0.4, 0, 0.2, 1)`. Entrances use the ease-out curve and are limited to the toast slide-up and the background-job pill. Every spinner shares one keyframe: a 1s linear rotation, violet top arc on a Hairline ring.
+
+**Front-door exception.** The landing page has one authored motion. When the Merge vignette scrolls into view, its duplicate folds up into the record above it and the second email the merge brings in opens. It animates `grid-template-rows`, opacity and transform over 600ms on an expo ease-out (`cubic-bezier(0.16, 1, 0.3, 1)`, `--lp-ease-out`, scoped to `.landing`), and a click toggles it. Under reduced motion it does not auto-play, and every landing-page transition drops to 0ms. This is scoped to the landing page. The app shell keeps the rules above.
 
 ## Do's and Don'ts
 
@@ -395,17 +439,19 @@ Motion is quick and functional, with no choreography. Every transition uses the 
 - **Do** align new pages to the shared 960px column so the header title, search and content edges line up.
 - **Do** let people carry the color. Use real photos where present, and otherwise the name-hashed initial avatar.
 - **Do** use the existing `--ds-*` tokens and the four breakpoints (640/768/1024/1280) only.
-- **Do** use Graphite (#6b7280) or darker for any text a person must read, placeholders included.
+- **Do** use Graphite (#6b7280) or darker for any text a person must read, placeholders included. On Gray Wash, use Ink.
 - **Do** show selection the same way everywhere: a 2px Signal Violet ring on the card and a violet check badge on the avatar.
+- **Do** reach for the primitives in `components/ui/` first: `<Button>` for actions, `<Tabs>` for tab bars, `<Modal>`/`<ConfirmDialog>` for overlays, `<LoadingSpinner>` and `<EmptyState>` for waiting and empty views, `<Badge>` for status.
 - **Do** write transitions with the duration and easing tokens (`var(--ds-duration-normal) var(--ds-easing-default)`), never literal seconds.
 
 ### Don't:
 - **Don't** introduce another violet, indigo or purple. Iris (#7c3aed) exists only as the gradient's first stop, and the old purple accent token is gone.
 - **Don't** put the brand gradient inside the app shell, or on text. It is for front doors only.
 - **Don't** fill panels, section headers or large areas with violet or Signal Tint. Tint is for selected states.
-- **Don't** set readable text in Pewter (#9ca3af, 2.5:1 on white). It is for icons, placeholders and disabled states.
+- **Don't** set readable text in Pewter (#9ca3af, 2.5:1 on white). It is for icons, dismiss glyphs and disabled states.
 - **Don't** give in-flow cards anything heavier than the hairline ambient shadow at rest.
-- **Don't** add a second typeface or set text off the `--ds-font-*` scale.
+- **Don't** add a second typeface or set text off the `--ds-font-*` scale. The landing page's `--lp-*` display steps are the one scoped exception.
 - **Don't** fill a button with Success green or Info blue, or fade a button with opacity on hover.
-- **Don't** redefine a canonical class (`.primary-button`, `.btn`, `.card`) in a page stylesheet. Page CSS loads globally, so the override leaks app-wide.
+- **Don't** invent a new button class or restyle `button` elements by descendant selector. Extend `<Button>` with a variant or size instead.
+- **Don't** redefine a canonical class (`.btn`, `.tab`, `.modal-content`, `.card`) in a page stylesheet. Page CSS loads globally, so the override leaks app-wide.
 - **Don't** add a dark theme ad hoc. The system is light-only today, and a dark mode needs its own token pass.

@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { Icon } from './Icon';
+import { Button } from './ui/Button';
 import { useContactEmailHistory, useEmailSync, useEmailRefresh } from '../api/emailHooks';
 
 interface EmailHistorySectionProps {
@@ -96,31 +97,22 @@ export function EmailHistorySection({ contactId, hasEmails }: EmailHistorySectio
         {isScopeError ? (
           <div className="email-history-cta">
             <p>Gmail access is required to sync emails.</p>
-            <button className="email-history-sync-btn" onClick={handleGmailScopeError}>
-              <Icon name="right-to-bracket" />
+            <Button variant="primary" icon="right-to-bracket" onClick={handleGmailScopeError}>
               Grant Gmail Access
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="email-history-cta">
             <p>Sync emails from Gmail to see your conversation history.</p>
-            <button
-              className="email-history-sync-btn"
+            <Button
+              variant="primary"
+              icon="arrows-rotate"
+              loading={isSyncing}
               onClick={handleSync}
               disabled={isSyncing}
             >
-              {isSyncing ? (
-                <>
-                  <Icon name="arrows-rotate" className="spinning" />
-                  Syncing...
-                </>
-              ) : (
-                <>
-                  <Icon name="arrows-rotate" />
-                  Sync Emails
-                </>
-              )}
-            </button>
+              {isSyncing ? 'Syncing...' : 'Sync Emails'}
+            </Button>
           </div>
         )}
       </div>

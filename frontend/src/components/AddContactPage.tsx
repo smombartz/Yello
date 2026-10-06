@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import type { ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, CreateContactRequest } from '../api/types';
 import { useCreateContact } from '../api/hooks';
-import { Icon } from './Icon';
+import { buildContactLists } from '../utils/contactPayload';
+import { Button } from './ui/Button';
 import type { OutletContext } from './Layout';
 import {
   EditableField,
-  ContactInfoSection,
+  PhoneSection,
+  EmailSection,
   LocationsSection,
   SocialLinksSection,
   BirthdaySection,
@@ -14,7 +16,8 @@ import {
   InstantMessagesSection,
   UrlsSection,
   RelatedPeopleSection,
-  NotesSection
+  NotesSection,
+  SaveErrors
 } from './ContactFormSections';
 
 interface FormState {
@@ -51,12 +54,33 @@ const initialFormState: FormState = {
   relatedPeople: [],
 };
 
+/** The payload, plus everything that stops it being saved. */
+function validate(form: FormState) {
+  // Display name: first/last name, or the company
+  const displayName = ([form.firstName, form.lastName].filter(Boolean).join(' ') || form.company || '').trim();
+  const { lists, problems } = buildContactLists(form);
+  if (!displayName) problems.unshift('The contact needs a first name, last name or company.');
+  return { displayName, lists, problems };
+}
+
 export function AddContactPage() {
   const navigate = useNavigate();
   const { setHeaderConfig } = useOutletContext<OutletContext>();
-  const createContactMutation = useCreateContact();
+  // Destructured: the mutation object is new every render, and depending on it made the
+  // header effect below re-run forever (setHeaderConfig re-renders this page via Layout).
+  const { mutateAsync: createContact, isPending } = useCreateContact();
   const [form, setForm] = useState<FormState>(initialFormState);
   const [error, setError] = useState<string | null>(null);
+  // Once a save has been refused, the problem list re-checks as the form is edited.
+  const [showProblems, setShowProblems] = useState(false);
+  const problems = showProblems ? validate(form).problems : [];
+  // Save sits in the header, so bring a failure into view wherever the page is scrolled.
+  const errorRef = useRef<HTMLDivElement>(null);
+  const [failedSaves, setFailedSaves] = useState(0);
+
+  useEffect(() => {
+    if (failedSaves) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [failedSaves]);
 
   const handleCancel = useCallback(() => {
     navigate('/contacts');
@@ -65,104 +89,54 @@ export function AddContactPage() {
   const handleSave = useCallback(async () => {
     setError(null);
 
-    // Build display name from first/last name or use company
-    const displayName = [form.firstName, form.lastName].filter(Boolean).join(' ') || form.company || '';
-
-    if (!displayName.trim()) {
-      setError('Please enter a name for the contact');
+    const { displayName, lists, problems } = validate(form);
+    if (problems.length) {
+      setShowProblems(true);
+      setFailedSaves(n => n + 1);
       return;
     }
 
-    // Build the create request
     const createData: CreateContactRequest = {
       firstName: form.firstName,
       lastName: form.lastName,
-      displayName: displayName.trim(),
+      displayName,
       company: form.company,
       title: form.title,
       notes: form.notes,
       birthday: form.birthday,
-      emails: form.emails.filter(e => e.email.trim()).map(e => ({
-        email: e.email,
-        type: e.type,
-        isPrimary: e.isPrimary,
-      })),
-      phones: form.phones.filter(p => p.phone.trim()).map(p => ({
-        phone: p.phone,
-        phoneDisplay: p.phoneDisplay,
-        countryCode: p.countryCode,
-        type: p.type,
-        isPrimary: p.isPrimary,
-      })),
-      addresses: form.addresses.filter(a =>
-        a.street || a.city || a.state || a.postalCode || a.country
-      ).map(a => ({
-        street: a.street,
-        city: a.city,
-        state: a.state,
-        postalCode: a.postalCode,
-        country: a.country,
-        type: a.type,
-      })),
-      socialProfiles: form.socialProfiles.filter(s => s.platform.trim() && s.username.trim()).map(s => ({
-        platform: s.platform,
-        username: s.username,
-        profileUrl: s.profileUrl,
-        type: s.type,
-      })),
-      categories: form.categories.filter(c => c.category.trim()).map(c => ({
-        category: c.category,
-      })),
-      instantMessages: form.instantMessages.filter(im => im.service.trim() && im.handle.trim()).map(im => ({
-        service: im.service,
-        handle: im.handle,
-        type: im.type,
-      })),
-      urls: form.urls.filter(u => u.url.trim()).map(u => ({
-        url: u.url,
-        label: u.label,
-        type: u.type,
-      })),
-      relatedPeople: form.relatedPeople.filter(rp => rp.name.trim()).map(rp => ({
-        name: rp.name,
-        relationship: rp.relationship,
-        relatedContactId: rp.relatedContactId ?? null,
-      })),
+      ...lists,
     };
 
     try {
-      await createContactMutation.mutateAsync(createData);
+      await createContact(createData);
       navigate('/contacts');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create contact');
+      setFailedSaves(n => n + 1);
     }
-  }, [form, createContactMutation, navigate]);
+  }, [form, createContact, navigate]);
 
   useEffect(() => {
     setHeaderConfig({
       title: 'New Contact',
       actions: (
         <>
-          <button className="header-action-btn secondary" onClick={handleCancel}>Cancel</button>
-          <button className="header-action-btn" onClick={handleSave} disabled={createContactMutation.isPending}>
-            {createContactMutation.isPending ? 'Saving...' : 'Save Contact'}
-          </button>
+          <Button variant="secondary" onClick={handleCancel}>Cancel</Button>
+          <Button variant="primary" onClick={handleSave} disabled={isPending}>
+            {isPending ? 'Saving...' : 'Save Contact'}
+          </Button>
         </>
       ),
     });
-  }, [setHeaderConfig, handleCancel, handleSave, createContactMutation.isPending]);
+  }, [setHeaderConfig, handleCancel, handleSave, isPending]);
 
   return (
     <>
       <div className="page-content">
         <div className="add-contact-content">
-          {/* Error message */}
-          {error && (
-            <div className="edit-error">
-              <Icon name="circle-exclamation" />
-              {error}
-            </div>
-          )}
+          <div ref={errorRef}>
+            <SaveErrors message={error} problems={problems} />
+          </div>
 
           {/* Name fields section */}
           <div className="expanded-section">
@@ -200,13 +174,16 @@ export function AddContactPage() {
             onCategoriesChange={(categories) => setForm(f => ({ ...f, categories }))}
           />
 
-          {/* Contact Info section */}
-          <ContactInfoSection
-            emails={form.emails}
+          <PhoneSection
             phones={form.phones}
             isEditMode={true}
-            onEmailsChange={(emails) => setForm(f => ({ ...f, emails }))}
             onPhonesChange={(phones) => setForm(f => ({ ...f, phones }))}
+          />
+
+          <EmailSection
+            emails={form.emails}
+            isEditMode={true}
+            onEmailsChange={(emails) => setForm(f => ({ ...f, emails }))}
           />
 
           {/* Locations section */}

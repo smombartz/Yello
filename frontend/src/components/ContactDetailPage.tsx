@@ -3,7 +3,7 @@ import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { useContactDetail } from '../api/hooks';
 import { ContactRowExpanded } from './ContactRowExpanded';
 import { Avatar } from './Avatar';
-import { Icon } from './Icon';
+import { Button } from './ui/Button';
 import type { OutletContext } from './Layout';
 
 export function ContactDetailPage() {
@@ -22,10 +22,9 @@ export function ContactDetailPage() {
     setHeaderConfig({
       title: contact?.displayName || 'Contact',
       actions: (
-        <button className="header-action-btn secondary" onClick={handleBack}>
-          <Icon name="arrow-left" />
+        <Button variant="secondary" icon="arrow-left" onClick={handleBack}>
           Back
-        </button>
+        </Button>
       ),
     });
   }, [setHeaderConfig, contact?.displayName, handleBack]);

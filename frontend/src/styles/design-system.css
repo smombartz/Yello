@@ -113,6 +113,8 @@
    * TYPOGRAPHY - Font Family
    * ============================================ */
   --ds-font-family: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Code, token names and file paths only (system stack, nothing to load) */
+  --ds-font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 
   /* ============================================
    * TYPOGRAPHY - Font Sizes

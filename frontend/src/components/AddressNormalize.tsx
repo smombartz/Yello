@@ -12,6 +12,7 @@ import { formatAddress } from '../lib/addressUtils';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { EmptyState } from './ui/EmptyState';
+import { Button } from './ui/Button';
 import { useToast } from './ui/Toast';
 
 const PAGE_SIZE = 20;
@@ -87,21 +88,23 @@ function AddressEditForm({
         />
       </div>
       <div className="address-edit-actions">
-        <button
-          className="address-edit-cancel"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={onCancel}
           disabled={isSaving}
         >
           Cancel
-        </button>
-        <button
-          className="address-edit-save"
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          icon="check"
           onClick={onSave}
           disabled={isSaving}
         >
-          <Icon name="check" />
           {isSaving ? 'Saving...' : 'Save'}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -233,21 +236,21 @@ function NormalizeCard({ contact, onRemove, onSkip, onEdit, isRemoving, isEditin
       </div>
 
       <div className="normalize-card-actions">
-        <button
-          className="normalize-skip-button"
+        <Button
+          variant="secondary"
           onClick={onSkip}
           disabled={isRemoving || isEditing}
         >
           Skip
-        </button>
-        <button
-          className="normalize-remove-button"
+        </Button>
+        <Button
+          variant="danger"
+          icon="trash"
           onClick={handleRemoveAll}
           disabled={isRemoving || isEditing}
         >
-          <Icon name="trash" />
           {isRemoving ? 'Removing...' : `Remove All (${issueCount})`}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -355,14 +358,14 @@ export function AddressNormalize() {
         <div className="normalize-stats">
           {total} contact{total !== 1 ? 's' : ''} with junk addresses
         </div>
-        <button
-          className="fix-all-button"
+        <Button
+          variant="primary"
+          icon="wand-magic-sparkles"
           onClick={() => setShowFixAllConfirm(true)}
           disabled={removeMutation.isPending || isFixingAll}
         >
-          <Icon name="wand-magic-sparkles" />
           {isFixingAll ? 'Removing...' : `Remove All Junk (${total})`}
-        </button>
+        </Button>
       </div>
 
       <div className="normalize-list">

@@ -1,4 +1,5 @@
 import { Icon } from './Icon';
+import { Button } from './ui/Button';
 import type { IncomingMatch, ParsedContact } from '../api/icloudHooks';
 
 /**
@@ -72,27 +73,30 @@ export function MatchCard({
         </div>
       </div>
       <div className="icloud-match-actions">
-        <button
-          type="button"
+        <Button
+          size="sm"
+          icon="code-merge"
           className={`icloud-action-btn ${decision === 'merge' ? 'active' : ''}`}
           onClick={() => onDecisionChange(index, 'merge')}
         >
-          <Icon name="code-merge" /> Merge
-        </button>
-        <button
-          type="button"
+          Merge
+        </Button>
+        <Button
+          size="sm"
+          icon="plus"
           className={`icloud-action-btn ${decision === 'new' ? 'active' : ''}`}
           onClick={() => onDecisionChange(index, 'new')}
         >
-          <Icon name="plus" /> Import as New
-        </button>
-        <button
-          type="button"
+          Import as New
+        </Button>
+        <Button
+          size="sm"
+          icon="forward"
           className={`icloud-action-btn ${decision === 'skip' ? 'active' : ''}`}
           onClick={() => onDecisionChange(index, 'skip')}
         >
-          <Icon name="forward" /> Skip
-        </button>
+          Skip
+        </Button>
       </div>
     </div>
   );

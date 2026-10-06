@@ -1,0 +1,4 @@
+{
+  "prompt": "Sourced, not generated. Stitched from 28 OpenStreetMap standard tiles (https://tile.openstreetmap.org/5/{x}/{y}.png, x 4-10, y 10-13), fetched 2026-10-06, cropped to the continental US (lon -126 to -66, lat 23 to 50; origin at zoom-5 world pixel 1229,2778; 1366x780), converted to grayscale and lightened. Map data and cartography: (c) OpenStreetMap contributors, ODbL / CC BY-SA. Attribution is shown on the page.\n",
+  "createdAt": "2026-10-06T16:35:13.109Z"
+}

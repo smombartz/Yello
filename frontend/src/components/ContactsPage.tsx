@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { ContactList } from './ContactList';
-import { Icon } from './Icon';
+import { Button } from './ui/Button';
 import { EXPANDED_CONTACT_PARAM, useSearchParamUpdater } from '../hooks/useSearchParamUpdater';
 import type { OutletContext } from './Layout';
 
@@ -44,13 +44,13 @@ export function ContactsPage() {
       searchPlaceholder: 'Search contacts...',
       info: <span>{totalContacts.toLocaleString()} contacts</span>,
       actions: (
-        <button
-          className="header-action-btn"
+        <Button
+          variant="primary"
+          icon="circle-plus"
           onClick={() => navigate('/contacts/new')}
         >
-          <Icon name="circle-plus" />
           Add Contact
-        </button>
+        </Button>
       ),
     });
   }, [setHeaderConfig, search, setSearch, totalContacts, navigate]);

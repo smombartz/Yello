@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Icon } from './Icon';
+import { Button } from './ui/Button';
 import { Pagination } from './Pagination';
 import { AddressCleanupCard } from './AddressCleanupCard';
 import { LoadingSpinner } from './ui/LoadingSpinner';
@@ -130,14 +130,14 @@ export function AddressDuplicates() {
               <option value="medium">Medium confidence</option>
             </select>
           </div>
-          <button
-            className="fix-all-button"
+          <Button
+            variant="primary"
+            icon="wand-magic-sparkles"
             onClick={() => setShowFixAllConfirm(true)}
             disabled={fixMutation.isPending || isFixingAll || isEmpty}
           >
-            <Icon name="wand-magic-sparkles" />
             {isFixingAll ? 'Fixing...' : `Fix All Contacts (${total})`}
-          </button>
+          </Button>
         </div>
       </div>
 

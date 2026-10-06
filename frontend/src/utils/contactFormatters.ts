@@ -122,6 +122,80 @@ export function getPlatformIconStyle(platform: string): 'solid' | 'brands' {
   return 'solid';
 }
 
+// Platform keys match the backend's (socialLinksCleanupService) and the stored
+// lowercase values the contact filters query, e.g. platform = 'instagram'.
+const SOCIAL_HOSTS: { platform: string; hosts: string[]; username: (segments: string[], url: URL) => string | undefined }[] = [
+  { platform: 'linkedin', hosts: ['linkedin.com'], username: (s) => (s[0] === 'in' || s[0] === 'pub' ? s[1] : undefined) },
+  {
+    platform: 'facebook',
+    hosts: ['facebook.com', 'fb.com'],
+    username: (s, url) => (s[0] === 'profile.php' ? url.searchParams.get('id') ?? undefined : s[0]),
+  },
+  { platform: 'twitter', hosts: ['twitter.com', 'x.com'], username: (s) => s[0] },
+  { platform: 'instagram', hosts: ['instagram.com'], username: (s) => s[0] },
+  {
+    platform: 'youtube',
+    hosts: ['youtube.com'],
+    username: (s) => (s[0]?.startsWith('@') ? s[0] : ['user', 'channel', 'c'].includes(s[0]) ? s[1] : undefined),
+  },
+  { platform: 'tiktok', hosts: ['tiktok.com'], username: (s) => (s[0]?.startsWith('@') ? s[0] : undefined) },
+  { platform: 'pinterest', hosts: ['pinterest.com'], username: (s) => s[0] },
+  { platform: 'snapchat', hosts: ['snapchat.com'], username: (s) => (s[0] === 'add' ? s[1] : undefined) },
+  { platform: 'reddit', hosts: ['reddit.com'], username: (s) => (s[0] === 'user' || s[0] === 'u' ? s[1] : undefined) },
+  { platform: 'github', hosts: ['github.com'], username: (s) => s[0] },
+  { platform: 'threads', hosts: ['threads.net', 'threads.com'], username: (s) => (s[0]?.startsWith('@') ? s[0] : undefined) },
+];
+
+/**
+ * Recognise a social profile URL: `https://www.instagram.com/someone/` →
+ * `{ platform: 'instagram', username: 'someone' }`. Matches on the hostname
+ * (so `dropbox.com` is not mistaken for `x.com`) and tolerates a missing scheme.
+ */
+export function detectSocialProfile(rawUrl: string): { platform: string; username: string | null } | null {
+  const url = parseLooseUrl(rawUrl);
+  if (!url) return null;
+
+  const host = url.hostname.toLowerCase();
+  const match = SOCIAL_HOSTS.find(({ hosts }) => hosts.some(h => host === h || host.endsWith(`.${h}`)));
+  if (!match) return null;
+
+  const username = match.username(pathSegments(url), url)?.replace(/^@/, '') || null;
+  return { platform: match.platform, username };
+}
+
+/**
+ * Platform and username for a profile saved with only its URL (both columns are
+ * NOT NULL). Unknown sites use the host as the platform; the username falls back
+ * to the URL's last path segment, as VCF import does.
+ */
+export function socialProfileFromUrl(rawUrl: string): { platform: string; username: string } {
+  const detected = detectSocialProfile(rawUrl);
+  const url = parseLooseUrl(rawUrl);
+  const host = url?.hostname.toLowerCase().replace(/^www\./, '') || null;
+  const lastSegment = url ? pathSegments(url).pop()?.replace(/^@/, '') || null : null;
+  return {
+    platform: detected?.platform ?? host ?? 'social',
+    username: detected?.username ?? lastSegment ?? host ?? rawUrl.trim(),
+  };
+}
+
+/** Parses a URL typed with or without its scheme (`instagram.com/x`). */
+function parseLooseUrl(rawUrl: string): URL | null {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return null;
+  try {
+    return new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+  } catch {
+    return null;
+  }
+}
+
+function pathSegments(url: URL): string[] {
+  return url.pathname.split('/').filter(Boolean).map(seg => {
+    try { return decodeURIComponent(seg); } catch { return seg; }
+  });
+}
+
 export function getServiceIcon(service: string): string {
   const s = service.toLowerCase();
   if (s.includes('aim')) return 'comment';

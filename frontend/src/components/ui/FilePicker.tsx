@@ -18,7 +18,7 @@ interface FilePickerProps {
 /**
  * Canonical file-upload control for import flows. Renders a visually-hidden
  * native input plus a styled `.file-input-label` button that shows the chosen
- * filename. Pair with a `.secondary-button` submit inside `.import-controls`.
+ * filename. Pair with a secondary `<Button>` submit inside `.import-controls`.
  */
 export function FilePicker({ id, accept, file, onChange, prompt = 'Choose file', disabled = false }: FilePickerProps) {
   return (

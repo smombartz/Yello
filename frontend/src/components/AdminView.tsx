@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
 import { useAdminUsers } from '../api/adminHooks';
 import { Icon } from './Icon';
+import { LoadingSpinner } from './ui/LoadingSpinner';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -41,10 +42,7 @@ export function AdminView() {
   if (isLoading) {
     return (
       <div className="admin-view">
-        <div className="admin-loading">
-          <div className="loading-spinner" />
-          <p>Loading users...</p>
-        </div>
+        <LoadingSpinner message="Loading users..." />
       </div>
     );
   }
