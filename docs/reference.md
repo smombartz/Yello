@@ -12,6 +12,21 @@ Living reference for features, integrations, and architecture decisions. See `do
 
 Vite build-time variables must be present when `npm run build` runs. On Railway (Docker build), set `VITE_PUBLIC_URL` as a service variable — the `Dockerfile` declares it as an `ARG` in the frontend build stage so it reaches Vite. If the domain changes, update the variable and redeploy, then force a re-scrape in each platform's debugger (e.g. Facebook Sharing Debugger) since scrapers cache previews.
 
+### Secrets and key rotation
+
+| Variable | Purpose | Reissue at |
+| --- | --- | --- |
+| `SESSION_SECRET` | Signs the session cookie (`@fastify/cookie`). Changing it logs every web and desktop session out. | `openssl rand -hex 32` |
+| `TOKEN_ENCRYPTION_KEY` | AES-256-GCM key (scrypt-derived) for credentials stored at rest: Google access/refresh tokens in `auth.db` `users`, and each tenant's `user_settings.apify_api_token` / `icloud_app_password`. Falls back to `SESSION_SECRET` when unset, which is how older deployments worked. | `openssl rand -hex 32` |
+| `TOKEN_ENCRYPTION_KEY_PREVIOUS` | Set **only during a rotation**: the value the stored credentials are currently encrypted with. | — |
+| `GOOGLE_CLIENT_SECRET` | OAuth login and Gmail/Contacts token refresh. | Google Cloud Console → Credentials → OAuth client → Add secret, then disable the old one |
+| `HERE_API_KEY` | Geocoding (billed). | HERE platform → API keys |
+
+**Rotating the token key without forcing reconnects** (`services/tokenKeyRotation.ts`): when `TOKEN_ENCRYPTION_KEY_PREVIOUS` is set, the server re-encrypts every stored credential onto `TOKEN_ENCRYPTION_KEY` at boot, before it starts listening. Values the new key already opens are skipped, so it is safe on every restart. Values neither key opens are logged and left untouched, never cleared. Look for `Token key rotation: rotated N, already current M, failed F` in the deploy log, then delete `TOKEN_ENCRYPTION_KEY_PREVIOUS` and redeploy.
+
+To rotate everything after a leak (as after Railway's October 2026 incident), stage these in one deploy:
+`TOKEN_ENCRYPTION_KEY_PREVIOUS` = the old key (the old `SESSION_SECRET` if `TOKEN_ENCRYPTION_KEY` was never set), `TOKEN_ENCRYPTION_KEY` = new value, `SESSION_SECRET` = another new value. Then rotate the third-party keys at their providers (create new → update the variable → deploy → delete the old). The full runbook is in `docs/plans/2026-10-24-railway-incident-secret-rotation.md`.
+
 ## Desktop app (`electron/`)
 
 The macOS app opens the hosted deployment (`https://yello.up.railway.app`, overridable with `YELLO_URL`) in a window. It loads `/`, and the web app sends a signed-out desktop window to `/login` rather than the landing page (see Landing page below). It has no local backend or database, so desktop and web share one account and one set of data. Full guide: `electron/README.md`.

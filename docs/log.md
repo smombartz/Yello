@@ -1,5 +1,35 @@
 # Change Log
 
+## 2026-10-24 — Separate token encryption key, with zero-reconnect rotation
+
+**Session:** `2f5b48f0-f95c-4b83-b5e0-b90e6ea3acf5`
+
+**What Changed:**
+- Stored credentials are now encrypted with `TOKEN_ENCRYPTION_KEY`, falling back to `SESSION_SECRET`
+  (the previous behaviour) when it is unset, so deploying this changes nothing on its own
+- New boot step `rotateEncryptedTokens`: when `TOKEN_ENCRYPTION_KEY_PREVIOUS` is set, it re-encrypts
+  `users.access_token` / `refresh_token` (auth.db) and each tenant's `user_settings.apify_api_token` /
+  `icloud_app_password` onto the new key before the server listens. Idempotent; values neither key
+  opens are logged and left untouched
+- Secrets table and rotation runbook added to `docs/reference.md`; plan saved in `docs/plans/`
+
+**Why:**
+- Railway's October 2026 security incident exposed environment variables. `SESSION_SECRET` doubled
+  as the at-rest encryption key, so rotating it would have made every stored Google, Apify and iCloud
+  credential unreadable and forced all users to reconnect
+
+**Files Modified:**
+- `backend/src/services/tokenEncryption.ts` — `TOKEN_ENCRYPTION_KEY` fallback, `deriveKey`,
+  `getPreviousKey`, `isKeyRotationPending`, `reencryptToken`
+- `backend/src/services/tokenKeyRotation.ts` (new) — `rotateEncryptedTokens`
+- `backend/src/server.ts` — runs the rotation before `app.listen`
+- `backend/src/services/__tests__/tokenKeyRotation.test.ts` (new)
+- `backend/.env.example` — `TOKEN_ENCRYPTION_KEY`
+- `docs/reference.md` — Secrets and key rotation
+- `docs/plans/2026-10-24-railway-incident-secret-rotation.md` (new)
+
+---
+
 ## 2026-10-15 — CLAUDE.md split into general CLAUDE.md + PROJECT.md
 
 **Session:** `f8fad04b-426f-4cf7-8c39-ee01d8036b49`

@@ -34,6 +34,7 @@ import adminRoutes from './routes/admin.js';
 import icloudRoutes from './routes/icloud.js';
 import googleContactsRoutes from './routes/googleContacts.js';
 import { resumeInterruptedImports } from './services/importRecovery.js';
+import { rotateEncryptedTokens } from './services/tokenKeyRotation.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -211,6 +212,10 @@ await app.register(gmailEnrichRoutes, { prefix: '/api/enrich/gmail' });
 await app.register(adminRoutes, { prefix: '/api/admin' });
 await app.register(icloudRoutes, { prefix: '/api/icloud' });
 await app.register(googleContactsRoutes, { prefix: '/api/google-contacts' });
+
+// Move stored credentials onto TOKEN_ENCRYPTION_KEY while a rotation is in
+// progress, before any request can read them.
+rotateEncryptedTokens(app.log);
 
 const port = parseInt(process.env.PORT || '3456');
 app.listen({ port, host: '0.0.0.0' }).then(() => {
