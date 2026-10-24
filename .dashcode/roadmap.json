@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "lajshk",
+      "title": "Model every vCard property in the database",
+      "status": "todo",
+      "priority": 1,
+      "due": null,
+      "notes": "What properties in the original vCards does the database not model? All properties should be modeled by the database; if not, why?\n\nRelated: \"keep the original card only as a source for properties the database does not model.\"",
+      "steps": [],
+      "createdAt": "2026-10-16T18:36:47Z",
+      "updatedAt": "2026-10-16T18:36:47Z",
+      "doneAt": null
+    },
+    {
+      "id": "mgr5dt",
+      "title": "Change log for each and every contact, as a backup",
+      "status": "idea",
+      "priority": 1,
+      "due": null,
+      "notes": "",
+      "steps": [],
+      "createdAt": "2026-10-16T18:36:47Z",
+      "updatedAt": "2026-10-16T18:36:47Z",
+      "doneAt": null
+    },
+    {
+      "id": "o9dymd",
+      "title": "AI prompt to create groups and assemble information",
+      "status": "idea",
+      "priority": 1,
+      "due": null,
+      "notes": "",
+      "steps": [],
+      "createdAt": "2026-10-16T18:36:47Z",
+      "updatedAt": "2026-10-16T18:36:47Z",
+      "doneAt": null
+    }
+  ]
+}

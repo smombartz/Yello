@@ -1,5 +1,29 @@
 # Change Log
 
+## 2026-10-15 — CLAUDE.md split into general CLAUDE.md + PROJECT.md
+
+**Session:** `f8fad04b-426f-4cf7-8c39-ee01d8036b49`
+
+**What Changed:**
+- New `PROJECT.md` holds everything project-specific from the old `CLAUDE.md`, verbatim: Stack, the
+  database reference rules (under Documentation), and a Project Rules section carrying this project's
+  log example and the "schema changes are logged and update `docs/database.md`" rule
+- `CLAUDE.md` is now the shared general template (Documentation, Plans, Verification, Logging), which
+  imports `PROJECT.md` with an `@PROJECT.md` line; where they disagree, `PROJECT.md` wins
+- Dropped from `CLAUDE.md` the older wordings of the general Documentation/Plans/Verification/Logging
+  rules, now covered by the new template
+
+**Why:**
+- The general rules can now be updated in every project by replacing `CLAUDE.md` whole, without
+  touching project-specific content
+
+**Files Modified:**
+- `CLAUDE.md` — replaced with the general template
+- `AGENTS.md` — deleted (it was a symlink to `CLAUDE.md`, which now holds only the general rules)
+- `PROJECT.md` (new)
+
+---
+
 ## 2026-10-06 — Landing hero: a working sample app
 
 **What Changed:**

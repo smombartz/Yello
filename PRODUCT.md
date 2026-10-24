@@ -72,7 +72,7 @@ Four pillars, all core:
 
 ## Evidence on Hand
 
-- **Real proof point:** the lossless vCard export/import round trip on a 12,116-card book (2026-09-27, `docs/readme.md`). Other real measurements: a live book of 8,054 contacts, and databases that shrank from 124 to 72 MB once `raw_vcard` was retired.
+- **Real proof point:** the lossless vCard export/import round trip on a 12,116-card book (2026-09-27, `docs/reference.md`). Other real measurements: a live book of 8,054 contacts, and databases that shrank from 124 to 72 MB once `raw_vcard` was retired.
 - **Demo data:** 20 fabricated contacts seeded for demo accounts (`docs/plans/2026-03-05-demo-account-design.md`). These are safe for screenshots, demos and marketing.
 - **Private, never for public surfaces:** `docs/contacts.vcf`, `docs/LinkedIn-Connections.csv` and the sample `.vcf` files in `docs/` are real people's data.
 - **Earlier design explorations:** `docs/stitch directory/` and `docs/stitch expanded card/` (an HTML file and a screenshot each).

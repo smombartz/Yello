@@ -1,32 +1,48 @@
-# CLAUDE.md
+# Claude Instructions
 
-## Stack
+These are general working rules, the same in every project. Nothing in this file is specific to
+this project, so it can be replaced as a whole when the rules are updated.
 
-Read this first — it heads off the most common wrong assumptions. Nothing here is Postgres, Supabase, Express, or Next.js.
+## Project
 
-- **Backend:** Fastify 5 + TypeScript (ESM). Entry point `backend/src/server.ts`; one plugin per file in `routes/`, business logic in `services/`, TypeBox schemas in `schemas/`.
-- **Database:** `better-sqlite3`, WAL. **Multi-tenancy is one SQLite file per user** — isolation comes from opening a different file, not from a `user_id` column, so there is no cross-tenant query surface. See `docs/database.md`.
-- **Frontend:** React 19 + Vite 7 + TanStack Query v5. Plain global CSS (`index.css` + `styles/`), no CSS modules or Tailwind. Design tokens are `--ds-*` custom properties.
-- **Auth:** Google OAuth + signed cookie sessions. A global `onRequest` hook guards `/api/*` and `/photos/*`; handlers scope data with `getUserDatabase(request.user!.id)`.
-- **Deployment:** single Docker container on Railway with a persistent volume at `/data`. The Electron desktop app is a thin client of that deployment (no local backend); its Google sign-in runs in the system browser and hands back over `yello://`. See `electron/README.md`.
-- **Tests:** Vitest (`cd backend && npx vitest run`). A few suites are slow enough to need `--testTimeout=20000`.
-- **Type-checking the frontend:** use `npm run build`. A bare `npx tsc --noEmit` at the frontend root misses `tsconfig.app.json` (`noUnusedLocals`, `include: ["src"]`) and will pass on code that fails the build.
+Everything specific to this project (what it is, how it's built, its commands and its own rules)
+lives in `PROJECT.md`, imported below. Where `PROJECT.md` and the general rules here disagree,
+`PROJECT.md` wins.
+
+@PROJECT.md
+
+**Keep this file general.** When something comes up that Claude should know in every session of
+this project (a convention, a command, a rule), add it to `PROJECT.md`, never here.
 
 ---
 
 ## Documentation
 
-When new features, integrations, architecture decisions, or other noteworthy information comes up during work, document it in `docs/readme.md`. Keep it updated as a living reference for the project.
+When new features, integrations, architecture decisions, or other noteworthy information comes up during work, document it in `docs/reference.md`. Keep it updated as a living reference for the project.
 
-**Database reference:** `docs/database.md` is the human-readable overview of the schema — every table, column, CHECK constraint, index, FTS table, and on-disk artefact in use. **Any change that adds or alters tables, columns, constraints, indexes, triggers, or seed data must update `docs/database.md` in the same change.**
+`docs/reference.md` is only opened when needed, but `PROJECT.md` is loaded into every session, so keep it
+short and put only what Claude must always know there.
 
-There are no migration files and no migration CLI. Schema is applied imperatively on every connection, so the code is the source of truth:
+---
 
-- `backend/src/services/authDatabase.ts` — the shared auth database (`/data/auth.db`)
-- `backend/src/services/userDatabase.ts` — the per-user contacts database (`/data/users/<id>/contacts.db`)
-- `backend/src/routes/profile.ts` — `user_profiles` and `profile_slugs`, created lazily
+## Plans
 
-To add a column: add it to the `CREATE TABLE IF NOT EXISTS` block **and** add an idempotent `try { ALTER TABLE ... } catch {}` so existing databases pick it up.
+**Every plan gets saved to `docs/plans/`, no exceptions.** Whenever Claude makes a plan (in plan
+mode, via a planning skill, or when laying out a multi-step approach before implementing), write it
+to `docs/plans/` as a Markdown file **before** starting the work, including a plan that was only
+presented in chat or approved through plan mode's exit prompt.
+
+- **Filename:** start with the date in `YYYY-MM-DD` format, followed by a descriptive name (e.g.,
+  `docs/plans/2026-03-27-auth-system.md`, `docs/plans/2026-03-27-cms-migration.md`).
+- **Keep it current:** the plan file is a living document. Whenever the plan changes (the user
+  revises scope, an approach is dropped, steps are added, reordered or completed, or implementation
+  reveals something that changes the design), update the same file in the same turn. Don't start a
+  new file for a revision of the same plan; mark finished steps done and note significant changes
+  and why in a short "Changes" section at the bottom.
+- **One source of truth:** if the plan-mode plan file lives elsewhere (e.g. `~/.claude/plans/`),
+  copy it into `docs/plans/` and keep the `docs/plans/` copy updated from then on.
+
+This keeps plans versioned, reviewable, and accessible across sessions.
 
 ---
 
@@ -42,12 +58,6 @@ the user to look at rather than asking which browser to use.
 
 ---
 
-## Plans
-
-All implementation plans must be saved to `docs/plans/`. Filenames must start with the date in `YYYY-MM-DD` format, followed by a descriptive name (e.g., `docs/plans/2026-03-27-auth-system.md`, `docs/plans/2026-03-27-cms-migration.md`). This ensures plans are versioned, reviewable, and accessible across sessions.
-
----
-
 ## Logging Requirements
 
 **CRITICAL:** For every code change or feature addition:
@@ -59,6 +69,8 @@ All implementation plans must be saved to `docs/plans/`. Filenames must start wi
 
 ```markdown
 ## [YYYY-MM-DD] - [Brief Change Title]
+
+**Session:** `[Claude Code session ID]`
 
 **What Changed:**
 - Specific file(s) modified or created
@@ -77,24 +89,32 @@ All implementation plans must be saved to `docs/plans/`. Filenames must start wi
 ### Example
 
 ```markdown
-## 2026-07-30 — VCF import keeps per-address GEO coordinates
+## 2026-03-27 - Added Parent Name field to notification form
+
+**Session:** `3f1c9a2e-7b4d-4e8a-9c61-0d2b5e7f8a14`
 
 **What Changed:**
-- `vcardParser` now parses `GEO`, matched to its address by item group (`item1.ADR` ↔ `item1.GEO`)
-- Import persists `latitude`/`longitude` and stamps `geocoded_at` so the cleanup queue skips them
-- Added `addresses_geotagged` to `import_jobs`, surfaced in the Last import summary
+- Added "Parent Name" input field to the email notification modal
+- Updated `submitNotify()` to collect and send parent name to Google Apps Script
 
 **Why:**
-- Export wrote coordinates but import discarded them, so an export/import round trip
-  silently lost all geocoding and forced re-billing through the HERE API
+- Parents want to be identified when registering interest, not just by email
 
 **Files Modified:**
-- `backend/src/services/vcardParser.ts` — `applyGeoToAddresses`, `parseGeoValue`
-- `backend/src/services/importService.ts` — persist coordinates, count them
-- `backend/src/services/userDatabase.ts` — `addresses_geotagged` column + migration
+- `index.html` - Added input field and updated form submission logic
 
 ---
 ```
+
+### Session ID
+
+Put the Claude Code session ID on the `**Session:**` line so every entry can be traced back to the
+conversation that made it. Read it from the environment with `echo $CLAUDE_CODE_SESSION_ID`.
+
+- **Reopen the session:** `claude --resume <id>` from the project folder.
+- **Read the transcript:** `~/.claude/projects/<project-path-slug>/<id>.jsonl`.
+- **When unavailable:** if the variable is empty or unset, leave the `**Session:**` line out.
+  Never guess or invent an ID.
 
 ### When to Log
 
@@ -103,16 +123,46 @@ Log entries are needed for:
 - ✅ Bug fixes
 - ✅ File modifications
 - ✅ New file creation
-- ✅ Schema changes (see the database reference requirement above)
+- ✅ Schema/structure changes (e.g., adding columns to Google Sheet)
 
 Don't log:
 - ❌ Reading files to understand context
 - ❌ Running tests/verification
 - ❌ Responding to questions without code changes
 
+
+
 ### Workflow
 
 1. **Make the code change(s)**
 2. **Write the log entry** in the format above
-3. **Insert it at the top of `docs/log.md`** — most recent first, preserving all existing entries
+3. **Append to `docs/log.md`**
 4. **Inform the user** of what was done in your response
+
+---
+
+### How to Update `docs/log.md`
+
+```javascript
+// Pseudocode - in practice, use Read → Edit/Write
+const logEntry = `
+## [YYYY-MM-DD] - [Title]
+
+**Session:** \`${process.env.CLAUDE_CODE_SESSION_ID}\`
+
+**What Changed:**
+- ...
+
+**Why:**
+- ...
+
+**Files Modified:**
+- ...
+
+---
+`;
+
+// Append to docs/log.md
+```
+
+Always preserve existing log entries. New entries go at the **top** (most recent first) for easy scanning.
