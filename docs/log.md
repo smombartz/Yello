@@ -12,6 +12,8 @@
   `icloud_app_password` onto the new key before the server listens. Idempotent; values neither key
   opens are logged and left untouched
 - Secrets table and rotation runbook added to `docs/reference.md`; plan saved in `docs/plans/`
+- Production rotated on 2026-10-24 via the Railway MCP in two deploys, using a `${{SESSION_SECRET}}`
+  reference so the old value was never read (`rotated 2, failed 0`)
 
 **Why:**
 - Railway's October 2026 security incident exposed environment variables. `SESSION_SECRET` doubled

@@ -108,3 +108,9 @@ No registry credentials apply: the Dockerfile only pulls the public `node:20-alp
 - 2026-10-24: Part A implemented. `reencryptToken` also encrypts legacy plaintext values, so the
   first rotation upgrades any pre-encryption Google tokens. Backend suite: 28 files, 260 tests pass;
   `tsc` clean. Part B (dashboard rotation) is still with the user.
+- 2026-10-24: Part B steps 2–5 done via the Railway MCP. The MCP returns variable names only, so
+  the old secret was never read: step 1 set `TOKEN_ENCRYPTION_KEY_PREVIOUS = ${{SESSION_SECRET}}`
+  (same-service reference) with a new `TOKEN_ENCRYPTION_KEY`, logging `rotated 2, already current 0,
+  failed 0`; step 2 set a new `SESSION_SECRET` and blanked `TOKEN_ENCRYPTION_KEY_PREVIOUS`.
+  Log review (Oct 20–24, 324 requests) found no suspicious authenticated activity; one AWS
+  scanner on Oct 24 got 401s on every API probe. HERE/Apify keys are not in Railway.
