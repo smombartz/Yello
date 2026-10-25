@@ -34,6 +34,8 @@ import adminRoutes from './routes/admin.js';
 import icloudRoutes from './routes/icloud.js';
 import googleContactsRoutes from './routes/googleContacts.js';
 import syncRoutes from './routes/sync.js';
+import { resumeInterruptedCutovers } from './services/sync/cutoverApply.js';
+import { isContactEdit, scheduleSyncAfterEdit, startSyncScheduler } from './services/sync/syncScheduler.js';
 import { resumeInterruptedImports } from './services/importRecovery.js';
 import { rotateEncryptedTokens } from './services/tokenKeyRotation.js';
 
@@ -106,6 +108,14 @@ await app.register(fastifyRateLimit, {
 // Register cookie plugin (required for @fastify/oauth2 and session management)
 await app.register(fastifyCookie, {
   secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+});
+
+// An edit to contacts triggers a sync with iCloud/Google shortly after
+// (debounced; only with SYNC_ENGINE=1 and a provider switched on).
+app.addHook('onResponse', async (request, reply) => {
+  if (request.user && isContactEdit(request.method, request.url, reply.statusCode)) {
+    scheduleSyncAfterEdit(request.user.id, app.log);
+  }
 });
 
 // Global auth: protect all /api/* and /photos/* routes except auth endpoints
@@ -224,6 +234,10 @@ app.listen({ port, host: '0.0.0.0' }).then(() => {
   console.log(`Server running on port ${port}`);
   // Pick up any VCF imports that were mid-flight when the process last stopped.
   resumeInterruptedImports(app.log);
+  // Finish the first push of a switch to Yello a restart interrupted.
+  if (process.env.SYNC_ENGINE === '1') resumeInterruptedCutovers(app.log);
+  // Sync every user's iCloud/Google every SYNC_INTERVAL_MINUTES.
+  startSyncScheduler(app.log);
 });
 
 export default app;

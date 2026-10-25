@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { useContactDetail } from '../api/hooks';
 import { ContactRowExpanded } from './ContactRowExpanded';
+import { RemoteVersionsPanel } from './RemoteVersionsPanel';
 import { Avatar } from './Avatar';
 import { Button } from './ui/Button';
 import type { OutletContext } from './Layout';
@@ -68,6 +69,7 @@ export function ContactDetailPage() {
           </div>
 
           <ContactRowExpanded contact={contact} />
+          <RemoteVersionsPanel contactId={contact.id} />
         </div>
       </div>
     </>

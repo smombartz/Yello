@@ -3,6 +3,7 @@ import { rebuildContactSearch } from './database.js';
 import { insertContactDates, paramsJson, saveVcardModelFields } from './vcardModelStore.js';
 import { LINKEDIN_ENRICHMENT_COLUMNS } from './linkedinEnrichmentColumns.js';
 import type { ParsedContact } from './vcardParser.js';
+import type { SyncField } from './sync/syncProjection.js';
 
 /**
  * Writes a ParsedContact into the per-user database, either as a new contact
@@ -389,4 +390,105 @@ export function mergeParsedIntoContact(
   db.prepare('UPDATE contacts SET display_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(displayName, id);
 
   rebuildContactSearch(db, id);
+}
+
+/**
+ * Replaces whole field families of a contact with an incoming card's values
+ * (sync: a family changed only on the remote side). Each family maps to its
+ * columns or child table; child rows are replaced wholesale, keeping the
+ * incoming labels and parameters. Geocoding survives on addresses whose
+ * street, city and postcode are unchanged, and a related person keeps its
+ * link to another contact while the name is the same. Must be called inside a
+ * transaction. Photos are left to the caller.
+ */
+export function replaceContactFields(
+  stmts: ContactStatements,
+  db: DatabaseType,
+  contactId: number,
+  incoming: ParsedContact,
+  families: SyncField[]
+): void {
+  const set = (assignments: Record<string, unknown>) => {
+    const columns = Object.keys(assignments);
+    db.prepare(`UPDATE contacts SET ${columns.map(c => `${c} = ?`).join(', ')} WHERE id = ?`)
+      .run(...columns.map(c => assignments[c] ?? null), contactId);
+  };
+  const clear = (table: string) => db.prepare(`DELETE FROM ${table} WHERE contact_id = ?`).run(contactId);
+
+  for (const family of families) {
+    switch (family) {
+      case 'name':
+        set({
+          first_name: incoming.firstName, last_name: incoming.lastName, middle_name: incoming.middleName,
+          name_prefix: incoming.namePrefix, name_suffix: incoming.nameSuffix,
+          display_name: incoming.displayName || [incoming.firstName, incoming.lastName].filter(Boolean).join(' ') || 'Unknown'
+        });
+        break;
+      case 'nickname': set({ nickname: incoming.nickname }); break;
+      case 'org': set({ company: incoming.company, title: incoming.title, department: incoming.department }); break;
+      case 'notes': set({ notes: incoming.notes }); break;
+      case 'birthday': set({ birthday: incoming.birthday }); break;
+      case 'gender': set({ gender: incoming.gender }); break;
+      case 'isCompany': set({ is_company: incoming.isCompany ? 1 : 0 }); break;
+      case 'emails':
+        clear('contact_emails');
+        for (const e of incoming.emails) insertEmailRow(stmts, contactId, e);
+        break;
+      case 'phones':
+        clear('contact_phones');
+        for (const p of incoming.phones) insertPhoneRow(stmts, contactId, p);
+        break;
+      case 'addresses': {
+        const geo = new Map((db.prepare(`
+          SELECT LOWER(COALESCE(street, '')) || '|' || LOWER(COALESCE(city, '')) || '|' || LOWER(COALESCE(postal_code, '')) AS key,
+                 latitude, longitude
+          FROM contact_addresses WHERE contact_id = ? AND latitude IS NOT NULL
+        `).all(contactId) as Array<{ key: string; latitude: number; longitude: number }>).map(r => [r.key, r]));
+        clear('contact_addresses');
+        for (const a of incoming.addresses) {
+          const kept = a.latitude === null ? geo.get(`${lower(a.street)}|${lower(a.city)}|${lower(a.postalCode)}`) : undefined;
+          insertAddressRow(stmts, contactId, kept ? { ...a, latitude: kept.latitude, longitude: kept.longitude } : a);
+        }
+        break;
+      }
+      case 'urls':
+        clear('contact_urls');
+        for (const u of incoming.urls) insertUrlRow(stmts, contactId, u);
+        break;
+      case 'socials':
+        clear('contact_social_profiles');
+        for (const sp of incoming.socialProfiles) insertSocialProfileRow(stmts, contactId, sp);
+        break;
+      case 'ims':
+        clear('contact_instant_messages');
+        for (const im of incoming.instantMessages) insertInstantMessageRow(stmts, contactId, im);
+        break;
+      case 'related': {
+        const links = new Map((db.prepare(`
+          SELECT LOWER(name) AS name, related_contact_id FROM contact_related_people
+          WHERE contact_id = ? AND related_contact_id IS NOT NULL
+        `).all(contactId) as Array<{ name: string; related_contact_id: number }>).map(r => [r.name, r.related_contact_id]));
+        clear('contact_related_people');
+        for (const rp of incoming.relatedPeople) {
+          insertRelatedPersonRow(stmts, contactId, rp);
+          const linked = links.get(lower(rp.name));
+          if (linked) {
+            db.prepare(`UPDATE contact_related_people SET related_contact_id = ? WHERE id = last_insert_rowid()`).run(linked);
+          }
+        }
+        break;
+      }
+      case 'dates':
+        clear('contact_dates');
+        insertContactDates(db, contactId, incoming.dates ?? []);
+        break;
+      case 'categories':
+        clear('contact_categories');
+        for (const c of [...new Set(incoming.categories)]) stmts.insertCategory.run(contactId, c);
+        break;
+    }
+  }
+
+  db.prepare('UPDATE contacts SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(contactId);
+  rebuildContactSearch(db, contactId);
 }

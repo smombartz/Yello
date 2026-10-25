@@ -330,6 +330,116 @@ Phase 1 (foundations, no remote writes):
   deleted them again.
 
 
+Phase 2 (iCloud two-way engine, behind `SYNC_ENGINE=1`):
+
+- **`runICloudSync(userId, { trigger, confirmLargeChanges?, fullScan? })`**
+  (`services/sync/icloudSyncEngine.ts`). One run = pull then push, under a per-user lock (in-process
+  plus a lease on `sync_providers`), recorded in `sync_runs`. Never throws; returns
+  `completed | failed | paused | skipped` with counters. Refuses to run before
+  `sync_providers.cutover_completed_at` is set.
+  - *Pull:* skipped when the book's ctag is unchanged (the ctag is only stored after a run that wrote
+    nothing, so a phone edit made during our own writes is never hidden). Otherwise the etag listing is
+    diffed against the links: changed cards are three-way merged per field family against the link's
+    snapshots (`replaceContactFields` takes the families only iCloud changed; families changed on both
+    sides keep Yello's value and log iCloud's card as `conflict_yello_won`); a vanished card archives
+    its contact if Yello did not change it since (else it is re-created); an unknown card relinks by UID
+    / merged identity or becomes a new contact. Photos changed only in iCloud are imported.
+  - *Push:* creates (`<UID>.vcf`, `If-None-Match: *`) for contacts without a card, conditional updates
+    when the projection hash or photo changed, deletes for archived contacts and tombstones (each card's
+    last version goes to `sync_remote_versions` first). A 412 on update re-reads the card, merges it, and
+    pushes once more. After pushing, the stored cards are read back so the link remembers iCloud's own
+    version (iCloud rewrites cards) and the next pull does not echo.
+  - *Guards:* more than max(20, 5%) cards vanishing, appearing or being deleted, or more than 300 created,
+    pauses the provider until a run with `confirmLargeChanges`; a confirmed mass delete still needs a
+    fresh confirmed backup (`assertDeletionAllowed`). An iCloud 401 pauses the provider.
+- **`services/sync/icloudRemote.ts`**: the `ICloudRemote` interface (ctag, list, multiget, conditional
+  create/update/delete) and its tsdav implementation; tests use an in-memory book.
+- **Routes** (all need `SYNC_ENGINE=1`): `POST /api/sync/icloud/enable` (only on an empty book: sets
+  `cutover_completed_at` and runs the first sync, creating a card per contact), `POST /api/sync/run`,
+  `POST /api/sync/icloud/disable`, `POST /api/sync/icloud/reset` (forget the pairing; contacts kept),
+  `POST /api/sync/pause|resume`, `GET /api/sync/runs`, `GET /api/sync/status`.
+- **Testing with a spare Apple ID:** sign in to Yello with a second Google account (a separate Yello user,
+  so the real contacts are not involved), add a few contacts, connect the spare Apple ID under Tools,
+  then from the browser console: `await (await fetch('/api/sync/icloud/enable', {method: 'POST'})).json()`
+  and later `fetch('/api/sync/run', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({provider: 'icloud'})})`.
+
+Phase 3 (Google two-way engine, behind `SYNC_ENGINE=1`):
+
+- **`runGoogleSync(userId, { trigger, confirmLargeChanges?, fullScan? })`**
+  (`services/sync/googleSyncEngine.ts`), the People API counterpart of the iCloud engine, using the same
+  three-way merge (`planFieldMerge` in `syncProjection.ts`), guards, deletion gate, run log and
+  remote-version log.
+  - *Pull* by sync token (`people.connections.list` with `requestSyncToken`; an expired token, about a
+    week, triggers a full read). Deleted people arrive flagged `metadata.deleted`; on a full read, linked
+    contacts missing from the list count as deleted. Only `CONTACT`-sourced values are read (never the
+    person's public profile). When Google's emails/phones/addresses replace Yello's, Apple labels and
+    extra types are kept on entries whose value survived (`preserveEntryAnnotations`). Taking `urls`
+    also replaces social profiles (Google holds them as typed URLs).
+  - *Push* with `batchCreateContacts` / `batchUpdateContacts` (200 per call, each with its etag,
+    `updateMask` = the mapped fields, never `memberships`) and `batchDeleteContacts`; a stale etag fails
+    the batch, so it is retried contact by contact and a stale one is re-read, merged and pushed again.
+    Photos go through `updateContactPhoto` / `deleteContactPhoto`, at most 100 per run (the rest on
+    later runs); the photo's URL identifies it for change detection. `clientData` `yelloUid` and
+    `contacts.google_resource_name` are written so a lost link can be rebuilt.
+  - The sync token stored is the one read at the start of the run, so our own writes come back next run
+    (and are recognised by their hashes) and nothing edited in between is skipped.
+- **`services/sync/googleRemote.ts`**: the `GoogleRemote` interface and its People API client (writes
+  spaced 1.1 s apart, 429/503 retried with back-off, 401/403 → `RemoteAuthError`, which pauses sync).
+- **OAuth:** `/api/auth/google/contacts?write=1` asks for `https://www.googleapis.com/auth/contacts`
+  (full Contacts access) and returns to `/tools?google=write-granted`; `contacts-status` also reports
+  `scope: none | readonly | write` (`contactsScopeOf`, via Google's tokeninfo). The Google Cloud OAuth
+  consent screen must list the `contacts` scope.
+- **Routes:** `POST /api/sync/google/enable` (needs the write scope and an empty Google Contacts),
+  `/google/disable`, `/google/reset`; `POST /api/sync/run` takes `provider: 'google'`.
+- **Testing with a spare Google account:** sign in to Yello with it (a separate Yello user), open
+  `/api/auth/google/contacts?write=1` to grant access, add a few contacts in Yello, then
+  `await (await fetch('/api/sync/google/enable', {method: 'POST'})).json()`.
+
+Phase 4 (the cutover: review, apply, restore; behind `SYNC_ENGINE=1`):
+
+- **Review** (the preview card): every decision item has a choice select (`RESOLUTIONS`, defaults from
+  `defaultResolution`), saved with `POST /api/sync/cutover/:id/resolve` (one or more items) or
+  `/resolve-all` (every item of a kind/provider, or `null` = back to the suggestions). Lists stay readable
+  but frozen once the switch starts.
+- **Apply** (`POST /api/sync/cutover/:id/apply`, `startCutoverApply` in `services/sync/cutoverApply.ts`).
+  Preconditions: the plan is the latest; for each provider in it, the newest verified backup is the one the
+  plan was made from, and the deletion gate is open (fresh, confirmed); the provider is not already switched
+  over; iCloud cards all live in one address book. Then, in one transaction, Yello takes the accepted
+  changes, links every remaining card (backup version as the remote snapshot) and tombstones the ones to
+  remove, and the providers are switched on; photos for photoless contacts come from the cards. The first
+  push runs each engine (`trigger: 'cutover'`, confirmed, iCloud first): differing cards updated, missing
+  ones created, tombstoned ones deleted last. If it cannot finish, the cutover stays `pushing` with the
+  reason; applying again (the "Continue" button, or the boot hook `resumeInterruptedCutovers`) picks up.
+  An `applying` left by a crash is reported as `planned` (step 1 commits atomically).
+- **Restore** (`POST /api/sync/backups/:id/restore` `{ mode: 'missing' | 'all' }`, `startRestore` in
+  `services/sync/remoteRestore.ts`; "Restore this backup…" on the backups card). Only while that provider's
+  sync is off. `missing` re-creates every backed-up card that is gone (iCloud: byte for byte at the same URL,
+  photos included; Google: new resource names, labels re-attached where the group still exists, photos not
+  restored); `all` also overwrites cards that changed with the backup's version. Results land in the
+  manifest's `restores`.
+- **Legacy imports** (`/api/icloud/import`, `/api/google-contacts/import`) return 409 for a provider that is
+  synced: its contacts arrive through sync, and an import would add unlinked duplicates.
+
+Phase 5 (running on its own; behind `SYNC_ENGINE=1`):
+
+- **Schedule** (`services/sync/syncScheduler.ts`, started after `app.listen`): every
+  `SYNC_INTERVAL_MINUTES` (10) a round syncs each user's active providers, users one after another, iCloud
+  before Google; a round is skipped while the previous one runs; a provider with `consecutive_failures` ≥ 2
+  waits that many intervals (max an hour) between tries.
+- **After an edit:** a root `onResponse` hook in `server.ts` calls `scheduleSyncAfterEdit` for every 2xx
+  non-GET under `EDITING_PREFIXES` (`/api/contacts`, `/api/archive`, `/api/duplicates`, `/api/cleanup`,
+  `/api/import`, `/api/profile`); each edit restarts a `SYNC_EDIT_DELAY_SECONDS` (45) countdown, so a burst
+  becomes one sync.
+- **Tools › Sync** (`SyncStatusContent.tsx`): per book On / Paused / Needs you / Off / Not switched over,
+  last sync, the last problem, Sync now, Pause / Resume; when the mass-change guard paused a book, *Review*
+  shows why and *Continue* runs with `confirmLargeChanges`. Recent runs (`GET /api/sync/runs`).
+  `POST /api/sync/run-all` syncs every book.
+- **Earlier versions** (`RemoteVersionsPanel.tsx` on the contact page; `GET /api/sync/remote-versions`,
+  `POST /api/sync/remote-versions/:id/restore`, `services/sync/remoteVersions.ts`): what sync overwrote or
+  removed in iCloud/Google, with a preview; *Restore* rewrites the contact from that card (unarchiving it if
+  needed) and the next sync writes it out. Field-only entries from the cutover cannot be restored.
+- The Tools page's one-off Google / iCloud import sections turn into a note once that book is synced.
+
 ### Public profile card (`/p/:slug`)
 
 Users can publish their contact card at a server-generated slug. Behavior notes:

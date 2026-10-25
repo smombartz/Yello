@@ -33,6 +33,10 @@ To add a column: add it to the `CREATE TABLE IF NOT EXISTS` block **and** add an
 
 ## Project Rules
 
+- **Two-way sync with iCloud and Google** lives in `backend/src/services/sync/` (overview in
+  `docs/reference.md`, *Yello as source of truth*). Any new route prefix that changes contacts must be
+  added to `EDITING_PREFIXES` in `syncScheduler.ts` so edits trigger a sync. Hard-delete contacts only
+  with `DELETE FROM contacts`: its `contacts_bd_sync` trigger records their remote cards for deletion.
 - **Schema changes are logged too**, and the same change must update `docs/database.md` (see the
   database reference requirement above).
 - **Log entry example for this project** (replaces the general template's example; headings use an

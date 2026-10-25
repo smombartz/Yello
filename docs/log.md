@@ -1,5 +1,152 @@
 # Change Log
 
+## 2026-10-25 — Sync Phase 5: automatic sync, sync status, earlier versions
+
+**Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
+
+**What Changed:**
+- Sync runs on its own: every 10 minutes for every user with iCloud/Google switched over, and about 45
+  seconds after the last edit in Yello. iCloud goes first so a phone edit reaches Google in the same pass;
+  a provider that keeps failing is tried less often
+- Tools › Sync: per address book status (On, Paused, Needs you, Off, Not switched over), last sync, the
+  last problem, Sync now, Pause / Resume, and Review / Continue when sync held back a large change;
+  recent sync runs
+- Contact page: "Earlier versions from iCloud and Google" — what sync overwrote or removed there, with
+  Restore (the next sync writes the restored version back)
+- Once a book is synced, its one-off import section on the Tools page is replaced by a note
+- `PROJECT.md`: rule for new contact-editing routes (`EDITING_PREFIXES`)
+
+**Why:**
+- Phase 5 of `docs/plans/2026-10-25-yello-source-of-truth-sync.md`; the last one before the live
+  rollout
+
+**Files Modified:**
+- `backend/src/services/sync/syncScheduler.ts` (new) — `startSyncScheduler`, `runScheduledRound`,
+  `runAllSyncs`, `scheduleSyncAfterEdit`, `isContactEdit`, `activeProviders`
+- `backend/src/services/sync/remoteVersions.ts` (new) — `listRemoteVersions`, `restoreRemoteVersion`
+- `backend/src/services/sync/syncRuntime.ts` — `last_run_at` on `SyncProviderRow`
+- `backend/src/routes/sync.ts` — `/run-all`, `/remote-versions`, `/remote-versions/:id/restore`;
+  `/status` adds `intervalMinutes` and `running`; pausing clears the guard's reason
+- `backend/src/server.ts` — `onResponse` edit hook, `startSyncScheduler`
+- `backend/.env.example` — `SYNC_INTERVAL_MINUTES`, `SYNC_EDIT_DELAY_SECONDS`
+- `frontend/src/components/SyncStatusContent.tsx` (new), `RemoteVersionsPanel.tsx` (new),
+  `SettingsView.tsx`, `ContactDetailPage.tsx`, `frontend/src/api/syncHooks.ts`, `frontend/src/index.css`
+- Tests (new): `sync/__tests__/syncScheduler.test.ts`
+- `PROJECT.md`, `docs/reference.md`, `docs/plans/2026-10-25-yello-source-of-truth-sync.md`,
+  `.dashcode/roadmap.json`
+
+---
+
+## 2026-10-25 — Sync Phase 4: review, switch to Yello, restore
+
+**Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
+
+**What Changed:**
+- The preview card became the switch: every listed item has a choice (take it / keep Yello's, bring into
+  Yello / remove, same person, restore, ...), defaulting to the suggestion; a reset to the suggestions;
+  a checklist (backups confirmed, no edits during the switch) and a "Switch to Yello" confirmation
+- Applying writes Yello's side in one transaction (accepted changes, kept cards as new contacts, links to
+  every remaining card, removals queued), then runs the first iCloud and Google sync: new and changed
+  cards written, removals last. An unfinished push can be continued and resumes after a restart
+- "Restore this backup" on the backups card: puts back every card that is gone, or also reverts changed
+  ones; only while that provider's sync is off
+- The old one-off iCloud/Google imports are refused once that provider is synced
+
+**Why:**
+- Phase 4 of `docs/plans/2026-10-25-yello-source-of-truth-sync.md`: the one-time switch, with a way back
+
+**Files Modified:**
+- `backend/src/services/sync/cutoverApply.ts` (new) — `RESOLUTIONS`, `defaultResolution`,
+  `resolveCutoverItems`, `resolveAllCutoverItems`, `startCutoverApply`, `resumeInterruptedCutovers`
+- `backend/src/services/sync/remoteRestore.ts` (new) — `startRestore`, `restorableBody`
+- `backend/src/services/sync/cutoverPlanner.ts` — exported `loadICloudCards` / `loadGoogleCards`
+  (etag, photo identity, `only`, `keepPhotos`); skips providers already switched over
+- `backend/src/services/sync/icloudRemote.ts` — `putCardAt`
+- `backend/src/services/sync/remoteBackupService.ts` — `restores` on the manifest, `recordRestore`
+- `backend/src/routes/sync.ts` — `/cutover/:id/resolve`, `/resolve-all`, `/apply`, `/backups/:id/restore`;
+  `engineEnabled` in `/status`; choices on cutover items
+- `backend/src/routes/icloud.ts`, `backend/src/routes/googleContacts.ts` — 409 once synced
+- `backend/src/server.ts` — `resumeInterruptedCutovers` at boot (with `SYNC_ENGINE=1`)
+- `frontend/src/components/CutoverPreviewContent.tsx` — `ChoiceSelect`, `ApplyPanel`
+- `frontend/src/components/RemoteBackupsContent.tsx` — `RestoreBackup`
+- `frontend/src/api/syncHooks.ts` — resolve, apply, status, restore hooks; `frontend/src/index.css`
+- Tests (new): `sync/__tests__/cutoverApply.test.ts`; route checks in `syncEngineRoutes.test.ts`
+- `docs/database.md`, `docs/reference.md`, `docs/plans/2026-10-25-yello-source-of-truth-sync.md`,
+  `.dashcode/roadmap.json`
+
+---
+
+## 2026-10-25 — Sync Phase 3: two-way Google Contacts sync engine
+
+**Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
+
+**What Changed:**
+- Google sync engine: pulls Gmail edits into Yello (by sync token) and pushes Yello's changes to Google
+  Contacts in batches. Same rules as iCloud: Yello wins per field and Google's version is kept,
+  Gmail deletes archive, archiving deletes in Google, mass changes pause and need a backup
+- Only the contact card's own values are read, never the person's public Google profile; Google labels
+  are never written; Apple labels survive when Gmail edits emails/phones/addresses; photos are uploaded
+  (up to 100 per run) and Gmail photos imported; Yello's UID is stored on each Google contact
+- Full Contacts access can be granted at `/api/auth/google/contacts?write=1`; the scope check reports
+  none/readonly/write
+- Routes (`SYNC_ENGINE=1` only): enable on an empty Google account, disable, reset, run
+- Shared three-way field merge (`planFieldMerge`) now used by both engines
+
+**Why:**
+- Phase 3 of `docs/plans/2026-10-25-yello-source-of-truth-sync.md`; with Phase 2 an edit on the iPhone
+  now reaches Gmail (and the other way) through Yello
+
+**Files Modified:**
+- `backend/src/services/sync/googleSyncEngine.ts` (new) — `runGoogleSync`
+- `backend/src/services/sync/googleRemote.ts` (new) — `GoogleRemote`, `openGoogleRemote`,
+  `SyncTokenExpiredError`, `SYNC_PERSON_FIELDS`
+- `backend/src/services/sync/syncProjection.ts` — `planFieldMerge`; Google projection counts only
+  social profiles with a URL
+- `backend/src/services/sync/syncRuntime.ts` — `PreconditionFailedError`, `RemoteAuthError`,
+  `RemoteRetryLaterError` (moved from `icloudRemote.ts`, re-exported there)
+- `backend/src/services/sync/icloudSyncEngine.ts` — uses `planFieldMerge`
+- `backend/src/services/googleAuthService.ts` — `contactsScopeOf`
+- `backend/src/routes/auth.ts` — `/google/contacts?write=1`, `scope` in `contacts-status`
+- `backend/src/routes/sync.ts` — `/google/enable`, `/:provider/disable`, `/:provider/reset`, `/run` for Google
+- Tests (new): `sync/__tests__/googleSyncEngine.test.ts` (13), `googleRemote.test.ts` (5),
+  `syncFakes.ts` (in-memory iCloud and Google, shared)
+- `docs/reference.md`, `docs/plans/2026-10-25-yello-source-of-truth-sync.md`, `.dashcode/roadmap.json`
+
+---
+
+## 2026-10-25 — Sync Phase 2: two-way iCloud sync engine
+
+**Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
+
+**What Changed:**
+- iCloud sync engine: pulls phone/Mac edits into Yello and pushes Yello's changes to iCloud. Yello wins
+  per field (a field changed only on the phone comes in; one changed on both sides keeps Yello's value,
+  and iCloud's version is kept for restore). Phone deletes archive the contact; archiving in Yello
+  deletes the card, unarchiving recreates it; a merge in Yello deletes the leftover card
+- Safety: refuses to run until the account is switched over; pauses and asks when many cards would
+  vanish, appear, be deleted or be created at once; a confirmed mass delete still needs a fresh backup;
+  conditional writes (412 → re-read, merge, retry); our own writes and iCloud's rewrites never echo
+- Routes (`SYNC_ENGINE=1` only): enable on an empty book, run, pause/resume, disable, reset, run log
+
+**Why:**
+- Phase 2 of `docs/plans/2026-10-25-yello-source-of-truth-sync.md`. It is off by default and can only
+  attach to an empty address book until the Phase 4 cutover links the real one
+
+**Files Modified:**
+- `backend/src/services/sync/icloudSyncEngine.ts` (new) — `runICloudSync`, `openUserICloud`, `cardFilename`
+- `backend/src/services/sync/icloudRemote.ts` (new) — `ICloudRemote`, `openICloudRemote`,
+  `PreconditionFailedError`, `RemoteAuthError`, `RemoteRetryLaterError`
+- `backend/src/services/sync/syncRuntime.ts` (new) — `acquireSyncLock`, `startRun`, `finishRun`,
+  `logRemoteVersion`, `withoutPhoto`, `massChangeThreshold`, `pruneRemoteVersions`
+- `backend/src/services/contactPersistence.ts` — `replaceContactFields`
+- `backend/src/routes/sync.ts` — `/icloud/enable`, `/icloud/disable`, `/icloud/reset`, `/run`, `/pause`,
+  `/resume`, `/runs`
+- `backend/.env.example` — `SYNC_ENGINE`
+- Tests (new): `sync/__tests__/icloudSyncEngine.test.ts` (16), `routes/__tests__/syncEngineRoutes.test.ts`
+- `docs/reference.md`, `docs/plans/2026-10-25-yello-source-of-truth-sync.md`, `.dashcode/roadmap.json`
+
+---
+
 ## 2026-10-25 — Cutover preview: readable change lines
 
 **Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`

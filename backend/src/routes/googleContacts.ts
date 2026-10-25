@@ -6,6 +6,7 @@ import type { ParsedContact } from '../services/vcardParser.js';
 import { processPhoto } from '../services/photoProcessor.js';
 import { rebuildContactSearch } from '../services/database.js';
 import { getValidAccessToken } from '../services/googleAuthService.js';
+import { getProviderRow } from '../services/sync/syncRuntime.js';
 
 export default async function googleContactsRoutes(
   fastify: FastifyInstance,
@@ -102,6 +103,10 @@ export default async function googleContactsRoutes(
     };
   }>('/import', { bodyLimit: 100 * 1024 * 1024 }, async (request, reply) => {
     const { newContacts, merges, skipped } = request.body;
+    // Once Google is synced, its contacts arrive through sync; an import would add unlinked duplicates.
+    if (getProviderRow(getUserDatabase(request.user!.id), 'google').cutover_completed_at) {
+      return reply.status(409).send({ error: 'Google is synced with Yello now; its contacts come in through sync.' });
+    }
     const userId = request.user!.id;
     const db = getUserDatabase(userId);
 

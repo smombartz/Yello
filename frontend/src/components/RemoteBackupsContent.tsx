@@ -1,12 +1,16 @@
+import { useState } from 'react';
 import { Icon } from './Icon';
 import { Button } from './ui/Button';
+import { ConfirmDialog } from './ui/ConfirmDialog';
 import { Badge } from './ui/Badge';
 import { useToast } from './ui/Toast';
 import {
   backupFileUrl,
   useConfirmBackup,
   useRemoteBackups,
+  useRestoreBackup,
   useStartBackup,
+  useSyncStatus,
   type BackupManifest,
   type BackupProvider,
   type DeletionGate,
@@ -108,6 +112,8 @@ function ProviderBackup({ provider, latest, gate }: {
         </label>
       )}
 
+      {latest?.status === 'verified' && <RestoreBackup provider={provider} backup={latest} />}
+
       {gate && (
         <p className={`backup-gate${gate.allowed ? ' backup-gate--open' : ''}`}>
           <Icon name={gate.allowed ? 'lock-open' : 'lock'} />
@@ -115,6 +121,74 @@ function ProviderBackup({ provider, latest, gate }: {
             ? 'Backed up. Sync may now remove duplicates from this address book (for the next 24 hours).'
             : gate.reason}
         </p>
+      )}
+    </div>
+  );
+}
+
+/** Putting a backup back into its address book: the escape hatch after a switch gone wrong. */
+function RestoreBackup({ provider, backup }: { provider: typeof PROVIDERS[number]; backup: BackupManifest }) {
+  const [asking, setAsking] = useState(false);
+  const [mode, setMode] = useState<'missing' | 'all'>('missing');
+  const [waitingFor, setWaitingFor] = useState<number | null>(null);
+  const restore = useRestoreBackup();
+  const status = useSyncStatus();
+  const { showToast } = useToast();
+  const restores = backup.restores ?? [];
+  const restoring = waitingFor !== null && restores.length <= waitingFor;
+  useRemoteBackups(restoring);
+
+  const syncOn = status.data?.providers.find(p => p.provider === provider.id)?.enabled ?? false;
+  const last = restores[restores.length - 1];
+  const where = provider.id === 'icloud' ? 'iCloud' : 'Google';
+
+  return (
+    <div className="backup-restore">
+      <Button
+        size="sm"
+        variant="ghost"
+        icon="clock-rotate-left"
+        loading={restoring || restore.isPending}
+        disabled={syncOn}
+        onClick={() => setAsking(true)}
+      >
+        Restore this backup to {where}…
+      </Button>
+      {syncOn && <span className="backup-meta"> Turn {where} sync off to restore.</span>}
+      {last && !restoring && (
+        <p className="backup-meta">
+          Restored {new Date(last.finishedAt).toLocaleString()}: {last.recreated} put back
+          {last.reverted ? `, ${last.reverted} reverted` : ''}{last.failed ? `, ${last.failed} failed` : ''}.
+          {last.errors[0] && <span className="backup-error"> {last.errors[0]}</span>}
+        </p>
+      )}
+      {asking && (
+        <ConfirmDialog
+          title={`Restore to ${where}?`}
+          confirmLabel="Restore"
+          danger={mode === 'all'}
+          onCancel={() => setAsking(false)}
+          onConfirm={() => {
+            setAsking(false);
+            setWaitingFor(restores.length);
+            restore.mutate({ backupId: backup.id, mode }, {
+              onError: error => { setWaitingFor(null); showToast(error.message, { type: 'error' }); },
+            });
+          }}
+        >
+          <label className="backup-confirm">
+            <input type="radio" name="restore-mode" checked={mode === 'missing'} onChange={() => setMode('missing')} />
+            Put back every card from this backup that is no longer in {where}.
+          </label>
+          <label className="backup-confirm">
+            <input type="radio" name="restore-mode" checked={mode === 'all'} onChange={() => setMode('all')} />
+            Also undo every change made since: cards that changed get this backup’s version again.
+          </label>
+          <p className="backup-meta">
+            Cards added since the backup are left alone.
+            {provider.id === 'google' && ' Google gives re-created contacts a new ID, and their photos are not restored.'}
+          </p>
+        </ConfirmDialog>
       )}
     </div>
   );

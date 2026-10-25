@@ -64,6 +64,19 @@ export interface BackupManifest {
   error: string | null;
   /** When the user confirmed they downloaded this backup or have their own. */
   confirmedAt: string | null;
+  /** Each time this backup was put back into its address book. */
+  restores?: RestoreRecord[];
+}
+
+export interface RestoreRecord {
+  mode: 'missing' | 'all';
+  startedAt: string;
+  finishedAt: string;
+  recreated: number;
+  reverted: number;
+  unchanged: number;
+  failed: number;
+  errors: string[];
 }
 
 /** A remote delete needs a verified, confirmed backup no older than this. */
@@ -355,6 +368,14 @@ export function confirmBackup(userId: number, id: string): BackupManifest {
   manifest.confirmedAt = new Date().toISOString();
   writeManifest(path.join(getUserBackupsPath(userId), id), manifest);
   return manifest;
+}
+
+/** Appends a restore's outcome to the backup's manifest. */
+export function recordRestore(userId: number, id: string, record: RestoreRecord): void {
+  const manifest = getBackup(userId, id);
+  if (!manifest) return;
+  manifest.restores = [...(manifest.restores ?? []), record];
+  writeManifest(path.join(getUserBackupsPath(userId), id), manifest);
 }
 
 export interface DeletionGate {

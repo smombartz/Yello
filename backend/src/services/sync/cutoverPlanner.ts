@@ -13,7 +13,8 @@ import {
   parsedToContactData, projectContact, type SyncField, type SyncProjection
 } from './syncProjection.js';
 import { personToContactData } from './googlePersonMapper.js';
-import type { GooglePersonRaw } from './googlePeople.js';
+import { contactPhotoUrl, type GooglePersonRaw } from './googlePeople.js';
+import { getProviderRow, sha256 } from './syncRuntime.js';
 import { listBackups, type BackupManifest } from './remoteBackupService.js';
 import type { SyncProvider } from './syncState.js';
 
@@ -88,13 +89,25 @@ export interface CutoverSummary {
 
 // ─── Remote cards ───────────────────────────────────────────────────────────
 
-interface RemoteCard {
+export interface RemoteCard {
   provider: SyncProvider;
   remoteId: string;
   remoteUid: string | null;
+  etag: string | null;
   modifiedAt: string | null;
   data: ContactForVcard;
   incoming: IncomingContact;
+  /** Identity of the card's photo (iCloud: hash of its bytes; Google: hash of its URL). */
+  photoHash: string | null;
+  /** Google: the contact photo's URL, to download it. */
+  photoUrl: string | null;
+}
+
+export interface LoadCardsOptions {
+  /** Keep iCloud photos in `data.photoBase64` (the apply step imports them). */
+  keepPhotos?: boolean;
+  /** Only these remote ids (the rest are skipped, not parsed). */
+  only?: Set<string>;
 }
 
 /** An ISO timestamp from a vCard REV (`20261024T101500Z`, `2026-10-24T10:15:00Z`, `2026-10-24`). */
@@ -115,11 +128,11 @@ function splitCards(text: string): string[] {
     .filter(block => /^BEGIN:VCARD/i.test(block));
 }
 
-async function loadICloudCards(userId: number, backup: BackupManifest) {
+export async function loadICloudCards(userId: number, backup: BackupManifest, options: LoadCardsOptions = {}) {
   const dir = path.join(getUserBackupsPath(userId), backup.id);
   const blocks = splitCards(fs.readFileSync(path.join(dir, 'icloud-contacts.vcf'), 'utf-8'));
   const index = JSON.parse(fs.readFileSync(path.join(dir, 'icloud-index.json'), 'utf-8')) as
-    Array<{ url: string; uid: string | null; group: boolean }>;
+    Array<{ url: string; etag: string | null; uid: string | null; group: boolean }>;
   if (index.length !== blocks.length) {
     throw new Error(`iCloud backup ${backup.id} is inconsistent: ${blocks.length} cards, ${index.length} index entries`);
   }
@@ -132,22 +145,27 @@ async function loadICloudCards(userId: number, backup: BackupManifest) {
     if (i % 100 === 99) await yieldToEventLoop();
     const block = blocks[i];
     const remoteId = index[i].url;
+    if (options.only && !options.only.has(remoteId)) continue;
     if (isGroupVcard(block)) { groups++; continue; }
     try {
       const parsed = parseSingleVcard(block);
       if (!parsed) throw new Error('card produced no contact');
+      const photoHash = parsed.photoBase64 ? sha256(parsed.photoBase64) : null;
       // The plan never needs the photo or the card text; dropping them keeps
       // a few thousand photo cards from piling up in memory.
-      parsed.photoBase64 = null;
+      if (!options.keepPhotos) parsed.photoBase64 = null;
       parsed.rawVcard = '';
       const rev = parsed.extraProperties?.find(p => p.name === 'REV')?.value ?? null;
       cards.push({
         provider: 'icloud',
         remoteId,
         remoteUid: parsed.uid,
+        etag: index[i].etag ?? null,
         modifiedAt: parseRev(rev),
         data: parsedToContactData(parsed),
-        incoming: parsed
+        incoming: parsed,
+        photoHash,
+        photoUrl: null
       });
     } catch (error) {
       unreadable.push({ remoteId, error: error instanceof Error ? error.message : String(error) });
@@ -156,21 +174,26 @@ async function loadICloudCards(userId: number, backup: BackupManifest) {
   return { cards, groups, unreadable };
 }
 
-function loadGoogleCards(userId: number, backup: BackupManifest) {
+export function loadGoogleCards(userId: number, backup: BackupManifest, options: LoadCardsOptions = {}) {
   const dir = path.join(getUserBackupsPath(userId), backup.id);
   const { people } = JSON.parse(fs.readFileSync(path.join(dir, 'google-people.json'), 'utf-8')) as { people: GooglePersonRaw[] };
   const cards: RemoteCard[] = [];
   for (const person of people) {
     if (person.metadata?.deleted) continue;
+    if (options.only && !options.only.has(person.resourceName)) continue;
     const data = personToContactData(person, { socialsFromUrls: true });
+    const photoUrl = contactPhotoUrl(person);
     const updateTime = person.metadata?.sources?.find(s => s.type === 'CONTACT')?.updateTime ?? null;
     cards.push({
       provider: 'google',
       remoteId: person.resourceName,
       remoteUid: data.uid ?? null,
+      etag: person.etag ?? null,
       modifiedAt: updateTime ? new Date(updateTime).toISOString() : null,
       data,
-      incoming: { ...contactDataToParsed(data), googleResourceName: person.resourceName }
+      incoming: { ...contactDataToParsed(data), googleResourceName: person.resourceName },
+      photoHash: photoUrl ? sha256(photoUrl) : null,
+      photoUrl
     });
   }
   return { cards, groups: 0, unreadable: [] as Array<{ remoteId: string; error: string }> };
@@ -483,6 +506,10 @@ export async function computeCutoverPlan(
   const providers = {} as Record<SyncProvider, ProviderPlanSummary>;
   const backups: Partial<Record<SyncProvider, string>> = {};
   for (const provider of ['icloud', 'google'] as const) {
+    if (getProviderRow(db, provider).cutover_completed_at) {
+      providers[provider] = emptySummary(provider, `${provider === 'icloud' ? 'iCloud' : 'Google'} is already synced with Yello`);
+      continue;
+    }
     const backup = listBackups(userId, provider).find(b => b.status === 'verified');
     if (!backup) {
       providers[provider] = emptySummary(provider, `No verified ${provider === 'icloud' ? 'iCloud' : 'Google'} backup yet`);

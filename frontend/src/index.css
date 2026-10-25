@@ -4507,6 +4507,149 @@ a.nav-rail-item.active {
   overflow-wrap: anywhere;
 }
 
+.backup-restore {
+  margin-top: var(--ds-space-3);
+}
+
+/* Sync status (Tools › Sync) */
+.sync-actions {
+  display: flex;
+  gap: var(--ds-space-2);
+}
+
+.sync-runs {
+  list-style: none;
+  margin: var(--ds-space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.sync-runs li {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: var(--ds-space-2);
+  color: var(--ds-text-primary);
+}
+
+.sync-run-when {
+  color: var(--ds-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Earlier versions from iCloud/Google (contact page) */
+.remote-versions {
+  margin-top: var(--ds-space-6);
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-border-color);
+}
+
+.remote-versions h3 {
+  margin: 0 0 var(--ds-space-3);
+  font-size: var(--ds-font-md);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text-primary);
+}
+
+.remote-versions ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.remote-versions li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  font-size: var(--ds-font-sm);
+}
+
+.remote-versions li p {
+  margin: var(--ds-space-1) 0 0;
+  color: var(--ds-text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* Cutover review and switch */
+.cutover-choice {
+  margin-left: var(--ds-space-2);
+  font-size: var(--ds-font-xs);
+  max-width: 100%;
+}
+
+.cutover-choice-done {
+  color: var(--ds-text-secondary);
+}
+
+.cutover-apply {
+  margin-top: var(--ds-space-5);
+  padding: var(--ds-space-4);
+  border: 1px solid var(--ds-border-color);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-bg-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-space-3);
+}
+
+.cutover-apply h3 {
+  margin: 0;
+  font-size: var(--ds-font-md);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text-primary);
+}
+
+.cutover-apply .backup-meta,
+.cutover-apply .backup-error {
+  margin: 0;
+}
+
+.cutover-apply--done {
+  border-color: var(--ds-color-success);
+}
+
+.cutover-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  font-size: var(--ds-font-sm);
+}
+
+.cutover-checklist li::before {
+  display: inline-block;
+  width: 1.25em;
+  font-weight: var(--ds-weight-bold);
+}
+
+.cutover-checklist li.ok::before {
+  content: '✓';
+  color: var(--ds-color-success-dark);
+}
+
+.cutover-checklist li.todo::before {
+  content: '•';
+  color: var(--ds-color-warning-dark);
+}
+
+.cutover-next {
+  margin: 0;
+  padding-left: var(--ds-space-5);
+  font-size: var(--ds-font-sm);
+  color: var(--ds-text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
 .import-controls {
   display: flex;
   flex-direction: column;

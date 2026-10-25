@@ -18,6 +18,8 @@ import { GoogleContactsImportContent } from './GoogleContactsImportContent';
 import { EnrichToolsContent } from './EnrichToolsContent';
 import { RemoteBackupsContent } from './RemoteBackupsContent';
 import { CutoverPreviewContent } from './CutoverPreviewContent';
+import { SyncStatusContent } from './SyncStatusContent';
+import { useSyncStatus } from '../api/syncHooks';
 import { FilePicker } from './ui/FilePicker';
 
 export function SettingsView() {
@@ -47,6 +49,9 @@ export function SettingsView() {
   const [icloudEmail, setIcloudEmail] = useState('');
   const [icloudPassword, setIcloudPassword] = useState('');
   const icloudSettings = useICloudSettings();
+  const syncStatus = useSyncStatus();
+  const syncedProviders = new Set((syncStatus.data?.providers ?? []).filter(p => p.cutoverCompletedAt).map(p => p.provider));
+  const showSync = !!syncStatus.data && (syncStatus.data.engineEnabled || syncedProviders.size > 0);
   const saveICloudSettings = useSaveICloudSettings();
   const deleteICloudSettings = useDeleteICloudSettings();
 
@@ -113,6 +118,18 @@ export function SettingsView() {
   return (
     <div className="settings-view">
       <div className="settings-content">
+        {/* ===== Sync ===== */}
+        {showSync && (
+          <section className="settings-group">
+            <h2 className="settings-group-title">Sync</h2>
+            <section className="settings-section collapsible-card expanded">
+              <div className="collapsible-content">
+                <SyncStatusContent />
+              </div>
+            </section>
+          </section>
+        )}
+
         {/* ===== Backups ===== */}
         <section className="settings-group">
           <h2 className="settings-group-title">Before you switch</h2>
@@ -286,7 +303,9 @@ export function SettingsView() {
               <p className="settings-description">
                 Import contacts from your Google account. Since you're already signed in with Google, you may just need to grant additional permission to access your contacts.
               </p>
-              <GoogleContactsImportContent />
+              {syncedProviders.has('google')
+                ? <p className="settings-description">Google Contacts is synced with Yello: new and changed contacts come in on their own. See Sync above.</p>
+                : <GoogleContactsImportContent />}
             </div>
           )}
         </section>
@@ -305,7 +324,11 @@ export function SettingsView() {
           </button>
           {icloudExpanded && (
             <div className="collapsible-content">
-              {icloudSettings.data?.connected ? (
+              {syncedProviders.has('icloud') ? (
+                <p className="settings-description">
+                  iCloud is synced with Yello as <strong>{icloudSettings.data?.email}</strong>: new and changed contacts come in on their own. See Sync above.
+                </p>
+              ) : icloudSettings.data?.connected ? (
                 <>
                   <p className="settings-description">
                     Connected as <strong>{icloudSettings.data.email}</strong>

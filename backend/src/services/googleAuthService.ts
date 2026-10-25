@@ -128,3 +128,20 @@ export function hasGoogleTokens(userId: number): boolean {
 
   return !!(user?.access_token || user?.refresh_token);
 }
+
+export type GoogleContactsScope = 'none' | 'readonly' | 'write';
+
+/** Which Contacts permission an access token carries (from Google's tokeninfo). */
+export async function contactsScopeOf(accessToken: string): Promise<GoogleContactsScope> {
+  try {
+    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`);
+    if (!response.ok) return 'none';
+    const { scope = '' } = await response.json() as { scope?: string };
+    const scopes = scope.split(' ');
+    if (scopes.includes('https://www.googleapis.com/auth/contacts')) return 'write';
+    if (scopes.includes('https://www.googleapis.com/auth/contacts.readonly')) return 'readonly';
+    return 'none';
+  } catch {
+    return 'none';
+  }
+}

@@ -3,7 +3,7 @@ import oauthPlugin from '@fastify/oauth2';
 import type { OAuth2Namespace } from '@fastify/oauth2';
 import { randomBytes } from 'crypto';
 import { encryptToken } from '../services/tokenEncryption.js';
-import { getValidAccessToken } from '../services/googleAuthService.js';
+import { contactsScopeOf, getValidAccessToken } from '../services/googleAuthService.js';
 
 // Google OAuth2 configuration - manually defined since types don't export it
 // See: https://github.com/fastify/fastify-oauth2
@@ -417,7 +417,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
             }
           );
 
-          return finishSignIn(request, reply, user.id, '/google-contacts-import');
+          const writeFlow = request.cookies.google_contacts_write_flow === '1';
+          reply.clearCookie('google_contacts_write_flow', { path: '/' });
+          return finishSignIn(request, reply, user.id, writeFlow ? '/tools?google=write-granted' : '/google-contacts-import');
         }
 
         // --- Normal login flow (uses @fastify/oauth2 plugin) ---
@@ -521,18 +523,30 @@ export default async function authRoutes(fastify: FastifyInstance) {
     return reply.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
   });
 
-  // Google Contacts re-auth: redirect to Google OAuth with contacts scopes
-  fastify.get('/google/contacts', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request: FastifyRequest, reply: FastifyReply) => {
+  // Google Contacts re-auth: redirect to Google OAuth with contacts scopes.
+  // ?write=1 asks for full Contacts access, which two-way sync needs.
+  fastify.get('/google/contacts', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request: FastifyRequest<{ Querystring: { write?: string } }>, reply: FastifyReply) => {
     if (!googleClientId || !googleClientSecret) {
       return reply.status(503).send({ error: 'Google OAuth not configured' });
     }
 
+    const write = request.query.write === '1';
     const scopes = [
       'profile',
       'email',
       'https://www.googleapis.com/auth/contacts.other.readonly',
-      'https://www.googleapis.com/auth/contacts.readonly',
+      write ? 'https://www.googleapis.com/auth/contacts' : 'https://www.googleapis.com/auth/contacts.readonly',
     ].join(' ');
+
+    if (write) {
+      reply.setCookie('google_contacts_write_flow', '1', {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 600, // 10 minutes
+      });
+    }
 
     const state = randomBytes(16).toString('hex');
     reply.setCookie('google_contacts_oauth_state', state, {
@@ -592,12 +606,12 @@ export default async function authRoutes(fastify: FastifyInstance) {
       );
 
       if (testResponse.ok) {
-        return { hasContactsScope: true, needsReauth: false };
+        return { hasContactsScope: true, needsReauth: false, scope: await contactsScopeOf(accessToken) };
       }
 
       // 403 means the token doesn't have the contacts scope
       if (testResponse.status === 403) {
-        return { hasContactsScope: false, needsReauth: true };
+        return { hasContactsScope: false, needsReauth: true, scope: 'none' };
       }
 
       // Other errors - treat as needing reauth

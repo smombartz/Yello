@@ -225,21 +225,39 @@ iCloud credentials stay in `user_settings`, handled by `encryptToken`/`decryptTo
 - ✅ Streaming iCloud read side (`streamICloudCards`, shipped in Phase 0).
 - ✅ Read-only cutover dry run (`cutoverPlanner.ts`, `/api/sync/cutover/*`, "Preview the switch to Yello" card), including Apple group cards imported as contacts. It plans from the latest verified backups, not the live remotes. Verified on the real 12,116-card export: every card linked by UID, zero spurious changes, 3.4 s.
 
-**Phase 2: iCloud two-way engine**
-- `syncEngine.ts` + `icloudSyncAdapter.ts`, feature-flagged.
+**Phase 2: iCloud two-way engine** — ✅ done 2026-10-25
+- ✅ `icloudSyncEngine.ts` (`runICloudSync`) + `icloudRemote.ts` (`ICloudRemote`, tsdav implementation) + `syncRuntime.ts` (lock/lease, runs, remote-version log, guards) + `replaceContactFields`.
+- ✅ Behind `SYNC_ENGINE=1`; enable only on an empty book; reset route for after testing.
+- ✅ Tested against an in-memory CardDAV book: second run is a no-op; server rewrites don't echo; phone edit pulled; different-field edits both survive; same-field edits go to Yello with iCloud's version logged; phone delete archives; archive deletes and unarchive recreates; new phone card imported; 412 merge-and-retry; merge leftover card deleted; mass-vanish and mass-delete guards (plus backup gate); unreadable card skipped; photo pulled.
+- ⏳ Live check against a spare Apple ID (user).
 
-**Phase 3: Google two-way engine**
-- Write scope, adapter, batching, photo queue.
+**Phase 3: Google two-way engine** — ✅ done 2026-10-25
+- ✅ Write scope (`/api/auth/google/contacts?write=1`) and scope status (`contactsScopeOf`).
+- ✅ `googleRemote.ts` (People API client: sync tokens, batch create/update/delete with etags, single-update fallback for a stale etag, photo upload/delete, write spacing, 429 back-off) and `googleSyncEngine.ts` (`runGoogleSync`).
+- ✅ Shared three-way merge `planFieldMerge`; error classes moved to `syncRuntime.ts`.
+- ✅ Routes: `/google/enable` (empty account + write scope only), `/google/disable`, `/google/reset`, `/run` for Google.
+- ✅ Tested against an in-memory People API: creates with `clientData`, no labels written, second run is a no-op; Gmail edit pulled; Apple labels kept on Gmail email edits; same-field edits go to Yello with Google's version logged; Gmail delete archives; archive deletes and unarchive recreates; Gmail-added contact imported without profile values; stale-etag merge and retry; expired sync token; photo uploaded once; an iPhone edit reaches Google in one round without echoing back; a missing permission pauses. The People API client was tested against a scripted fetch.
+- ⏳ Live check against a spare Google account (user). The Google Cloud consent screen must list the `contacts` scope.
 
-**Phase 4: Cutover**
-- Backups, plan, review UI (`components/sync/CutoverWizard.tsx`, `CutoverReview.tsx` styled like `ImportMatchCards`), apply, first push, resume after a crash.
+**Phase 4: Cutover** — ✅ done 2026-10-25
+- ✅ Review: per-item choices in the preview card (`CutoverPreviewContent.tsx`, built into the existing lists rather than a separate wizard), `resolve` / `resolve-all` routes, defaults that never lose data (possible matches default to *import*, not *same*).
+- ✅ Apply (`cutoverApply.ts`): preconditions, one-transaction Yello step (accepted changes, imports, links from the backup snapshots, tombstones, providers on), photos for photoless contacts, first push through both engines, `pushing` → resumable (Continue button + boot hook).
+- ✅ Restore (`remoteRestore.ts`): `missing` / `all`, only with that provider's sync off; UI on the backups card.
+- ✅ Legacy iCloud/Google import routes refuse (409) once that provider is synced.
+- ✅ Tested end to end against the in-memory iCloud and Google: both books end up holding exactly Yello's active contacts, and ongoing sync afterwards is a no-op. Also tested: reviewer choices honoured, invalid choices refused, bulk choices, refusal without a confirmed backup (nothing changed), resuming an interrupted push, and restore (`missing` and `all`).
+- ⏳ Live run against the real accounts (user), following the runbook.
 
-**Phase 5: Scheduler and UI**
-- `components/SyncView.tsx` with status cards, Sync now, Pause, runs log and mass-change confirm.
-- `RemoteVersionsPanel.tsx` on contact detail, for restore.
-- `api/syncHooks.ts`.
-- A Sync group at the top of `SettingsView.tsx`.
-- Disable the legacy import buttons.
+**Phase 5: Scheduler and UI** — ✅ done 2026-10-25
+- ✅ `syncScheduler.ts`: rounds every `SYNC_INTERVAL_MINUTES`, failure back-off, debounced sync after edits (root `onResponse` hook), `runAllSyncs`.
+- ✅ Tools › Sync (`SyncStatusContent.tsx`): status, Sync now, Pause/Resume, mass-change *Review / Continue*, recent runs.
+- ✅ Earlier versions on the contact page (`RemoteVersionsPanel.tsx`, `remoteVersions.ts`) with restore.
+- ✅ Legacy import sections replaced by a note once synced (backend already refuses with 409).
+- ✅ Tested: edit detection, a scheduled round carrying an iPhone edit to Google, paused/off books left alone, back-off, run-all order, listing and restoring overwritten and deleted versions, refusal of summary-only entries.
+
+**Rollout checklist (production)**
+1. Google Cloud OAuth consent screen: add the `.../auth/contacts` scope. Move the app out of Testing (or make it Internal for the Workspace), so refresh tokens don't expire every 7 days.
+2. Railway: set `SYNC_ENGINE=1` (optionally `SYNC_INTERVAL_MINUTES`).
+3. Deploy, then follow the cutover runbook below with the real accounts.
 
 Every phase gets a `docs/log.md` entry, `docs/database.md` updates and `docs/reference.md` notes.
 
@@ -338,3 +356,20 @@ Every phase gets a `docs/log.md` entry, `docs/database.md` updates and `docs/ref
   - The dry run is pure computation over the backup files and the database, so it needs no throwaway `db.backup()` copy. Phase 4's apply will reuse the stored plan.
   - Fixed a pre-existing bug found while testing the tombstone trigger: permanently deleting archived contacts (and the cleanup delete) failed with "database disk image is malformed" because the code deleted `contacts_fts` rows before the `contacts_ad` trigger deleted them again.
   - `contacts_au` now fires only `AFTER UPDATE OF display_name, company`. The new UID trigger otherwise triggered it before the row was indexed, which corrupted the index the same way.
+- **2026-10-25 (Phase 2 shipped):**
+  - Pull uses ctag plus an etag diff of the full listing instead of CardDAV sync-collection. That is one PROPFIND per run and needs no sync-token state to expire or corrupt. Sync-collection can come later if listings get slow.
+  - The ctag is stored only after a run that wrote nothing. A ctag read after our own writes could hide a phone edit made in between.
+  - A remote photo removal is not applied (Yello keeps its photo and pushes it back). Only added or changed photos come in.
+- **2026-10-25 (Phase 3 shipped):**
+  - Google photos are identified by their URL rather than their bytes; Google recompresses images and the URL changes when the photo does.
+  - Photo uploads are capped at 100 per run (one API call each); the rest follow on later runs.
+  - Google Cloud's OAuth consent screen needs the `contacts` scope added before `?write=1` can be granted.
+- **2026-10-25 (Phase 4 shipped):**
+  - Review lives inside the preview lists (a choice per item) instead of a separate wizard, so there is one place to read and decide.
+  - Possible matches default to *bring into Yello* rather than *same person*. A wrong "same" would delete someone's card, while a wrong import only leaves a duplicate to merge in Yello.
+  - Apply checks that the plan's backup is still the newest. If you back up again, you must preview again, so what you reviewed is what gets applied.
+  - When a contact has a photo on both sides, the photos are treated as in sync. Pushing Yello's photos over every card would cost a write per photo for no visible gain.
+- **2026-10-25 (Phase 5 shipped):**
+  - Edits are detected by route prefix in one root `onResponse` hook rather than in each writer.
+  - Remote versions from the cutover that hold only a field summary are listed but cannot be restored; full cards and Persons can.
+  - All five phases are built. What remains is the user's live testing with spare accounts, then the production rollout.

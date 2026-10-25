@@ -183,7 +183,9 @@ function socialUrl(profile: { platform: string; username: string | null; profile
  * Yello sends social profiles as typed URLs, so they project as URLs there.
  */
 export function projectContact(contact: ContactForVcard, provider: SyncProvider): SyncProjection {
+  // Google gets only the profiles that have a URL (see contactDataToPerson).
   const socials = contact.socialProfiles
+    .filter(profile => provider !== 'google' || text(profile.profileUrl))
     .map(profile => ({ platform: profile.platform.trim().toLowerCase(), value: socialUrl(profile) }))
     .filter((s): s is { platform: string; value: string } => !!s.value)
     .map(s => ({ platform: s.platform, value: s.value.toLowerCase().replace(/\/+$/, '') }));
@@ -356,5 +358,29 @@ export function contactDataToParsed(data: ContactForVcard): ParsedContact {
     photoBase64: data.photoBase64 ?? null,
     rawVcard: '',
     uid: data.uid ?? null
+  };
+}
+
+/**
+ * The three-way, per-family merge both sync engines use. `baseRemote` /
+ * `baseLocal` are the projections stored at the last sync. A family changed
+ * only on the remote side is taken; one changed on both sides to different
+ * values is a conflict, which Yello wins.
+ *
+ * Without a local snapshot, the remote snapshot stands in for it; without
+ * either, every difference counts as changed on both sides (Yello wins).
+ */
+export function planFieldMerge(
+  baseRemote: SyncProjection | null,
+  baseLocal: SyncProjection | null,
+  local: SyncProjection,
+  remote: SyncProjection
+): { take: SyncField[]; conflicts: SyncField[] } {
+  const localBase = baseLocal ?? baseRemote;
+  const remoteChanged = diffProjections(baseRemote ?? local, remote);
+  const localChanged = localBase ? diffProjections(localBase, local) : remoteChanged;
+  return {
+    take: remoteChanged.filter(f => !localChanged.includes(f)),
+    conflicts: remoteChanged.filter(f => localChanged.includes(f) && JSON.stringify(local[f]) !== JSON.stringify(remote[f]))
   };
 }

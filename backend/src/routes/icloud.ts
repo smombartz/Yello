@@ -6,6 +6,7 @@ import { matchIncomingContacts } from '../services/icloudMatchingService.js';
 import type { ParsedContact } from '../services/vcardParser.js';
 import { processPhoto } from '../services/photoProcessor.js';
 import { insertParsedContact, mergeParsedIntoContact, prepareContactStatements } from '../services/contactPersistence.js';
+import { getProviderRow } from '../services/sync/syncRuntime.js';
 
 export default async function icloudRoutes(
   fastify: FastifyInstance,
@@ -108,6 +109,10 @@ export default async function icloudRoutes(
     };
   }>('/import', { bodyLimit: 100 * 1024 * 1024 }, async (request, reply) => {
     const { newContacts, merges, skipped } = request.body;
+    // Once iCloud is synced, its contacts arrive through sync; an import would add unlinked duplicates.
+    if (getProviderRow(getUserDatabase(request.user!.id), 'icloud').cutover_completed_at) {
+      return reply.status(409).send({ error: 'iCloud is synced with Yello now; its contacts come in through sync.' });
+    }
     const userId = request.user!.id;
     const db = getUserDatabase(userId);
 
