@@ -1,12 +1,9 @@
 import fs from 'fs';
 import readline from 'readline';
-import { rebuildContactSearch } from './database.js';
-import { paramsJson, saveVcardModelFields } from './vcardModelStore.js';
-import type { Database as DatabaseType, Statement } from 'better-sqlite3';
-import { parseSingleVcard, unfoldLines, type ParsedContact } from './vcardParser.js';
+import { isGroupVcard, parseSingleVcard, unfoldLines, type ParsedContact } from './vcardParser.js';
 import { processPhoto } from './photoProcessor.js';
 import { getUserDatabase } from './userDatabase.js';
-import { LINKEDIN_ENRICHMENT_COLUMNS } from './linkedinEnrichmentColumns.js';
+import { insertParsedContact, prepareContactStatements } from './contactPersistence.js';
 import {
   getImportJob,
   startJob,
@@ -102,212 +99,6 @@ async function countVcards(filePath: string): Promise<number> {
   return count;
 }
 
-type ImportStatement = Statement<unknown[]>;
-
-interface ImportStatements {
-  findByUid: ImportStatement;
-  insertContact: ImportStatement;
-  insertEmail: ImportStatement;
-  insertPhone: ImportStatement;
-  insertAddress: ImportStatement;
-  insertCategory: ImportStatement;
-  insertInstantMessage: ImportStatement;
-  insertUrl: ImportStatement;
-  insertRelatedPerson: ImportStatement;
-  insertSocialProfile: ImportStatement;
-  insertLinkedinEnrichment: ImportStatement;
-  setPhotoHash: ImportStatement;
-  upsertContactPhoto: ImportStatement;
-}
-
-/**
- * Prepared once per batch rather than once per job: the LRU cache in
- * getUserDatabase can close a handle out from under a long-running job, so the
- * worker re-acquires the database (and therefore its statements) each batch.
- */
-function prepareStatements(db: DatabaseType): ImportStatements {
-  return {
-    findByUid: db.prepare('SELECT id FROM contacts WHERE icloud_uid = ? LIMIT 1'),
-
-    insertContact: db.prepare(`
-      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, photo_hash, icloud_uid)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `),
-
-    insertEmail: db.prepare(`
-      INSERT INTO contact_emails (contact_id, email, type, extra_types, label, params, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?)
-    `),
-
-    insertPhone: db.prepare(`
-      INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, extra_types, label, params, is_primary)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `),
-
-    // geocoded_at is stamped alongside imported coordinates so the address
-    // cleanup queue (which treats geocoded_at IS NULL as pending) does not
-    // re-geocode them through the paid HERE API.
-    insertAddress: db.prepare(`
-      INSERT INTO contact_addresses (
-        contact_id, street, city, state, postal_code, country, type, extra_types, label,
-        po_box, extended, sublocality, subadministrative_area, country_code, params,
-        latitude, longitude, geocoded_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? IS NULL THEN NULL ELSE datetime('now') END)
-    `),
-
-    insertCategory: db.prepare(`
-      INSERT INTO contact_categories (contact_id, category) VALUES (?, ?)
-    `),
-
-    insertInstantMessage: db.prepare(`
-      INSERT INTO contact_instant_messages (contact_id, service, handle, type, params) VALUES (?, ?, ?, ?, ?)
-    `),
-
-    insertUrl: db.prepare(`
-      INSERT INTO contact_urls (contact_id, url, label, type, params) VALUES (?, ?, ?, ?, ?)
-    `),
-
-    insertRelatedPerson: db.prepare(`
-      INSERT INTO contact_related_people (contact_id, name, relationship, params) VALUES (?, ?, ?, ?)
-    `),
-
-    insertSocialProfile: db.prepare(`
-      INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url, type, params)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `),
-
-    insertLinkedinEnrichment: db.prepare(`
-      INSERT INTO linkedin_enrichment (contact_id, ${LINKEDIN_ENRICHMENT_COLUMNS.join(', ')})
-      VALUES (?, ${LINKEDIN_ENRICHMENT_COLUMNS.map(() => '?').join(', ')})
-    `),
-
-    setPhotoHash: db.prepare('UPDATE contacts SET photo_hash = ? WHERE id = ?'),
-
-    upsertContactPhoto: db.prepare(`
-      INSERT INTO contact_photos (contact_id, source, local_hash, is_primary)
-      VALUES (?, 'vcard', ?, 1)
-      ON CONFLICT(contact_id, source) DO UPDATE SET
-        local_hash = excluded.local_hash,
-        fetched_at = CURRENT_TIMESTAMP
-    `)
-  };
-}
-
-interface InsertedContact {
-  contactId: number;
-  addressesGeotagged: number;
-}
-
-/**
- * Inserts one contact and all of its child rows. Must be called inside a
- * transaction; returns null if the card was skipped as a duplicate.
- */
-function insertContact(stmts: ImportStatements, db: DatabaseType, contact: ParsedContact): InsertedContact | null {
-  // Stable-identifier dedupe: a re-import of the same export is a no-op for
-  // any card carrying a UID we have already seen.
-  if (contact.uid) {
-    const existing = stmts.findByUid.get(contact.uid) as { id: number } | undefined;
-    if (existing) return null;
-  }
-
-  const result = stmts.insertContact.run(
-    contact.firstName,
-    contact.lastName,
-    contact.displayName,
-    contact.company,
-    contact.title,
-    contact.notes,
-    contact.birthday,
-    null,
-    contact.uid
-  );
-  const contactId = result.lastInsertRowid as number;
-
-  for (const email of contact.emails) {
-    stmts.insertEmail.run(
-      contactId, email.email, email.type, email.extraTypes ?? null, email.label ?? null,
-      paramsJson(email.params), email.isPrimary ? 1 : 0
-    );
-  }
-
-  for (const phone of contact.phones) {
-    stmts.insertPhone.run(
-      contactId, phone.phone, phone.phoneDisplay, phone.countryCode, phone.type,
-      phone.extraTypes ?? null, phone.label ?? null, paramsJson(phone.params), phone.isPrimary ? 1 : 0
-    );
-  }
-
-  let addressesGeotagged = 0;
-  for (const addr of contact.addresses) {
-    stmts.insertAddress.run(
-      contactId,
-      addr.street,
-      addr.city,
-      addr.state,
-      addr.postalCode,
-      addr.country,
-      addr.type,
-      addr.extraTypes ?? null,
-      addr.label ?? null,
-      addr.poBox ?? null,
-      addr.extended ?? null,
-      addr.sublocality ?? null,
-      addr.subadministrativeArea ?? null,
-      addr.countryCode ?? null,
-      paramsJson(addr.params),
-      addr.latitude,
-      addr.longitude,
-      addr.latitude
-    );
-    if (addr.latitude !== null && addr.longitude !== null) addressesGeotagged++;
-  }
-
-  for (const category of contact.categories) {
-    stmts.insertCategory.run(contactId, category);
-  }
-
-  for (const im of contact.instantMessages) {
-    stmts.insertInstantMessage.run(contactId, im.service, im.handle, im.type, paramsJson(im.params));
-  }
-
-  for (const url of contact.urls) {
-    stmts.insertUrl.run(contactId, url.url, url.label, url.type, paramsJson(url.params));
-  }
-
-  for (const person of contact.relatedPeople) {
-    stmts.insertRelatedPerson.run(contactId, person.name, person.relationship, paramsJson(person.params));
-  }
-
-  for (const profile of contact.socialProfiles) {
-    // Extract username from URL if not provided
-    let username = profile.username;
-    if (!username && profile.url) {
-      const urlMatch = profile.url.match(/\/([^/]+)\/?$/);
-      username = urlMatch ? urlMatch[1] : profile.platform;
-    }
-    username = username || profile.platform;
-
-    stmts.insertSocialProfile.run(contactId, profile.platform, username, profile.url, null, paramsJson(profile.params));
-  }
-
-  if (contact.linkedinEnrichment) {
-    const enrichment = contact.linkedinEnrichment;
-    const values = LINKEDIN_ENRICHMENT_COLUMNS.map(column => {
-      const value = enrichment[column];
-      return typeof value === 'string' || typeof value === 'number' ? value : null;
-    });
-    if (values.some(value => value !== null)) {
-      stmts.insertLinkedinEnrichment.run(contactId, ...values);
-    }
-  }
-
-  saveVcardModelFields(db, contactId, contact);
-
-  rebuildContactSearch(db, contactId);
-
-  return { contactId, addressesGeotagged };
-}
-
 /**
  * Commits one batch. Photo processing is deliberately sandwiched between two
  * transactions: processPhoto is async (sharp) and hashes on the contact id, so
@@ -323,6 +114,10 @@ async function processBatch(
   const parsed: Array<{ index: number; contact: ParsedContact }> = [];
 
   for (const block of blocks) {
+    if (isGroupVcard(block.raw)) {
+      totals.skipped++;
+      continue;
+    }
     try {
       const contact = parseSingleVcard(unfoldLines(block.raw));
       if (contact) {
@@ -342,14 +137,14 @@ async function processBatch(
   }
 
   const db = getUserDatabase(userId);
-  const stmts = prepareStatements(db);
+  const stmts = prepareContactStatements(db);
   const pendingPhotos: PendingPhoto[] = [];
 
   // Transaction A — contacts and all child rows.
   db.transaction(() => {
     for (const { index, contact } of parsed) {
       try {
-        const inserted = insertContact(stmts, db, contact);
+        const inserted = insertParsedContact(stmts, db, contact);
 
         if (inserted === null) {
           totals.skipped++;
@@ -384,7 +179,7 @@ async function processBatch(
   // Transaction B — attach the processed photo hashes.
   if (processed.length > 0) {
     const photoDb = getUserDatabase(userId);
-    const photoStmts = prepareStatements(photoDb);
+    const photoStmts = prepareContactStatements(photoDb);
 
     photoDb.transaction(() => {
       for (const { contactId, hash } of processed) {

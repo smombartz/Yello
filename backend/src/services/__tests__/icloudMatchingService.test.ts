@@ -27,6 +27,11 @@ function createTestDb(): InstanceType<typeof Database> {
       contact_id INTEGER NOT NULL, platform TEXT, username TEXT,
       profile_url TEXT, type TEXT
     );
+    CREATE TABLE contact_merged_identities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_id INTEGER NOT NULL, kind TEXT NOT NULL, value TEXT NOT NULL,
+      merged_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE (kind, value)
+    );
   `);
   return db;
 }
@@ -131,6 +136,20 @@ describe('matchIncomingContacts', () => {
       expect(result.matches).toHaveLength(1);
       expect(result.matches[0].existingContactId).toBe(1);
       expect(result.matches[0].confidence).toBe('very_high');
+    });
+
+    it('resolves the UID of a contact merged away to the contact it was merged into', () => {
+      const db = createTestDb();
+      db.prepare('INSERT INTO contacts (display_name, icloud_uid) VALUES (?, ?)').run('Bob Jones', 'ABC-123');
+      db.prepare("INSERT INTO contact_merged_identities (contact_id, kind, value) VALUES (1, 'uid', 'OLD-DUPLICATE')").run();
+      db.prepare("INSERT INTO contact_merged_identities (contact_id, kind, value) VALUES (1, 'google_resource_name', 'people/c9')").run();
+
+      const result = matchIncomingContacts(db, [
+        makeParsedContact({ displayName: 'B. Jones', uid: 'OLD-DUPLICATE' }),
+        makeParsedContact({ displayName: 'Bobby', googleResourceName: 'people/c9' }),
+      ]);
+      expect(result.newContacts).toHaveLength(0);
+      expect(result.matches.map(m => [m.existingContactId, m.confidence])).toEqual([[1, 'very_high'], [1, 'very_high']]);
     });
 
     it('does not match a different contact that happens to share no identifier', () => {

@@ -2,6 +2,49 @@
   "version": 1,
   "items": [
     {
+      "id": "m3c1xj",
+      "title": "Yello as source of truth: two-way sync with iCloud + Google",
+      "status": "todo",
+      "priority": 2,
+      "due": null,
+      "notes": "Plan: docs/plans/2026-10-25-yello-source-of-truth-sync.md. Cutover keeps Yello's cleaned list as the base, imports only in-window remote updates and new contacts, deletes remote duplicates only after a verified backup.",
+      "steps": [
+        {
+          "id": "xo11",
+          "title": "Phase 0: bug fixes + Apple/Google backup function",
+          "done": false
+        },
+        {
+          "id": "c3pw",
+          "title": "Phase 1: sync foundations (schema, UIDs, projection, mapper, dry run)",
+          "done": false
+        },
+        {
+          "id": "vvsx",
+          "title": "Phase 2: iCloud two-way engine",
+          "done": false
+        },
+        {
+          "id": "i324",
+          "title": "Phase 3: Google two-way engine (write scope)",
+          "done": false
+        },
+        {
+          "id": "no0s",
+          "title": "Phase 4: cutover (review UI, apply, first push, restore)",
+          "done": false
+        },
+        {
+          "id": "99hf",
+          "title": "Phase 5: scheduler + sync UI",
+          "done": false
+        }
+      ],
+      "createdAt": "2026-10-25T04:43:32Z",
+      "updatedAt": "2026-10-25T04:43:32Z",
+      "doneAt": null
+    },
+    {
       "id": "lajshk",
       "title": "Model every vCard property in the database",
       "status": "todo",

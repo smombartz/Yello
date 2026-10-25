@@ -1,4 +1,4 @@
-import { DAVClient, DAVObject } from 'tsdav';
+import { DAVClient, type DAVAddressBook, type DAVObject } from 'tsdav';
 import { parseVcf, type ParsedContact } from './vcardParser.js';
 
 export interface ICloudConnectionResult {
@@ -87,4 +87,50 @@ export async function fetchICloudContacts(
 
   const { contacts, errors } = parseVcf(vcfContent);
   return { contacts, errors, total: contacts.length };
+}
+
+/** One card in an iCloud address book, as the server stores it. */
+export interface ICloudCard {
+  /** Absolute URL of the card resource. */
+  url: string;
+  etag: string | null;
+  /** The vCard text exactly as returned. */
+  data: string;
+}
+
+/** Cards fetched per CARDDAV:addressbook-multiget request. */
+const MULTIGET_BATCH = 100;
+
+/**
+ * Streams every card of every address book, MULTIGET_BATCH at a time, so the
+ * caller never holds the whole book (photos included) in memory at once.
+ * Lists hrefs first (etags only), then multigets them in batches.
+ */
+export async function* streamICloudCards(
+  client: DAVClient
+): AsyncGenerator<{ addressBook: DAVAddressBook; cards: ICloudCard[]; requested: number }> {
+  const addressBooks = await client.fetchAddressBooks();
+
+  for (const addressBook of addressBooks) {
+    const listing = await client.addressBookQuery({
+      url: addressBook.url,
+      props: { 'd:getetag': {} },
+      depth: '1',
+    });
+    const urls = listing
+      .map(res => res.href ?? '')
+      .filter(Boolean)
+      .map(href => new URL(href, addressBook.url).href)
+      .filter(url => url.replace(/\/$/, '') !== addressBook.url.replace(/\/$/, ''));
+
+    for (let i = 0; i < urls.length; i += MULTIGET_BATCH) {
+      const batch = urls.slice(i, i + MULTIGET_BATCH);
+      const objects = await client.fetchVCards({ addressBook, objectUrls: batch });
+      const cards = objects
+        .filter((obj): obj is DAVObject & { data: string } =>
+          typeof obj.data === 'string' && obj.data.includes('BEGIN:VCARD'))
+        .map(obj => ({ url: new URL(obj.url, addressBook.url).href, etag: obj.etag ?? null, data: obj.data }));
+      yield { addressBook, cards, requested: batch.length };
+    }
+  }
 }

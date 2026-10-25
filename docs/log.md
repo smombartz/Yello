@@ -1,5 +1,60 @@
 # Change Log
 
+## 2026-10-25 — Backups of Apple & Google contacts; sync Phase 0 fixes
+
+**Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
+
+**What Changed:**
+- New backup function for the remote address books: Tools › Before you switch › Back up Apple &
+  Google contacts. One click per provider writes a re-importable `.vcf`, a full-fidelity copy
+  (iCloud card index / every Google Person field and label) and a Yello database snapshot to
+  `/data/users/<id>/backups/`, and verifies that the `.vcf` holds every contact the remote listed
+- Deletion gate (`checkDeletionGate` / `assertDeletionAllowed`): nothing may be deleted from iCloud or
+  Google without a verified backup of it from the last 24 hours that the user confirmed. Native-backup
+  guide (Contacts archive, iCloud.com, Google CSV/Takeout) on the same card
+- Contact inserts and merges moved to a shared `contactPersistence` module; the iCloud import's merge
+  path no longer throws when a merge adds an email/phone/address/etc., and its photos are saved
+- Merges keep the merged-away contacts' iCloud UIDs and Google resource names (new
+  `contact_merged_identities`), and import matching resolves them to the surviving contact
+- Apple group cards are no longer imported as contacts
+- Google sign-in, Gmail and Contacts consent all send `include_granted_scopes=true`
+
+**Why:**
+- Phase 0 of making Yello the source of truth and syncing it to iCloud and Google
+  (`docs/plans/2026-10-25-yello-source-of-truth-sync.md`). The user deduplicated in Yello while the
+  Apple and Google books still hold the old duplicates; the cutover will delete those remotely, which
+  must never happen without a backup. The merge-identity record lets the cutover recognise them
+- The iCloud merge path called prepared statements with 4–6 of their 5–9 parameters, so every merge
+  that added a child row failed; its photo insert used a `source` the CHECK constraint rejects
+- A re-consent without `include_granted_scopes` can return a token missing earlier scopes
+
+**Files Modified:**
+- `backend/src/services/sync/remoteBackupService.ts` (new) — `startBackup`, `listBackups`,
+  `confirmBackup`, `resolveBackupFile`, `checkDeletionGate`, `assertDeletionAllowed`
+- `backend/src/services/sync/googlePeople.ts` (new) — `fetchAllGooglePeople`,
+  `fetchAllGoogleContactGroups`, `googlePersonToVcardInput`
+- `backend/src/routes/sync.ts` (new) — `/api/sync/backups` list, start, get, confirm, file download
+- `backend/src/services/contactPersistence.ts` (new) — `prepareContactStatements`,
+  `insertParsedContact`, `mergeParsedIntoContact`
+- `backend/src/services/mergedIdentities.ts` (new) — `carryMergedIdentities`, `findContactByMergedIdentity`
+- `backend/src/services/userDatabase.ts` — `contact_merged_identities` table, `getUserBackupsPath`
+- `backend/src/services/icloudService.ts` — `streamICloudCards`
+- `backend/src/services/importService.ts` — uses `contactPersistence`; skips group cards
+- `backend/src/services/vcardParser.ts` — `isGroupVcard`; `parseVcf` skips groups (`skippedGroups`)
+- `backend/src/services/mergeService.ts` — `mergeContacts` calls `carryMergedIdentities`
+- `backend/src/services/icloudMatchingService.ts` — `addMergedIdentities`
+- `backend/src/routes/icloud.ts` — import/merge via `contactPersistence`
+- `backend/src/routes/auth.ts` — `include_granted_scopes` on all Google flows
+- `backend/src/server.ts` — registers `/api/sync`
+- `frontend/src/components/RemoteBackupsContent.tsx` (new), `frontend/src/api/syncHooks.ts` (new),
+  `frontend/src/components/SettingsView.tsx`, `frontend/src/index.css` — backups card
+- Tests: `contactPersistence.test.ts`, `sync/__tests__/remoteBackupService.test.ts`,
+  `routes/__tests__/sync.test.ts` (new); `icloudMatchingService.test.ts`, `importService.test.ts`
+- `docs/database.md`, `docs/reference.md`, `docs/plans/2026-10-25-yello-source-of-truth-sync.md`,
+  `.dashcode/roadmap.json`
+
+---
+
 ## 2026-10-24 — Separate token encryption key, with zero-reconnect rotation
 
 **Session:** `2f5b48f0-f95c-4b83-b5e0-b90e6ea3acf5`

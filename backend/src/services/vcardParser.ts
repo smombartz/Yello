@@ -154,6 +154,8 @@ export interface ParsedContact {
 export interface ParseResult {
   contacts: ParsedContact[];
   errors: Array<{ line: number; reason: string }>;
+  /** Apple group cards, which are not contacts (see isGroupVcard). */
+  skippedGroups?: number;
 }
 
 /**
@@ -1022,9 +1024,19 @@ function normalizeUid(raw: string | null): string | null {
   return trimmed || null;
 }
 
+/**
+ * Apple stores contact groups as cards of their own (iCloud CardDAV,
+ * X-ADDRESSBOOKSERVER-KIND:group, member UIDs in X-ADDRESSBOOKSERVER-MEMBER).
+ * They are not people, so the import paths skip them.
+ */
+export function isGroupVcard(rawText: string): boolean {
+  return /^(?:[\w-]+\.)?(?:X-ADDRESSBOOKSERVER-KIND|KIND)(?:;[^:]*)?:\s*group\s*$/im.test(unfoldLines(rawText));
+}
+
 export function parseVcf(vcfContent: string): ParseResult {
   const contacts: ParsedContact[] = [];
   const errors: Array<{ line: number; reason: string }> = [];
+  let skippedGroups = 0;
 
   const unfolded = unfoldLines(vcfContent);
   const vcardBlocks = unfolded
@@ -1034,6 +1046,10 @@ export function parseVcf(vcfContent: string): ParseResult {
   for (let i = 0; i < vcardBlocks.length; i++) {
     const block = vcardBlocks[i].trim();
     if (!block.match(/^BEGIN:VCARD/i)) continue;
+    if (isGroupVcard(block)) {
+      skippedGroups++;
+      continue;
+    }
 
     try {
       const parsed = parseSingleVcard(block);
@@ -1048,5 +1064,5 @@ export function parseVcf(vcfContent: string): ParseResult {
     }
   }
 
-  return { contacts, errors };
+  return { contacts, errors, skippedGroups };
 }

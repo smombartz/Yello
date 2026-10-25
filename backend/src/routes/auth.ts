@@ -257,6 +257,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
       callbackUri: `${appUrl}/api/auth/google/callback`,
       callbackUriParams: {
         access_type: 'offline',
+        // Keep scopes granted earlier (Contacts, Gmail) on the new token;
+        // without it a plain sign-in hands back a token with only these.
+        include_granted_scopes: 'true',
       },
     });
 
@@ -510,6 +513,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       response_type: 'code',
       scope: scopes,
       access_type: 'offline',
+      include_granted_scopes: 'true',
       prompt: 'consent',
       state,
     });
@@ -554,6 +558,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       response_type: 'code',
       scope: scopes,
       access_type: 'offline',
+      include_granted_scopes: 'true',
       prompt: 'consent',
       state,
     });

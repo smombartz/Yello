@@ -27,9 +27,13 @@ Two tiers of **SQLite** (`better-sqlite3`), both opened with `journal_mode = WAL
         ├── photos/                ← that user's CONTACT photos
         │   └── {thumbnail,small,medium,large}/<2-char prefix>/<md5>.jpg
         ├── imports/<jobId>.vcf    ← staged VCF uploads, deleted on success
-        └── archive/original-cards-<date>.vcf.gz
-                                   ← imported originals, written once when raw_vcard was retired
+        ├── archive/original-cards-<date>.vcf.gz
+        │                          ← imported originals, written once when raw_vcard was retired
+        └── backups/<provider>-<timestamp>/
+                                   ← backups of the user's iCloud / Google address books (see below)
 ```
+
+**Remote address-book backups (`backups/`).** `services/sync/remoteBackupService.ts` writes one directory per backup, named `icloud-<UTC yyyymmddThhmmssmmm>Z` or `google-…`. Contents: `<provider>-contacts.vcf` (iCloud: every card byte-for-byte as iCloud stores it, groups included; Google: every contact rendered as vCard 3.0, labels as `CATEGORIES`, contact photos embedded), the full-fidelity copy (`icloud-index.json`: URL, etag, UID per card; `google-people.json`: every Person field plus all contact groups, as Google returned them), `yello.db` (a `db.backup()` snapshot of `contacts.db`), and `manifest.json` (counts, sha256 per file, status `running|verified|unverified|failed`, `confirmedAt`). A backup is `verified` only when its `.vcf` re-reads to exactly the number of contacts the remote listed. Nothing deletes backups; they are not in any database.
 
 ### Tenancy has no tenant column
 
@@ -192,6 +196,7 @@ All share `contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE
 | `contact_related_people` | `name` NOT NULL, `relationship`, `related_contact_id`, `params` | *(migration)* nullable FK → `contacts(id)` ON DELETE **SET NULL**, so free-text names keep a `NULL` link. Partial index `WHERE related_contact_id IS NOT NULL` |
 | `contact_dates` | `date` NOT NULL, `label`, `params` | Apple `X-ABDATE` and vCard `ANNIVERSARY`. `date` and `label` are kept as written (Apple's built-ins look like `_$!<Anniversary>!$_`) |
 | `contact_vcard_properties` | `position` NOT NULL, `group_name`, `name` NOT NULL, `params`, `value` NOT NULL | Every vCard property with no typed home, one row per line in card order. `name` upper-cased; `params` JSON `{"PARAM": ["v", …]}` (a bare vCard 2.1 parameter maps to `[]`); `value` still vCard-escaped. Indexes `(contact_id, position)` and `name`. Read-only in the API |
+| `contact_merged_identities` | `kind` NOT NULL, `value` NOT NULL, `merged_at` | The vCard UIDs (`kind = 'uid'`) and Google resource names (`'google_resource_name'`) of contacts merged *into* this one. `UNIQUE (kind, value)`; index on `contact_id`. Written by `carryMergedIdentities()` during a merge (the primary first adopts a UID / resource name it lacks; the rest land here, and a secondary's own records are re-pointed). `matchIncomingContacts` treats them as authoritative identifiers, so the merged-away cards still in iCloud/Google resolve to the surviving contact. Merges before 2026-10-25 recorded nothing |
 
 **`type` / `extra_types` / `label` (emails, phones, addresses).** `type` is the first vCard `TYPE` (what the edit form's select binds to); `extra_types` holds the rest, comma-joined (`fax` of `TYPE=HOME;TYPE=FAX`, `internet` of `TYPE=OTHER;TYPE=INTERNET`). `pref` is never stored as a type — preference is `is_primary`. `label` is the Apple `X-ABLabel` of the entry's item group ("Obsolete", "WhatsApp", `_$!<HomePage>!$_`). The edit endpoints replace child rows wholesale from forms that don't carry `label`/`extra_types`/address hints/`params`, so `PUT /api/contacts/:id` and the profile save wrap the replacement in `preserveEntryAnnotations()`, which restores them on rows whose value (email, E.164 phone, street+city+postcode, URL, IM, social URL, related name) survived.
 
@@ -378,6 +383,7 @@ This table has a **destructive migration**: legacy columns (`first_name`, `last_
 | `contact_photos.source` | `vcard`, `google`, `gravatar`, `linkedin` |
 | `contact_emails_history.direction` | `inbound`, `outbound` |
 | `import_jobs.status` | `pending`, `running`, `completed`, `failed` |
+| `contact_merged_identities.kind` | `uid`, `google_resource_name` |
 | `user_settings.id` | `1` (single-row table) |
 
 ---
@@ -387,7 +393,7 @@ This table has a **destructive migration**: legacy columns (`first_name`, `last_
 - **Timestamps are inconsistent by type.** Some columns are `DATETIME DEFAULT CURRENT_TIMESTAMP`, others `TEXT DEFAULT (datetime('now'))`. Both store zone-less UTC strings. Clients **must** append a `Z` before parsing, or the browser reads them as local time.
 - **Booleans are INTEGER `0`/`1`.** SQLite has no boolean type.
 - **`is_primary` is not enforced.** Nothing prevents two primary emails; ordering code treats it as a hint.
-- **Cascades are wide.** Deleting a contact removes every child row, its photos record, enrichment, email history, custom dates and generic vCard properties. A merge carries a secondary's person fields, dates and email/phone/address annotations to the survivor, but not its `contact_vcard_properties` (client metadata of a card that no longer exists). Only `contact_related_people.related_contact_id` and `user_profiles.linked_contact_id` use SET NULL.
+- **Cascades are wide.** Deleting a contact removes every child row, its photos record, enrichment, email history, custom dates and generic vCard properties. A merge carries a secondary's person fields, dates, email/phone/address annotations and remote identifiers (`icloud_uid`, `google_resource_name` → the survivor or `contact_merged_identities`) to the survivor, but not its `contact_vcard_properties` (client metadata of a card that no longer exists). Only `contact_related_people.related_contact_id` and `user_profiles.linked_contact_id` use SET NULL.
 - **FTS is only as correct as the last `rebuildContactSearch` call** — `contacts_unified_fts` is contentless and trigger-free.
 - **No `updated_at` triggers.** Where it matters it is set explicitly in the query.
 - **Writes must go through the owning tenant's handle.** Re-acquire via `getUserDatabase(userId)` rather than caching a connection across awaits, because the 50-entry LRU may have closed it.

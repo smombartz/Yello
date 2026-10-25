@@ -16,6 +16,7 @@ import { useToast } from './ui/Toast';
 import { LinkedInImportContent } from './LinkedInImportContent';
 import { GoogleContactsImportContent } from './GoogleContactsImportContent';
 import { EnrichToolsContent } from './EnrichToolsContent';
+import { RemoteBackupsContent } from './RemoteBackupsContent';
 import { FilePicker } from './ui/FilePicker';
 
 export function SettingsView() {
@@ -40,6 +41,7 @@ export function SettingsView() {
   const [exportExpanded, setExportExpanded] = useState(false);
   const [dangerExpanded, setDangerExpanded] = useState(false);
   const [icloudExpanded, setIcloudExpanded] = useState(false);
+  const [backupsExpanded, setBackupsExpanded] = useState(false);
   const [icloudEmail, setIcloudEmail] = useState('');
   const [icloudPassword, setIcloudPassword] = useState('');
   const icloudSettings = useICloudSettings();
@@ -109,6 +111,29 @@ export function SettingsView() {
   return (
     <div className="settings-view">
       <div className="settings-content">
+        {/* ===== Backups ===== */}
+        <section className="settings-group">
+          <h2 className="settings-group-title">Before you switch</h2>
+
+        <section className={`settings-section collapsible-card${backupsExpanded ? ' expanded' : ''}`}>
+          <button
+            className="collapsible-header"
+            onClick={() => setBackupsExpanded(!backupsExpanded)}
+          >
+            <div className="settings-section-header">
+              <Icon name="box-archive" />
+              <h2>Back up Apple &amp; Google contacts</h2>
+            </div>
+            <Icon name="chevron-down" className={`expand-icon${backupsExpanded ? ' rotated' : ''}`} />
+          </button>
+          {backupsExpanded && (
+            <div className="collapsible-content">
+              <RemoteBackupsContent />
+            </div>
+          )}
+        </section>
+        </section>
+
         {/* ===== Import ===== */}
         <section className="settings-group">
           <h2 className="settings-group-title">Import</h2>

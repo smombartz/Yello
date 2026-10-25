@@ -142,6 +142,20 @@ function buildIndexes(existingContacts: DbContactMatchData[]) {
 }
 
 /**
+ * Cards of contacts merged away in Yello still carry their old UID / Google
+ * resource name; they resolve to the contact they were merged into. A live
+ * contact's own identifier wins over a merged record of the same value.
+ */
+function addMergedIdentities(db: DatabaseType, externalIdIndex: Map<string, number>): void {
+  const rows = db.prepare('SELECT contact_id, kind, value FROM contact_merged_identities').all() as
+    Array<{ contact_id: number; kind: 'uid' | 'google_resource_name'; value: string }>;
+  for (const row of rows) {
+    const key = row.kind === 'uid' ? `uid:${row.value}` : `google:${row.value}`;
+    if (!externalIdIndex.has(key)) externalIdIndex.set(key, row.contact_id);
+  }
+}
+
+/**
  * Score an incoming ParsedContact against a single existing DB contact.
  */
 function scoreMatch(
@@ -229,6 +243,7 @@ export function matchIncomingContacts(
 ): MatchResult {
   const existingContacts = loadExistingContacts(db);
   const indexes = buildIndexes(existingContacts);
+  addMergedIdentities(db, indexes.externalIdIndex);
   const existingById = new Map(existingContacts.map(c => [c.id, c]));
 
   const newContacts: IncomingContact[] = [];

@@ -4326,6 +4326,118 @@ a.nav-rail-item.active {
   border-top: 1px solid var(--ds-border-color);
 }
 
+/* Remote address-book backups (Tools › Before you switch) */
+.backup-provider {
+  padding: var(--ds-space-4) 0;
+  border-top: 1px solid var(--ds-border-color);
+}
+
+.backup-provider-header {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  flex-wrap: wrap;
+}
+
+.backup-provider-header h3 {
+  margin: 0;
+  font-size: var(--ds-font-md);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text-primary);
+}
+
+.backup-provider-action {
+  margin-left: auto;
+}
+
+.backup-meta {
+  margin: var(--ds-space-2) 0 0;
+  color: var(--ds-text-secondary);
+  font-size: var(--ds-font-sm);
+}
+
+.backup-error {
+  margin: var(--ds-space-2) 0 0;
+  color: var(--ds-color-error);
+  font-size: var(--ds-font-sm);
+}
+
+.backup-files {
+  list-style: none;
+  margin: var(--ds-space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.backup-files li {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  column-gap: var(--ds-space-2);
+  align-items: baseline;
+  font-size: var(--ds-font-sm);
+}
+
+.backup-file-size {
+  color: var(--ds-text-secondary);
+  font-size: var(--ds-font-xs);
+}
+
+.backup-file-description {
+  grid-column: 1 / -1;
+  color: var(--ds-text-secondary);
+  font-size: var(--ds-font-xs);
+}
+
+.backup-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-2);
+  margin-top: var(--ds-space-3);
+  font-size: var(--ds-font-sm);
+  color: var(--ds-text-primary);
+}
+
+.backup-gate {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-space-2);
+  margin: var(--ds-space-3) 0 0;
+  font-size: var(--ds-font-sm);
+  color: var(--ds-color-warning-dark);
+}
+
+.backup-gate--open {
+  color: var(--ds-color-success-dark);
+}
+
+.backup-guide {
+  margin-top: var(--ds-space-4);
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-border-color);
+  font-size: var(--ds-font-sm);
+  color: var(--ds-text-secondary);
+}
+
+.backup-guide summary {
+  cursor: pointer;
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text-primary);
+}
+
+.backup-guide ol {
+  margin: var(--ds-space-3) 0;
+  padding-left: var(--ds-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.backup-guide p {
+  margin: 0;
+}
+
 .import-controls {
   display: flex;
   flex-direction: column;

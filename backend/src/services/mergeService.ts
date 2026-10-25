@@ -1,6 +1,7 @@
 import { rebuildContactSearch, deleteContactsFromSearch } from './database.js';
 import { getPhotoUrl } from './photoProcessor.js';
 import { mergeVcardModelFields } from './vcardModelStore.js';
+import { carryMergedIdentities } from './mergedIdentities.js';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { ContactDetail, ContactSocialProfile } from '../types/index.js';
 
@@ -479,6 +480,10 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
     for (const secondaryId of secondaryContactIds) {
       mergeVcardModelFields(db, primaryContactId, secondaryId);
     }
+
+    // Keep the merged-away contacts' iCloud UIDs and Google resource names,
+    // so their cards in the remote address books still resolve to this one.
+    carryMergedIdentities(db, primaryContactId, secondaryContactIds);
 
     // Delete secondary contacts (cascades to related tables)
     const secondaryPlaceholders = secondaryContactIds.map(() => '?').join(',');

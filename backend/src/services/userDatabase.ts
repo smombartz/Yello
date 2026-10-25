@@ -426,6 +426,22 @@ export function getUserDatabase(userId: number): DatabaseType {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_contacts_icloud_uid ON contacts(icloud_uid) WHERE icloud_uid IS NOT NULL`);
   } catch { /* index already exists */ }
 
+  // Merged-identity record — the vCard UIDs and Google resource names of
+  // contacts merged into another one. Remote address books still hold those
+  // cards, so sync and the cutover use this to recognise them as the
+  // surviving contact instead of as new people.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS contact_merged_identities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL CHECK (kind IN ('uid', 'google_resource_name')),
+      value TEXT NOT NULL,
+      merged_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (kind, value)
+    )
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_contact_merged_identities_contact ON contact_merged_identities(contact_id)`);
+
   // Imported-GEO migration — vCards carrying per-address coordinates (this
   // app's own exports do) now keep them instead of forcing a re-geocode.
   try {
@@ -521,6 +537,20 @@ export function getUserImportsPath(userId: number): string {
   }
 
   return importsDir;
+}
+
+/**
+ * Returns the backups directory for a user, creating it if needed. Each
+ * backup of a remote address book (iCloud, Google) is a subdirectory here.
+ */
+export function getUserBackupsPath(userId: number): string {
+  const backupsDir = path.join(getUserDataPath(), String(userId), 'backups');
+
+  if (!fs.existsSync(backupsDir)) {
+    fs.mkdirSync(backupsDir, { recursive: true });
+  }
+
+  return backupsDir;
 }
 
 /**

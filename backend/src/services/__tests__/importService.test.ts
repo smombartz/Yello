@@ -98,6 +98,18 @@ describe('runVcfImportJob', () => {
     expect(count).toBe(2);
   });
 
+  it('skips Apple group cards instead of importing them as contacts', async () => {
+    const group = [
+      'BEGIN:VCARD', 'VERSION:3.0', 'N:Family', 'FN:Family',
+      'X-ADDRESSBOOKSERVER-KIND:group', 'X-ADDRESSBOOKSERVER-MEMBER:urn:uuid:uid-1', 'END:VCARD'
+    ].join('\n');
+    const result = await runVcfImportJob(USER_ID, stageJob([card('Ada Lovelace', 'uid-1'), group].join('\n')));
+
+    expect(result.imported).toBe(1);
+    expect(result.skipped).toBe(1);
+    expect(result.failed).toBe(0);
+  });
+
   it('normalizes urn:uuid UIDs so they match bare ones', async () => {
     await runVcfImportJob(USER_ID, stageJob(card('Grace Hopper', 'abc-123')));
     const second = await runVcfImportJob(USER_ID, stageJob(card('Grace Hopper', 'urn:uuid:abc-123')));

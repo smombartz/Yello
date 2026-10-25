@@ -265,6 +265,38 @@ Measured on the local databases: user 12 (8054 contacts) differs from its origin
 
 Imports before 2026-09-27 could not read grouped `X-ABRELATEDNAMES`, so those related people existed only inside `raw_vcard` (since retired, see above). Since the export no longer replays the raw card, `backfillGroupedRelatedNames()` (`backend/src/services/relatedNamesBackfill.ts`) copies them into `contact_related_people` once per database, on open. It recovers grouped lines only — ungrouped ones were always imported, so a missing row for one of those means the user removed it — and records completion in `user_settings.related_names_backfilled_at` so that later removals are not undone.
 
+### Yello as source of truth: sync with iCloud and Google (in progress)
+
+Plan: `docs/plans/2026-10-25-yello-source-of-truth-sync.md`. Yello's cleaned, deduplicated list is
+the base; the one-time cutover imports only recent remote changes and new contacts, and replaces the
+remote address books (removing their old duplicates) only after a verified backup. Ongoing sync is
+two-way, Yello wins per field. Shipped so far (Phase 0):
+
+- **Backups** (Tools › Before you switch › Back up Apple & Google contacts; `/api/sync/backups`).
+  `startBackup` runs in the background (one per provider at a time); iCloud is read through
+  `streamICloudCards` (`icloudService.ts`: href listing, then 100-card multigets, so photos are never
+  all in memory), Google through `fetchAllGooglePeople` / `fetchAllGoogleContactGroups`
+  (`services/sync/googlePeople.ts`, every person field). Files and layout: `docs/database.md`,
+  *Remote address-book backups*. Downloads: `GET /api/sync/backups/:id/files/:name` (only names in the
+  manifest resolve).
+- **Deletion gate.** `checkDeletionGate` / `assertDeletionAllowed` (`remoteBackupService.ts`): a
+  provider may be deleted from only with a `verified` backup of it from the last 24 hours that the user
+  confirmed (`POST /api/sync/backups/:id/confirm`). Every remote-delete path of the sync engine must
+  call `assertDeletionAllowed` first.
+- **Shared contact writes** (`services/contactPersistence.ts`): `prepareContactStatements`,
+  `insertParsedContact` (VCF import job, iCloud import) and `mergeParsedIntoContact` (iCloud import
+  merges; fills empty scalars, unions every child table with labels and params). Replaces the iCloud
+  route's own statements, whose merge path passed too few arguments and threw on any new child row,
+  and whose photo source `'icloud'` violated the `contact_photos` CHECK.
+- **Merged identities.** Merges keep the secondaries' `icloud_uid` / `google_resource_name`
+  (`carryMergedIdentities`, `contact_merged_identities`), so cards of merged-away contacts that are
+  still in iCloud/Google match the survivor instead of looking new.
+- **Apple group cards** (`X-ADDRESSBOOKSERVER-KIND:group`, vCard 4 `KIND:group`) are skipped by
+  `parseVcf` and the VCF import job (counted as skipped). Group cards imported before this exist as
+  contacts; the cutover dry run will list them.
+- **Google OAuth** flows all send `include_granted_scopes=true`, so signing in again or the Gmail
+  re-consent no longer returns a token without the Contacts scope.
+
 ### Public profile card (`/p/:slug`)
 
 Users can publish their contact card at a server-generated slug. Behavior notes:

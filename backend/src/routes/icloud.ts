@@ -5,8 +5,7 @@ import { testICloudConnection, fetchICloudContacts } from '../services/icloudSer
 import { matchIncomingContacts } from '../services/icloudMatchingService.js';
 import type { ParsedContact } from '../services/vcardParser.js';
 import { processPhoto } from '../services/photoProcessor.js';
-import { rebuildContactSearch } from '../services/database.js';
-import { paramsJson, saveVcardModelFields } from '../services/vcardModelStore.js';
+import { insertParsedContact, mergeParsedIntoContact, prepareContactStatements } from '../services/contactPersistence.js';
 
 export default async function icloudRoutes(
   fastify: FastifyInstance,
@@ -115,82 +114,24 @@ export default async function icloudRoutes(
     let imported = 0;
     let merged = 0;
     const errors: Array<{ line: number; reason: string }> = [];
+    const stmts = prepareContactStatements(db);
 
-    const insertContact = db.prepare(`
-      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, photo_hash, icloud_uid)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const insertEmail = db.prepare('INSERT INTO contact_emails (contact_id, email, type, extra_types, label, params, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?)');
-    const insertPhone = db.prepare('INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, extra_types, label, params, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    const insertAddress = db.prepare(`
-      INSERT INTO contact_addresses (
-        contact_id, street, city, state, postal_code, country, type, extra_types, label,
-        po_box, extended, sublocality, subadministrative_area, country_code, params,
-        latitude, longitude, geocoded_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? IS NULL THEN NULL ELSE datetime('now') END)
-    `);
-    const insertCategory = db.prepare('INSERT INTO contact_categories (contact_id, category) VALUES (?, ?)');
-    const insertInstantMessage = db.prepare('INSERT INTO contact_instant_messages (contact_id, service, handle, type, params) VALUES (?, ?, ?, ?, ?)');
-    const insertUrl = db.prepare('INSERT INTO contact_urls (contact_id, url, label, type, params) VALUES (?, ?, ?, ?, ?)');
-    const insertRelatedPerson = db.prepare('INSERT INTO contact_related_people (contact_id, name, relationship, params) VALUES (?, ?, ?, ?)');
-    const insertSocialProfile = db.prepare('INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url, type, params) VALUES (?, ?, ?, ?, ?, ?)');
+    // Async (sharp), so it runs between transactions, never inside one.
+    const attachPhoto = async (contactId: number, photoBase64: string): Promise<void> => {
+      try {
+        const photoHash = await processPhoto(photoBase64, contactId, userId);
+        stmts.setPhotoHash.run(photoHash, contactId);
+        stmts.upsertContactPhoto.run(contactId, photoHash);
+      } catch { /* skip photo on error */ }
+    };
 
     // --- Import new contacts ---
     for (const contact of (newContacts || [])) {
       try {
-        const result = insertContact.run(
-          contact.firstName, contact.lastName, contact.displayName,
-          contact.company, contact.title, contact.notes, contact.birthday, null,
-          contact.uid || null
-        );
-        const contactId = result.lastInsertRowid as number;
-
-        if (contact.photoBase64) {
-          try {
-            const photoHash = await processPhoto(contact.photoBase64, contactId, userId);
-            db.prepare('UPDATE contacts SET photo_hash = ? WHERE id = ?').run(photoHash, contactId);
-            db.prepare(`
-              INSERT INTO contact_photos (contact_id, source, local_hash, is_primary)
-              VALUES (?, 'icloud', ?, 1)
-              ON CONFLICT(contact_id, source) DO UPDATE SET local_hash = excluded.local_hash, fetched_at = CURRENT_TIMESTAMP
-            `).run(contactId, photoHash);
-          } catch { /* skip photo on error */ }
-        }
-
-        for (const e of contact.emails) {
-          insertEmail.run(contactId, e.email, e.type, e.extraTypes ?? null, e.label ?? null, paramsJson(e.params), e.isPrimary ? 1 : 0);
-        }
-        for (const p of contact.phones) {
-          insertPhone.run(
-            contactId, p.phone, p.phoneDisplay, p.countryCode, p.type, p.extraTypes ?? null, p.label ?? null,
-            paramsJson(p.params), p.isPrimary ? 1 : 0
-          );
-        }
-        for (const a of contact.addresses) {
-          insertAddress.run(
-            contactId, a.street, a.city, a.state, a.postalCode, a.country, a.type,
-            a.extraTypes ?? null, a.label ?? null, a.poBox ?? null, a.extended ?? null,
-            a.sublocality ?? null, a.subadministrativeArea ?? null, a.countryCode ?? null, paramsJson(a.params),
-            a.latitude, a.longitude, a.latitude
-          );
-        }
-        for (const c of contact.categories) insertCategory.run(contactId, c);
-        for (const im of contact.instantMessages) insertInstantMessage.run(contactId, im.service, im.handle, im.type, paramsJson(im.params));
-        for (const u of contact.urls) insertUrl.run(contactId, u.url, u.label, u.type, paramsJson(u.params));
-        for (const rp of contact.relatedPeople) insertRelatedPerson.run(contactId, rp.name, rp.relationship, paramsJson(rp.params));
-        for (const sp of contact.socialProfiles) {
-          let username = sp.username;
-          if (!username && sp.url) {
-            const m = sp.url.match(/\/([^\/]+)\/?$/);
-            username = m ? m[1] : sp.platform;
-          }
-          username = username || sp.platform;
-          insertSocialProfile.run(contactId, sp.platform, username, sp.url, null, paramsJson(sp.params));
-        }
-
-        saveVcardModelFields(db, contactId, contact);
-        rebuildContactSearch(db, contactId);
+        const inserted = db.transaction(() =>
+          insertParsedContact(stmts, db, contact, { skipExistingUid: false })
+        )();
+        if (inserted && contact.photoBase64) await attachPhoto(inserted.contactId, contact.photoBase64);
         imported++;
       } catch (e) {
         errors.push({ line: imported + 1, reason: e instanceof Error ? e.message : 'Unknown error' });
@@ -201,150 +142,21 @@ export default async function icloudRoutes(
     for (const merge of (merges || [])) {
       try {
         const { incomingContact, existingContactId, conflictResolutions } = merge;
-        const existingRow = db.prepare('SELECT * FROM contacts WHERE id = ?').get(existingContactId) as Record<string, unknown> | undefined;
+        const existingRow = db.prepare('SELECT photo_hash FROM contacts WHERE id = ?').get(existingContactId) as
+          { photo_hash: string | null } | undefined;
         if (!existingRow) {
           errors.push({ line: merged + 1, reason: `Existing contact ${existingContactId} not found` });
           continue;
         }
 
-        // Store the vCard UID on the existing contact if it doesn't have one, so
-        // the next import matches this record exactly instead of by heuristics.
-        if (incomingContact.uid && !existingRow.icloud_uid) {
-          db.prepare('UPDATE contacts SET icloud_uid = ? WHERE id = ?').run(incomingContact.uid, existingContactId);
-        }
-
-        // Apply scalar field resolutions
-        const scalarFields = ['first_name', 'last_name', 'company', 'title', 'birthday'] as const;
-        const incomingFieldMap: Record<string, string | null> = {
-          first_name: incomingContact.firstName,
-          last_name: incomingContact.lastName,
-          company: incomingContact.company,
-          title: incomingContact.title,
-          birthday: incomingContact.birthday,
-        };
-
-        for (const field of scalarFields) {
-          const incomingVal = incomingFieldMap[field];
-          const existingVal = existingRow[field] as string | null;
-
-          if (incomingVal && !existingVal) {
-            db.prepare(`UPDATE contacts SET ${field} = ? WHERE id = ?`).run(incomingVal, existingContactId);
-          } else if (incomingVal && existingVal && incomingVal !== existingVal) {
-            const resolution = conflictResolutions?.[field];
-            if (resolution === 'incoming') {
-              db.prepare(`UPDATE contacts SET ${field} = ? WHERE id = ?`).run(incomingVal, existingContactId);
-            }
-          }
-        }
-
-        // Union multi-value fields (skip duplicates)
-        const existingEmails = new Set(
-          (db.prepare('SELECT LOWER(email) as email FROM contact_emails WHERE contact_id = ?').all(existingContactId) as Array<{ email: string }>)
-            .map(r => r.email)
-        );
-        for (const e of incomingContact.emails) {
-          if (!existingEmails.has(e.email.toLowerCase())) {
-            insertEmail.run(existingContactId, e.email, e.type, 0);
-          }
-        }
-
-        const existingPhones = new Set(
-          (db.prepare('SELECT phone FROM contact_phones WHERE contact_id = ?').all(existingContactId) as Array<{ phone: string }>)
-            .map(r => r.phone)
-        );
-        for (const p of incomingContact.phones) {
-          if (!existingPhones.has(p.phone)) {
-            insertPhone.run(existingContactId, p.phone, p.phoneDisplay, p.countryCode, p.type, 0);
-          }
-        }
-
-        const existingAddresses = new Set(
-          (db.prepare('SELECT street, city, postal_code FROM contact_addresses WHERE contact_id = ?').all(existingContactId) as Array<{ street: string; city: string; postal_code: string }>)
-            .map(r => `${(r.street || '').toLowerCase()}|${(r.city || '').toLowerCase()}|${(r.postal_code || '').toLowerCase()}`)
-        );
-        for (const a of incomingContact.addresses) {
-          const key = `${(a.street || '').toLowerCase()}|${(a.city || '').toLowerCase()}|${(a.postalCode || '').toLowerCase()}`;
-          if (!existingAddresses.has(key)) {
-            insertAddress.run(existingContactId, a.street, a.city, a.state, a.postalCode, a.country, a.type, a.latitude, a.longitude, a.latitude);
-          }
-        }
-
-        const existingSocials = new Set(
-          (db.prepare(`SELECT LOWER(platform) || ':' || LOWER(username) as key FROM contact_social_profiles WHERE contact_id = ?`).all(existingContactId) as Array<{ key: string }>)
-            .map(r => r.key)
-        );
-        for (const sp of incomingContact.socialProfiles) {
-          let username = sp.username || sp.platform;
-          const key = `${(sp.platform || '').toLowerCase()}:${(username || '').toLowerCase()}`;
-          if (!existingSocials.has(key)) {
-            insertSocialProfile.run(existingContactId, sp.platform, username, sp.url, null);
-          }
-        }
-
-        const existingCategories = new Set(
-          (db.prepare('SELECT LOWER(category) as cat FROM contact_categories WHERE contact_id = ?').all(existingContactId) as Array<{ cat: string }>)
-            .map(r => r.cat)
-        );
-        for (const c of incomingContact.categories) {
-          if (!existingCategories.has(c.toLowerCase())) {
-            insertCategory.run(existingContactId, c);
-          }
-        }
-
-        const existingUrls = new Set(
-          (db.prepare('SELECT LOWER(url) as url FROM contact_urls WHERE contact_id = ?').all(existingContactId) as Array<{ url: string }>)
-            .map(r => r.url)
-        );
-        for (const u of incomingContact.urls) {
-          if (!existingUrls.has(u.url.toLowerCase())) {
-            insertUrl.run(existingContactId, u.url, u.label, u.type);
-          }
-        }
-
-        const existingIMs = new Set(
-          (db.prepare(`SELECT LOWER(service) || ':' || LOWER(handle) as key FROM contact_instant_messages WHERE contact_id = ?`).all(existingContactId) as Array<{ key: string }>)
-            .map(r => r.key)
-        );
-        for (const im of incomingContact.instantMessages) {
-          const key = `${(im.service || '').toLowerCase()}:${(im.handle || '').toLowerCase()}`;
-          if (!existingIMs.has(key)) {
-            insertInstantMessage.run(existingContactId, im.service, im.handle, im.type);
-          }
-        }
-
-        const existingRelated = new Set(
-          (db.prepare(`SELECT LOWER(name) || ':' || LOWER(relationship) as key FROM contact_related_people WHERE contact_id = ?`).all(existingContactId) as Array<{ key: string }>)
-            .map(r => r.key)
-        );
-        for (const rp of incomingContact.relatedPeople) {
-          const key = `${(rp.name || '').toLowerCase()}:${(rp.relationship || '').toLowerCase()}`;
-          if (!existingRelated.has(key)) {
-            insertRelatedPerson.run(existingContactId, rp.name, rp.relationship);
-          }
-        }
+        db.transaction(() =>
+          mergeParsedIntoContact(stmts, db, existingContactId, incomingContact, conflictResolutions)
+        )();
 
         // Photo: only if existing has none
-        if (incomingContact.photoBase64) {
-          const existingPhoto = existingRow.photo_hash as string | null;
-          if (!existingPhoto) {
-            try {
-              const photoHash = await processPhoto(incomingContact.photoBase64, existingContactId, userId);
-              db.prepare('UPDATE contacts SET photo_hash = ? WHERE id = ?').run(photoHash, existingContactId);
-              db.prepare(`
-                INSERT INTO contact_photos (contact_id, source, local_hash, is_primary)
-                VALUES (?, 'icloud', ?, 1)
-                ON CONFLICT(contact_id, source) DO UPDATE SET local_hash = excluded.local_hash, fetched_at = CURRENT_TIMESTAMP
-              `).run(existingContactId, photoHash);
-            } catch { /* skip photo on error */ }
-          }
+        if (incomingContact.photoBase64 && !existingRow.photo_hash) {
+          await attachPhoto(existingContactId, incomingContact.photoBase64);
         }
-
-        // Update display_name if it changed
-        const updatedFirst = db.prepare('SELECT first_name, last_name FROM contacts WHERE id = ?').get(existingContactId) as { first_name: string | null; last_name: string | null };
-        const newDisplayName = [updatedFirst.first_name, updatedFirst.last_name].filter(Boolean).join(' ') || incomingContact.displayName;
-        db.prepare('UPDATE contacts SET display_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(newDisplayName, existingContactId);
-
-        rebuildContactSearch(db, existingContactId);
         merged++;
       } catch (e) {
         errors.push({ line: merged + 1, reason: e instanceof Error ? e.message : 'Unknown error' });
