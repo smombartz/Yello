@@ -34,28 +34,94 @@ const REASON_LABELS: Record<string, string> = {
   old_remote_only: 'not in Yello, not changed recently',
   archived_in_yello: 'archived in Yello',
   edited_after_archived: 'archived in Yello, but edited on the phone afterwards',
-  changed_remotely: 'changed there',
-  added_remotely: 'added there',
-  filled_remotely: 'empty in Yello',
-  changed_on_both_sides: 'changed in both places',
-  differs_no_baseline: 'differs',
   new_in_window: 'new or edited recently',
 };
 
-/** A projected field value as short text. */
-function describe(value: unknown): string {
-  if (value === null || value === undefined || value === false) return '—';
-  if (value === true) return 'yes';
-  if (typeof value === 'string') return value;
+/** Plain-English names for the normalised types in a projection. */
+const TYPE_LABELS: Record<string, string> = {
+  cell: 'mobile', iphone: 'iPhone', home: 'home', work: 'work', other: 'other', main: 'main',
+  fax: 'fax', pager: 'pager', homepage: 'homepage',
+};
+
+function typeLabel(type: unknown): string | null {
+  if (typeof type !== 'string' || !type) return null;
+  if (type.startsWith('label:')) return type.slice('label:'.length);
+  return TYPE_LABELS[type] ?? type;
+}
+
+const withType = (text: string, type: unknown) => {
+  const label = typeLabel(type);
+  return label ? `${text} (${label})` : text;
+};
+
+/**
+ * vCard dates as people read them: `--08-08` (no year) → "8 August",
+ * `1990-08-08` → "8 August 1990".
+ */
+function formatDate(value: unknown): string {
+  if (typeof value !== 'string') return String(value ?? '');
+  const noYear = value.match(/^--(\d{2})-(\d{2})$/);
+  const full = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const [year, month, day] = noYear ? [2000, noYear[1], noYear[2]] : full ? [Number(full[1]), full[2], full[3]] : [];
+  if (!month) return value;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  const text = date.toLocaleDateString(undefined, {
+    day: 'numeric', month: 'long', ...(noYear ? {} : { year: 'numeric' }), timeZone: 'UTC',
+  });
+  return noYear ? `${text} (no year)` : text;
+}
+
+type Entry = Record<string, unknown>;
+const joined = (...parts: unknown[]) => parts.filter(p => typeof p === 'string' && p).join(', ');
+
+/** One entry of a multi-value field as short text. */
+function formatEntry(field: string, entry: unknown): string {
+  if (typeof entry !== 'object' || entry === null) return String(entry);
+  const e = entry as Entry;
+  switch (field) {
+    case 'emails':
+    case 'phones':
+    case 'urls':
+      return withType(String(e.value), e.type);
+    case 'addresses':
+      return withType(joined(e.street, e.extended, e.poBox, e.city, e.region, e.postalCode, e.country) || '(empty address)', e.type);
+    case 'socials':
+      return `${e.platform}: ${e.value}`;
+    case 'ims':
+      return `${e.service}: ${e.handle}`;
+    case 'related':
+      return e.relation ? `${e.name} (${typeLabel(e.relation)})` : String(e.name);
+    case 'dates':
+      return e.label ? `${formatDate(e.date)} (${typeLabel(e.label)})` : formatDate(e.date);
+    default:
+      return Object.values(e).filter(Boolean).join(' · ');
+  }
+}
+
+/** A projected field value as short text; null when the field is empty. */
+function formatValue(field: string | null, value: unknown): string | null {
+  if (value === null || value === undefined || value === false) return null;
   if (Array.isArray(value)) {
-    return value.map(entry => (typeof entry === 'object' && entry !== null
-      ? Object.values(entry as Record<string, unknown>).filter(v => v !== null && !String(v).startsWith('label:')).join(' · ')
-      : String(entry))).join(', ') || '—';
+    return value.length ? value.map(entry => formatEntry(field ?? '', entry)).join('; ') : null;
   }
-  if (typeof value === 'object') {
-    return Object.values(value as Record<string, unknown>).filter(v => v !== null).join(' · ') || '—';
+  if (field === 'birthday') return formatDate(value);
+  if (field === 'isCompany') return value ? 'shown as a company' : null;
+  if (field === 'name' && typeof value === 'object') {
+    const n = value as Entry;
+    return [n.prefix, n.first, n.middle, n.last, n.suffix].filter(Boolean).join(' ') || (n.display as string) || null;
   }
+  if (field === 'org' && typeof value === 'object') {
+    const o = value as Entry;
+    const company = joined(o.company, o.department);
+    if (o.title && company) return `${o.title}, ${company}`;
+    return (o.title as string) || company || null;
+  }
+  if (typeof value === 'object') return Object.values(value as Entry).filter(Boolean).join(' · ') || null;
   return String(value);
+}
+
+function formatWhen(iso: string | null): string | null {
+  return iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : null;
 }
 
 function ItemList({ cutoverId, kind, provider, total }: {
@@ -86,27 +152,49 @@ function ItemList({ cutoverId, kind, provider, total }: {
 
 function ItemRow({ item }: { item: CutoverItem }) {
   const name = item.displayName || '(no name)';
+  const where = item.provider ? PROVIDER_NAMES[item.provider] : 'the address book';
+  const edited = formatWhen(item.remoteTs);
+
   if (item.kind === 'update' || item.kind === 'conflict') {
+    const field = FIELD_LABELS[item.field ?? ''] ?? item.field;
+    const yello = formatValue(item.field, item.yelloValue);
+    const remote = formatValue(item.field, item.remoteValue);
+    let change: React.ReactNode;
+    if (item.kind === 'conflict') {
+      const pick = item.suggested === 'remote' ? `${where}’s (edited more recently)` : 'Yello’s';
+      change = (
+        <>
+          Yello has <q>{yello ?? 'nothing'}</q>, {where} has <q>{remote ?? 'nothing'}</q>.
+          <span className="backup-meta"> Suggested: keep {pick}.</span>
+        </>
+      );
+    } else if (item.reason === 'added_remotely') {
+      change = <>add <q>{remote}</q> <span className="backup-meta">(added in {where})</span></>;
+    } else if (item.reason === 'filled_remotely' || !yello) {
+      change = <>empty in Yello → <q>{remote ?? 'nothing'}</q> <span className="backup-meta">(from {where})</span></>;
+    } else {
+      change = <><q>{yello}</q> → <q>{remote ?? 'nothing'}</q> <span className="backup-meta">(changed in {where})</span></>;
+    }
     return (
       <li>
-        <strong>{name}</strong> — {FIELD_LABELS[item.field ?? ''] ?? item.field}:{' '}
-        {item.kind === 'conflict' ? (
-          <>Yello “{describe(item.yelloValue)}” vs. “{describe(item.remoteValue)}”
-            {item.suggested && <span className="backup-meta"> (suggested: {item.suggested === 'remote' ? 'theirs, it is newer' : 'Yello'})</span>}
-          </>
-        ) : (
-          <>{item.reason === 'added_remotely' ? '+ ' : '→ '}{describe(item.remoteValue)}</>
-        )}
+        <strong>{name}</strong> — {field}: {change}
+        {edited && <span className="backup-meta"> Card edited {edited}.</span>}
       </li>
     );
   }
   if (item.kind === 'possible_match') {
-    return <li><strong>{name}</strong> might be Yello’s “{describe(item.yelloValue)}” <span className="backup-meta">({item.reason})</span></li>;
+    return (
+      <li>
+        <strong>{name}</strong> might be Yello’s <q>{String(item.yelloValue ?? '')}</q>
+        {item.reason && <span className="backup-meta"> (matched on {item.reason})</span>}
+      </li>
+    );
   }
   return (
     <li>
       <strong>{name}</strong>
       {item.reason && REASON_LABELS[item.reason] && <span className="backup-meta"> — {REASON_LABELS[item.reason]}</span>}
+      {edited && (item.kind === 'import' || item.kind === 'restore_review') && <span className="backup-meta">, edited {edited}</span>}
     </li>
   );
 }

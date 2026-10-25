@@ -1,5 +1,28 @@
 # Change Log
 
+## 2026-10-25 — Cutover preview: readable change lines
+
+**Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
+
+**What Changed:**
+- Change and conflict lines in "Preview the switch to Yello" now say what happens and why, in plain
+  values: "Birthday: empty in Yello → "8 August (no year)" (from iCloud). Card edited 12 Oct 2026."
+  instead of "Birthday: → --08-08"
+- Dates are written out (year-less vCard dates as "(no year)"); names, company/title, emails, phones
+  (with mobile/home/work…), addresses, related people and dates read as text instead of raw projection
+  values; conflicts name both values and the suggested side; imports and "needs a look" cards show when
+  the card was last edited; possible matches say what they matched on
+
+**Why:**
+- The raw projection values (`--08-08`, `label:…`, bare arrows) were not understandable without
+  knowing the sync internals
+
+**Files Modified:**
+- `frontend/src/components/CutoverPreviewContent.tsx` — `formatDate`, `formatEntry`, `formatValue`,
+  `formatWhen`, `typeLabel`; `ItemRow` rewritten
+
+---
+
 ## 2026-10-25 — Sync Phase 1: cutover preview, sync schema, a UID for every contact
 
 **Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
