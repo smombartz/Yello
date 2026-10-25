@@ -1,5 +1,81 @@
 # Change Log
 
+## 2026-10-25 — Legal pages: New York law, Kings County courts, estimates filled
+
+**Session:** `ac76ffad-a7cf-4ff4-a9fd-0d59dc131c65`
+
+**What Changed:**
+- Governing law is New York. The venue is the state courts in Kings County or the US District Court
+  for the Eastern District of New York
+- Hosting region is the United States, checked against Railway (`us-west2`)
+- Best-estimate values for log retention, deletion turnaround, notice periods, the liability cap and
+  the effective date, marked *Estimate* in `docs/legal-review.md`
+- Dates now read as "October 25, 2026"; no bracketed placeholders remain
+- Blocker 3 is downgraded: Railway production sets `PHOTOS_PATH`
+
+**Why:**
+- User request: New York law and Kings County courts, with best estimates for the remaining values
+
+**Files Modified:**
+- `frontend/src/components/legal/legalDetails.ts` — `governingLaw`, `venue`, `hostingRegion`,
+  `logRetention`, `deletionDays`, `shutdownNoticeDays`, `termsNoticeDays`, `liabilityCap`,
+  `effectiveDate`, `lastUpdated`
+- `docs/legal-review.md` — filled-values table, Blocker 3
+
+---
+
+## 2026-10-25 — Legal pages name the operating entity
+
+**Session:** `ac76ffad-a7cf-4ff4-a9fd-0d59dc131c65`
+
+**What Changed:**
+- Filled the entity name (Office for Visual Affairs), address (19 Morris Ave, Brooklyn, NY 11205)
+  and contact email (frontdesk@officeforvisualaffairs.com) on the Terms and Privacy Policy
+- The contact email now renders as a mailto link; it was a highlighted placeholder before
+
+**Why:**
+- User supplied the operator details for the legal draft
+
+**Files Modified:**
+- `frontend/src/components/legal/legalDetails.ts` — `LEGAL.entityName`, `entityAddress`, `contactEmail`
+- `docs/legal-review.md` — placeholder table
+
+---
+
+## 2026-10-25 — Terms of Service and Privacy Policy pages (draft for legal review)
+
+**Session:** `ac76ffad-a7cf-4ff4-a9fd-0d59dc131c65`
+
+**What Changed:**
+- New public routes `/privacy` and `/terms`. The text was written from an audit of the code's actual
+  data practices: OAuth scopes, stored credentials, Gmail metadata and snippets, third parties
+  (Railway, HERE, Gravatar, Apify, OSM, fonts, QR), cookies, retention, backups and two-way sync
+- Shared `LegalPage` layout: landing nav, "On this page" list, numbered sections, provider tables and
+  print styles. Placeholders are centralised in `legalDetails.ts` and highlighted until they're filled
+- Extracted the landing footer into `LandingFooter`, which now carries Privacy and Terms links. It
+  replaces the "Every book is its own SQLite file" fine print
+- Login page: added "By signing in you agree to the Terms and Privacy Policy". Replaced "stored
+  securely and never shared", which is inaccurate given the processors, with "We never sell them or
+  use them for ads"
+- `docs/legal-review.md`: the placeholders, four blockers, the decisions for counsel and a claim-to-code
+  table
+
+**Why:**
+- User request: a solid ToS and Privacy draft to review with legal. Google OAuth verification also
+  needs a privacy policy linked from the homepage
+
+**Files Modified:**
+- `frontend/src/components/legal/LegalPage.tsx` — `LegalPage`, `Fill`, `ContactEmail` (new)
+- `frontend/src/components/legal/PrivacyPolicy.tsx`, `TermsOfService.tsx` (new)
+- `frontend/src/components/legal/legalDetails.ts` — `LEGAL`, `isPlaceholder` (new)
+- `frontend/src/components/landing/LandingFooter.tsx` (new); `LandingPage.tsx` uses it
+- `frontend/src/components/LoginPage.tsx` — `.login-legal` consent line
+- `frontend/src/App.tsx` — `/privacy`, `/terms` routes
+- `frontend/src/styles/pages/legal.css` (new), `styles/pages.css`, `styles/pages/login.css`
+- `docs/legal-review.md` (new), `docs/reference.md`, `docs/plans/2026-10-25-legal-pages.md`
+
+---
+
 ## 2026-10-25 — Preview lists the cards it could not read
 
 **Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`

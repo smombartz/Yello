@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useQueryClient } from '@tanstack/react-query';
 import { startDemo } from '../api/client';
@@ -74,7 +75,11 @@ export function LoginPage() {
         </div>
 
         <div className="login-footer">
-          <p>Your contacts are stored securely and never shared</p>
+          <p>Your contacts are yours. We never sell them or use them for ads.</p>
+          <p className="login-legal">
+            By signing in you agree to the <Link to="/terms">Terms of Service</Link> and{' '}
+            <Link to="/privacy">Privacy Policy</Link>.
+          </p>
         </div>
       </div>
 

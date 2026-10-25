@@ -78,6 +78,14 @@ Up to 1.x the app spawned its own backend with local SQLite in `~/Library/Applic
 
 ## Features
 
+### Legal pages (`/privacy`, `/terms`)
+
+Public routes declared before the `*` catch-all, so they work signed in, signed out and in the desktop app. The shared layout `components/legal/LegalPage.tsx` uses the landing nav and footer around one reading column with an "On this page" list. Styles are in `styles/pages/legal.css`.
+
+- **Placeholders:** the entity, contact email, governing law, notice periods and dates live in `components/legal/legalDetails.ts`. A value still in `[brackets]` renders highlighted (`<Fill>`).
+- **Footer:** `components/landing/LandingFooter.tsx` is shared by the landing page and the legal pages, and carries the Privacy and Terms links. The login page links both under the sign-in button.
+- **Review notes:** `docs/legal-review.md` lists the open placeholders, the blockers to fix before publishing, and the code source for every factual claim. **When a data practice changes (a new provider, OAuth scope, cookie or retention rule), update the policy and that table in the same change.**
+
 ### Landing page (`/`)
 
 `/` is the public front door. Signed-out visitors see the landing page (`components/LandingPage.tsx`, vignettes in `components/landing/`, styles in `styles/pages/landing.css`).

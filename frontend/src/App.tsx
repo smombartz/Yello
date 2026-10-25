@@ -21,6 +21,8 @@ import { ICloudImportView } from './components/ICloudImportView';
 import { LoginPage } from './components/LoginPage';
 import { LandingPage } from './components/LandingPage';
 import { PublicContactCard } from './components/PublicContactCard';
+import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
+import { TermsOfService } from './components/legal/TermsOfService';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
 import { ImportStatusProvider } from './contexts/ImportStatusProvider';
@@ -110,6 +112,10 @@ function AppRoutes() {
 
       {/* Public contact card - no auth required */}
       <Route path="/p/:slug" element={<PublicContactCard />} />
+
+      {/* Legal pages - public, signed in or out */}
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<TermsOfService />} />
 
       {/* Public route - Login */}
       <Route

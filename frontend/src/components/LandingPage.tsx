@@ -8,6 +8,7 @@ import { Button } from './ui/Button';
 import { Icon } from './Icon';
 import { Avatar } from './Avatar';
 import { GoogleMark } from './landing/GoogleMark';
+import { LandingFooter } from './landing/LandingFooter';
 import { SampleBookFrame } from './landing/SampleBookFrame';
 import {
   BirthdaysVignette,
@@ -252,13 +253,9 @@ export function LandingPage() {
         </section>
       </main>
 
-      <footer className="lp-footer">
-        <div className="lp-footer__inner">
-          <div className="lp-footer__brand">
-            <img src={logoSvg} alt="Yello" width={94} height={20} />
-            <p>A personal CRM for people with big networks.</p>
-          </div>
-          <div className="lp-footer__links">
+      <LandingFooter
+        actions={
+          <>
             <button type="button" className="lp-text-link" onClick={login}>Sign in</button>
             <button
               type="button"
@@ -268,13 +265,9 @@ export function LandingPage() {
             >
               Try the demo
             </button>
-          </div>
-        </div>
-        <div className="lp-footer__fine">
-          <span>{'©'} {new Date().getFullYear()} Yello</span>
-          <span>Every book is its own SQLite file.</span>
-        </div>
-      </footer>
+          </>
+        }
+      />
     </div>
   );
 }

@@ -14,6 +14,8 @@ Name
 - Zap
 - Ringo, Bringo
 - Kiu (who in esperanto)
+- lololo
+- qui
 
 **Domains**
 - yello.you

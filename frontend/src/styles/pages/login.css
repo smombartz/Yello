@@ -119,3 +119,17 @@
 .login-footer p {
   margin: 0;
 }
+
+.login-footer .login-legal {
+  margin-top: var(--ds-space-2);
+}
+
+.login-legal a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.login-legal a:hover {
+  color: var(--ds-text-primary);
+}
