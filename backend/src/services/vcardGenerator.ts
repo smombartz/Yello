@@ -235,10 +235,25 @@ function formatLabelValue(address: AddressInput): string {
   return escapeVcardValue(formatted.display.replace(/\n/g, '\\n'));
 }
 
+export interface GenerateVcardOptions {
+  /**
+   * The card is pushed to a sync target (iCloud): the stale REV and PRODID
+   * of the imported card and the LinkedIn enrichment blob are left out, and
+   * a fresh REV (this ISO timestamp) and Yello's PRODID are written instead.
+   */
+  sync?: { rev: string };
+}
+
+/** PRODID of cards Yello writes to a sync target. */
+export const YELLO_PRODID = '-//Yello//Yello Contacts//EN';
+
+/** Imported-card properties a synced card regenerates instead of copying. */
+const SYNC_REGENERATED_PROPERTIES = new Set(['REV', 'PRODID']);
+
 /**
  * Generate a vCard 3.0 string from contact data
  */
-export function generateVcard(contact: ContactForVcard): string {
+export function generateVcard(contact: ContactForVcard, options: GenerateVcardOptions = {}): string {
   const lines: string[] = [];
 
   // Required vCard header
@@ -419,10 +434,18 @@ export function generateVcard(contact: ContactForVcard): string {
   }
 
   // Every other property of the imported card
-  lines.push(...extraPropertyLines(contact.extraProperties ?? [], nextGroup));
+  const extraProperties = options.sync
+    ? (contact.extraProperties ?? []).filter(property => !SYNC_REGENERATED_PROPERTIES.has(property.name))
+    : contact.extraProperties ?? [];
+  lines.push(...extraPropertyLines(extraProperties, nextGroup));
+
+  if (options.sync) {
+    lines.push(`PRODID:${YELLO_PRODID}`);
+    lines.push(`REV:${options.sync.rev}`);
+  }
 
   // LinkedIn enrichment, gzip-compressed so a full export stays uploadable
-  if (contact.linkedinEnrichment && Object.keys(contact.linkedinEnrichment).length > 0) {
+  if (!options.sync && contact.linkedinEnrichment && Object.keys(contact.linkedinEnrichment).length > 0) {
     const payload = zlib.gzipSync(JSON.stringify(contact.linkedinEnrichment)).toString('base64');
     lines.push(`${LINKEDIN_ENRICHMENT_PROPERTY}:${payload}`);
   }
@@ -443,7 +466,7 @@ export function generateVcard(contact: ContactForVcard): string {
  * Generate vCards for multiple contacts
  */
 export function generateVcards(contacts: ContactForVcard[]): string {
-  return contacts.map(generateVcard).join('\r\n');
+  return contacts.map(contact => generateVcard(contact)).join('\r\n');
 }
 
 /**

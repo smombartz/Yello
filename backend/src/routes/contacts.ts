@@ -27,6 +27,7 @@ import {
   CreateContactBody
 } from '../schemas/contact.js';
 import { ContactSearchResultSchema, type ContactSearchResult } from '../schemas/profile.js';
+import { isSyncEnabled } from '../services/sync/syncState.js';
 
 interface ContactRow {
   id: number;
@@ -1569,11 +1570,25 @@ export default async function contactsRoutes(
           properties: {
             deletedCount: { type: 'number' }
           }
+        },
+        409: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' }
+          }
         }
       }
     }
-  }, async (request, _reply) => {
+  }, async (request, reply) => {
     const db = getUserDatabase(request.user!.id);
+
+    // With sync on, every deleted contact would also be deleted from iCloud
+    // and Google.
+    if (isSyncEnabled(db)) {
+      return reply.status(409).send({
+        error: 'Sync with iCloud or Google is on. Turn it off before deleting all contacts, or they are deleted there too.'
+      });
+    }
 
     const countResult = db.prepare('SELECT COUNT(*) as count FROM contacts').get() as { count: number };
     const count = countResult.count;

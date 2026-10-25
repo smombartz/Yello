@@ -46,6 +46,8 @@ function insertLegacyContact(overrides: { firstName?: string; company?: string }
     INSERT INTO contacts (first_name, last_name, display_name, company, raw_vcard)
     VALUES (?, 'Lovelace', 'Ada Lovelace', ?, ?)
   `).run(overrides.firstName ?? 'Ada', overrides.company ?? 'Analytical Engines', CARD).lastInsertRowid as number;
+  // A legacy row predates the trigger that gives every new contact a UID.
+  db().prepare('UPDATE contacts SET icloud_uid = NULL WHERE id = ?').run(id);
   db().prepare(`INSERT INTO contact_emails (contact_id, email, type, is_primary) VALUES (?, 'ada@old.example', 'internet', 1)`).run(id);
   db().prepare(`INSERT INTO contact_phones (contact_id, phone, phone_display, type, is_primary) VALUES (?, '+12125550101', '+1 212 555 0101', 'pref', 1)`).run(id);
   db().prepare(`

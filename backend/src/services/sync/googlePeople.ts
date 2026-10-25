@@ -1,4 +1,5 @@
 import type { ContactForVcard } from '../vcardGenerator.js';
+import { personToContactData } from './googlePersonMapper.js';
 
 /**
  * Raw access to the People API for backup and sync: every person field, kept
@@ -30,7 +31,7 @@ export interface GooglePersonRaw {
     displayName?: string; givenName?: string; familyName?: string; middleName?: string;
     honorificPrefix?: string; honorificSuffix?: string; metadata?: FieldMetadata;
   }>;
-  nicknames?: Array<{ value?: string }>;
+  nicknames?: Array<{ value?: string; metadata?: FieldMetadata }>;
   organizations?: Array<{ name?: string; title?: string; department?: string; metadata?: FieldMetadata }>;
   biographies?: Array<{ value?: string }>;
   birthdays?: Array<{ date?: GoogleDate; text?: string }>;
@@ -38,6 +39,7 @@ export interface GooglePersonRaw {
   emailAddresses?: Array<{ value?: string; type?: string; formattedType?: string; metadata?: FieldMetadata }>;
   phoneNumbers?: Array<{ value?: string; canonicalForm?: string; type?: string; formattedType?: string; metadata?: FieldMetadata }>;
   addresses?: Array<{
+    metadata?: FieldMetadata;
     streetAddress?: string; extendedAddress?: string; poBox?: string; city?: string; region?: string;
     postalCode?: string; country?: string; countryCode?: string; type?: string; formattedType?: string;
   }>;
@@ -114,33 +116,9 @@ export function contactPhotoUrl(person: GooglePersonRaw): string | null {
 
 // ─── Person → vCard (for backup files) ──────────────────────────────────────
 
-/** Google's standard types → vCard TYPE values. Anything else becomes an X-ABLabel. */
-const EMAIL_TYPES: Record<string, string> = { home: 'HOME', work: 'WORK', other: 'OTHER' };
-const PHONE_TYPES: Record<string, string> = {
-  home: 'HOME', work: 'WORK', mobile: 'CELL', main: 'MAIN', homeFax: 'HOME,FAX', workFax: 'WORK,FAX',
-  otherFax: 'FAX', pager: 'PAGER', workMobile: 'WORK,CELL', workPager: 'WORK,PAGER', other: 'OTHER',
-  googleVoice: 'OTHER'
-};
-const ADDRESS_TYPES: Record<string, string> = { home: 'HOME', work: 'WORK', other: 'OTHER' };
-const URL_TYPES: Record<string, string> = { homePage: 'HOME', home: 'HOME', work: 'WORK', blog: 'OTHER', profile: 'OTHER', other: 'OTHER' };
-
-function typed(type: string | undefined, formattedType: string | undefined, table: Record<string, string>) {
-  if (!type) return { type: null, extraTypes: null, label: null };
-  const mapped = table[type];
-  if (!mapped) return { type: null, extraTypes: null, label: formattedType || type };
-  const [first, ...rest] = mapped.split(',');
-  return { type: first, extraTypes: rest.length ? rest.join(',') : null, label: null };
-}
-
-function formatDate(date: GoogleDate | undefined): string | null {
-  if (!date?.month || !date?.day) return null;
-  const mm = String(date.month).padStart(2, '0');
-  const dd = String(date.day).padStart(2, '0');
-  return date.year ? `${String(date.year).padStart(4, '0')}-${mm}-${dd}` : `--${mm}-${dd}`;
-}
-
 /**
- * Maps a raw Person to the vCard generator's input. Lossy by nature (a
+ * Maps a raw Person to the vCard generator's input, keeping every value
+ * (profile-sourced ones too) and labels as categories. Lossy by nature (a
  * vCard has no home for every People field); the JSON in the same backup is
  * the full-fidelity copy.
  */
@@ -149,77 +127,5 @@ export function googlePersonToVcardInput(
   groupNames: Map<string, string>,
   photoBase64: string | null
 ): ContactForVcard {
-  const name = person.names?.[0];
-  const org = person.organizations?.[0];
-  const emails = (person.emailAddresses ?? []).filter(e => e.value);
-  const firstName = name?.givenName || null;
-  const lastName = name?.familyName || null;
-  const displayName = name?.displayName
-    || [firstName, lastName].filter(Boolean).join(' ')
-    || org?.name
-    || emails[0]?.value
-    || 'Unknown';
-
-  const categories = (person.memberships ?? [])
-    .map(m => m.contactGroupMembership?.contactGroupResourceName)
-    .map(resource => (resource ? groupNames.get(resource) : undefined))
-    .filter((group): group is string => !!group);
-
-  return {
-    firstName,
-    lastName,
-    displayName,
-    middleName: name?.middleName || null,
-    namePrefix: name?.honorificPrefix || null,
-    nameSuffix: name?.honorificSuffix || null,
-    nickname: person.nicknames?.[0]?.value || null,
-    company: org?.name || null,
-    title: org?.title || null,
-    department: org?.department || null,
-    notes: person.biographies?.[0]?.value || null,
-    birthday: formatDate(person.birthdays?.[0]?.date),
-    gender: person.genders?.[0]?.value || null,
-    emails: emails.map((e, i) => ({
-      email: e.value!,
-      isPrimary: e.metadata?.primary ?? i === 0,
-      ...typed(e.type, e.formattedType, EMAIL_TYPES)
-    })),
-    phones: (person.phoneNumbers ?? []).filter(p => p.value).map((p, i) => ({
-      phone: p.canonicalForm || p.value!,
-      phoneDisplay: p.value!,
-      isPrimary: p.metadata?.primary ?? i === 0,
-      ...typed(p.type, p.formattedType, PHONE_TYPES)
-    })),
-    addresses: (person.addresses ?? []).map(a => ({
-      street: a.streetAddress || null,
-      extended: a.extendedAddress || null,
-      poBox: a.poBox || null,
-      city: a.city || null,
-      state: a.region || null,
-      postalCode: a.postalCode || null,
-      country: a.country || null,
-      countryCode: a.countryCode || null,
-      ...typed(a.type, a.formattedType, ADDRESS_TYPES)
-    })),
-    urls: (person.urls ?? []).filter(u => u.value).map(u => {
-      const t = typed(u.type, u.formattedType, URL_TYPES);
-      return { url: u.value!, type: t.type, label: t.label };
-    }),
-    instantMessages: (person.imClients ?? []).filter(im => im.username).map(im => ({
-      service: im.formattedProtocol || im.protocol || 'other',
-      handle: im.username!,
-      type: null
-    })),
-    relatedPeople: (person.relations ?? []).filter(r => r.person).map(r => ({
-      name: r.person!,
-      relationship: r.formattedType || r.type || null
-    })),
-    dates: (person.events ?? [])
-      .map(e => ({ date: formatDate(e.date), label: e.formattedType || e.type || null }))
-      .filter((d): d is { date: string; label: string | null } => d.date !== null),
-    socialProfiles: [],
-    categories: [...new Set(categories)],
-    photoBase64: photoBase64 ?? undefined,
-    uid: null
-  };
+  return { ...personToContactData(person, { groupNames, allSources: true, photoBase64 }), uid: null };
 }

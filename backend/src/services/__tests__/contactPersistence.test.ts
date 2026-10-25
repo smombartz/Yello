@@ -107,6 +107,8 @@ describe('contactPersistence', () => {
     it('the primary adopts a missing UID and records the rest', () => {
       const db = getUserDatabase(USER_ID);
       const primary = insert(parsed({ displayName: 'Primary' }));
+      // A contact from before every contact was given a UID.
+      db.prepare('UPDATE contacts SET icloud_uid = NULL WHERE id = ?').run(primary);
       const second = insert(parsed({ displayName: 'Second', uid: 'UID-2' }));
       const third = insert(parsed({ displayName: 'Third', uid: 'UID-3' }));
       db.prepare('UPDATE contacts SET google_resource_name = ? WHERE id = ?').run('people/c2', second);

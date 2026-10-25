@@ -25,6 +25,8 @@ interface ContactRow {
   department: string | null;
   is_company: number | null;
   vcard_params: string | null;
+  archived_at: string | null;
+  updated_at: string | null;
 }
 
 interface TypedRow {
@@ -46,25 +48,46 @@ export function contactPhotoReader(userId: number): (photoHash: string) => strin
   };
 }
 
+export interface LoadedContact {
+  id: number;
+  photoHash: string | null;
+  archivedAt: string | null;
+  updatedAt: string | null;
+  contact: ContactForVcard;
+}
+
+export interface LoadContactsOptions {
+  /** Only these contacts (any archive state). */
+  ids?: number[];
+  /** Without ids: archived contacts instead of active ones, or 'all'. */
+  archived?: boolean | 'all';
+  /** Reads a photo hash as base64; omit to leave photos out. */
+  readPhotoBase64?: (photoHash: string) => string | null;
+  /** Leave the X-YELLO-LINKEDIN enrichment out (sync never sends it). */
+  withoutEnrichment?: boolean;
+}
+
 /**
- * Exports every non-archived contact (or, with `archived`, every archived one)
- * as one VCF document, built from the database. `readPhotoBase64` returns the
- * JPEG for a photo hash, or null when the file is missing, in which case the
- * card is written without a photo.
+ * Loads contacts with every child row, in the shape generateVcard takes.
+ * Shared by the VCF export and sync, so both describe a contact identically.
  */
-export function exportContactsAsVcf(
-  db: DatabaseType,
-  readPhotoBase64: (photoHash: string) => string | null,
-  options: { archived?: boolean } = {}
-): string {
-  const contacts = db.prepare(`
-    SELECT id, first_name, last_name, display_name, company, title, notes, birthday,
+export function loadContactsForVcard(db: DatabaseType, options: LoadContactsOptions = {}): LoadedContact[] {
+  const columns = `id, first_name, last_name, display_name, company, title, notes, birthday,
            photo_hash, icloud_uid, middle_name, name_prefix, name_suffix, nickname,
-           gender, department, is_company, vcard_params
-    FROM contacts
-    WHERE archived_at IS ${options.archived ? 'NOT NULL' : 'NULL'}
-    ORDER BY ${options.archived ? 'archived_at DESC, id' : 'id'}
-  `).all() as ContactRow[];
+           gender, department, is_company, vcard_params, archived_at, updated_at`;
+  let contacts: ContactRow[];
+  if (options.ids) {
+    const select = db.prepare(`SELECT ${columns} FROM contacts WHERE id = ?`);
+    contacts = options.ids
+      .map(id => select.get(id) as ContactRow | undefined)
+      .filter((row): row is ContactRow => row !== undefined);
+  } else {
+    const where = options.archived === 'all' ? '' : `WHERE archived_at IS ${options.archived ? 'NOT NULL' : 'NULL'}`;
+    contacts = db.prepare(`
+      SELECT ${columns} FROM contacts ${where}
+      ORDER BY ${options.archived === true ? 'archived_at DESC, id' : 'id'}
+    `).all() as ContactRow[];
+  }
 
   const emails = db.prepare(`
     SELECT email, type, extra_types, label, params, is_primary FROM contact_emails WHERE contact_id = ? ORDER BY id
@@ -110,10 +133,12 @@ export function exportContactsAsVcf(
     rows.map(row => ({ ...row, params: parseParamsJson(row.params) }));
 
   function buildContactForVcard(contact: ContactRow): ContactForVcard {
-    const photoBase64 = contact.photo_hash ? readPhotoBase64(contact.photo_hash) : null;
+    const photoBase64 = contact.photo_hash && options.readPhotoBase64 ? options.readPhotoBase64(contact.photo_hash) : null;
 
     // Only the columns that hold something travel; the rest import as NULL anyway.
-    const enrichmentRow = enrichment.get(contact.id) as Record<string, unknown> | undefined;
+    const enrichmentRow = options.withoutEnrichment
+      ? undefined
+      : enrichment.get(contact.id) as Record<string, unknown> | undefined;
     const linkedinEnrichment = enrichmentRow
       ? Object.fromEntries(Object.entries(enrichmentRow).filter(([, value]) => value !== null))
       : null;
@@ -180,5 +205,27 @@ export function exportContactsAsVcf(
     };
   }
 
-  return contacts.map(contact => generateVcard(buildContactForVcard(contact))).join('\r\n');
+  return contacts.map(row => ({
+    id: row.id,
+    photoHash: row.photo_hash,
+    archivedAt: row.archived_at,
+    updatedAt: row.updated_at,
+    contact: buildContactForVcard(row)
+  }));
+}
+
+/**
+ * Exports every non-archived contact (or, with `archived`, every archived one)
+ * as one VCF document, built from the database. `readPhotoBase64` returns the
+ * JPEG for a photo hash, or null when the file is missing, in which case the
+ * card is written without a photo.
+ */
+export function exportContactsAsVcf(
+  db: DatabaseType,
+  readPhotoBase64: (photoHash: string) => string | null,
+  options: { archived?: boolean } = {}
+): string {
+  return loadContactsForVcard(db, { archived: options.archived ?? false, readPhotoBase64 })
+    .map(loaded => generateVcard(loaded.contact))
+    .join('\r\n');
 }

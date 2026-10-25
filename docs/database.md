@@ -171,7 +171,7 @@ The root record. Everything else in this database hangs off it via `ON DELETE CA
 | `gmail_history_id` | TEXT | Gmail incremental-sync cursor |
 | `gmail_last_sync_at` | TEXT | |
 | `google_resource_name` | TEXT | *(migration)* Google People API `resourceName` |
-| `icloud_uid` | TEXT | *(migration)* vCard `UID`, `urn:uuid:` stripped |
+| `icloud_uid` | TEXT | *(migration)* vCard `UID`, `urn:uuid:` stripped. **Every contact has one** since 2026-10-25: trigger `contacts_ai_uid` gives a new contact without one a random uppercase v4 UUID, and a one-time backfill (marker `user_settings.contact_uids_backfilled_at`, run after the `raw_vcard` backfills so a card's own UID wins) did the same for existing contacts. It names the contact's card in iCloud and is written to Google as `clientData` `yelloUid`. Despite the name it is the contact's UID for every source |
 | `created_at` / `updated_at` | DATETIME DEFAULT CURRENT_TIMESTAMP | |
 
 Indexes: `display_name`, `(last_name, first_name)`, `archived_at`, partial `google_resource_name WHERE NOT NULL`, partial `icloud_uid WHERE NOT NULL`.
@@ -238,11 +238,13 @@ Three virtual tables, two maintained by triggers and one maintained in code.
 
 | Table | Content | Maintained by |
 | --- | --- | --- |
-| `contacts_fts` | `display_name`, `company` — external content on `contacts` | Triggers `contacts_ai` / `contacts_ad` / `contacts_au` |
+| `contacts_fts` | `display_name`, `company` — external content on `contacts` | Triggers `contacts_ai` / `contacts_ad` / `contacts_au` (`AFTER UPDATE OF display_name, company` — older databases had it on every UPDATE and are migrated on open; see below) |
 | `emails_fts` | `email` — external content on `contact_emails` | Triggers `emails_ai` / `emails_ad` |
 | `contacts_unified_fts` | `searchable_text` — **contentless** (`content=''`, `contentless_delete=1`) | Code: `rebuildContactSearch()` |
 
 `contacts_fts` uses `tokenize='porter unicode61'` with `prefix='2 3'`. `contacts_unified_fts` uses `tokenize="unicode61 tokenchars '@.'"` so email addresses and domains tokenise sensibly.
+
+**`contacts_fts` is never written directly.** Its triggers are the only writers. A manual `DELETE FROM contacts_fts` before deleting the contact made `contacts_ad` delete the row a second time, which SQLite reports as `database disk image is malformed` (fixed 2026-10-25 in `deleteArchivedContacts` and `cleanupService`'s delete). For the same reason `contacts_au` only fires on the two indexed columns: the UID trigger updates a row before `contacts_ai` has indexed it.
 
 **`contacts_unified_fts` has no triggers.** `buildSearchableText()` (`services/database.ts`) concatenates the contact plus all of its child rows plus JSON-encoded enrichment blobs; `rebuildContactSearch(db, contactId)` deletes and re-inserts the row. **Any code path that writes contacts or their children must call `rebuildContactSearch` itself**, or the contact becomes unfindable. Every importer does this per contact.
 
@@ -262,6 +264,7 @@ Single row, enforced by `CHECK (id = 1)` and seeded with `INSERT OR IGNORE INTO 
 | `vcard_model_backfilled_at` | *(migration)* TEXT. Marker for the one-time vCard-model backfill. See below |
 | `vcard_model_v2_backfilled_at` | *(migration)* TEXT. Marker for the second vCard-model backfill |
 | `raw_vcards_archived_at` | *(migration)* TEXT. Marker for the `raw_vcard` retirement; set only after the archive is verified and the column dropped |
+| `contact_uids_backfilled_at` | *(migration)* TEXT. Marker for the one-time UID backfill (every contact without `icloud_uid` gets a random one) |
 | `created_at` / `updated_at` | |
 
 Encryption is `services/tokenEncryption.ts` (`encryptToken` / `decryptToken`), keyed off `SESSION_SECRET`. **Rotating `SESSION_SECRET` invalidates every stored third-party credential.**
@@ -353,6 +356,39 @@ Indexes: `status`, `created_at DESC`.
 
 **`cards_processed` is written only after a batch transaction commits**, which is what makes it an exact resume offset — resuming can neither drop nor duplicate a card. On boot, `resumeInterruptedImports()` walks every tenant directory, re-enqueues `running` jobs whose staged file survives, and fails the rest.
 
+### Sync with iCloud and Google
+
+Tables for making Yello the source of truth and syncing it with the user's iCloud and Google address books (`docs/plans/2026-10-25-yello-source-of-truth-sync.md`). Created on every open in `userDatabase.ts`. Until the sync engine ships (Phase 2+), only the cutover preview writes to them (`sync_cutovers`, `sync_cutover_items`), plus the tombstone trigger and merge link handover.
+
+**`contact_sync_links`** — one row per contact per remote book it is synced with.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `contact_id` | INTEGER NOT NULL | FK → `contacts(id)` ON DELETE CASCADE |
+| `provider` | TEXT NOT NULL | CHECK `icloud`, `google` |
+| `remote_id` | TEXT | iCloud card URL or Google `people/…` resource name; NULL while `pending_create` |
+| `remote_uid` | TEXT | UID inside the iCloud card (CardDAV never lets it change) |
+| `etag` | TEXT | Remote version at the last sync |
+| `local_hash` / `remote_hash` | TEXT | sha256 of the provider projection (`services/sync/syncProjection.ts`) of Yello's / the remote's side at the last sync. `NULL` local hash = "compare everything next run" (set when a merge hands the link to another contact) |
+| `local_snapshot` / `remote_snapshot` | TEXT | That projection as JSON, for field-by-field three-way merges |
+| `local_photo_hash` / `remote_photo_hash` | TEXT | Photos are compared apart from the projection (servers recompress them) |
+| `status` | TEXT NOT NULL DEFAULT `'active'` | CHECK `active`, `pending_create`, `deleted`, `error` |
+| `last_error`, `last_pulled_at`, `last_pushed_at`, `created_at` | | |
+
+`UNIQUE (provider, remote_id)`, `UNIQUE (contact_id, provider)`. A merge moves a secondary's link to the survivor when the survivor has none for that provider (`carryMergedIdentities`); otherwise the link is left to cascade, and the tombstone trigger records the card for deletion.
+
+**`sync_tombstones`** — remote cards whose contact was hard-deleted: `provider`, `remote_id` NOT NULL, `remote_uid`, `etag`, `display_name`, `reason` (default `contact_deleted`), `created_at`, `remote_deleted_at` (set once sync has deleted the card). Filled by trigger **`contacts_bd_sync`** (`BEFORE DELETE ON contacts`) from the contact's active/error links, so every hard-delete path (merge, empty archive, cleanup, delete-all) is covered without touching it. Partial index on `provider WHERE remote_deleted_at IS NULL`.
+
+**`sync_providers`** — one row per provider, seeded `icloud` and `google`: `enabled`, `paused` (INTEGER 0/1), `collection_url` (the iCloud address book), `sync_token` (CardDAV sync-token / Google `syncToken`), `ctag`, `last_run_at`, `last_success_at`, `last_error`, `consecutive_failures`, `cutover_completed_at`, `lock_holder` / `lock_until` (a lease so two processes never sync one user at once), `updated_at`. `DELETE /api/contacts/all` returns 409 while any row is `enabled`.
+
+**`sync_runs`** — one row per sync run: `provider`, `trigger` (CHECK `cutover`, `scheduled`, `manual`, `local_edit`), `status` (CHECK `running`, `completed`, `failed`, `paused`), `started_at`, `finished_at`, counters `pulled_created/updated/archived`, `pushed_created/updated/deleted`, `conflicts`, `errors_json`.
+
+**`sync_remote_versions`** — remote versions sync overwrote or deleted, kept for restore: `run_id` (FK → `sync_runs` SET NULL), `contact_id` (FK → `contacts` SET NULL), `provider`, `remote_id`, `reason` (CHECK `conflict_yello_won`, `remote_delete`, `pre_update`, `cutover_conflict`, `cutover_delete`), `payload` (raw vCard or Person JSON), `created_at`, `restored_at`. Index on `contact_id`.
+
+**`sync_cutovers`** — the one-time switch: `id` TEXT PK (`cutover-<uuid>`), `status` (CHECK `planning`, `planned`, `applying`, `pushing`, `done`, `failed`, `aborted`), `window_days`, `icloud_backup_id` / `google_backup_id` (the backups the plan was computed from), `summary_json`, `error`, `created_at`, `updated_at`. Only the latest plan is kept: a new preview deletes older `planned`/`failed` rows.
+
+**`sync_cutover_items`** — the plan's decisions: `cutover_id` (FK ON DELETE CASCADE), `provider` (NULL for Yello-only items), `kind` (CHECK `link`, `merged_duplicate`, `update`, `conflict`, `possible_match`, `import`, `delete_remote`, `restore_review`, `create_remote`, `group_card`), `remote_id`, `remote_uid`, `contact_id` (FK SET NULL), `display_name`, `field` (a projection family for `update`/`conflict`), `yello_value` / `remote_value` (projection JSON), `yello_ts` / `remote_ts`, `reason`, `suggested`, `resolution` (the user's choice, Phase 4). Index `(cutover_id, kind)`.
+
 ### `user_profiles`
 
 Created lazily by `ensureProfileTables()` in `routes/profile.ts`, not in `userDatabase.ts`.
@@ -384,6 +420,13 @@ This table has a **destructive migration**: legacy columns (`first_name`, `last_
 | `contact_emails_history.direction` | `inbound`, `outbound` |
 | `import_jobs.status` | `pending`, `running`, `completed`, `failed` |
 | `contact_merged_identities.kind` | `uid`, `google_resource_name` |
+| `contact_sync_links.provider`, `sync_tombstones.provider`, `sync_providers.provider`, `sync_runs.provider`, `sync_remote_versions.provider`, `sync_cutover_items.provider` | `icloud`, `google` |
+| `contact_sync_links.status` | `active`, `pending_create`, `deleted`, `error` |
+| `sync_runs.trigger` | `cutover`, `scheduled`, `manual`, `local_edit` |
+| `sync_runs.status` | `running`, `completed`, `failed`, `paused` |
+| `sync_remote_versions.reason` | `conflict_yello_won`, `remote_delete`, `pre_update`, `cutover_conflict`, `cutover_delete` |
+| `sync_cutovers.status` | `planning`, `planned`, `applying`, `pushing`, `done`, `failed`, `aborted` |
+| `sync_cutover_items.kind` | `link`, `merged_duplicate`, `update`, `conflict`, `possible_match`, `import`, `delete_remote`, `restore_review`, `create_remote`, `group_card` |
 | `user_settings.id` | `1` (single-row table) |
 
 ---

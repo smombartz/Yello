@@ -15,6 +15,12 @@ const MAX_CACHE_SIZE = 50;
  */
 const cache = new Map<number, DatabaseType>();
 
+/** SQL expression yielding a random RFC 4122 v4 UUID, upper-cased like Apple's. */
+const NEW_UID_SQL = `upper(
+  hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' ||
+  substr('89AB', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))
+)`;
+
 /**
  * Returns the base path for user data directories.
  */
@@ -232,7 +238,7 @@ export function getUserDatabase(userId: number): DatabaseType {
       VALUES('delete', old.id, old.display_name, old.company);
     END;
 
-    CREATE TRIGGER IF NOT EXISTS contacts_au AFTER UPDATE ON contacts BEGIN
+    CREATE TRIGGER IF NOT EXISTS contacts_au AFTER UPDATE OF display_name, company ON contacts BEGIN
       INSERT INTO contacts_fts(contacts_fts, rowid, display_name, company)
       VALUES('delete', old.id, old.display_name, old.company);
       INSERT INTO contacts_fts(rowid, display_name, company)
@@ -442,6 +448,170 @@ export function getUserDatabase(userId: number): DatabaseType {
   `);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_contact_merged_identities_contact ON contact_merged_identities(contact_id)`);
 
+  // Sync with iCloud / Google (docs/plans/2026-10-25-yello-source-of-truth-sync.md).
+  // contact_sync_links ties a contact to its card in each remote address book
+  // and holds what both sides looked like at the last sync, so a change on
+  // either side can be told apart from the other.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS contact_sync_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+      provider TEXT NOT NULL CHECK (provider IN ('icloud', 'google')),
+      remote_id TEXT,
+      remote_uid TEXT,
+      etag TEXT,
+      local_hash TEXT,
+      remote_hash TEXT,
+      local_snapshot TEXT,
+      remote_snapshot TEXT,
+      local_photo_hash TEXT,
+      remote_photo_hash TEXT,
+      status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'pending_create', 'deleted', 'error')),
+      last_error TEXT,
+      last_pulled_at TEXT,
+      last_pushed_at TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (provider, remote_id),
+      UNIQUE (contact_id, provider)
+    );
+
+    CREATE TABLE IF NOT EXISTS sync_tombstones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      provider TEXT NOT NULL CHECK (provider IN ('icloud', 'google')),
+      remote_id TEXT NOT NULL,
+      remote_uid TEXT,
+      etag TEXT,
+      display_name TEXT,
+      reason TEXT NOT NULL DEFAULT 'contact_deleted',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      remote_deleted_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_sync_tombstones_pending ON sync_tombstones(provider) WHERE remote_deleted_at IS NULL;
+
+    -- A hard-deleted contact (merge, empty archive, delete-all) leaves a
+    -- tombstone per remote card, so sync deletes the card there too instead
+    -- of importing it back as new.
+    CREATE TRIGGER IF NOT EXISTS contacts_bd_sync BEFORE DELETE ON contacts BEGIN
+      INSERT INTO sync_tombstones (provider, remote_id, remote_uid, etag, display_name)
+      SELECT provider, remote_id, remote_uid, etag, OLD.display_name
+      FROM contact_sync_links
+      WHERE contact_id = OLD.id AND remote_id IS NOT NULL AND status IN ('active', 'error');
+    END;
+
+    CREATE TABLE IF NOT EXISTS sync_providers (
+      provider TEXT PRIMARY KEY CHECK (provider IN ('icloud', 'google')),
+      enabled INTEGER NOT NULL DEFAULT 0,
+      paused INTEGER NOT NULL DEFAULT 0,
+      collection_url TEXT,
+      sync_token TEXT,
+      ctag TEXT,
+      last_run_at TEXT,
+      last_success_at TEXT,
+      last_error TEXT,
+      consecutive_failures INTEGER NOT NULL DEFAULT 0,
+      cutover_completed_at TEXT,
+      lock_holder TEXT,
+      lock_until TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    INSERT OR IGNORE INTO sync_providers (provider) VALUES ('icloud'), ('google');
+
+    CREATE TABLE IF NOT EXISTS sync_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      provider TEXT NOT NULL CHECK (provider IN ('icloud', 'google')),
+      trigger TEXT NOT NULL CHECK (trigger IN ('cutover', 'scheduled', 'manual', 'local_edit')),
+      status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'completed', 'failed', 'paused')),
+      started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      finished_at TEXT,
+      pulled_created INTEGER NOT NULL DEFAULT 0,
+      pulled_updated INTEGER NOT NULL DEFAULT 0,
+      pulled_archived INTEGER NOT NULL DEFAULT 0,
+      pushed_created INTEGER NOT NULL DEFAULT 0,
+      pushed_updated INTEGER NOT NULL DEFAULT 0,
+      pushed_deleted INTEGER NOT NULL DEFAULT 0,
+      conflicts INTEGER NOT NULL DEFAULT 0,
+      errors_json TEXT
+    );
+
+    -- Remote versions sync overwrote or deleted, kept so they can be restored.
+    CREATE TABLE IF NOT EXISTS sync_remote_versions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      run_id INTEGER REFERENCES sync_runs(id) ON DELETE SET NULL,
+      contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
+      provider TEXT NOT NULL CHECK (provider IN ('icloud', 'google')),
+      remote_id TEXT NOT NULL,
+      reason TEXT NOT NULL CHECK (reason IN ('conflict_yello_won', 'remote_delete', 'pre_update', 'cutover_conflict', 'cutover_delete')),
+      payload TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      restored_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_sync_remote_versions_contact ON sync_remote_versions(contact_id);
+
+    -- The one-time switch to Yello as source of truth: a plan (dry run) per row,
+    -- its decisions in sync_cutover_items.
+    CREATE TABLE IF NOT EXISTS sync_cutovers (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL CHECK (status IN ('planning', 'planned', 'applying', 'pushing', 'done', 'failed', 'aborted')),
+      window_days INTEGER NOT NULL,
+      icloud_backup_id TEXT,
+      google_backup_id TEXT,
+      summary_json TEXT,
+      error TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS sync_cutover_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cutover_id TEXT NOT NULL REFERENCES sync_cutovers(id) ON DELETE CASCADE,
+      provider TEXT CHECK (provider IN ('icloud', 'google')),
+      kind TEXT NOT NULL CHECK (kind IN (
+        'link', 'merged_duplicate', 'update', 'conflict', 'possible_match',
+        'import', 'delete_remote', 'restore_review', 'create_remote', 'group_card'
+      )),
+      remote_id TEXT,
+      remote_uid TEXT,
+      contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
+      display_name TEXT,
+      field TEXT,
+      yello_value TEXT,
+      remote_value TEXT,
+      yello_ts TEXT,
+      remote_ts TEXT,
+      reason TEXT,
+      suggested TEXT,
+      resolution TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_sync_cutover_items_kind ON sync_cutover_items(cutover_id, kind);
+  `);
+
+  // contacts_fts holds only display_name and company, so its update trigger is
+  // limited to those columns. Older databases have it on every UPDATE, which
+  // also fired for the UID trigger below before contacts_ai had indexed the
+  // row, and the FTS 'delete' of a row it never held corrupts the index.
+  const ftsUpdateTrigger = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = 'contacts_au'").get() as
+    { sql: string } | undefined;
+  if (ftsUpdateTrigger && !/UPDATE\s+OF/i.test(ftsUpdateTrigger.sql)) {
+    db.exec(`
+      DROP TRIGGER contacts_au;
+      CREATE TRIGGER contacts_au AFTER UPDATE OF display_name, company ON contacts BEGIN
+        INSERT INTO contacts_fts(contacts_fts, rowid, display_name, company)
+        VALUES('delete', old.id, old.display_name, old.company);
+        INSERT INTO contacts_fts(rowid, display_name, company)
+        VALUES (new.id, new.display_name, new.company);
+      END;
+    `);
+  }
+
+  // Every contact carries a vCard UID: it names the contact's card in iCloud
+  // and is written to Google as clientData. Contacts created before this, or
+  // by a path that sets none, get a random one (uppercase, as Apple writes them).
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS contacts_ai_uid AFTER INSERT ON contacts WHEN NEW.icloud_uid IS NULL BEGIN
+      UPDATE contacts SET icloud_uid = ${NEW_UID_SQL} WHERE id = NEW.id;
+    END;
+  `);
+
   // Imported-GEO migration — vCards carrying per-address coordinates (this
   // app's own exports do) now keep them instead of forcing a re-geocode.
   try {
@@ -505,6 +675,21 @@ export function getUserDatabase(userId: number): DatabaseType {
   // database into a verified archive file, and the column is dropped. Must
   // run after the backfills above, which read raw_vcard.
   retireRawVcards(db, path.join(getUserDataPath(), String(userId), 'archive'));
+
+  // UID backfill — after the raw_vcard backfills above, which recover the
+  // card's own UID where one exists; only contacts still without one get a
+  // random UID.
+  try {
+    db.exec(`ALTER TABLE user_settings ADD COLUMN contact_uids_backfilled_at TEXT`);
+  } catch { /* column already exists */ }
+  const uidMarker = db.prepare('SELECT contact_uids_backfilled_at FROM user_settings WHERE id = 1').get() as
+    { contact_uids_backfilled_at: string | null } | undefined;
+  if (!uidMarker?.contact_uids_backfilled_at) {
+    db.transaction(() => {
+      db.exec(`UPDATE contacts SET icloud_uid = ${NEW_UID_SQL} WHERE icloud_uid IS NULL OR icloud_uid = ''`);
+      db.exec(`UPDATE user_settings SET contact_uids_backfilled_at = datetime('now') WHERE id = 1`);
+    })();
+  }
 
   cache.set(userId, db);
   return db;

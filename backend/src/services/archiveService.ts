@@ -206,8 +206,9 @@ export function deleteArchivedContacts(db: DatabaseType, contactIds: number[]): 
     db.prepare(`DELETE FROM contact_urls WHERE contact_id IN (${placeholders})`).run(...contactIds);
     db.prepare(`DELETE FROM contact_related_people WHERE contact_id IN (${placeholders})`).run(...contactIds);
 
-    // Delete from FTS tables
-    db.prepare(`DELETE FROM contacts_fts WHERE rowid IN (${placeholders})`).run(...contactIds);
+    // contacts_fts is cleared by the contacts_ad trigger. Deleting its rows here
+    // as well made that trigger delete them twice, which SQLite reports as
+    // "database disk image is malformed" and rolled the whole delete back.
     deleteContactsFromSearch(db, contactIds);
 
     // Delete contacts (only if archived)

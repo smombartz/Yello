@@ -9,8 +9,21 @@ import {
   startBackup,
   type BackupProvider
 } from '../services/sync/remoteBackupService.js';
+import {
+  DEFAULT_WINDOW_DAYS,
+  getLatestCutover,
+  listCutoverItems,
+  startCutoverPlan,
+  type CutoverItemKind
+} from '../services/sync/cutoverPlanner.js';
+import { getSyncProviders } from '../services/sync/syncState.js';
+import { getUserDatabase } from '../services/userDatabase.js';
 
 const PROVIDERS: BackupProvider[] = ['icloud', 'google'];
+const ITEM_KINDS: CutoverItemKind[] = [
+  'link', 'merged_duplicate', 'update', 'conflict', 'possible_match',
+  'import', 'delete_remote', 'restore_review', 'create_remote', 'group_card'
+];
 
 const CONTENT_TYPES: Record<string, string> = {
   '.vcf': 'text/vcard; charset=utf-8',
@@ -22,6 +35,56 @@ export default async function syncRoutes(
   fastify: FastifyInstance,
   _opts: FastifyPluginOptions
 ): Promise<void> {
+
+  // GET /api/sync/status — per-provider sync state
+  fastify.get('/status', async (request) => {
+    return { providers: getSyncProviders(getUserDatabase(request.user!.id)) };
+  });
+
+  // POST /api/sync/cutover/plan — compute the cutover preview (dry run) from
+  // the latest verified backups, in the background. Read-only.
+  fastify.post<{ Body: { windowDays?: number } }>('/cutover/plan', {
+    config: { rateLimit: { max: 6, timeWindow: '1 minute' } },
+    schema: {
+      body: {
+        type: 'object',
+        properties: { windowDays: { type: 'integer', minimum: 1, maximum: 3650 } }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { id, promise } = startCutoverPlan(request.user!.id, request.body?.windowDays ?? DEFAULT_WINDOW_DAYS);
+      promise.catch(err => request.log.error(err, 'Cutover plan crashed'));
+      return reply.status(202).send({ id });
+    } catch (error) {
+      return reply.status(409).send({ error: error instanceof Error ? error.message : 'Preview already running' });
+    }
+  });
+
+  // GET /api/sync/cutover/latest — the most recent preview and its summary
+  fastify.get('/cutover/latest', async (request) => {
+    return { cutover: getLatestCutover(request.user!.id) };
+  });
+
+  // GET /api/sync/cutover/:id/items — the preview's decisions, one list at a time
+  fastify.get<{
+    Params: { id: string };
+    Querystring: { kind?: CutoverItemKind; provider?: BackupProvider; limit?: number; offset?: number };
+  }>('/cutover/:id/items', {
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          kind: { type: 'string', enum: ITEM_KINDS },
+          provider: { type: 'string', enum: PROVIDERS },
+          limit: { type: 'integer', minimum: 1, maximum: 500 },
+          offset: { type: 'integer', minimum: 0 }
+        }
+      }
+    }
+  }, async (request) => {
+    return listCutoverItems(request.user!.id, request.params.id, request.query);
+  });
 
   // GET /api/sync/backups — every backup, plus whether each provider may be
   // deleted from right now (the deletion gate)

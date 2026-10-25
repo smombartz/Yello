@@ -79,3 +79,98 @@ export function useConfirmBackup() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BACKUPS_KEY }),
   });
 }
+
+// --- Cutover preview (mirror backend/src/services/sync/cutoverPlanner.ts) ---
+
+export type CutoverItemKind =
+  | 'link' | 'merged_duplicate' | 'update' | 'conflict' | 'possible_match'
+  | 'import' | 'delete_remote' | 'restore_review' | 'create_remote' | 'group_card';
+
+export interface ProviderPlanSummary {
+  provider: BackupProvider;
+  skipped: string | null;
+  backupId: string | null;
+  backupAt: string | null;
+  remoteCards: number;
+  groups: number;
+  unreadable: Array<{ remoteId: string; error: string }>;
+  matched: number;
+  matchedByIdentifier: number;
+  links: number;
+  updates: { contacts: number; fields: number };
+  conflicts: number;
+  possibleMatches: number;
+  imports: number;
+  restoreReview: number;
+  deletes: { mergedDuplicates: number; removedInCleanup: number; oldRemoteOnly: number; archivedInYello: number; total: number };
+  creates: number;
+  pushUpdates: number;
+}
+
+export interface CutoverSummary {
+  windowDays: number;
+  windowStart: string;
+  generatedAt: string;
+  yello: { active: number; archived: number; groupCards: number };
+  providers: Record<BackupProvider, ProviderPlanSummary>;
+}
+
+export interface CutoverRecord {
+  id: string;
+  status: 'planning' | 'planned' | 'applying' | 'pushing' | 'done' | 'failed' | 'aborted';
+  windowDays: number;
+  summary: CutoverSummary | null;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CutoverItem {
+  id: number;
+  provider: BackupProvider | null;
+  kind: CutoverItemKind;
+  remoteId: string | null;
+  contactId: number | null;
+  displayName: string;
+  field: string | null;
+  yelloValue: unknown;
+  remoteValue: unknown;
+  yelloTs: string | null;
+  remoteTs: string | null;
+  reason: string | null;
+  suggested: string | null;
+  resolution: string | null;
+}
+
+const CUTOVER_KEY = ['sync', 'cutover', 'latest'] as const;
+
+export function useLatestCutover() {
+  return useQuery({
+    queryKey: CUTOVER_KEY,
+    queryFn: () => fetchApi<{ cutover: CutoverRecord | null }>('/api/sync/cutover/latest'),
+    refetchInterval: query => (query.state.data?.cutover?.status === 'planning' ? 1500 : false),
+  });
+}
+
+export function useStartCutoverPlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (windowDays: number) =>
+      fetchApi<{ id: string }>('/api/sync/cutover/plan', { method: 'POST', body: JSON.stringify({ windowDays }) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: CUTOVER_KEY }),
+  });
+}
+
+export function useCutoverItems(
+  cutoverId: string | undefined,
+  filter: { kind: CutoverItemKind; provider?: BackupProvider },
+  enabled: boolean
+) {
+  const params = new URLSearchParams({ kind: filter.kind, limit: '200' });
+  if (filter.provider) params.set('provider', filter.provider);
+  return useQuery({
+    queryKey: ['sync', 'cutover', cutoverId, 'items', filter.kind, filter.provider ?? null],
+    queryFn: () => fetchApi<{ items: CutoverItem[]; total: number }>(`/api/sync/cutover/${cutoverId}/items?${params}`),
+    enabled: enabled && !!cutoverId,
+  });
+}

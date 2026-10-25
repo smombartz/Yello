@@ -297,6 +297,39 @@ two-way, Yello wins per field. Shipped so far (Phase 0):
 - **Google OAuth** flows all send `include_granted_scopes=true`, so signing in again or the Gmail
   re-consent no longer returns a token without the Contacts scope.
 
+Phase 1 (foundations, no remote writes):
+
+- **Cutover preview** (Tools › Before you switch › Preview the switch to Yello;
+  `POST /api/sync/cutover/plan`, `GET /api/sync/cutover/latest`, `GET /api/sync/cutover/:id/items`).
+  `services/sync/cutoverPlanner.ts` reads the latest *verified* backup of each provider (never the live
+  remote) plus the baseline archive, and classifies every remote card: `link` (its Yello contact's card),
+  `merged_duplicate` (another card matching the same contact → removed), `update` (a remote change inside
+  the window that Yello takes), `conflict` (changed on both sides), `possible_match` (medium-confidence
+  match, for review), `import` (not in Yello, not in the baseline, modified inside the window),
+  `delete_remote` (removed in the cleanup / old remote-only / archived in Yello), `restore_review`
+  (would be deleted but was edited recently), `create_remote` (Yello contact with no card there) and
+  `group_card` (Apple group imported as a contact). A family counts as changed remotely only if it differs
+  from the baseline card (where one exists); multi-value families changed on both sides bring in only the
+  remote's additions. Runs in the background (yields every 100 cards); 12,116 real contacts plan in ~3.4 s.
+  Writes only `sync_cutovers` / `sync_cutover_items`.
+- **Projection** (`services/sync/syncProjection.ts`): `projectContact(contactData, provider)` →
+  normalised field families (`SYNC_FIELDS`), `hashProjection`, `diffProjections`, `entriesMissingFrom`.
+  Google's projection has no categories, company flag or FN and folds social profiles into URLs. A card
+  imported into Yello projects identically to the card (tested on the real sample cards and the 12k export).
+- **Google mapping** (`services/sync/googlePersonMapper.ts`): `personToContactData` (contact-sourced
+  values only, social URLs → profiles) and `contactDataToPerson` (writes `clientData` `yelloUid`, never
+  `memberships`); round-trips to the same Google projection.
+- **`loadContactsForVcard(db, options)`** (`vcardExportService.ts`) loads contacts in generateVcard's
+  shape for the export and sync alike; `generateVcard(contact, { sync: { rev } })` writes a card for
+  iCloud (fresh `REV`, Yello `PRODID`, no stale imported REV/PRODID, no LinkedIn blob).
+- **Every contact has a UID** (trigger `contacts_ai_uid` + backfill), so VCF exports now carry a UID for
+  every card and re-importing an export no longer duplicates app-created contacts.
+- **Delete all** returns 409 while sync is enabled (`isSyncEnabled`, `services/sync/syncState.ts`).
+- **Fixed:** permanently deleting archived contacts (and the cleanup delete) failed with "database disk
+  image is malformed": the code deleted the `contacts_fts` rows itself and then the `contacts_ad` trigger
+  deleted them again.
+
+
 ### Public profile card (`/p/:slug`)
 
 Users can publish their contact card at a server-generated slug. Behavior notes:

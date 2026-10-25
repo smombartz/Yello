@@ -14,8 +14,8 @@ interface IdentityRow {
 }
 
 /**
- * Moves the identifiers of the secondary contacts onto the primary before the
- * secondaries are deleted. The primary adopts a UID / resource name it lacks;
+ * Moves the identifiers and sync links of the secondary contacts onto the
+ * primary before the secondaries are deleted. The primary adopts a UID / resource name it lacks;
  * every other one is recorded as a merged identity. Call inside the merge
  * transaction, before the DELETE (the cascade would drop their records).
  */
@@ -26,6 +26,13 @@ export function carryMergedIdentities(db: DatabaseType, primaryId: number, secon
     ON CONFLICT(kind, value) DO UPDATE SET contact_id = excluded.contact_id, merged_at = CURRENT_TIMESTAMP
   `);
   const repoint = db.prepare('UPDATE contact_merged_identities SET contact_id = ? WHERE contact_id = ?');
+  // A secondary's card in a remote book becomes the primary's when the primary
+  // has none there; otherwise it stays behind and the delete turns it into a
+  // tombstone (contacts_bd_sync), so sync removes that duplicate card.
+  const moveLinks = db.prepare(`
+    UPDATE contact_sync_links SET contact_id = ?, local_hash = NULL
+    WHERE contact_id = ? AND provider NOT IN (SELECT provider FROM contact_sync_links WHERE contact_id = ?)
+  `);
 
   const primary = select.get(primaryId) as IdentityRow | undefined;
   if (!primary) return;
@@ -34,6 +41,7 @@ export function carryMergedIdentities(db: DatabaseType, primaryId: number, secon
 
   for (const secondaryId of secondaryIds) {
     repoint.run(primaryId, secondaryId);
+    moveLinks.run(primaryId, secondaryId, primaryId);
     const secondary = select.get(secondaryId) as IdentityRow | undefined;
     if (!secondary) continue;
 

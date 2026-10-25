@@ -17,6 +17,7 @@ import { LinkedInImportContent } from './LinkedInImportContent';
 import { GoogleContactsImportContent } from './GoogleContactsImportContent';
 import { EnrichToolsContent } from './EnrichToolsContent';
 import { RemoteBackupsContent } from './RemoteBackupsContent';
+import { CutoverPreviewContent } from './CutoverPreviewContent';
 import { FilePicker } from './ui/FilePicker';
 
 export function SettingsView() {
@@ -42,6 +43,7 @@ export function SettingsView() {
   const [dangerExpanded, setDangerExpanded] = useState(false);
   const [icloudExpanded, setIcloudExpanded] = useState(false);
   const [backupsExpanded, setBackupsExpanded] = useState(false);
+  const [cutoverExpanded, setCutoverExpanded] = useState(false);
   const [icloudEmail, setIcloudEmail] = useState('');
   const [icloudPassword, setIcloudPassword] = useState('');
   const icloudSettings = useICloudSettings();
@@ -129,6 +131,24 @@ export function SettingsView() {
           {backupsExpanded && (
             <div className="collapsible-content">
               <RemoteBackupsContent />
+            </div>
+          )}
+        </section>
+
+        <section className={`settings-section collapsible-card${cutoverExpanded ? ' expanded' : ''}`}>
+          <button
+            className="collapsible-header"
+            onClick={() => setCutoverExpanded(!cutoverExpanded)}
+          >
+            <div className="settings-section-header">
+              <Icon name="magnifying-glass-chart" />
+              <h2>Preview the switch to Yello</h2>
+            </div>
+            <Icon name="chevron-down" className={`expand-icon${cutoverExpanded ? ' rotated' : ''}`} />
+          </button>
+          {cutoverExpanded && (
+            <div className="collapsible-content">
+              <CutoverPreviewContent />
             </div>
           )}
         </section>

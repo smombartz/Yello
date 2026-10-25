@@ -4438,6 +4438,75 @@ a.nav-rail-item.active {
   margin: 0;
 }
 
+/* Cutover preview (Tools › Before you switch) */
+.cutover-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  flex-wrap: wrap;
+  font-size: var(--ds-font-sm);
+  color: var(--ds-text-primary);
+}
+
+.cutover-provider {
+  margin-top: var(--ds-space-4);
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-border-color);
+}
+
+.cutover-provider h3 {
+  margin: 0;
+  font-size: var(--ds-font-md);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text-primary);
+}
+
+.cutover-provider h4 {
+  margin: var(--ds-space-4) 0 var(--ds-space-2);
+  font-size: var(--ds-font-xs);
+  font-weight: var(--ds-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ds-text-secondary);
+}
+
+.cutover-row {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-1) 0;
+  font-size: var(--ds-font-sm);
+  color: var(--ds-text-primary);
+}
+
+.cutover-row--zero {
+  color: var(--ds-text-secondary);
+}
+
+.cutover-count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--ds-weight-semibold);
+}
+
+.cutover-list summary {
+  cursor: pointer;
+  font-size: var(--ds-font-xs);
+  color: var(--ds-color-primary);
+}
+
+.cutover-list ul {
+  margin: var(--ds-space-2) 0;
+  padding-left: var(--ds-space-4);
+  max-height: 20rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+  font-size: var(--ds-font-xs);
+  overflow-wrap: anywhere;
+}
+
 .import-controls {
   display: flex;
   flex-direction: column;

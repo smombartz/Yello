@@ -1,5 +1,61 @@
 # Change Log
 
+## 2026-10-25 — Sync Phase 1: cutover preview, sync schema, a UID for every contact
+
+**Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
+
+**What Changed:**
+- New "Preview the switch to Yello" card (Tools › Before you switch): a read-only dry run, computed
+  from the latest verified iCloud and Google backups, of what switching would do. It lists changes and
+  new contacts coming into Yello, conflicts, possible matches, cards removed from each address book (with
+  why), and cards written there. The window (1/3/6/12 months) sets which remote edits count
+- Change detection for sync: a normalised per-provider projection of a contact and its hash, so
+  reformatting by a server is not mistaken for an edit; Google Person ↔ Yello mapping in both directions
+- Sync schema: card links, tombstones (filled by a `BEFORE DELETE` trigger on contacts), provider state,
+  runs, overwritten remote versions, and the cutover plan tables
+- Every contact now has a vCard UID (insert trigger + one-time backfill); exports carry it for all cards
+- "Delete all contacts" is refused (409) while sync is on
+- `generateVcard` sync mode (fresh REV, Yello PRODID, no stale imported REV/PRODID or LinkedIn blob);
+  `loadContactsForVcard` shared by export and sync
+- Fixed: permanently deleting archived contacts, and the cleanup delete, failed with "database disk
+  image is malformed" and rolled back
+
+**Why:**
+- Phase 1 of `docs/plans/2026-10-25-yello-source-of-truth-sync.md`: everything the sync engine needs,
+  with no remote writes yet, and real numbers for the cutover before anything is applied
+- `updated_at` is not bumped by many writers, so sync compares content hashes instead
+- The delete bug: those paths deleted `contacts_fts` rows by hand and the `contacts_ad` trigger then
+  deleted them a second time. `contacts_au` is now limited to the two indexed columns for the same reason
+  (the UID trigger's UPDATE would otherwise hit the index before the row was in it)
+
+**Files Modified:**
+- `backend/src/services/sync/cutoverPlanner.ts` (new) — `computeCutoverPlan`, `startCutoverPlan`,
+  `getLatestCutover`, `listCutoverItems`, `loadBaseline`, `parseRev`
+- `backend/src/services/sync/syncProjection.ts` (new) — `projectContact`, `hashProjection`,
+  `diffProjections`, `entriesMissingFrom`, `parsedToContactData`, `contactDataToParsed`
+- `backend/src/services/sync/googlePersonMapper.ts` (new) — `personToContactData`, `contactDataToPerson`
+- `backend/src/services/sync/syncState.ts` (new) — `getSyncProviders`, `isSyncEnabled`
+- `backend/src/services/sync/googlePeople.ts` — backup converter delegates to the mapper
+- `backend/src/services/userDatabase.ts` — `contact_sync_links`, `sync_tombstones` + `contacts_bd_sync`,
+  `sync_providers`, `sync_runs`, `sync_remote_versions`, `sync_cutovers`, `sync_cutover_items`;
+  `contacts_ai_uid` trigger, `contact_uids_backfilled_at` backfill; `contacts_au` limited to
+  `display_name, company` (and migrated on open)
+- `backend/src/services/mergedIdentities.ts` — `carryMergedIdentities` moves sync links to the survivor
+- `backend/src/services/vcardExportService.ts` — `loadContactsForVcard`
+- `backend/src/services/vcardGenerator.ts` — `GenerateVcardOptions.sync`, `YELLO_PRODID`
+- `backend/src/services/archiveService.ts` — `deleteArchivedContacts` no longer deletes `contacts_fts` rows
+- `backend/src/services/cleanupService.ts` — same fix in its contact delete
+- `backend/src/routes/contacts.ts` — delete-all 409 while sync is enabled
+- `backend/src/routes/sync.ts` — `/status`, `/cutover/plan`, `/cutover/latest`, `/cutover/:id/items`
+- `frontend/src/components/CutoverPreviewContent.tsx` (new), `frontend/src/api/syncHooks.ts`,
+  `frontend/src/components/SettingsView.tsx`, `frontend/src/index.css` — preview card
+- Tests (new): `sync/__tests__/syncProjection.test.ts`, `cutoverPlanner.test.ts`, `syncSchema.test.ts`;
+  updated `contactPersistence.test.ts`, `vcardModelBackfill.test.ts` (legacy rows predate the UID trigger)
+- `docs/database.md`, `docs/reference.md`, `docs/plans/2026-10-25-yello-source-of-truth-sync.md`,
+  `.dashcode/roadmap.json`
+
+---
+
 ## 2026-10-25 — Backups of Apple & Google contacts; sync Phase 0 fixes
 
 **Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`

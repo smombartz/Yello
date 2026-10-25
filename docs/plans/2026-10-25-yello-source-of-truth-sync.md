@@ -215,15 +215,15 @@ iCloud credentials stay in `user_settings`, handled by `encryptToken`/`decryptTo
 - ↪ Delete-all 409 *moved to Phase 1*: it keys off `sync_providers.enabled`, which Phase 1 creates.
 - ✅ **Backup function.** `services/sync/remoteBackupService.ts` + `services/sync/googlePeople.ts` + `/api/sync/backups` (`routes/sync.ts`), with streaming iCloud reads (`streamICloudCards`), verification, Yello DB snapshot, and the deletion gate (`checkDeletionGate`/`assertDeletionAllowed`). Tools page "Before you switch › Back up Apple & Google contacts" card with the native-backup guide (`RemoteBackupsContent.tsx`, `api/syncHooks.ts`).
 
-**Phase 1: Foundations (no remote writes)**
-- Schema, tombstone trigger and UID backfill.
-- `DELETE /api/contacts/all` returns 409 while sync is enabled (moved from Phase 0).
-- Dry run lists Apple group cards imported before Phase 0 as contacts, so they can be archived.
-- `syncProjection.ts` and `generateVcard({ sync: true })`.
-- `googlePersonMapper.ts`.
-- Export a shared `loadContactsForVcard(db, ids, {photos})` from `vcardExportService.ts`.
-- Streaming iCloud read side.
-- The read-only cutover dry run, so you can preview your real reconciliation numbers early.
+**Phase 1: Foundations (no remote writes)** — ✅ done 2026-10-25
+- ✅ Schema: `contact_sync_links`, `sync_tombstones` + trigger `contacts_bd_sync`, `sync_providers`, `sync_runs`, `sync_remote_versions`, `sync_cutovers`, `sync_cutover_items`. Merges hand links to the survivor (`carryMergedIdentities`).
+- ✅ UID for every contact: trigger `contacts_ai_uid` + one-time backfill (after the raw_vcard backfills, so a card's own UID wins).
+- ✅ `DELETE /api/contacts/all` returns 409 while sync is enabled (`isSyncEnabled`).
+- ✅ `syncProjection.ts` (`projectContact`, `hashProjection`, `diffProjections`, `entriesMissingFrom`) and `generateVcard(contact, { sync: { rev } })`.
+- ✅ `googlePersonMapper.ts` (`personToContactData`, `contactDataToPerson`); the backup converter now uses it.
+- ✅ Shared `loadContactsForVcard(db, options)` in `vcardExportService.ts`.
+- ✅ Streaming iCloud read side (`streamICloudCards`, shipped in Phase 0).
+- ✅ Read-only cutover dry run (`cutoverPlanner.ts`, `/api/sync/cutover/*`, "Preview the switch to Yello" card), including Apple group cards imported as contacts. It plans from the latest verified backups, not the live remotes. Verified on the real 12,116-card export: every card linked by UID, zero spurious changes, 3.4 s.
 
 **Phase 2: iCloud two-way engine**
 - `syncEngine.ts` + `icloudSyncAdapter.ts`, feature-flagged.
@@ -334,3 +334,7 @@ Every phase gets a `docs/log.md` entry, `docs/database.md` updates and `docs/ref
 - **2026-10-25 (Phase 0 shipped):**
   - Added `contact_merged_identities`. The user's past merges dropped the secondaries' UIDs, and the cutover needs to recognise the old duplicates still in iCloud/Google. Merges from now on record them. Earlier merges are recognised only by matching.
   - Moved the delete-all 409 and the report of already-imported group cards to Phase 1, which they depend on.
+- **2026-10-25 (Phase 1 shipped):**
+  - The dry run is pure computation over the backup files and the database, so it needs no throwaway `db.backup()` copy. Phase 4's apply will reuse the stored plan.
+  - Fixed a pre-existing bug found while testing the tombstone trigger: permanently deleting archived contacts (and the cleanup delete) failed with "database disk image is malformed" because the code deleted `contacts_fts` rows before the `contacts_ad` trigger deleted them again.
+  - `contacts_au` now fires only `AFTER UPDATE OF display_name, company`. The new UID trigger otherwise triggered it before the row was indexed, which corrupted the index the same way.
