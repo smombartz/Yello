@@ -23,6 +23,7 @@ import { runGoogleSync } from './googleSyncEngine.js';
 import { openGoogleRemote, type GoogleRemote } from './googleRemote.js';
 import type { ICloudRemote } from './icloudRemote.js';
 import { getProviderRow, logRemoteVersion, updateProvider, type SyncRunResult } from './syncRuntime.js';
+import { contactsScopeOf, getValidAccessToken } from '../googleAuthService.js';
 import type { SyncProvider } from './syncState.js';
 
 /**
@@ -482,6 +483,13 @@ export async function startCutoverApply(
   const summary = latest.summary!;
   const items = listAllItems(userId, cutoverId);
   const providers = checkPreconditions(userId, summary, items);
+  // Without full access, Google's part would stop halfway through the switch.
+  if (providers.some(p => p.provider === 'google') && !remotes.google) {
+    const token = await getValidAccessToken(userId);
+    if (!token || await contactsScopeOf(token) !== 'write') {
+      throw new CutoverError('Yello needs full access to your Google Contacts to make the switch. Grant it first (Migration › “Grant Google access”).');
+    }
+  }
 
   running.add(userId);
   const promise = (async () => {

@@ -3,6 +3,7 @@ import { Icon } from './Icon';
 import { Button } from './ui/Button';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { useToast } from './ui/Toast';
+import { useGoogleContactsStatus } from '../api/googleContactsHooks';
 import {
   useApplyCutover,
   useCutoverItems,
@@ -445,7 +446,10 @@ function ApplyPanel({ cutover, summary, applying }: { cutover: CutoverRecord; su
 
   const included = (['icloud', 'google'] as const).filter(p => !summary.providers[p].skipped);
   const gates = included.map(p => ({ provider: p, gate: backups.data?.gates[p] }));
-  const gatesOpen = gates.every(g => g.gate?.allowed);
+  const googleAccess = useGoogleContactsStatus();
+  const needsGoogleWrite = included.includes('google');
+  const googleWrite = googleAccess.data?.scope === 'write';
+  const gatesOpen = gates.every(g => g.gate?.allowed) && (!needsGoogleWrite || googleWrite);
   const engineOn = status.data?.engineEnabled ?? false;
   const totals = included.reduce((acc, p) => {
     const s = summary.providers[p];
@@ -519,6 +523,13 @@ function ApplyPanel({ cutover, summary, applying }: { cutover: CutoverRecord; su
             {gate?.allowed ? `${PROVIDER_NAMES[provider]} is backed up and confirmed.` : gate?.reason ?? 'Checking the backup…'}
           </li>
         ))}
+        {needsGoogleWrite && (
+          <li className={googleWrite ? 'ok' : 'todo'}>
+            {googleWrite
+              ? 'Yello has full access to your Google Contacts.'
+              : <>Yello needs full access to your Google Contacts. <a href="/api/auth/google/contacts?write=1">Grant Google access</a></>}
+          </li>
+        )}
         <li className={promised ? 'ok' : 'todo'}>
           <label>
             <input type="checkbox" checked={promised} onChange={e => setPromised(e.target.checked)} />{' '}
@@ -603,6 +614,12 @@ export function CutoverPreviewContent() {
 
       {summary && cutover && (
         <ReviewContext.Provider value={{ cutoverId: cutover.id, editable, choices: data?.choices ?? {} }}>
+          {summary.carriedChoices && summary.carriedChoices.previous > 0 && (
+            <p className="backup-meta">
+              {summary.carriedChoices.carried.toLocaleString()} of your {summary.carriedChoices.previous.toLocaleString()} choices
+              from the previous preview were kept{summary.carriedChoices.carried < summary.carriedChoices.previous && ' (the rest no longer apply)'}.
+            </p>
+          )}
           <p className="backup-meta">
             Prepared {new Date(summary.generatedAt).toLocaleString()} with changes since{' '}
             {new Date(summary.windowStart).toLocaleDateString()}. Yello has {summary.yello.active.toLocaleString()} contacts

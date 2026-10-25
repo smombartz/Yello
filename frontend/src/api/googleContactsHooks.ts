@@ -17,6 +17,8 @@ export interface GoogleContactsStatus {
   hasContactsScope: boolean;
   needsReauth: boolean;
   reason?: string;
+  /** Which Contacts permission Yello has: none, read-only, or full (sync needs write). */
+  scope?: 'none' | 'readonly' | 'write';
 }
 
 export interface GoogleContactsFetchResult {

@@ -85,6 +85,8 @@ export interface CutoverSummary {
   generatedAt: string;
   yello: { active: number; archived: number; groupCards: number };
   providers: Record<SyncProvider, ProviderPlanSummary>;
+  /** Choices taken over from the previous preview (of how many it had). */
+  carriedChoices?: { carried: number; previous: number };
 }
 
 // ─── Remote cards ───────────────────────────────────────────────────────────
@@ -549,23 +551,44 @@ export async function computeCutoverPlan(
 
 const running = new Set<number>();
 
+/**
+ * What makes an item "the same decision" in two previews: the same card (or,
+ * for Yello-only items, the same contact), the same kind and the same field.
+ */
+function decisionKey(item: { provider: string | null; kind: string; remoteId: string | null; field: string | null; contactId: number | null }): string {
+  return [item.provider ?? '', item.kind, item.remoteId ?? `contact-${item.contactId}`, item.field ?? ''].join('|');
+}
+
 function storePlan(db: DatabaseType, id: string, windowDays: number, plan: CutoverPlan): void {
   const insert = db.prepare(`
     INSERT INTO sync_cutover_items (
       cutover_id, provider, kind, remote_id, remote_uid, contact_id, display_name, field,
-      yello_value, remote_value, yello_ts, remote_ts, reason, suggested
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      yello_value, remote_value, yello_ts, remote_ts, reason, suggested, resolution
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const json = (value: unknown) => (value === null || value === undefined ? null : JSON.stringify(value));
   db.transaction(() => {
+    // The reviewer's choices in the previous preview carry over to the items
+    // that are still the same decision (after a fresh backup, a wider window).
+    const previous = new Map((db.prepare(`
+      SELECT i.provider, i.kind, i.remote_id, i.field, i.contact_id, i.resolution FROM sync_cutover_items i
+      JOIN sync_cutovers c ON c.id = i.cutover_id
+      WHERE c.status = 'planned' AND c.id != ? AND i.resolution IS NOT NULL
+    `).all(id) as Array<{ provider: string | null; kind: string; remote_id: string | null; field: string | null; contact_id: number | null; resolution: string }>)
+      .map(r => [decisionKey({ provider: r.provider, kind: r.kind, remoteId: r.remote_id, field: r.field, contactId: r.contact_id }), r.resolution]));
+
     // Only the latest plan is kept; nothing has been applied from an older one.
     db.prepare("DELETE FROM sync_cutovers WHERE status IN ('planned', 'failed') AND id != ?").run(id);
+    let carried = 0;
     for (const i of plan.items) {
+      const resolution = previous.get(decisionKey(i)) ?? null;
+      if (resolution) carried++;
       insert.run(
         id, i.provider, i.kind, i.remoteId, i.remoteUid, i.contactId, i.displayName, i.field,
-        json(i.yelloValue), json(i.remoteValue), i.yelloTs, i.remoteTs, i.reason, i.suggested
+        json(i.yelloValue), json(i.remoteValue), i.yelloTs, i.remoteTs, i.reason, i.suggested, resolution
       );
     }
+    plan.summary.carriedChoices = { carried, previous: previous.size };
     db.prepare(`
       UPDATE sync_cutovers SET status = 'planned', window_days = ?, icloud_backup_id = ?, google_backup_id = ?,
         summary_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?

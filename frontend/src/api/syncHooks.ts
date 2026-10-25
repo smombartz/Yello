@@ -143,6 +143,7 @@ export interface CutoverSummary {
   yello: { active: number; archived: number; groupCards: number };
   providers: Record<BackupProvider, ProviderPlanSummary>;
   apply?: CutoverApplyRecord;
+  carriedChoices?: { carried: number; previous: number };
 }
 
 export interface CutoverRecord {

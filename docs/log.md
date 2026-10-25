@@ -1,5 +1,31 @@
 # Change Log
 
+## 2026-10-25 — Preview keeps your choices; the switch checks Google access first
+
+**Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
+
+**What Changed:**
+- "Preview again" (needed after a fresh backup, because the switch requires backups from the last 24
+  hours) now carries every choice made in the previous preview over to the same decisions in the new one
+  (same card, kind and field); the preview says how many were kept
+- The switch refuses to start, with a clear message, when Google is in the plan but Yello lacks full
+  Contacts access; the checklist shows it with a "Grant Google access" link
+
+**Why:**
+- The user reviewed every decision; a required re-backup would otherwise have reset them all to the
+  suggestions
+- Without the write scope the Google half of the switch would stop part-way (recoverable, but confusing)
+
+**Files Modified:**
+- `backend/src/services/sync/cutoverPlanner.ts` — `storePlan` carries resolutions over (`decisionKey`),
+  `CutoverSummary.carriedChoices`
+- `backend/src/services/sync/cutoverApply.ts` — Google write-scope precondition in `startCutoverApply`
+- `backend/src/services/sync/__tests__/cutoverApply.test.ts` — choices survive a new preview
+- `frontend/src/components/CutoverPreviewContent.tsx` — Google access checklist item, kept-choices note
+- `frontend/src/api/googleContactsHooks.ts`, `frontend/src/api/syncHooks.ts` — types
+
+---
+
 ## 2026-10-25 — Preview: one dropdown per list, caret headings
 
 **Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`

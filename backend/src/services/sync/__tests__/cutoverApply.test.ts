@@ -211,6 +211,23 @@ describe('cutover apply', () => {
     expect(unfoldLines(icloud.cards.get(`${BOOK}A.vcf`)!.data)).toContain('TITLE:Analyst');
   });
 
+  it('keeps the reviewer’s choices when previewing again', async () => {
+    const first = await plan();
+    const items = listCutoverItems(USER_ID, first, { provider: 'icloud', limit: 100 }).items;
+    resolveCutoverItems(USER_ID, first, [
+      { id: items.find(i => i.displayName === 'Otto Old')!.id, resolution: 'import' },
+      { id: items.find(i => i.kind === 'conflict')!.id, resolution: 'remote' }
+    ]);
+
+    const second = await plan();
+    expect(second).not.toBe(first);
+    const again = listCutoverItems(USER_ID, second, { provider: 'icloud', limit: 100 }).items;
+    expect(again.find(i => i.displayName === 'Otto Old')!.resolution).toBe('import');
+    expect(again.find(i => i.kind === 'conflict')!.resolution).toBe('remote');
+    expect(again.filter(i => i.resolution !== null)).toHaveLength(2);
+    expect(getLatestCutover(USER_ID)!.summary!.carriedChoices).toEqual({ carried: 2, previous: 2 });
+  });
+
   it('can set every item of a kind at once and back to the suggestions', async () => {
     const id = await plan();
     const section = () => listCutoverSections(USER_ID, id).find(s => s.kind === 'delete_remote' && s.provider === 'icloud')!;
