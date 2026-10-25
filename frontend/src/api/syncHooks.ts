@@ -283,11 +283,12 @@ export interface SyncRun {
   errors: Array<{ contactId: number | null; remoteId: string | null; message: string }>;
 }
 
-export function useSyncRuns(enabled: boolean) {
+export function useSyncRuns(enabled: boolean, pollMs: number | false = false) {
   return useQuery({
     queryKey: ['sync', 'runs'] as const,
     queryFn: () => fetchApi<{ runs: SyncRun[] }>('/api/sync/runs?limit=15'),
     enabled,
+    refetchInterval: pollMs,
   });
 }
 

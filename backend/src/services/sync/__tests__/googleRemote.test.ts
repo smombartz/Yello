@@ -22,7 +22,7 @@ function fakeFetch(handlers: Array<(call: Call) => { status: number; json?: unkn
 }
 
 const remoteWith = (impl: typeof fetch) =>
-  peopleApiRemoteForTests(async () => 'token', { fetchImpl: impl, mutateIntervalMs: 0, backoffBaseMs: 0 });
+  peopleApiRemoteForTests(async () => 'token', { fetchImpl: impl, mutateIntervalMs: 0, backoffBaseMs: 0, quotaWaitMs: 0 });
 
 describe('People API client', () => {
   it('pages through connections and returns the sync token', async () => {
@@ -69,6 +69,25 @@ describe('People API client', () => {
     const [created] = await remoteWith(impl).createContacts([{ names: [{ givenName: 'A' }] }]);
     expect((created as { resourceName: string }).resourceName).toBe('people/c9');
     expect(attempts).toBe(3);
+  });
+
+  it('waits out a per-minute quota instead of giving up, and deletes in small batches', async () => {
+    let calls = 0;
+    const { impl } = fakeFetch([
+      c => {
+        if (!c.url.endsWith('people:batchDeleteContacts')) return null;
+        calls++;
+        // Every third request runs into the per-minute quota.
+        return calls % 3 === 0
+          ? { status: 429, json: { error: { status: 'RESOURCE_EXHAUSTED', message: "Quota exceeded for quota metric 'Write requests (Contact Deletes and Contact Group Writes)' and limit '... per minute per user'" } } }
+          : { status: 200, json: {} };
+      }
+    ]);
+    const names = Array.from({ length: 120 }, (_, i) => `people/c${i}`);
+    const batches: number[] = [];
+    await remoteWith(impl).deleteContacts(names, batch => batches.push(batch.length));
+    expect(batches).toEqual([50, 50, 20]);
+    expect(calls).toBe(4); // three batches, one of them retried after the quota wait
   });
 
   it('turns a missing permission into an auth error', async () => {

@@ -14,6 +14,7 @@ import {
   useResolveAllCutoverItems,
   useResolveCutoverItems,
   useStartCutoverPlan,
+  useSyncRuns,
   useSyncStatus,
   type BackupProvider,
   type CutoverItem,
@@ -475,6 +476,34 @@ const PHASE_LABELS: Record<string, string> = {
   pulledCreated: 'brought in', pulledUpdated: 'changes brought in', pulledArchived: 'archived', conflicts: 'conflicts'
 };
 
+/** Each address book's part of the switch, from its latest sync run (counts update while it runs). */
+function SwitchProgress({ summary, live }: { summary: CutoverSummary; live: boolean }) {
+  const runs = useSyncRuns(true, live ? 5000 : false);
+  const appliedAt = summary.apply?.appliedAt ?? null;
+  const included = (['icloud', 'google'] as const).filter(p => !summary.providers[p].skipped);
+  return (
+    <ul className="cutover-checklist">
+      {included.map(provider => {
+        const plan = summary.providers[provider];
+        const planned = plan.creates + plan.pushUpdates + plan.deletes.total;
+        const run = runs.data?.runs.find(r => r.provider === provider && r.trigger === 'cutover'
+          && (!appliedAt || `${r.started_at.replace(' ', 'T')}Z` >= appliedAt.slice(0, 19)));
+        const done = run ? run.pushed_created + run.pushed_updated + run.pushed_deleted : 0;
+        const state = !run ? 'waiting' : run.status === 'running' ? 'running' : run.status;
+        return (
+          <li key={provider} className={state === 'completed' ? 'ok' : 'todo'}>
+            <strong>{PROVIDER_NAMES[provider]}</strong>:{' '}
+            {state === 'waiting' && 'waiting its turn'}
+            {state === 'running' && <>writing… {done.toLocaleString()} of about {planned.toLocaleString()} changes</>}
+            {state === 'completed' && <>done: {run!.pushed_created.toLocaleString()} created, {run!.pushed_updated.toLocaleString()} updated, {run!.pushed_deleted.toLocaleString()} removed</>}
+            {(state === 'failed' || state === 'paused') && <>stopped after {done.toLocaleString()} of about {planned.toLocaleString()} changes</>}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function ApplyPanel({ cutover, summary, applying }: { cutover: CutoverRecord; summary: CutoverSummary; applying: boolean }) {
   const [confirming, setConfirming] = useState(false);
   const [promised, setPromised] = useState(false);
@@ -526,6 +555,7 @@ function ApplyPanel({ cutover, summary, applying }: { cutover: CutoverRecord; su
     return (
       <div className="cutover-apply">
         <h3>Switching…</h3>
+        <SwitchProgress summary={summary} live />
         <p className="backup-meta">
           Yello is updating your contacts and writing to {included.map(p => PROVIDER_NAMES[p]).join(' and ')}. This can take a while
           (Google takes about a second per change). You can leave this page; it keeps going. Please don’t edit contacts on your phone or in Gmail until it is done.
@@ -538,7 +568,9 @@ function ApplyPanel({ cutover, summary, applying }: { cutover: CutoverRecord; su
     return (
       <div className="cutover-apply">
         <h3>Not finished yet</h3>
+        <SwitchProgress summary={summary} live={false} />
         <p className="backup-error">{cutover.error ?? 'The first sync did not complete.'}</p>
+        <p className="backup-meta">Everything done so far is kept; Continue picks up where it stopped.</p>
         <Button variant="primary" icon="rotate-right" loading={apply.isPending}
           onClick={() => apply.mutate(undefined, { onError: error => showToast(error.message, { type: 'error' }) })}>
           Continue

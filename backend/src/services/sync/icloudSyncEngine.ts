@@ -16,7 +16,7 @@ import {
 } from './icloudRemote.js';
 import { assertDeletionAllowed, DeletionBlockedError } from './remoteBackupService.js';
 import {
-  acquireSyncLock, emptyCounters, finishRun, getProviderRow, logRemoteVersion, massChangeThreshold,
+  acquireSyncLock, emptyCounters, finishRun, progressReporter, getProviderRow, logRemoteVersion, massChangeThreshold,
   MASS_CREATE_THRESHOLD, pruneRemoteVersions, pushError, sha256, startRun, updateProvider, withoutPhoto,
   type SyncCounters, type SyncRunError, type SyncRunResult, type SyncTrigger
 } from './syncRuntime.js';
@@ -135,6 +135,14 @@ class ICloudSyncRun {
   ) {
     this.db = getUserDatabase(userId);
     this.stmts = prepareContactStatements(this.db);
+    this.progress = progressReporter(this.db, runId, PROVIDER, userId, this.counters);
+  }
+
+  private readonly progress: (label?: string, planned?: number) => void;
+
+  /** After each write to the remote: keeps the run log and server log current. */
+  private reportProgress(label?: string, planned?: number): void {
+    this.progress(label, planned);
   }
 
   private loadLinks(): void {
@@ -433,6 +441,7 @@ class ICloudSyncRun {
         else this.insertLink(contactId, values);
         pushed.push({ contactId, url: ref.url, projection: entry.projection, photoHash: entry.loaded.photoHash ?? null });
         this.counters.pushedCreated++;
+        this.reportProgress('new cards', creates.length);
       } catch (error) {
         this.recordPushError(contactId, link ?? null, null, error);
       }
@@ -463,6 +472,7 @@ class ICloudSyncRun {
         this.updateLink(link.id, { etag: ref.etag, status: 'active', last_error: null });
         pushed.push({ contactId, url: link.remote_id!, projection: entry.projection, photoHash: entry.loaded.photoHash ?? null });
         this.counters.pushedUpdated++;
+        this.reportProgress('updated cards', updates.length);
       } catch (error) {
         this.recordPushError(contactId, link, link.remote_id, error);
       }
@@ -474,6 +484,7 @@ class ICloudSyncRun {
         await this.deleteRemoteCard(link.remote_id!, link.etag, link.contact_id);
         this.updateLink(link.id, { status: 'deleted', last_error: null });
         this.counters.pushedDeleted++;
+        this.reportProgress('removals', archivedDeletes.length + tombstones.length);
       } catch (error) {
         this.recordPushError(link.contact_id, link, link.remote_id, error);
       }
@@ -485,6 +496,7 @@ class ICloudSyncRun {
         await this.deleteRemoteCard(tombstone.remote_id, tombstone.etag, null);
         this.db.prepare('UPDATE sync_tombstones SET remote_deleted_at = ? WHERE id = ?').run(new Date().toISOString(), tombstone.id);
         this.counters.pushedDeleted++;
+        this.reportProgress('removals', archivedDeletes.length + tombstones.length);
       } catch (error) {
         this.recordPushError(null, null, tombstone.remote_id, error);
       }

@@ -170,10 +170,11 @@ export class FakeGoogle implements GoogleRemote {
       return structuredClone(this.store(u.resourceName, u.body, { photos: current.photos, memberships: current.memberships }));
     });
   }
-  async deleteContacts(names: string[]) {
+  async deleteContacts(names: string[], onDeleted?: (batch: string[]) => void) {
     for (const name of names) {
       if (this.people.delete(name)) { this.calls.delete++; this.touch(name, true); }
     }
+    onDeleted?.(names);
   }
   async updatePhoto(name: string, base64: string) {
     const person = this.people.get(name)!;

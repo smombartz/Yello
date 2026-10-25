@@ -83,6 +83,15 @@ describe('sync scheduling and remote versions', () => {
     expect(icloud.cards.size + google.people.size).toBe(0);
   });
 
+  it('leaves a user alone while their switch to Yello is unfinished', async () => {
+    addContact('Ada', 'Lovelace', 'Analyst');
+    db().prepare("INSERT INTO sync_cutovers (id, status, window_days) VALUES ('cutover-x', 'pushing', 90)").run();
+    expect(activeProviders(USER_ID)).toEqual([]);
+    await runScheduledRound(quietLog, remotes());
+    expect(icloud.cards.size + google.people.size).toBe(0);
+    db().exec("DELETE FROM sync_cutovers");
+  });
+
   it('tries a failing provider less often', async () => {
     addContact('Ada', 'Lovelace', 'Analyst');
     db().exec(`UPDATE sync_providers SET consecutive_failures = 3, last_run_at = '${new Date().toISOString()}' WHERE provider = 'icloud'`);

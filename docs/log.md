@@ -1,5 +1,58 @@
 # Change Log
 
+## 2026-10-25 — iCloud listing works for large address books
+
+**Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
+
+**What Changed:**
+- Listing an iCloud address book (sync and backups) now uses PROPFIND and, when iCloud cuts that short,
+  pages through sync-collection until every card is listed, instead of an addressbook-query
+
+**Why:**
+- After the switch, scheduled iCloud syncs on the live server failed with "Collection query failed: 507":
+  iCloud truncates a large addressbook-query and marks it with 507 (RFC 6352), which tsdav treats as an
+  error, so iCloud sync stopped whenever it had to list the book
+
+**Files Modified:**
+- `backend/src/services/icloudService.ts` — `listAddressBookCards` (used by `streamICloudCards`)
+- `backend/src/services/sync/icloudRemote.ts` — `listCards` uses it
+- `backend/src/services/__tests__/icloudListing.test.ts` (new)
+
+---
+
+## 2026-10-25 — Google removals respect the per-minute quota; switch progress; no scheduled syncs mid-switch
+
+**Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
+
+**What Changed:**
+- Google removals go in batches of 50 instead of 500, and a "per minute per user" quota error now waits
+  61 s and continues (up to 30 times per request) instead of giving up after ~30 s of back-off
+- Each batch of removals is recorded as soon as Google confirms it (links marked deleted, tombstones
+  done), so an interrupted switch or sync continues with only the rest
+- Runs write their counters to `sync_runs` every few seconds while in flight and a progress line to the
+  server log every 30 s ("[sync] google user 1 run 7: 0 created, 0 updated, 1250 removed")
+- The Migration page shows each address book's part of the switch live ("writing… 1,250 of about 5,800
+  changes", "done: …", "stopped after …"), also on "Not finished yet"
+- Scheduled syncs and syncs after edits skip a user whose switch is applying or unfinished
+
+**Why:**
+- The live switch stopped with Google's "Write requests (Contact Deletes and Contact Group Writes) per
+  minute per user" quota: 5,766 removals in batches of 500 far exceed it
+- A scheduled sync ran in the middle of the switch, unconfirmed, and paused Google
+- There was no way to see how far a long switch had got
+
+**Files Modified:**
+- `backend/src/services/sync/googleRemote.ts` — `DELETE_BATCH` 50, quota waits (`quotaWaitMs`,
+  `maxQuotaWaits`), `deleteContacts(…, onDeleted)`
+- `backend/src/services/sync/googleSyncEngine.ts` — `pushDeletes` records per batch; `reportProgress`
+- `backend/src/services/sync/icloudSyncEngine.ts` — `reportProgress`
+- `backend/src/services/sync/syncRuntime.ts` — `progressReporter`
+- `backend/src/services/sync/syncScheduler.ts` — `isSwitchInProgress`; `activeProviders` honours it
+- Tests: `googleRemote.test.ts`, `googleSyncEngine.test.ts`, `syncScheduler.test.ts`, `syncFakes.ts`
+- `frontend/src/components/CutoverPreviewContent.tsx` — `SwitchProgress`; `frontend/src/api/syncHooks.ts`
+
+---
+
 ## 2026-10-25 — Legal pages: New York law, Kings County courts, estimates filled
 
 **Session:** `ac76ffad-a7cf-4ff4-a9fd-0d59dc131c65`

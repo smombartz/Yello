@@ -181,3 +181,37 @@ export const MASS_CREATE_THRESHOLD = 300;
 export function sha256(value: string): string {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
+
+/**
+ * Progress of a run in flight: its counters are written to sync_runs every few
+ * seconds (so the run log shows how far a long run has got) and a line goes
+ * to the server log every half minute. Returns a function to call after each
+ * write to the remote.
+ */
+export function progressReporter(
+  db: DatabaseType,
+  runId: number,
+  provider: SyncProvider,
+  userId: number,
+  counters: SyncCounters
+): (label?: string, planned?: number) => void {
+  let lastWrite = 0;
+  let lastLog = Date.now();
+  return (label, planned) => {
+    const now = Date.now();
+    if (now - lastWrite >= 3000) {
+      lastWrite = now;
+      db.prepare(`
+        UPDATE sync_runs SET pulled_created = ?, pulled_updated = ?, pulled_archived = ?,
+          pushed_created = ?, pushed_updated = ?, pushed_deleted = ?, conflicts = ?
+        WHERE id = ? AND status = 'running'
+      `).run(counters.pulledCreated, counters.pulledUpdated, counters.pulledArchived,
+        counters.pushedCreated, counters.pushedUpdated, counters.pushedDeleted, counters.conflicts, runId);
+    }
+    if (now - lastLog >= 30_000) {
+      lastLog = now;
+      const done = `${counters.pushedCreated} created, ${counters.pushedUpdated} updated, ${counters.pushedDeleted} removed`;
+      console.log(`[sync] ${provider} user ${userId} run ${runId}: ${done}${label && planned ? ` (${label}: of ${planned})` : ''}`);
+    }
+  };
+}

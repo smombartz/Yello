@@ -1,5 +1,5 @@
 import type { DAVAddressBook, DAVClient } from 'tsdav';
-import { buildICloudClient } from '../icloudService.js';
+import { buildICloudClient, listAddressBookCards } from '../icloudService.js';
 import { PreconditionFailedError, RemoteAuthError, RemoteRetryLaterError } from './syncRuntime.js';
 
 /**
@@ -82,15 +82,7 @@ class TsdavICloudRemote implements ICloudRemote {
   }
 
   async listCards(): Promise<RemoteCardRef[]> {
-    const listing = await this.client.addressBookQuery({ url: this.book.url, props: { 'd:getetag': {} }, depth: '1' });
-    const self = this.book.url.replace(/\/$/, '');
-    return listing
-      .filter(res => res.href)
-      .map(res => ({
-        url: new URL(res.href!, this.book.url).href,
-        etag: ((res.props as Record<string, unknown> | undefined)?.getetag as string | undefined) ?? null
-      }))
-      .filter(card => card.url.replace(/\/$/, '') !== self);
+    return listAddressBookCards(this.client, this.book);
   }
 
   async fetchCards(urls: string[]): Promise<RemoteCardData[]> {

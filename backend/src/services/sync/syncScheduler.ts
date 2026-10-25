@@ -24,8 +24,21 @@ const editDelayMs = () => Math.max(5, Number(process.env.SYNC_EDIT_DELAY_SECONDS
 /** Providers in sync order: iCloud first, so a phone edit reaches Google in the same pass. */
 const ORDER: SyncProvider[] = ['icloud', 'google'];
 
-/** The providers this user syncs (switched over, on, not paused). */
+/**
+ * True while the user's switch to Yello is under way or unfinished. The
+ * switch runs its own syncs, with the user's confirmation; a scheduled one
+ * in between would only trip the mass-change guard and pause the provider.
+ */
+export function isSwitchInProgress(userId: number): boolean {
+  const status = (getUserDatabase(userId).prepare(
+    'SELECT status FROM sync_cutovers ORDER BY created_at DESC, rowid DESC LIMIT 1'
+  ).get() as { status: string } | undefined)?.status;
+  return status === 'applying' || status === 'pushing';
+}
+
+/** The providers this user syncs on their own (switched over, on, not paused, no switch under way). */
 export function activeProviders(userId: number): SyncProvider[] {
+  if (isSwitchInProgress(userId)) return [];
   const db = getUserDatabase(userId);
   return ORDER.filter(provider => {
     const row = getProviderRow(db, provider);

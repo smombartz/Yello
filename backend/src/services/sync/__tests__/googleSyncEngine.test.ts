@@ -13,6 +13,7 @@ import { archiveContacts, unarchiveContacts } from '../../archiveService.js';
 import { runGoogleSync } from '../googleSyncEngine.js';
 import { runICloudSync } from '../icloudSyncEngine.js';
 import { FakeGoogle, FakeICloud } from './syncFakes.js';
+import { RemoteRetryLaterError } from '../syncRuntime.js';
 
 const USER_ID = 41;
 
@@ -204,6 +205,27 @@ describe('Google sync engine', () => {
     // ...and nothing echoes back to iCloud.
     const echo = await runICloudSync(USER_ID, { trigger: 'manual', remote: icloud, fullScan: true });
     expect(echo.counters.pushedUpdated).toBe(0);
+  });
+
+  it('an interrupted removal keeps what it removed and continues with the rest', async () => {
+    const ids = Array.from({ length: 6 }, (_, i) => addContact(`P${i}`, 'Person'));
+    await sync();
+    archiveContacts(db(), ids);
+
+    const realDelete = google.deleteContacts.bind(google);
+    google.deleteContacts = async (names, onDeleted) => {
+      await realDelete(names.slice(0, 2), onDeleted);
+      throw new RemoteRetryLaterError(null, 'Quota exceeded … per minute per user');
+    };
+    const first = await sync();
+    expect(first.status).toBe('failed');
+    expect(google.people.size).toBe(4);
+    expect((db().prepare("SELECT COUNT(*) AS n FROM contact_sync_links WHERE provider = 'google' AND status = 'deleted'").get() as { n: number }).n).toBe(2);
+
+    google.deleteContacts = realDelete;
+    const second = await sync();
+    expect(second.counters.pushedDeleted).toBe(4);
+    expect(google.people.size).toBe(0);
   });
 
   it('pauses when Google refuses the permission', async () => {

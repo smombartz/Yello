@@ -16,6 +16,8 @@ Name
 - Kiu (who in esperanto)
 - lololo
 - qui
+- dige
+- clique
 
 **Domains**
 - yello.you
@@ -43,3 +45,9 @@ Related words from other languages (useful for naming)
 - Italian: legame, legato, nodo, trama, ponte, giunto, rete, intreccio, socio
 - Esperanto: ligi, ligo, rilato, ponto, kun, kunligi, kunularo
 - Greek: synapse, syndesis (binding together), harmos (joint), desmos (bond)
+
+Synonyms: letters and messages
+letters, mail, post, messages, notes, missives, epistles, dispatches, exchange, communication, writing, replies, keeping in touch, back-and-forth
+
+Synonyms: matching
+accord, concord, agreement, harmony, consonance, congruence, parallel, match, equivalence, symmetry, analogy, resemblance, kinship

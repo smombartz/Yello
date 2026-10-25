@@ -98,6 +98,60 @@ export interface ICloudCard {
   data: string;
 }
 
+/** A card's URL and etag, as an address-book listing gives them. */
+export interface ICloudCardRef {
+  url: string;
+  etag: string | null;
+}
+
+interface DavResponse {
+  href?: string;
+  status?: number;
+  props?: Record<string, unknown>;
+  raw?: unknown;
+}
+
+/** A listing iCloud cut short: RFC 6352 marks it with a 507 response. */
+const isTruncated = (responses: DavResponse[]) => responses.some(r => r.status === 507);
+
+function toRefs(responses: DavResponse[], book: DAVAddressBook): ICloudCardRef[] {
+  const self = book.url.replace(/\/$/, '');
+  const refs = new Map<string, ICloudCardRef>();
+  for (const res of responses) {
+    if (!res.href || (res.status ?? 200) >= 400) continue;
+    const url = new URL(res.href, book.url).href;
+    if (url.replace(/\/$/, '') === self) continue;
+    refs.set(url, { url, etag: (res.props?.getetag as string | undefined) ?? null });
+  }
+  return [...refs.values()];
+}
+
+/**
+ * Every card URL in an address book with its etag. iCloud cuts a large
+ * addressbook-query short (a 507 in the answer), so this lists with PROPFIND,
+ * and when that is cut short too, pages through sync-collection, which iCloud
+ * answers in parts until the whole book is listed.
+ */
+export async function listAddressBookCards(client: DAVClient, book: DAVAddressBook): Promise<ICloudCardRef[]> {
+  const props = { 'd:getetag': {} };
+  try {
+    const responses = await client.propfind({ url: book.url, props, depth: '1' }) as DavResponse[];
+    if (!isTruncated(responses)) return toRefs(responses, book);
+  } catch { /* fall back to sync-collection */ }
+
+  const all: DavResponse[] = [];
+  let syncToken = '';
+  for (let page = 0; page < 1000; page++) {
+    const responses = await client.syncCollection({ url: book.url, props, syncLevel: 1, syncToken }) as DavResponse[];
+    all.push(...responses);
+    const raw = responses[0]?.raw as { multistatus?: { syncToken?: string } } | undefined;
+    const next = raw?.multistatus?.syncToken;
+    if (!isTruncated(responses) || !next || next === syncToken) return toRefs(all, book);
+    syncToken = next;
+  }
+  throw new Error('iCloud kept the address book listing unfinished');
+}
+
 /** Cards fetched per CARDDAV:addressbook-multiget request. */
 const MULTIGET_BATCH = 100;
 
@@ -112,16 +166,7 @@ export async function* streamICloudCards(
   const addressBooks = await client.fetchAddressBooks();
 
   for (const addressBook of addressBooks) {
-    const listing = await client.addressBookQuery({
-      url: addressBook.url,
-      props: { 'd:getetag': {} },
-      depth: '1',
-    });
-    const urls = listing
-      .map(res => res.href ?? '')
-      .filter(Boolean)
-      .map(href => new URL(href, addressBook.url).href)
-      .filter(url => url.replace(/\/$/, '') !== addressBook.url.replace(/\/$/, ''));
+    const urls = (await listAddressBookCards(client, addressBook)).map(card => card.url);
 
     for (let i = 0; i < urls.length; i += MULTIGET_BATCH) {
       const batch = urls.slice(i, i + MULTIGET_BATCH);

@@ -13,7 +13,7 @@ import { contactPhotoUrl, type GooglePersonRaw } from './googlePeople.js';
 import { openGoogleRemote, SyncTokenExpiredError, type GoogleRemote } from './googleRemote.js';
 import { assertDeletionAllowed, DeletionBlockedError } from './remoteBackupService.js';
 import {
-  acquireSyncLock, emptyCounters, finishRun, getProviderRow, logRemoteVersion, massChangeThreshold,
+  acquireSyncLock, emptyCounters, finishRun, progressReporter, getProviderRow, logRemoteVersion, massChangeThreshold,
   MASS_CREATE_THRESHOLD, PreconditionFailedError, pruneRemoteVersions, pushError, RemoteAuthError,
   RemoteRetryLaterError, sha256, startRun, updateProvider,
   type SyncCounters, type SyncRunError, type SyncRunResult, type SyncTrigger
@@ -105,6 +105,14 @@ class GoogleSyncRun {
   ) {
     this.db = getUserDatabase(userId);
     this.stmts = prepareContactStatements(this.db);
+    this.progress = progressReporter(this.db, runId, PROVIDER, userId, this.counters);
+  }
+
+  private readonly progress: (label?: string, planned?: number) => void;
+
+  /** After each write to the remote: keeps the run log and server log current. */
+  private reportProgress(label?: string, planned?: number): void {
+    this.progress(label, planned);
   }
 
   private loadLinks(): void {
@@ -406,6 +414,7 @@ class GoogleSyncRun {
         this.counters.pushedCreated++;
       });
     })();
+    this.reportProgress();
   }
 
   private async pushUpdates(
@@ -427,6 +436,7 @@ class GoogleSyncRun {
         this.counters.pushedUpdated++;
       });
     })();
+    this.reportProgress();
 
     // Edited in Google since the pull: merge that edit, then push once more.
     for (const { contactId, link } of stale) {
@@ -463,21 +473,35 @@ class GoogleSyncRun {
       const person = current.get(name);
       if (person) logRemoteVersion(this.db, { runId: this.runId, contactId: contactOf.get(name) ?? null, provider: PROVIDER, remoteId: name, reason: 'remote_delete', payload: JSON.stringify(person) });
     }
+
+    // Recorded batch by batch, so an interrupted run (Google's per-minute
+    // quota, a restart) continues where it stopped.
+    const linkOf = new Map(archived.map(l => [l.remote_id!, l]));
+    const tombstoneOf = new Map(tombstones.map(t => [t.remote_id, t]));
+    const markDeleted = (batch: string[]) => {
+      const now = new Date().toISOString();
+      this.db.transaction(() => {
+        for (const name of batch) {
+          const link = linkOf.get(name);
+          if (link) this.updateLink(link.id, { status: 'deleted', last_error: null });
+          const tombstone = tombstoneOf.get(name);
+          if (tombstone) this.db.prepare('UPDATE sync_tombstones SET remote_deleted_at = ? WHERE id = ?').run(now, tombstone.id);
+        }
+      })();
+      this.counters.pushedDeleted += batch.length;
+      this.reportProgress('removed', names.length);
+    };
+
+    markDeleted(names.filter(name => !current.has(name))); // already gone from Google
     const existing = names.filter(name => current.has(name));
     try {
-      if (existing.length) await this.remote.deleteContacts(existing);
+      if (existing.length) await this.remote.deleteContacts(existing, markDeleted);
     } catch (error) {
       if (error instanceof RemoteAuthError || error instanceof RemoteRetryLaterError) throw error;
-      for (const name of existing) this.recordPushError(contactOf.get(name) ?? null, null, name, error);
-      return;
+      pushError(this.errors, { contactId: null, remoteId: null, message: `Removing contacts from Google stopped: ${error instanceof Error ? error.message : String(error)}` });
     }
-    const now = new Date().toISOString();
-    this.db.transaction(() => {
-      for (const link of archived) this.updateLink(link.id, { status: 'deleted', last_error: null });
-      for (const t of tombstones) this.db.prepare('UPDATE sync_tombstones SET remote_deleted_at = ? WHERE id = ?').run(now, t.id);
-    })();
-    this.counters.pushedDeleted += names.length;
   }
+
 
   /** Photos go one request each, so at most PHOTO_PUSH_LIMIT per run; the rest follow on later runs. */
   private async pushPhotos(contactIds: number[]): Promise<void> {

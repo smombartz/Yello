@@ -35,7 +35,8 @@ export interface GoogleRemote {
   createContacts(bodies: GooglePersonBody[]): Promise<Array<GooglePersonRaw | Error>>;
   /** Results in input order; an etag mismatch is a PreconditionFailedError. */
   updateContacts(updates: Array<{ resourceName: string; etag: string | null; body: GooglePersonBody }>): Promise<Array<GooglePersonRaw | Error>>;
-  deleteContacts(resourceNames: string[]): Promise<void>;
+  /** Deletes in small batches; `onDeleted` is told after each batch, so progress survives an interruption. */
+  deleteContacts(resourceNames: string[], onDeleted?: (batch: string[]) => void): Promise<void>;
   updatePhoto(resourceName: string, base64: string): Promise<GooglePersonRaw>;
   deletePhoto(resourceName: string): Promise<GooglePersonRaw>;
   /** A contact photo's bytes as base64, or null. */
@@ -44,7 +45,12 @@ export interface GoogleRemote {
 
 const API = 'https://people.googleapis.com/v1';
 const BATCH = 200;
-const DELETE_BATCH = 500;
+/**
+ * Deletes count one by one against a per-minute, per-user quota ("Write
+ * requests (Contact Deletes and Contact Group Writes)"), so they go in small
+ * batches; when the quota is used up the client waits for the next minute.
+ */
+const DELETE_BATCH = 50;
 
 export interface GoogleRemoteOptions {
   /** Milliseconds between mutating requests (default 1100). */
@@ -53,6 +59,9 @@ export interface GoogleRemoteOptions {
   maxRetries?: number;
   /** First back-off delay, doubled on each retry (default 2000 ms). */
   backoffBaseMs?: number;
+  /** Wait after a per-minute quota error (default 61 s), and how many such waits one request may take (default 30). */
+  quotaWaitMs?: number;
+  maxQuotaWaits?: number;
   fetchImpl?: typeof fetch;
 }
 
@@ -65,16 +74,21 @@ class PeopleApiRemote implements GoogleRemote {
   private readonly mutateIntervalMs: number;
   private readonly maxRetries: number;
   private readonly backoffBaseMs: number;
+  private readonly quotaWaitMs: number;
+  private readonly maxQuotaWaits: number;
   private readonly fetchImpl: typeof fetch;
 
   constructor(private readonly getToken: () => Promise<string | null>, options: GoogleRemoteOptions = {}) {
     this.mutateIntervalMs = options.mutateIntervalMs ?? 1100;
     this.maxRetries = options.maxRetries ?? 4;
     this.backoffBaseMs = options.backoffBaseMs ?? 2000;
+    this.quotaWaitMs = options.quotaWaitMs ?? 61_000;
+    this.maxQuotaWaits = options.maxQuotaWaits ?? 30;
     this.fetchImpl = options.fetchImpl ?? fetch;
   }
 
   private async request<T>(method: string, path: string, body?: unknown, mutating = false): Promise<T> {
+    let quotaWaits = 0;
     for (let attempt = 0; ; attempt++) {
       if (mutating) {
         const wait = this.lastMutation + this.mutateIntervalMs - Date.now();
@@ -96,6 +110,14 @@ class PeopleApiRemote implements GoogleRemote {
       const payload = await response.json().catch(() => ({})) as ApiError;
       const status = payload.error?.status ?? '';
       const message = payload.error?.message ?? `Google People API ${response.status}`;
+      // A per-minute quota frees up within a minute: wait it out rather than give up.
+      if (response.status === 429 && /per minute/i.test(message) && quotaWaits < this.maxQuotaWaits) {
+        quotaWaits++;
+        attempt--;
+        console.log(`[sync] Google quota reached (${path.split('?')[0]}); waiting ${Math.round(this.quotaWaitMs / 1000)} s`);
+        await new Promise(resolve => setTimeout(resolve, this.quotaWaitMs));
+        continue;
+      }
       if ((response.status === 429 || response.status === 503) && attempt < this.maxRetries) {
         await new Promise(resolve => setTimeout(resolve, this.backoffBaseMs * 2 ** attempt));
         continue;
@@ -198,9 +220,11 @@ class PeopleApiRemote implements GoogleRemote {
     return results;
   }
 
-  async deleteContacts(resourceNames: string[]): Promise<void> {
+  async deleteContacts(resourceNames: string[], onDeleted?: (batch: string[]) => void): Promise<void> {
     for (let i = 0; i < resourceNames.length; i += DELETE_BATCH) {
-      await this.request('POST', 'people:batchDeleteContacts', { resourceNames: resourceNames.slice(i, i + DELETE_BATCH) }, true);
+      const batch = resourceNames.slice(i, i + DELETE_BATCH);
+      await this.request('POST', 'people:batchDeleteContacts', { resourceNames: batch }, true);
+      onDeleted?.(batch);
     }
   }
 
