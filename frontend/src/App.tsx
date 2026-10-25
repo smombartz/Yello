@@ -9,6 +9,7 @@ import { ArchivedView } from './components/ArchivedView';
 import { GroupsView } from './components/GroupsView';
 import { MapView } from './components/MapView';
 import { SettingsView } from './components/SettingsView';
+import { MigrationView } from './components/MigrationView';
 import { UserProfilePage } from './components/UserProfilePage';
 import { DashboardView } from './components/DashboardView';
 import { WelcomeView } from './components/WelcomeView';
@@ -140,6 +141,7 @@ function AppRoutes() {
         <Route path="groups/:category" element={<GroupsView />} />
         <Route path="map" element={<MapView />} />
         <Route path="tools" element={<SettingsView />} />
+        <Route path="migration" element={<MigrationView />} />
         <Route path="profile" element={<UserProfilePage />} />
         <Route path="admin" element={<AdminRoute><AdminView /></AdminRoute>} />
         <Route path="admin/docs" element={<AdminRoute><DocsView /></AdminRoute>} />

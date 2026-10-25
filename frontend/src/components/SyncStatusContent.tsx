@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Icon } from './Icon';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
@@ -111,7 +112,7 @@ function ProviderStatus({ state, running, engineEnabled }: { state: SyncProvider
           Last synced {ago(state.lastSuccessAt)}{running && ' · syncing now…'}
         </p>
       ) : (
-        <p className="backup-meta">Switch this address book over with “Preview the switch to Yello” above.</p>
+        <p className="backup-meta">Switch this address book over on the <Link to="/migration">Migration</Link> page.</p>
       )}
       {state.lastError && <p className={heldBack ? 'backup-gate' : 'backup-error'}>{state.lastError}</p>}
 

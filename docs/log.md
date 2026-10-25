@@ -1,5 +1,32 @@
 # Change Log
 
+## 2026-10-25 — Migration page; preview lists grouped by contact
+
+**Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
+
+**What Changed:**
+- New Migration page (`/migration`): step 1 backups, step 2 the preview and switch, which now sits on the
+  page instead of in a folding card. The Tools page links to it in place of its "Before you switch" group;
+  Google's full-access consent now returns there
+- Preview lists group a contact's items under one name, with the choice dropdown next to the name (one
+  choice for all of that contact's items in the list). Differences are nested bullets:
+  name › field › "Yello has …" / "iCloud has …", the suggestion for conflicts, and when the card was edited
+
+**Why:**
+- User request: easier to read side by side, and the move to Yello gets a page of its own
+
+**Files Modified:**
+- `frontend/src/components/MigrationView.tsx` (new), `frontend/src/App.tsx` — `/migration` route
+- `frontend/src/components/CutoverPreviewContent.tsx` — `GroupChoice`, `groupByContact`, `ItemGroup`,
+  `ItemDetail` (replace `ChoiceSelect` / `ItemRow`)
+- `frontend/src/components/SettingsView.tsx` — link to Migration instead of the backup and preview cards
+- `frontend/src/components/SyncStatusContent.tsx` — points to the Migration page
+- `frontend/src/index.css` — nested list styles
+- `backend/src/routes/auth.ts` — write-access consent returns to `/migration`
+- `docs/reference.md`
+
+---
+
 ## 2026-10-25 — Cutover preview: "After the switch" tally per source
 
 **Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`

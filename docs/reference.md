@@ -272,7 +272,7 @@ the base; the one-time cutover imports only recent remote changes and new contac
 remote address books (removing their old duplicates) only after a verified backup. Ongoing sync is
 two-way, Yello wins per field. Shipped so far (Phase 0):
 
-- **Backups** (Tools › Before you switch › Back up Apple & Google contacts; `/api/sync/backups`).
+- **Backups** (Migration page `/migration` › Back up Apple & Google contacts; `/api/sync/backups`).
   `startBackup` runs in the background (one per provider at a time); iCloud is read through
   `streamICloudCards` (`icloudService.ts`: href listing, then 100-card multigets, so photos are never
   all in memory), Google through `fetchAllGooglePeople` / `fetchAllGoogleContactGroups`
@@ -299,7 +299,7 @@ two-way, Yello wins per field. Shipped so far (Phase 0):
 
 Phase 1 (foundations, no remote writes):
 
-- **Cutover preview** (Tools › Before you switch › Preview the switch to Yello;
+- **Cutover preview** (Migration page `/migration` › Preview the switch to Yello;
   `POST /api/sync/cutover/plan`, `GET /api/sync/cutover/latest`, `GET /api/sync/cutover/:id/items`).
   `services/sync/cutoverPlanner.ts` reads the latest *verified* backup of each provider (never the live
   remote) plus the baseline archive, and classifies every remote card: `link` (its Yello contact's card),
@@ -397,6 +397,10 @@ Phase 3 (Google two-way engine, behind `SYNC_ENGINE=1`):
 
 Phase 4 (the cutover: review, apply, restore; behind `SYNC_ENGINE=1`):
 
+- **Migration page** (`/migration`, `MigrationView.tsx`; linked from Tools): step 1 the backups (folding
+  card), step 2 the preview, review and switch (on the page itself). In the lists, each contact's items are
+  grouped under its name with one choice next to the name (it sets all of that contact's items in the list),
+  and every difference is a sub-bullet: the field, then "Yello has …" / "iCloud has …".
 - **Review** (the preview card): every decision item has a choice select (`RESOLUTIONS`, defaults from
   `defaultResolution`), saved with `POST /api/sync/cutover/:id/resolve` (one or more items) or
   `/resolve-all` (every item of a kind/provider, or `null` = back to the suggestions). Lists stay readable

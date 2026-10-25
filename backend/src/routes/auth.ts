@@ -419,7 +419,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
           const writeFlow = request.cookies.google_contacts_write_flow === '1';
           reply.clearCookie('google_contacts_write_flow', { path: '/' });
-          return finishSignIn(request, reply, user.id, writeFlow ? '/tools?google=write-granted' : '/google-contacts-import');
+          return finishSignIn(request, reply, user.id, writeFlow ? '/migration?google=write-granted' : '/google-contacts-import');
         }
 
         // --- Normal login flow (uses @fastify/oauth2 plugin) ---

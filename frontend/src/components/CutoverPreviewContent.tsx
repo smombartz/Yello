@@ -41,24 +41,31 @@ function choiceLabel(choice: string, where: string): string {
   }
 }
 
-function ChoiceSelect({ item }: { item: CutoverItem }) {
+/** One dropdown for all of a contact's items in a list; changing it sets every one of them. */
+function GroupChoice({ items }: { items: CutoverItem[] }) {
   const { cutoverId, editable } = useContext(ReviewContext);
   const resolve = useResolveCutoverItems(cutoverId);
   const { showToast } = useToast();
-  if (!item.choices.length) return null;
-  const where = item.provider ? PROVIDER_NAMES[item.provider] : 'Yello';
-  if (!editable) return <span className="cutover-choice-done"> → {choiceLabel(item.effective ?? '', where)}</span>;
+  const choices = items[0]?.choices ?? [];
+  if (!choices.length) return null;
+  const where = items[0].provider ? PROVIDER_NAMES[items[0].provider] : 'Yello';
+  const values = new Set(items.map(i => i.effective ?? ''));
+  const value = values.size === 1 ? [...values][0] : '';
+  if (!editable) {
+    return <span className="cutover-choice-done">→ {value ? choiceLabel(value, where) : 'mixed'}</span>;
+  }
   return (
     <select
       className="cutover-choice"
-      aria-label={`What to do with ${item.displayName}`}
-      value={item.effective ?? ''}
+      aria-label={`What to do with ${items[0].displayName}`}
+      value={value}
       disabled={resolve.isPending}
-      onChange={e => resolve.mutate([{ id: item.id, resolution: e.target.value }], {
+      onChange={e => resolve.mutate(items.map(i => ({ id: i.id, resolution: e.target.value })), {
         onError: error => showToast(error.message, { type: 'error' }),
       })}
     >
-      {item.choices.map(choice => <option key={choice} value={choice}>{choiceLabel(choice, where)}</option>)}
+      {!value && <option value="" disabled>Mixed</option>}
+      {choices.map(choice => <option key={choice} value={choice}>{choiceLabel(choice, where)}</option>)}
     </select>
   );
 }
@@ -185,6 +192,7 @@ function ItemList({ kind, provider, total }: {
   const [open, setOpen] = useState(false);
   const { data, isLoading } = useCutoverItems(cutoverId, { kind, provider }, open);
   if (total === 0) return null;
+  const groups = data ? groupByContact(data.items) : [];
 
   return (
     <details className="cutover-list" onToggle={e => setOpen((e.target as HTMLDetailsElement).open)}>
@@ -192,7 +200,7 @@ function ItemList({ kind, provider, total }: {
       {isLoading && <p className="backup-meta">Loading…</p>}
       {data && (
         <ul>
-          {data.items.map(item => <ItemRow key={item.id} item={item} />)}
+          {groups.map(group => <ItemGroup key={group.key} items={group.items} />)}
           {data.total > data.items.length && (
             <li className="backup-meta">…and {(data.total - data.items.length).toLocaleString()} more</li>
           )}
@@ -202,56 +210,70 @@ function ItemList({ kind, provider, total }: {
   );
 }
 
-function ItemRow({ item }: { item: CutoverItem }) {
-  const name = item.displayName || '(no name)';
+/** Items about the same Yello contact (or, without one, the same card), in list order. */
+function groupByContact(items: CutoverItem[]): Array<{ key: string; items: CutoverItem[] }> {
+  const groups = new Map<string, CutoverItem[]>();
+  for (const item of items) {
+    const key = item.contactId !== null ? `contact-${item.contactId}` : `card-${item.remoteId ?? item.id}`;
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  return [...groups].map(([key, grouped]) => ({ key, items: grouped }));
+}
+
+/** A contact, its choice next to the name, and what differs as sub-bullets. */
+function ItemGroup({ items }: { items: CutoverItem[] }) {
+  const first = items[0];
+  const name = first.displayName || '(no name)';
+  const latestEdit = items.map(i => i.remoteTs).filter((t): t is string => !!t).sort().pop() ?? null;
+  const edited = formatWhen(latestEdit);
+  const showEdited = edited && ['update', 'conflict', 'import', 'restore_review'].includes(first.kind);
+
+  return (
+    <li className="cutover-group">
+      <div className="cutover-group-name">
+        <strong>{name}</strong>
+        <GroupChoice items={items} />
+      </div>
+      <ul className="cutover-sub">
+        {items.map(item => <ItemDetail key={item.id} item={item} />)}
+        {showEdited && <li className="backup-meta">Card edited {edited}</li>}
+      </ul>
+    </li>
+  );
+}
+
+function ItemDetail({ item }: { item: CutoverItem }) {
   const where = item.provider ? PROVIDER_NAMES[item.provider] : 'the address book';
-  const edited = formatWhen(item.remoteTs);
 
   if (item.kind === 'update' || item.kind === 'conflict') {
     const field = FIELD_LABELS[item.field ?? ''] ?? item.field;
     const yello = formatValue(item.field, item.yelloValue);
     const remote = formatValue(item.field, item.remoteValue);
-    let change: React.ReactNode;
+    const lines: React.ReactNode[] = item.reason === 'added_remotely'
+      ? [<>{where} adds <q>{remote}</q></>]
+      : [<>Yello has {yello ? <q>{yello}</q> : 'nothing'}</>, <>{where} has {remote ? <q>{remote}</q> : 'nothing'}</>];
     if (item.kind === 'conflict') {
-      const pick = item.suggested === 'remote' ? `${where}’s (edited more recently)` : 'Yello’s';
-      change = (
-        <>
-          Yello has <q>{yello ?? 'nothing'}</q>, {where} has <q>{remote ?? 'nothing'}</q>.
-          <span className="backup-meta"> Suggested: keep {pick}.</span>
-        </>
-      );
-    } else if (item.reason === 'added_remotely') {
-      change = <>add <q>{remote}</q> <span className="backup-meta">(added in {where})</span></>;
-    } else if (item.reason === 'filled_remotely' || !yello) {
-      change = <>empty in Yello → <q>{remote ?? 'nothing'}</q> <span className="backup-meta">(from {where})</span></>;
-    } else {
-      change = <><q>{yello}</q> → <q>{remote ?? 'nothing'}</q> <span className="backup-meta">(changed in {where})</span></>;
+      lines.push(<span className="backup-meta">Changed in both places. Suggested: keep {item.suggested === 'remote' ? `${where}’s (edited more recently)` : 'Yello’s'}</span>);
     }
     return (
       <li>
-        <strong>{name}</strong> — {field}: {change}
-        {edited && <span className="backup-meta"> Card edited {edited}.</span>}
-        <ChoiceSelect item={item} />
+        {field}:
+        <ul className="cutover-sub">
+          {lines.map((line, i) => <li key={i}>{line}</li>)}
+        </ul>
       </li>
     );
   }
   if (item.kind === 'possible_match') {
     return (
       <li>
-        <strong>{name}</strong> might be Yello’s <q>{String(item.yelloValue ?? '')}</q>
+        Might be Yello’s <q>{String(item.yelloValue ?? '')}</q>
         {item.reason && <span className="backup-meta"> (matched on {item.reason})</span>}
-        <ChoiceSelect item={item} />
       </li>
     );
   }
-  return (
-    <li>
-      <strong>{name}</strong>
-      {item.reason && REASON_LABELS[item.reason] && <span className="backup-meta"> — {REASON_LABELS[item.reason]}</span>}
-      {edited && (item.kind === 'import' || item.kind === 'restore_review') && <span className="backup-meta">, edited {edited}</span>}
-      <ChoiceSelect item={item} />
-    </li>
-  );
+  const reason = item.reason ? REASON_LABELS[item.reason] : null;
+  return reason ? <li>{reason[0].toUpperCase() + reason.slice(1)}</li> : null;
 }
 
 function Row({ label, count, children }: { label: string; count: number; children?: React.ReactNode }) {

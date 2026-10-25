@@ -16,8 +16,6 @@ import { useToast } from './ui/Toast';
 import { LinkedInImportContent } from './LinkedInImportContent';
 import { GoogleContactsImportContent } from './GoogleContactsImportContent';
 import { EnrichToolsContent } from './EnrichToolsContent';
-import { RemoteBackupsContent } from './RemoteBackupsContent';
-import { CutoverPreviewContent } from './CutoverPreviewContent';
 import { SyncStatusContent } from './SyncStatusContent';
 import { useSyncStatus } from '../api/syncHooks';
 import { FilePicker } from './ui/FilePicker';
@@ -44,8 +42,6 @@ export function SettingsView() {
   const [exportExpanded, setExportExpanded] = useState(false);
   const [dangerExpanded, setDangerExpanded] = useState(false);
   const [icloudExpanded, setIcloudExpanded] = useState(false);
-  const [backupsExpanded, setBackupsExpanded] = useState(false);
-  const [cutoverExpanded, setCutoverExpanded] = useState(false);
   const [icloudEmail, setIcloudEmail] = useState('');
   const [icloudPassword, setIcloudPassword] = useState('');
   const icloudSettings = useICloudSettings();
@@ -130,45 +126,16 @@ export function SettingsView() {
           </section>
         )}
 
-        {/* ===== Backups ===== */}
+        {/* ===== Migration ===== */}
         <section className="settings-group">
-          <h2 className="settings-group-title">Before you switch</h2>
-
-        <section className={`settings-section collapsible-card${backupsExpanded ? ' expanded' : ''}`}>
-          <button
-            className="collapsible-header"
-            onClick={() => setBackupsExpanded(!backupsExpanded)}
-          >
+          <h2 className="settings-group-title">Switch to Yello</h2>
+          <Link to="/migration" className="collapsible-card settings-nav-link">
             <div className="settings-section-header">
-              <Icon name="box-archive" />
-              <h2>Back up Apple &amp; Google contacts</h2>
+              <Icon name="right-left" />
+              <h2>Migration: back up, preview and switch</h2>
             </div>
-            <Icon name="chevron-down" className={`expand-icon${backupsExpanded ? ' rotated' : ''}`} />
-          </button>
-          {backupsExpanded && (
-            <div className="collapsible-content">
-              <RemoteBackupsContent />
-            </div>
-          )}
-        </section>
-
-        <section className={`settings-section collapsible-card${cutoverExpanded ? ' expanded' : ''}`}>
-          <button
-            className="collapsible-header"
-            onClick={() => setCutoverExpanded(!cutoverExpanded)}
-          >
-            <div className="settings-section-header">
-              <Icon name="magnifying-glass-chart" />
-              <h2>Preview the switch to Yello</h2>
-            </div>
-            <Icon name="chevron-down" className={`expand-icon${cutoverExpanded ? ' rotated' : ''}`} />
-          </button>
-          {cutoverExpanded && (
-            <div className="collapsible-content">
-              <CutoverPreviewContent />
-            </div>
-          )}
-        </section>
+            <Icon name="chevron-right" className="nav-link-arrow" />
+          </Link>
         </section>
 
         {/* ===== Import ===== */}

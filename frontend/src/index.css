@@ -4326,7 +4326,7 @@ a.nav-rail-item.active {
   border-top: 1px solid var(--ds-border-color);
 }
 
-/* Remote address-book backups (Tools › Before you switch) */
+/* Remote address-book backups (Migration page) */
 .backup-provider {
   padding: var(--ds-space-4) 0;
   border-top: 1px solid var(--ds-border-color);
@@ -4438,7 +4438,7 @@ a.nav-rail-item.active {
   margin: 0;
 }
 
-/* Cutover preview (Tools › Before you switch) */
+/* Cutover preview (Migration page) */
 .cutover-controls {
   display: flex;
   align-items: center;
@@ -4495,16 +4495,40 @@ a.nav-rail-item.active {
   color: var(--ds-color-primary);
 }
 
-.cutover-list ul {
+.cutover-list > ul {
   margin: var(--ds-space-2) 0;
   padding-left: var(--ds-space-4);
-  max-height: 20rem;
+  max-height: 24rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--ds-space-1);
+  gap: var(--ds-space-2);
   font-size: var(--ds-font-xs);
   overflow-wrap: anywhere;
+}
+
+.cutover-group-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}
+
+.cutover-group-name .cutover-choice {
+  margin-left: 0;
+}
+
+.cutover-sub {
+  margin: var(--ds-space-1) 0 0;
+  padding-left: var(--ds-space-5);
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-1);
+}
+
+.cutover-sub .cutover-sub {
+  list-style: circle;
 }
 
 .backup-restore {
