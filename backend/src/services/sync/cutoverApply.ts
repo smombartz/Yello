@@ -1,4 +1,8 @@
-import type { Database as DatabaseType } from 'better-sqlite3';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { createHash, randomUUID } from 'crypto';
+import Database, { type Database as DatabaseType } from 'better-sqlite3';
 import { getUserDatabase, listUserIds } from '../userDatabase.js';
 import { processPhoto } from '../photoProcessor.js';
 import { loadContactsForVcard } from '../vcardExportService.js';
@@ -161,6 +165,26 @@ function checkPreconditions(userId: number, summary: CutoverSummary, items: Cuto
   }
   if (!included.length) throw new CutoverError('Back up iCloud or Google first; there is nothing to switch over.');
   return included;
+}
+
+/** The backed-up cards a plan's items refer to, by provider and remote id. */
+async function loadPlanCards(
+  userId: number,
+  providers: ProviderInPlan[],
+  items: CutoverItemRow[],
+  keepPhotos: boolean
+): Promise<Map<SyncProvider, Map<string, RemoteCard>>> {
+  const cards = new Map<SyncProvider, Map<string, RemoteCard>>();
+  for (const { provider, backupId } of providers) {
+    const backup = listBackups(userId, provider).find(b => b.id === backupId);
+    if (!backup) throw new CutoverError(`The ${provider === 'icloud' ? 'iCloud' : 'Google'} backup this preview was made from is gone. Preview again.`);
+    const needed = new Set(items.filter(i => i.provider === provider && i.remoteId && LINKING.has(i.kind)).map(i => i.remoteId!));
+    const loaded = provider === 'icloud'
+      ? (await loadICloudCards(userId, backup, { keepPhotos, only: needed })).cards
+      : loadGoogleCards(userId, backup, { only: needed }).cards;
+    cards.set(provider, new Map(loaded.map(c => [c.remoteId, c])));
+  }
+  return cards;
 }
 
 // ─── Step 1: Yello ──────────────────────────────────────────────────────────
@@ -463,15 +487,7 @@ export async function startCutoverApply(
   const promise = (async () => {
     try {
       db.prepare("UPDATE sync_cutovers SET status = 'applying', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(cutoverId);
-      const cards = new Map<SyncProvider, Map<string, RemoteCard>>();
-      for (const { provider, backupId } of providers) {
-        const backup = listBackups(userId, provider).find(b => b.id === backupId)!;
-        const needed = new Set(items.filter(i => i.provider === provider && i.remoteId && LINKING.has(i.kind)).map(i => i.remoteId!));
-        const loaded = provider === 'icloud'
-          ? (await loadICloudCards(userId, backup, { keepPhotos: true, only: needed })).cards
-          : loadGoogleCards(userId, backup, { only: needed }).cards;
-        cards.set(provider, new Map(loaded.map(c => [c.remoteId, c])));
-      }
+      const cards = await loadPlanCards(userId, providers, items, true);
 
       const photos = db.transaction(() => applyStep(db, userId, cutoverId, providers, items, cards))();
       const google = providers.some(p => p.provider === 'google') ? (remotes.google ?? openGoogleRemote(userId)) : null;
@@ -517,5 +533,98 @@ export function resumeInterruptedCutovers(log: { info: (msg: string) => void; er
     startCutoverApply(userId, cutover.id)
       .then(({ promise }) => promise)
       .catch(err => log.error(err, `Could not resume the switch for user ${userId}`));
+  }
+}
+
+// ─── Tally ──────────────────────────────────────────────────────────────────
+
+export interface TallyRow {
+  unchanged: number;
+  updated: number;
+  new: number;
+  /** Removed from the address book; for Yello: archived (Yello never deletes). */
+  deleted: number;
+}
+
+export interface CutoverTally {
+  cutoverId: string;
+  yello: TallyRow;
+  providers: Partial<Record<SyncProvider, TallyRow>>;
+}
+
+const tallyCache = new Map<number, { key: string; tally: CutoverTally }>();
+
+/**
+ * What the switch would leave behind, contact by contact, with the reviewer's
+ * current choices: the plan's Yello step is run for real on a throwaway copy
+ * of the database (the same code the switch runs), and the copy is compared
+ * with the original. Remote cards: linked and already in step → unchanged,
+ * linked but differing → updated (Yello's version is pushed), contacts with
+ * no card → new, tombstoned → deleted.
+ */
+export async function computeCutoverTally(userId: number, cutoverId: string): Promise<CutoverTally> {
+  const latest = getLatestCutover(userId);
+  if (!latest || latest.id !== cutoverId || !latest.summary) throw new CutoverError('This preview is no longer the latest one. Preview again.');
+  const items = listAllItems(userId, cutoverId);
+
+  const key = createHash('sha256').update(JSON.stringify(items.map(i => [i.id, i.resolution]))).digest('hex');
+  const cached = tallyCache.get(userId);
+  if (cached?.key === `${cutoverId}:${key}`) return cached.tally;
+
+  const providers: ProviderInPlan[] = (['icloud', 'google'] as const)
+    .filter(p => !latest.summary!.providers[p].skipped && latest.summary!.providers[p].backupId)
+    .map(p => ({ provider: p, backupId: latest.summary!.providers[p].backupId!, collectionUrl: null }));
+  const cards = await loadPlanCards(userId, providers, items, false);
+
+  const original = getUserDatabase(userId);
+  const copyPath = path.join(os.tmpdir(), `yello-tally-${userId}-${randomUUID()}.db`);
+  await original.backup(copyPath);
+  const copy = new Database(copyPath);
+  try {
+    copy.pragma('foreign_keys = ON');
+    copy.transaction(() => applyStep(copy, userId, cutoverId, providers, items, cards))();
+
+    // Yello: the copy against the original.
+    const before = new Map(loadContactsForVcard(original, { archived: 'all', withoutEnrichment: true }).map(c => [c.id, c]));
+    const after = loadContactsForVcard(copy, { archived: 'all', withoutEnrichment: true });
+    const yello: TallyRow = { unchanged: 0, updated: 0, new: 0, deleted: 0 };
+    for (const contact of after) {
+      const was = before.get(contact.id);
+      if (!was) { if (!contact.archivedAt) yello.new++; continue; }
+      if (contact.archivedAt) { if (!was.archivedAt) yello.deleted++; continue; }
+      const changed = JSON.stringify(projectContact(was.contact, 'icloud')) !== JSON.stringify(projectContact(contact.contact, 'icloud'))
+        || !!was.archivedAt;
+      if (changed) yello.updated++; else yello.unchanged++;
+    }
+
+    // Each address book, from the links and tombstones the step wrote.
+    const tally: CutoverTally = { cutoverId, yello, providers: {} };
+    const active = after.filter(c => !c.archivedAt);
+    const groupCards = new Set((copy.prepare(`
+      SELECT DISTINCT contact_id FROM contact_vcard_properties
+      WHERE name IN ('X-ADDRESSBOOKSERVER-KIND', 'KIND') AND LOWER(TRIM(value)) = 'group'
+    `).all() as Array<{ contact_id: number }>).map(r => r.contact_id));
+    for (const { provider } of providers) {
+      const links = new Map((copy.prepare(`
+        SELECT contact_id, local_hash, local_photo_hash FROM contact_sync_links WHERE provider = ? AND status = 'active'
+      `).all(provider) as Array<{ contact_id: number; local_hash: string | null; local_photo_hash: string | null }>)
+        .map(l => [l.contact_id, l]));
+      const row: TallyRow = { unchanged: 0, updated: 0, new: 0, deleted: 0 };
+      for (const contact of active) {
+        if (groupCards.has(contact.id)) continue;
+        const link = links.get(contact.id);
+        if (!link) { row.new++; continue; }
+        const photoToSend = !!contact.photoHash && !link.local_photo_hash;
+        if (link.local_hash && !photoToSend) row.unchanged++; else row.updated++;
+      }
+      row.deleted = (copy.prepare('SELECT COUNT(*) AS n FROM sync_tombstones WHERE provider = ?').get(provider) as { n: number }).n;
+      tally.providers[provider] = row;
+    }
+
+    tallyCache.set(userId, { key: `${cutoverId}:${key}`, tally });
+    return tally;
+  } finally {
+    copy.close();
+    for (const suffix of ['', '-wal', '-shm']) fs.rmSync(`${copyPath}${suffix}`, { force: true });
   }
 }

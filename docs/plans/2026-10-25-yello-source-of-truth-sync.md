@@ -373,3 +373,4 @@ Every phase gets a `docs/log.md` entry, `docs/database.md` updates and `docs/ref
   - Edits are detected by route prefix in one root `onResponse` hook rather than in each writer.
   - Remote versions from the cutover that hold only a field summary are listed but cannot be restored; full cards and Persons can.
   - All five phases are built. What remains is the user's live testing with spare accounts, then the production rollout.
+- **2026-10-25 (tally):** added an "After the switch" tally at the bottom of the preview: unchanged, updated, new and deleted contacts for Yello, iCloud and Google, following the current choices. It runs the real apply step on a throwaway copy of the database (the throwaway-copy idea from the original dry-run design), so its numbers are exactly what the switch will do.

@@ -419,6 +419,12 @@ Phase 4 (the cutover: review, apply, restore; behind `SYNC_ENGINE=1`):
   manifest's `restores`.
 - **Legacy imports** (`/api/icloud/import`, `/api/google-contacts/import`) return 409 for a provider that is
   synced: its contacts arrive through sync, and an import would add unlinked duplicates.
+- **Tally** (bottom of the preview card; `GET /api/sync/cutover/:id/tally`, `computeCutoverTally`): per
+  source (Yello, iCloud, Google) how many contacts end up unchanged / updated / new / deleted (Yello:
+  archived), with the current choices. It copies the database (`db.backup` to a temp file), runs the switch's
+  own Yello step on the copy, and compares: Yello rows by projection, remote rows from the links (in step →
+  unchanged, differing or photo to send → updated), contacts without a card (new) and tombstones (deleted).
+  So it cannot drift from what the switch does. Cached per choice set; about 5 s for 12k contacts.
 
 Phase 5 (running on its own; behind `SYNC_ENGINE=1`):
 

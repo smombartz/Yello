@@ -4575,6 +4575,54 @@ a.nav-rail-item.active {
   overflow-wrap: anywhere;
 }
 
+/* Cutover tally (bottom of the preview) */
+.cutover-tally {
+  margin-top: var(--ds-space-5);
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-border-color);
+  overflow-x: auto;
+}
+
+.cutover-tally h3 {
+  margin: 0 0 var(--ds-space-3);
+  font-size: var(--ds-font-md);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text-primary);
+}
+
+.cutover-tally table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ds-font-sm);
+  color: var(--ds-text-primary);
+}
+
+.cutover-tally th,
+.cutover-tally td {
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-bottom: 1px solid var(--ds-border-color);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.cutover-tally th:first-child {
+  text-align: left;
+}
+
+.cutover-tally thead th {
+  font-size: var(--ds-font-xs);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-text-secondary);
+}
+
+.cutover-tally tbody th {
+  font-weight: var(--ds-weight-semibold);
+}
+
+.cutover-tally .backup-meta {
+  margin-top: var(--ds-space-2);
+}
+
 /* Cutover review and switch */
 .cutover-choice {
   margin-left: var(--ds-space-2);

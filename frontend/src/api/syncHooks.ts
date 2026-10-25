@@ -364,3 +364,27 @@ export function useRestoreBackup() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BACKUPS_KEY }),
   });
 }
+
+export interface TallyRow {
+  unchanged: number;
+  updated: number;
+  new: number;
+  /** Removed from the address book; for Yello: archived. */
+  deleted: number;
+}
+
+export interface CutoverTally {
+  cutoverId: string;
+  yello: TallyRow;
+  providers: Partial<Record<BackupProvider, TallyRow>>;
+}
+
+/** Recounted after every change of a choice (resolving invalidates the cutover's queries). */
+export function useCutoverTally(cutoverId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['sync', 'cutover', cutoverId, 'tally'] as const,
+    queryFn: () => fetchApi<CutoverTally>(`/api/sync/cutover/${cutoverId}/tally`),
+    enabled: enabled && !!cutoverId,
+    placeholderData: previous => previous,
+  });
+}

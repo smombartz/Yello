@@ -1,5 +1,29 @@
 # Change Log
 
+## 2026-10-25 — Cutover preview: "After the switch" tally per source
+
+**Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
+
+**What Changed:**
+- New table at the very bottom of "Preview the switch to Yello": for Yello, iCloud and Google, how many
+  contacts end up unchanged, updated, new and deleted (for Yello: archived), with the current choices;
+  recounted after every change of a choice
+- Counted by running the switch's own Yello step on a throwaway copy of the database and comparing the
+  result, so the numbers match what the switch then does (tested against the real switch's counters)
+
+**Why:**
+- The user asked for a per-source tally to judge, before switching, whether it will work as intended
+
+**Files Modified:**
+- `backend/src/services/sync/cutoverApply.ts` — `computeCutoverTally`, `loadPlanCards` (extracted)
+- `backend/src/routes/sync.ts` — `GET /api/sync/cutover/:id/tally`
+- `backend/src/services/sync/__tests__/cutoverApply.test.ts` — tally matches the switch
+- `frontend/src/components/CutoverPreviewContent.tsx` — `CutoverTallyTable`
+- `frontend/src/api/syncHooks.ts` — `useCutoverTally`; `frontend/src/index.css`
+- `docs/reference.md`, `docs/plans/2026-10-25-yello-source-of-truth-sync.md`
+
+---
+
 ## 2026-10-25 — Sync Phase 5: automatic sync, sync status, earlier versions
 
 **Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`

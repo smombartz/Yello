@@ -5,6 +5,7 @@ import { useToast } from './ui/Toast';
 import {
   useApplyCutover,
   useCutoverItems,
+  useCutoverTally,
   useLatestCutover,
   useRemoteBackups,
   useResolveAllCutoverItems,
@@ -17,6 +18,7 @@ import {
   type CutoverRecord,
   type CutoverSummary,
   type ProviderPlanSummary,
+  type TallyRow,
 } from '../api/syncHooks';
 
 /** The preview being shown, and whether its choices can still be changed. */
@@ -323,6 +325,46 @@ function ProviderPreview({ summary }: { summary: ProviderPlanSummary }) {
   );
 }
 
+/**
+ * What the switch leaves behind, per source, with the current choices:
+ * counted by running the switch on a throwaway copy of the database.
+ */
+function CutoverTallyTable({ cutoverId, summary }: { cutoverId: string; summary: CutoverSummary }) {
+  const { data, isFetching, error } = useCutoverTally(cutoverId, true);
+  const rows: Array<{ label: string; counts: TallyRow | undefined }> = [
+    { label: 'Yello', counts: data?.yello },
+    ...(['icloud', 'google'] as const)
+      .filter(p => !summary.providers[p].skipped)
+      .map(p => ({ label: PROVIDER_NAMES[p], counts: data?.providers[p] })),
+  ];
+
+  return (
+    <div className="cutover-tally">
+      <h3>After the switch {isFetching && <span className="backup-meta">· counting…</span>}</h3>
+      {error && <p className="backup-error">{error.message}</p>}
+      <table>
+        <thead>
+          <tr><th scope="col">Contacts</th><th scope="col">Unchanged</th><th scope="col">Updated</th><th scope="col">New</th><th scope="col">Deleted</th></tr>
+        </thead>
+        <tbody>
+          {rows.map(({ label, counts }) => (
+            <tr key={label}>
+              <th scope="row">{label}</th>
+              {(['unchanged', 'updated', 'new', 'deleted'] as const).map(column => (
+                <td key={column}>{counts ? counts[column].toLocaleString() : '…'}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="backup-meta">
+        With your current choices. Yello: deleted means archived (Yello never deletes). iCloud and Google:
+        updated cards get Yello’s version, new ones are created, deleted ones are removed there.
+      </p>
+    </div>
+  );
+}
+
 const PHASE_LABELS: Record<string, string> = {
   pushedCreated: 'created', pushedUpdated: 'updated', pushedDeleted: 'removed',
   pulledCreated: 'brought in', pulledUpdated: 'changes brought in', pulledArchived: 'archived', conflicts: 'conflicts'
@@ -511,6 +553,7 @@ export function CutoverPreviewContent() {
             <ProviderPreview key={provider} summary={summary.providers[provider]} />
           ))}
           <ApplyPanel cutover={cutover} summary={summary} applying={!!data?.applying} />
+          {cutover.status === 'planned' && <CutoverTallyTable cutoverId={cutover.id} summary={summary} />}
         </ReviewContext.Provider>
       )}
     </>

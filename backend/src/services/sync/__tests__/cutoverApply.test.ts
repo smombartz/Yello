@@ -13,7 +13,7 @@ import { getUserDatabase, closeAllUserDatabases, getUserBackupsPath } from '../.
 import { insertParsedContact, prepareContactStatements } from '../../contactPersistence.js';
 import { parseSingleVcard, unfoldLines } from '../../vcardParser.js';
 import { getLatestCutover, listCutoverItems, startCutoverPlan } from '../cutoverPlanner.js';
-import { CutoverError, resolveAllCutoverItems, resolveCutoverItems, startCutoverApply } from '../cutoverApply.js';
+import { computeCutoverTally, CutoverError, resolveAllCutoverItems, resolveCutoverItems, startCutoverApply } from '../cutoverApply.js';
 import { runICloudSync } from '../icloudSyncEngine.js';
 import { runGoogleSync } from '../googleSyncEngine.js';
 import { startRestore } from '../remoteRestore.js';
@@ -163,6 +163,31 @@ describe('cutover apply', () => {
     const quiet = { pulledCreated: 0, pulledUpdated: 0, pulledArchived: 0, pushedCreated: 0, pushedUpdated: 0, pushedDeleted: 0, conflicts: 0 };
     expect((await runICloudSync(USER_ID, { trigger: 'manual', remote: icloud, fullScan: true })).counters).toEqual(quiet);
     expect((await runGoogleSync(USER_ID, { trigger: 'manual', remote: google })).counters).toEqual(quiet);
+  });
+
+  it('tallies beforehand exactly what the switch then does', async () => {
+    const id = await plan();
+    const tally = await computeCutoverTally(USER_ID, id);
+    expect(tally.yello).toEqual({ unchanged: 2, updated: 2, new: 2, deleted: 0 });
+    expect(tally.providers.icloud).toEqual({ unchanged: 2, updated: 2, new: 2, deleted: 4 });
+    expect(tally.providers.google).toEqual({ unchanged: 1, updated: 1, new: 4, deleted: 1 });
+
+    // The tally changed nothing...
+    expect(db().prepare('SELECT COUNT(*) AS n FROM contact_sync_links').get()).toEqual({ n: 0 });
+    expect(getLatestCutover(USER_ID)!.status).toBe('planned');
+
+    // ...and follows the choices.
+    const otto = listCutoverItems(USER_ID, id, { provider: 'icloud', kind: 'delete_remote' }).items.find(i => i.displayName === 'Otto Old')!;
+    resolveCutoverItems(USER_ID, id, [{ id: otto.id, resolution: 'import' }]);
+    const recount = await computeCutoverTally(USER_ID, id);
+    expect(recount.yello.new).toBe(3);
+    expect(recount.providers.icloud!.deleted).toBe(3);
+
+    // The real switch matches the (recounted) tally.
+    await apply(id);
+    const results = (getLatestCutover(USER_ID)!.summary as { apply?: { results: Record<string, { counters: Record<string, number> }> } }).apply!.results;
+    expect(results.icloud.counters).toMatchObject({ pushedUpdated: 2, pushedCreated: recount.providers.icloud!.new, pushedDeleted: 3 });
+    expect(results.google.counters).toMatchObject({ pushedUpdated: 1, pushedCreated: recount.providers.google!.new, pushedDeleted: 1 });
   });
 
   it('follows the reviewer’s choices', async () => {
