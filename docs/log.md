@@ -1,5 +1,25 @@
 # Change Log
 
+## 2026-10-25 — Preview lists the cards it could not read
+
+**Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
+
+**What Changed:**
+- "N cards could not be read" in the preview is now an expandable list: each card's name (read straight
+  from its FN/N line, even though the card does not parse), why it failed, its UID, and the card's text
+  without the photo
+
+**Why:**
+- User request: see which cards are left untouched, to fix or re-create them
+
+**Files Modified:**
+- `backend/src/services/sync/cutoverPlanner.ts` — `UnreadableCard` (`name`, `uid`, `card`)
+- `backend/src/services/sync/__tests__/cutoverPlanner.test.ts` — an unreadable card in the fixture
+- `frontend/src/components/CutoverPreviewContent.tsx` — `UnreadableCards`
+- `frontend/src/api/syncHooks.ts`, `frontend/src/index.css`
+
+---
+
 ## 2026-10-25 — Preview keeps your choices; the switch checks Google access first
 
 **Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`

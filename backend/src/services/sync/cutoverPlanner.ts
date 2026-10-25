@@ -14,7 +14,7 @@ import {
 } from './syncProjection.js';
 import { personToContactData } from './googlePersonMapper.js';
 import { contactPhotoUrl, type GooglePersonRaw } from './googlePeople.js';
-import { getProviderRow, sha256 } from './syncRuntime.js';
+import { getProviderRow, sha256, withoutPhoto } from './syncRuntime.js';
 import { listBackups, type BackupManifest } from './remoteBackupService.js';
 import type { SyncProvider } from './syncState.js';
 
@@ -58,6 +58,17 @@ export interface CutoverItem {
   suggested: string | null;
 }
 
+/** A card the vCard parser could not read: left untouched by the switch and by sync. */
+export interface UnreadableCard {
+  remoteId: string;
+  error: string;
+  /** FN, read straight from the card text. */
+  name: string | null;
+  uid: string | null;
+  /** The card without its photo, cut to a few KB, to see what is wrong with it. */
+  card: string;
+}
+
 export interface ProviderPlanSummary {
   provider: SyncProvider;
   skipped: string | null;
@@ -65,7 +76,7 @@ export interface ProviderPlanSummary {
   backupAt: string | null;
   remoteCards: number;
   groups: number;
-  unreadable: Array<{ remoteId: string; error: string }>;
+  unreadable: UnreadableCard[];
   matched: number;
   matchedByIdentifier: number;
   links: number;
@@ -140,7 +151,7 @@ export async function loadICloudCards(userId: number, backup: BackupManifest, op
   }
 
   const cards: RemoteCard[] = [];
-  const unreadable: Array<{ remoteId: string; error: string }> = [];
+  const unreadable: UnreadableCard[] = [];
   let groups = 0;
   for (let i = 0; i < blocks.length; i++) {
     // ical.js parsing is synchronous; keep the server responsive on big books.
@@ -170,7 +181,14 @@ export async function loadICloudCards(userId: number, backup: BackupManifest, op
         photoUrl: null
       });
     } catch (error) {
-      unreadable.push({ remoteId, error: error instanceof Error ? error.message : String(error) });
+      const field = (name: string) => block.match(new RegExp(`^(?:[\\w-]+\\.)?${name}(?:;[^:]*)?:(.*)$`, 'im'))?.[1]?.trim() || null;
+      unreadable.push({
+        remoteId,
+        error: error instanceof Error ? error.message : String(error),
+        name: field('FN') ?? field('N')?.split(';').filter(Boolean).reverse().join(' ') ?? null,
+        uid: field('UID'),
+        card: withoutPhoto(block).slice(0, 4000)
+      });
     }
   }
   return { cards, groups, unreadable };
@@ -198,7 +216,7 @@ export function loadGoogleCards(userId: number, backup: BackupManifest, options:
       photoUrl
     });
   }
-  return { cards, groups: 0, unreadable: [] as Array<{ remoteId: string; error: string }> };
+  return { cards, groups: 0, unreadable: [] as UnreadableCard[] };
 }
 
 // ─── Baseline ───────────────────────────────────────────────────────────────

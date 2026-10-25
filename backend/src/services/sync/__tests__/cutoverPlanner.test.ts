@@ -91,7 +91,9 @@ describe('cutoverPlanner', () => {
       card('Nina New', 'N', ['EMAIL:nina@example.com'], RECENT), // new on the phone
       card('Otto Old', 'O', ['EMAIL:otto@example.com'], OLD), // old clutter never imported
       card('Zed Archived', 'Z', ['EMAIL:zed@example.com'], OLD),
-      card('Family', 'GRP', ['X-ADDRESSBOOKSERVER-KIND:group'], OLD)
+      card('Family', 'GRP', ['X-ADDRESSBOOKSERVER-KIND:group'], OLD),
+      // A card the parser rejects (a bare `PHOTO;;`, as some apps write).
+      ['BEGIN:VCARD', 'VERSION:3.0', 'N:Card;Broken;;;', 'FN:Broken Card', 'UID:BRK', 'PHOTO;;', 'END:VCARD'].join('\r\n')
     ];
     writeBackup('icloud', {
       'icloud-contacts.vcf': icloudCards.join('\r\n'),
@@ -99,7 +101,7 @@ describe('cutoverPlanner', () => {
         addressBook: 'card', url: `https://contacts.icloud.com/1/card/${i}.vcf`, etag: `"${i}"`,
         uid: c.match(/UID:(.*)/)![1].trim(), group: c.includes('KIND:group')
       })))
-    }, 10);
+    }, 11);
 
     const source = (updateTime: string) => ({ sources: [{ type: 'CONTACT', updateTime }] });
     writeBackup('google', {
@@ -127,8 +129,13 @@ describe('cutoverPlanner', () => {
     const { summary, items } = await computeCutoverPlan(USER_ID, { windowDays: 90, now: NOW });
     const s = summary.providers.icloud;
 
-    expect(s.remoteCards).toBe(10);
+    expect(s.remoteCards).toBe(11);
     expect(s.groups).toBe(1);
+    expect(s.unreadable).toHaveLength(1);
+    expect(s.unreadable[0]).toMatchObject({ name: 'Broken Card', uid: 'BRK', remoteId: 'https://contacts.icloud.com/1/card/11.vcf' });
+    expect(s.unreadable[0].error).toMatch(/PHOTO/);
+    expect(s.unreadable[0].card).toContain('FN:Broken Card');
+    expect(s.unreadable[0].card).not.toMatch(/^PHOTO/m);
     expect(of(items, 'icloud', 'link')).toEqual(['Ada Lovelace', 'Bob Ross', 'Cleo Patra', 'Dora Explorer', 'Emil Zola']);
     expect(of(items, 'icloud', 'merged_duplicate')).toEqual(['Bobby Ross']);
     expect(of(items, 'icloud', 'import')).toEqual(['Nina New']);

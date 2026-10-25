@@ -4545,6 +4545,19 @@ a.nav-rail-item.active {
   overflow-wrap: anywhere;
 }
 
+.cutover-card-text {
+  margin: var(--ds-space-1) 0 0;
+  padding: var(--ds-space-2);
+  max-height: 14rem;
+  overflow: auto;
+  background: var(--ds-bg-secondary);
+  border-radius: var(--ds-radius-sm);
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-font-2xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .cutover-group-name {
   display: flex;
   align-items: center;

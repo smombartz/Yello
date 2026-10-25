@@ -347,6 +347,48 @@ function Row({ label, count, children }: { label: string; count: number; childre
   );
 }
 
+/** Cards the parser could not read, by name, with why and the card itself. */
+function UnreadableCards({ cards, where }: { cards: ProviderPlanSummary['unreadable']; where: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="cutover-section">
+      <div className="cutover-section-head">
+        <button type="button" className="cutover-section-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <Icon name="chevron-right" className={`cutover-caret${open ? ' open' : ''}`} />
+          <span className="cutover-count">{cards.length.toLocaleString()}</span>
+          <span className="backup-error">cards could not be read; the switch and sync leave them untouched in {where}</span>
+        </button>
+      </div>
+      {open && (
+        <div className="cutover-list">
+          <ul>
+            {cards.map(card => (
+              <li key={card.remoteId} className="cutover-group">
+                <div className="cutover-group-name"><strong>{card.name || '(no name)'}</strong></div>
+                <ul className="cutover-sub">
+                  <li>Why: {card.error}</li>
+                  {card.uid && <li className="backup-meta">UID {card.uid}</li>}
+                  {card.card && (
+                    <li>
+                      <details>
+                        <summary className="backup-meta">Show the card</summary>
+                        <pre className="cutover-card-text">{card.card}</pre>
+                      </details>
+                    </li>
+                  )}
+                </ul>
+              </li>
+            ))}
+          </ul>
+          <p className="backup-meta">
+            To include them, fix or re-create these cards in Contacts on your Mac or at iCloud.com, then back up and preview again.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProviderPreview({ summary }: { summary: ProviderPlanSummary }) {
   const name = PROVIDER_NAMES[summary.provider];
   const p = summary.provider;
@@ -368,9 +410,7 @@ function ProviderPreview({ summary }: { summary: ProviderPlanSummary }) {
         {summary.groups > 0 && <>, plus {summary.groups} groups</>}.
         {' '}{summary.matched.toLocaleString()} match a Yello contact ({idShare}% by their ID, the rest by email, phone or name).
       </p>
-      {summary.unreadable.length > 0 && (
-        <p className="backup-error">{summary.unreadable.length} cards could not be read; they will be left untouched.</p>
-      )}
+      {summary.unreadable.length > 0 && <UnreadableCards cards={summary.unreadable} where={name} />}
 
       <h4>Coming into Yello</h4>
       <SectionRow label={`changes to existing contacts (${summary.updates.contacts.toLocaleString()} contacts)`} count={summary.updates.fields} kind="update" provider={p} />

@@ -106,7 +106,7 @@ export interface ProviderPlanSummary {
   backupAt: string | null;
   remoteCards: number;
   groups: number;
-  unreadable: Array<{ remoteId: string; error: string }>;
+  unreadable: Array<{ remoteId: string; error: string; name?: string | null; uid?: string | null; card?: string }>;
   matched: number;
   matchedByIdentifier: number;
   links: number;
