@@ -1,10 +1,12 @@
 import { createContext, useContext, useState } from 'react';
+import { Icon } from './Icon';
 import { Button } from './ui/Button';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { useToast } from './ui/Toast';
 import {
   useApplyCutover,
   useCutoverItems,
+  useCutoverSections,
   useCutoverTally,
   useLatestCutover,
   useRemoteBackups,
@@ -22,7 +24,12 @@ import {
 } from '../api/syncHooks';
 
 /** The preview being shown, and whether its choices can still be changed. */
-const ReviewContext = createContext<{ cutoverId: string; editable: boolean }>({ cutoverId: '', editable: false });
+const ReviewContext = createContext<{
+  cutoverId: string;
+  editable: boolean;
+  /** The choices of each item kind (the backend's RESOLUTIONS). */
+  choices: Partial<Record<CutoverItemKind, string[]>>;
+}>({ cutoverId: '', editable: false, choices: {} });
 
 /** What each choice does, in the reviewer's words. */
 function choiceLabel(choice: string, where: string): string {
@@ -183,20 +190,13 @@ function formatWhen(iso: string | null): string | null {
   return iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : null;
 }
 
-function ItemList({ kind, provider, total }: {
-  kind: CutoverItemKind;
-  provider?: BackupProvider;
-  total: number;
-}) {
+function ItemList({ kind, provider }: { kind: CutoverItemKind; provider?: BackupProvider }) {
   const { cutoverId } = useContext(ReviewContext);
-  const [open, setOpen] = useState(false);
-  const { data, isLoading } = useCutoverItems(cutoverId, { kind, provider }, open);
-  if (total === 0) return null;
+  const { data, isLoading } = useCutoverItems(cutoverId, { kind, provider }, true);
   const groups = data ? groupByContact(data.items) : [];
 
   return (
-    <details className="cutover-list" onToggle={e => setOpen((e.target as HTMLDetailsElement).open)}>
-      <summary>Show {total.toLocaleString()}</summary>
+    <div className="cutover-list">
       {isLoading && <p className="backup-meta">Loading…</p>}
       {data && (
         <ul>
@@ -206,7 +206,64 @@ function ItemList({ kind, provider, total }: {
           )}
         </ul>
       )}
-    </details>
+    </div>
+  );
+}
+
+/** One dropdown for a whole list: sets every item in it (or returns them all to the suggestions). */
+function SectionChoice({ kind, provider }: { kind: CutoverItemKind; provider?: BackupProvider }) {
+  const { cutoverId, editable, choices } = useContext(ReviewContext);
+  const sections = useCutoverSections(cutoverId);
+  const resolveAll = useResolveAllCutoverItems(cutoverId);
+  const { showToast } = useToast();
+  const options = choices[kind] ?? [];
+  const section = sections.data?.sections.find(sec => sec.kind === kind && (sec.provider ?? undefined) === provider);
+  if (!options.length || !section) return null;
+
+  const where = provider ? PROVIDER_NAMES[provider] : 'Yello';
+  const used = Object.entries(section.choices).filter(([, n]) => n > 0);
+  const value = used.length === 1 && used[0][1] === section.total ? used[0][0] : '';
+  if (!editable) return <span className="cutover-choice-done">→ {value ? choiceLabel(value, where) : 'mixed'}</span>;
+
+  return (
+    <select
+      className="cutover-choice cutover-section-choice"
+      aria-label="What to do with every item in this list"
+      value={value}
+      disabled={resolveAll.isPending}
+      onChange={e => resolveAll.mutate(
+        { kind, provider, resolution: e.target.value === '__suggested__' ? null : e.target.value },
+        { onError: error => showToast(error.message, { type: 'error' }) }
+      )}
+    >
+      {!value && <option value="" disabled>Mixed</option>}
+      {options.map(choice => <option key={choice} value={choice}>All: {choiceLabel(choice, where)}</option>)}
+      {section.suggested < section.total && <option value="__suggested__">All: back to the suggestion</option>}
+    </select>
+  );
+}
+
+/** A list's heading (caret, count, label, its dropdown) that opens onto its items. */
+function SectionRow({ label, count, kind, provider }: {
+  label: string;
+  count: number;
+  kind: CutoverItemKind;
+  provider?: BackupProvider;
+}) {
+  const [open, setOpen] = useState(false);
+  if (count === 0) return <Row label={label} count={0} />;
+  return (
+    <div className="cutover-section">
+      <div className="cutover-section-head">
+        <button type="button" className="cutover-section-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <Icon name="chevron-right" className={`cutover-caret${open ? ' open' : ''}`} />
+          <span className="cutover-count">{count.toLocaleString()}</span>
+          <span>{label}</span>
+        </button>
+        <SectionChoice kind={kind} provider={provider} />
+      </div>
+      {open && <ItemList kind={kind} provider={provider} />}
+    </div>
   );
 }
 
@@ -279,6 +336,7 @@ function ItemDetail({ item }: { item: CutoverItem }) {
 function Row({ label, count, children }: { label: string; count: number; children?: React.ReactNode }) {
   return (
     <div className={`cutover-row${count === 0 ? ' cutover-row--zero' : ''}`}>
+      <span aria-hidden="true" />
       <span className="cutover-count">{count.toLocaleString()}</span>
       <div>
         <span>{label}</span>
@@ -314,31 +372,15 @@ function ProviderPreview({ summary }: { summary: ProviderPlanSummary }) {
       )}
 
       <h4>Coming into Yello</h4>
-      <Row label={`changes to existing contacts (${summary.updates.contacts.toLocaleString()} contacts)`} count={summary.updates.fields}>
-        <ItemList kind="update" provider={p} total={summary.updates.fields} />
-      </Row>
-      <Row label="new contacts" count={summary.imports}>
-        <ItemList kind="import" provider={p} total={summary.imports} />
-      </Row>
-      <Row label="conflicts to decide (changed in both places)" count={summary.conflicts}>
-        <ItemList kind="conflict" provider={p} total={summary.conflicts} />
-      </Row>
-      <Row label="possible matches to confirm" count={summary.possibleMatches}>
-        <ItemList kind="possible_match" provider={p} total={summary.possibleMatches} />
-      </Row>
-      <Row label="cards to look at (edited recently, but gone from Yello)" count={summary.restoreReview}>
-        <ItemList kind="restore_review" provider={p} total={summary.restoreReview} />
-      </Row>
+      <SectionRow label={`changes to existing contacts (${summary.updates.contacts.toLocaleString()} contacts)`} count={summary.updates.fields} kind="update" provider={p} />
+      <SectionRow label="new contacts" count={summary.imports} kind="import" provider={p} />
+      <SectionRow label="conflicts to decide (changed in both places)" count={summary.conflicts} kind="conflict" provider={p} />
+      <SectionRow label="possible matches to confirm" count={summary.possibleMatches} kind="possible_match" provider={p} />
+      <SectionRow label="cards to look at (edited recently, but gone from Yello)" count={summary.restoreReview} kind="restore_review" provider={p} />
 
       <h4>Removed from {name}</h4>
-      <Row label="duplicates of a Yello contact" count={summary.deletes.mergedDuplicates}>
-        <ItemList kind="merged_duplicate" provider={p} total={summary.deletes.mergedDuplicates} />
-      </Row>
-      <Row label="removed in your cleanup, old remote-only, or archived in Yello"
-        count={summary.deletes.removedInCleanup + summary.deletes.oldRemoteOnly + summary.deletes.archivedInYello}>
-        <ItemList kind="delete_remote" provider={p}
-          total={summary.deletes.removedInCleanup + summary.deletes.oldRemoteOnly + summary.deletes.archivedInYello} />
-      </Row>
+      <SectionRow label="duplicates of a Yello contact" count={summary.deletes.mergedDuplicates} kind="merged_duplicate" provider={p} />
+      <SectionRow label="removed in your cleanup, old remote-only, or archived in Yello" count={summary.deletes.removedInCleanup + summary.deletes.oldRemoteOnly + summary.deletes.archivedInYello} kind="delete_remote" provider={p} />
 
       <h4>Written to {name}</h4>
       <Row label="new cards for Yello contacts not there yet" count={summary.creates} />
@@ -560,16 +602,14 @@ export function CutoverPreviewContent() {
       {cutover?.status === 'failed' && <p className="backup-error">{cutover.error}</p>}
 
       {summary && cutover && (
-        <ReviewContext.Provider value={{ cutoverId: cutover.id, editable }}>
+        <ReviewContext.Provider value={{ cutoverId: cutover.id, editable, choices: data?.choices ?? {} }}>
           <p className="backup-meta">
             Prepared {new Date(summary.generatedAt).toLocaleString()} with changes since{' '}
             {new Date(summary.windowStart).toLocaleDateString()}. Yello has {summary.yello.active.toLocaleString()} contacts
             ({summary.yello.archived.toLocaleString()} archived).
           </p>
           {summary.yello.groupCards > 0 && (
-            <Row label="Apple groups that were imported as contacts (they will be archived)" count={summary.yello.groupCards}>
-              <ItemList kind="group_card" total={summary.yello.groupCards} />
-            </Row>
+            <SectionRow label="Apple groups that were imported as contacts (they will be archived)" count={summary.yello.groupCards} kind="group_card" />
           )}
           {(['icloud', 'google'] as const).map(provider => (
             <ProviderPreview key={provider} summary={summary.providers[provider]} />

@@ -400,7 +400,9 @@ Phase 4 (the cutover: review, apply, restore; behind `SYNC_ENGINE=1`):
 - **Migration page** (`/migration`, `MigrationView.tsx`; linked from Tools): step 1 the backups (folding
   card), step 2 the preview, review and switch (on the page itself). In the lists, each contact's items are
   grouped under its name with one choice next to the name (it sets all of that contact's items in the list),
-  and every difference is a sub-bullet: the field, then "Yello has …" / "iCloud has …".
+  and every difference is a sub-bullet: the field, then "Yello has …" / "iCloud has …". Each list's heading
+  opens with a caret and has its own dropdown for every item in it (`resolve-all`; "Mixed" when they differ,
+  from `GET /api/sync/cutover/:id/sections`).
 - **Review** (the preview card): every decision item has a choice select (`RESOLUTIONS`, defaults from
   `defaultResolution`), saved with `POST /api/sync/cutover/:id/resolve` (one or more items) or
   `/resolve-all` (every item of a kind/provider, or `null` = back to the suggestions). Lists stay readable

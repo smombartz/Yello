@@ -4472,8 +4472,8 @@ a.nav-rail-item.active {
 
 .cutover-row {
   display: grid;
-  grid-template-columns: 4.5rem 1fr;
-  gap: var(--ds-space-3);
+  grid-template-columns: 1rem 3.5rem 1fr;
+  gap: var(--ds-space-2);
   padding: var(--ds-space-1) 0;
   font-size: var(--ds-font-sm);
   color: var(--ds-text-primary);
@@ -4489,10 +4489,48 @@ a.nav-rail-item.active {
   font-weight: var(--ds-weight-semibold);
 }
 
-.cutover-list summary {
+.cutover-section {
+  padding: var(--ds-space-1) 0;
+}
+
+.cutover-section-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}
+
+.cutover-section-toggle {
+  display: grid;
+  grid-template-columns: 1rem 3.5rem auto;
+  align-items: baseline;
+  gap: var(--ds-space-2);
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--ds-font-sm);
+  color: var(--ds-text-primary);
+  text-align: left;
   cursor: pointer;
+}
+
+.cutover-caret {
   font-size: var(--ds-font-xs);
-  color: var(--ds-color-primary);
+  color: var(--ds-text-secondary);
+  transition: transform var(--ds-duration-normal) var(--ds-easing-default);
+}
+
+.cutover-caret.open {
+  transform: rotate(90deg);
+}
+
+.cutover-section-choice {
+  margin-left: auto;
+}
+
+.cutover-section .cutover-list {
+  margin-left: calc(1rem + var(--ds-space-2));
 }
 
 .cutover-list > ul {

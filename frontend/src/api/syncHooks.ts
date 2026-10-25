@@ -181,7 +181,7 @@ const CUTOVER_KEY = ['sync', 'cutover', 'latest'] as const;
 export function useLatestCutover() {
   return useQuery({
     queryKey: CUTOVER_KEY,
-    queryFn: () => fetchApi<{ cutover: CutoverRecord | null; applying: boolean }>('/api/sync/cutover/latest'),
+    queryFn: () => fetchApi<{ cutover: CutoverRecord | null; applying: boolean; choices: Partial<Record<CutoverItemKind, string[]>> }>('/api/sync/cutover/latest'),
     refetchInterval: query => {
       const data = query.state.data;
       if (data?.cutover?.status === 'planning') return 1500;
@@ -385,6 +385,25 @@ export function useCutoverTally(cutoverId: string | undefined, enabled: boolean)
     queryKey: ['sync', 'cutover', cutoverId, 'tally'] as const,
     queryFn: () => fetchApi<CutoverTally>(`/api/sync/cutover/${cutoverId}/tally`),
     enabled: enabled && !!cutoverId,
+    placeholderData: previous => previous,
+  });
+}
+
+export interface CutoverSection {
+  kind: CutoverItemKind;
+  provider: BackupProvider | null;
+  total: number;
+  /** How many items take each choice. */
+  choices: Record<string, number>;
+  /** How many still follow the suggestion. */
+  suggested: number;
+}
+
+export function useCutoverSections(cutoverId: string | undefined) {
+  return useQuery({
+    queryKey: ['sync', 'cutover', cutoverId, 'sections'] as const,
+    queryFn: () => fetchApi<{ sections: CutoverSection[] }>(`/api/sync/cutover/${cutoverId}/sections`),
+    enabled: !!cutoverId,
     placeholderData: previous => previous,
   });
 }

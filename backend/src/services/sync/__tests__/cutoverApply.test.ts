@@ -13,7 +13,7 @@ import { getUserDatabase, closeAllUserDatabases, getUserBackupsPath } from '../.
 import { insertParsedContact, prepareContactStatements } from '../../contactPersistence.js';
 import { parseSingleVcard, unfoldLines } from '../../vcardParser.js';
 import { getLatestCutover, listCutoverItems, startCutoverPlan } from '../cutoverPlanner.js';
-import { computeCutoverTally, CutoverError, resolveAllCutoverItems, resolveCutoverItems, startCutoverApply } from '../cutoverApply.js';
+import { computeCutoverTally, CutoverError, listCutoverSections, resolveAllCutoverItems, resolveCutoverItems, startCutoverApply } from '../cutoverApply.js';
 import { runICloudSync } from '../icloudSyncEngine.js';
 import { runGoogleSync } from '../googleSyncEngine.js';
 import { startRestore } from '../remoteRestore.js';
@@ -213,7 +213,10 @@ describe('cutover apply', () => {
 
   it('can set every item of a kind at once and back to the suggestions', async () => {
     const id = await plan();
+    const section = () => listCutoverSections(USER_ID, id).find(s => s.kind === 'delete_remote' && s.provider === 'icloud')!;
+    expect(section()).toMatchObject({ total: 3, choices: { delete: 3 }, suggested: 3 });
     expect(resolveAllCutoverItems(USER_ID, id, { kind: 'delete_remote', provider: 'icloud' }, 'import')).toBe(3);
+    expect(section()).toMatchObject({ total: 3, choices: { import: 3 }, suggested: 0 });
     expect(listCutoverItems(USER_ID, id, { kind: 'delete_remote', provider: 'icloud' }).items.every(i => i.resolution === 'import')).toBe(true);
     resolveAllCutoverItems(USER_ID, id, {}, null);
     expect(listCutoverItems(USER_ID, id, { kind: 'delete_remote', provider: 'icloud' }).items.every(i => i.resolution === null)).toBe(true);

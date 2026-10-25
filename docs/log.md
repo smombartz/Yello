@@ -1,5 +1,29 @@
 # Change Log
 
+## 2026-10-25 — Preview: one dropdown per list, caret headings
+
+**Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`
+
+**What Changed:**
+- Each list heading in the preview ("221 changes to existing contacts (106 contacts)") opens with a caret
+  and carries a dropdown that sets every item in that list at once, or returns them all to the
+  suggestion; it reads "Mixed" when the items differ. The separate "Show 221" toggle is gone
+- `GET /api/sync/cutover/:id/sections` reports per list how many items take each choice, so the heading
+  shows the current choice without loading the items
+
+**Why:**
+- User request: decide a whole list in one step, and less clutter
+
+**Files Modified:**
+- `backend/src/services/sync/cutoverApply.ts` — `listCutoverSections`
+- `backend/src/routes/sync.ts` — `/cutover/:id/sections`
+- `backend/src/services/sync/__tests__/cutoverApply.test.ts`
+- `frontend/src/components/CutoverPreviewContent.tsx` — `SectionRow`, `SectionChoice`; `ItemList` no
+  longer folds itself
+- `frontend/src/api/syncHooks.ts` — `useCutoverSections`; `frontend/src/index.css`
+
+---
+
 ## 2026-10-25 — Migration page; preview lists grouped by contact
 
 **Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`

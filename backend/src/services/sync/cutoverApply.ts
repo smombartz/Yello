@@ -628,3 +628,33 @@ export async function computeCutoverTally(userId: number, cutoverId: string): Pr
     for (const suffix of ['', '-wal', '-shm']) fs.rmSync(`${copyPath}${suffix}`, { force: true });
   }
 }
+
+export interface CutoverSection {
+  kind: CutoverItemKind;
+  provider: SyncProvider | null;
+  total: number;
+  /** How many items take each choice (the reviewer's, else the default). */
+  choices: Record<string, number>;
+  /** How many still follow the suggestion. */
+  suggested: number;
+}
+
+/** Per list (kind × provider): how the items are currently decided. */
+export function listCutoverSections(userId: number, cutoverId: string): CutoverSection[] {
+  const rows = getUserDatabase(userId).prepare(`
+    SELECT kind, provider, suggested, resolution, COUNT(*) AS n FROM sync_cutover_items
+    WHERE cutover_id = ? GROUP BY kind, provider, suggested, resolution
+  `).all(cutoverId) as Array<{ kind: CutoverItemKind; provider: SyncProvider | null; suggested: string | null; resolution: string | null; n: number }>;
+  const sections = new Map<string, CutoverSection>();
+  for (const row of rows) {
+    if (!RESOLUTIONS[row.kind]) continue;
+    const key = `${row.kind}:${row.provider ?? ''}`;
+    const section = sections.get(key) ?? { kind: row.kind, provider: row.provider, total: 0, choices: {}, suggested: 0 };
+    const effective = effectiveResolution(row)!;
+    section.total += row.n;
+    section.choices[effective] = (section.choices[effective] ?? 0) + row.n;
+    if (row.resolution === null) section.suggested += row.n;
+    sections.set(key, section);
+  }
+  return [...sections.values()];
+}

@@ -24,7 +24,7 @@ import { contactsScopeOf, getValidAccessToken } from '../services/googleAuthServ
 import { isSyncRunning, updateProvider } from '../services/sync/syncRuntime.js';
 import { isGroupVcard } from '../services/vcardParser.js';
 import {
-  computeCutoverTally, CutoverError, effectiveResolution, isCutoverRunning, RESOLUTIONS, resolveAllCutoverItems,
+  computeCutoverTally, CutoverError, effectiveResolution, isCutoverRunning, listCutoverSections, RESOLUTIONS, resolveAllCutoverItems,
   resolveCutoverItems, startCutoverApply
 } from '../services/sync/cutoverApply.js';
 import { RestoreError, startRestore, type RestoreMode } from '../services/sync/remoteRestore.js';
@@ -303,6 +303,11 @@ export default async function syncRoutes(
     } catch (error) {
       return cutoverFailure(reply, error);
     }
+  });
+
+  // GET /api/sync/cutover/:id/sections — per list, how its items are decided
+  fastify.get<{ Params: { id: string } }>('/cutover/:id/sections', async (request) => {
+    return { sections: listCutoverSections(request.user!.id, request.params.id) };
   });
 
   // GET /api/sync/cutover/:id/tally — per source: unchanged / updated / new / deleted,
