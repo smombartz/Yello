@@ -36,7 +36,7 @@ export function BottomTabBar() {
       </button>
 
       <TabItem to="/groups" icon="users" label="Groups" />
-      <TabItem to="/tools" icon="gear" label="Tools" />
+      <TabItem to="/tools" icon="screwdriver-wrench" label="Tools" />
     </nav>
   );
 }

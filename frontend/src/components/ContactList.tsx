@@ -14,6 +14,7 @@ import { Modal } from './ui/Modal';
 import { EmptyState } from './ui/EmptyState';
 import { useToast } from './ui/Toast';
 import { EXPANDED_CONTACT_PARAM, useSearchParamUpdater } from '../hooks/useSearchParamUpdater';
+import { useIsMobile } from '../hooks/useIsMobile';
 import type { MergeConflict, ContactDetail, ContactListItem } from '../api/types';
 
 interface ContactListProps {
@@ -40,6 +41,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
   const listRef = useRef<HTMLDivElement>(null);
   const [searchParams] = useSearchParams();
   const updateParams = useSearchParamUpdater();
+  const isMobile = useIsMobile();
 
   // The expanded row lives in ?contact= so the URL can be copied to reopen it.
   // Grid view has no expansion, so the param only applies to the list.
@@ -303,7 +305,9 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
     );
   }
 
-  const selectionEnabled = true;
+  // Bulk merge/archive/delete is desk work, like the desktop-only Merge and Cleanup
+  // routes. On a phone, tapping an avatar opens the row instead of selecting it.
+  const selectionEnabled = !isMobile;
 
   return (
     <div className="contact-list">
@@ -366,16 +370,18 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
             )}
           </>
         )}
-        <div className="contact-selection-actions">
-          <button
-            className="contact-action-button"
-            onClick={selectedIds.size > 0 ? handleSelectNone : handleSelectPage}
-          >
-            {selectedIds.size > 0 ? 'Select None' : 'Select Page'}
-          </button>
-        </div>
+        {selectionEnabled && (
+          <div className="contact-selection-actions">
+            <button
+              className="contact-action-button"
+              onClick={selectedIds.size > 0 ? handleSelectNone : handleSelectPage}
+            >
+              {selectedIds.size > 0 ? 'Select None' : 'Select Page'}
+            </button>
+          </div>
+        )}
 
-        {selectedIds.size > 0 && (
+        {selectionEnabled && selectedIds.size > 0 && (
           <div className="contact-action-buttons">
             {selectedIds.size >= 2 && (
               <Button

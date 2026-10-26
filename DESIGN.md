@@ -218,6 +218,12 @@ components:
     textColor: "{colors.paper}"
     rounded: "{rounded.full}"
     size: "56px"
+  reach-out-tile:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    typography: "{typography.label}"
+    rounded: "{rounded.lg}"
+    height: "56px"
   toast:
     backgroundColor: "#333333"
     textColor: "{colors.paper}"
@@ -325,7 +331,7 @@ The shell is a fixed **64px white header**, a **floating icon rail** on the left
 
 **Spacing** follows a 4px grid. 8px and 16px dominate, 12px separates list rows, 24px separates sections and pads modals, and 48px pads empty states and front-door cards. **Every button and form field is 32px tall** (`--ds-control-height`), and square icon buttons are 32×32.
 
-**Responsive.** These four breakpoints are the only ones allowed: 640, 768, 1024 and 1280px, mirrored in `src/constants/breakpoints.ts`. **768px is the app-shell switch.** Below it the rail and logo column disappear, the search field takes the header's full width, and a **bottom tab bar** (56px plus the safe-area inset) takes over navigation. Its center is a raised 56px Signal Violet add button. List rows grow to a 56px minimum touch height.
+**Responsive.** These four breakpoints are the only ones allowed: 640, 768, 1024 and 1280px, mirrored in `src/constants/breakpoints.ts`. **768px is the app-shell switch.** Below it the rail disappears and a **bottom tab bar** (56px plus the safe-area inset) takes over navigation. Its center is a raised 56px Signal Violet add button. The header drops to 56px (plus the top safe-area inset; `--ds-header-height` is redefined, so the body offset and the sticky list toolbar follow it). Its logo column shrinks to the 28px Yello mark (→ Dashboard), the title loses its fixed 120px slot, the search takes the remaining width, and the right spacer holds the user's 32px avatar (→ Profile; a 2px Signal Violet ring when active). The header's "Add Contact" action is dropped on phones, because the + tab does that job. Content and the tab bar pad to the left and right safe-area insets in landscape. List rows grow to a 56px minimum touch height. Bulk selection (Select Page, avatar tap-to-select, Merge/Archive/Delete) is desk work and is off on phones, like the desktop-only Merge, Cleanup and Archive routes.
 
 ### Named Rules
 **The Shared Column Rule.** The header's center column and the page content share one 960px column, so the title, search, counts and list edges line up vertically on every page. Never offset one without the other.
@@ -396,12 +402,15 @@ The core repeated unit of the desk, built for 10K-row virtualized scrolling.
 - To the right sit two fixed-width detail columns (email, and phone with a country flag) in Graphite with 16px icons. They are capped at 220px each and truncate.
 - A right action strip is set off by a full-height vertical hairline. Its 16px Graphite reach-out icons turn Ink on hover.
 - Rows stack with a 12px gap. Clicking expands the row in place, and it becomes a 56px-minimum touch target on phones. A row selected for a bulk action gets a 2px inset Signal Violet ring.
+- **On phones** the detail columns and action strip drop out, but the role/company line stays, so people with the same name can still be told apart. A tap shows Shaded Paper as pressed feedback, and touch never leaves a card in its hover lift.
+- **Reach-out bar (phones only):** an expanded contact opens with up to four equal tiles, Text · Call · WhatsApp · Email, for the primary phone and email, so reaching someone takes one tap, as in iOS Contacts. Each tile is 56px tall: Desk White with a Hairline border and 8px corners, an 18px Signal Violet icon (WhatsApp green on WhatsApp) over a 12px medium Ink label. Pressed, it goes to Shaded Paper with a Strong Rule border. It is inset 13px, like the card's content. On phones the inline reach-out links beside each value grow from 24px to 40px squares.
 
 ### Avatars (signature)
 People supply the color. A photo is cropped to a full circle. Without a photo, the person's initials (600 weight, 40% of the avatar size) sit in white on a hue hashed from their name (`hsl(h, 65%, 45%)`), so the same person is always the same color. This is the one place the desk is allowed to be multicolored.
 
 ### Inputs / Fields
 - **Style:** 32px tall, Desk White, 1px Hairline Rule border, 6px corners, 12px horizontal padding, Body Small text, Graphite placeholder.
+- **Phones (≤768px):** every text field, select and textarea renders at 16px (Body). iOS Safari zooms the page into any field under 16px when it takes focus, so this guard overrides page-level field sizes. The 32px height is unchanged.
 - **Search field:** An inset variant: Shaded Paper fill, Strong Rule border, 8px corners, a leading Pewter magnifier, a Graphite placeholder and a trailing clear button. In the header it caps at 300px.
 - **Focus:** The border shifts to Signal Violet and the 3px tint halo appears inside the frame. There is no outline.
 - **Error / Disabled:** The error halo uses Error Tint (`--ds-shadow-focus-error`). Disabled text drops to Strong Rule.
@@ -409,10 +418,12 @@ People supply the color. A photo is cropped to a full circle. Without a photo, t
 ### Navigation
 - **Header:** Fixed, 64px, Desk White, with no bottom border. The logo sits at 24px height. The page title is Title type, and parent breadcrumbs are Graphite Title-size links that turn Ink on hover, separated by a small Pewter chevron.
 - **Nav rail (desktop):** A floating column of 40×40 icon squares (24px icons, 8px corners) vertically centered on the left edge, with no panel behind it. Inactive icons are Pewter. Hover turns the icon violet and slides out its label (14px medium, violet). The active item is Signal Tint with a violet icon. The user's avatar sits in the rail.
-- **Bottom tab bar (≤768px):** Desk White, a hairline top border with the upward shadow, and 24px icons over 11px medium labels. Inactive items are Graphite and the active one is Signal Violet. The center add button is a 56px Signal Violet circle with the violet glow, raised 12px above the bar, that scales to 0.95 when pressed.
+- **Bottom tab bar (≤768px):** Desk White, a hairline top border with the upward shadow, and 24px icons over 11px medium labels: Contacts, Map, add, Groups, Tools. The icons match the nav rail's. Inactive items are Graphite and the active one is Signal Violet. The center add button is a 56px Signal Violet circle with the violet glow, raised 12px above the bar, that scales to 0.95 when pressed. Dashboard and Profile are reached from the phone header (the mark and the avatar).
+- **Filter sheet (≤768px):** the Contacts filter popover becomes a bottom sheet: Desk White, 12px top corners, the Modal shadow, over the 50% black overlay, with 44px filter rows. A tap on the overlay closes it.
 
 ### Toast & Modals
 - **Toast:** A dark floating pill-card (#333, 8px corners) at the bottom center, sliding up 1rem over 300ms. It carries a success- or error-colored leading icon, a 15px message, and an optional white semibold undo action.
+- **On phones** the toast sits 12px above the tab bar rather than behind it, and modals cap at the viewport height (minus the safe areas) and scroll inside.
 - **Modal:** Every overlay renders through `<Modal>` (`components/ui/Modal.tsx`): Desk White, 12px corners, 24px padding and the Modal shadow, over a 50% black overlay. It handles `aria-modal`, Escape (captured before Layout's global handler), overlay-click close, initial focus and focus return. Progress dialogs omit `onClose` and can't be dismissed. `ConfirmDialog` is a Modal with a secondary and a primary or danger action. Confirm dialogs cap at 400px wide, left-aligned, with a Graphite explanation and a Danger primary when the action is destructive.
 
 ### Public Card (front door)
@@ -425,7 +436,7 @@ The page at `/`, shown to signed-out visitors only. Signed-in visitors go to the
 - **Gradient:** It appears only inside the public-card tile's stage (16px corners), behind a miniature public card. Nowhere else on the page.
 
 ### Motion
-Motion is quick and functional, with no choreography. Every transition uses the tokens. Fast (100ms) is for button fills, normal (150ms) is the default for state changes (color, border, background, shadow), and slow (300ms) is for progress fills and entrances. All of them use the standard ease, `cubic-bezier(0.4, 0, 0.2, 1)`. Entrances use the ease-out curve and are limited to the toast slide-up and the background-job pill. Every spinner shares one keyframe: a 1s linear rotation, violet top arc on a Hairline ring.
+Motion is quick and functional, with no choreography. Every transition uses the tokens. Fast (100ms) is for button fills, normal (150ms) is the default for state changes (color, border, background, shadow), and slow (300ms) is for progress fills and entrances. All of them use the standard ease, `cubic-bezier(0.4, 0, 0.2, 1)`. Entrances use the ease-out curve and are limited to the toast slide-up, the background-job pill, and the phone filter sheet sliding up from the bottom edge (300ms, none under reduced motion). Every spinner shares one keyframe: a 1s linear rotation, violet top arc on a Hairline ring.
 
 **Front-door exception.** The landing page has one authored motion. When the Merge vignette scrolls into view, its duplicate folds up into the record above it and the second email the merge brings in opens. It animates `grid-template-rows`, opacity and transform over 600ms on an expo ease-out (`cubic-bezier(0.16, 1, 0.3, 1)`, `--lp-ease-out`, scoped to `.landing`), and a click toggles it. Under reduced motion it does not auto-play, and every landing-page transition drops to 0ms. This is scoped to the landing page. The app shell keeps the rules above.
 

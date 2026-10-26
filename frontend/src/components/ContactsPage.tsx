@@ -6,7 +6,7 @@ import { EXPANDED_CONTACT_PARAM, useSearchParamUpdater } from '../hooks/useSearc
 import type { OutletContext } from './Layout';
 
 export function ContactsPage() {
-  const { setHeaderConfig } = useOutletContext<OutletContext>();
+  const { setHeaderConfig, isMobile } = useOutletContext<OutletContext>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const updateParams = useSearchParamUpdater();
@@ -43,7 +43,8 @@ export function ContactsPage() {
       onSearchChange: setSearch,
       searchPlaceholder: 'Search contacts...',
       info: <span>{totalContacts.toLocaleString()} contacts</span>,
-      actions: (
+      // Phones add from the tab bar's + button
+      actions: isMobile ? undefined : (
         <Button
           variant="primary"
           icon="circle-plus"
@@ -53,7 +54,7 @@ export function ContactsPage() {
         </Button>
       ),
     });
-  }, [setHeaderConfig, search, setSearch, totalContacts, navigate]);
+  }, [setHeaderConfig, search, setSearch, totalContacts, navigate, isMobile]);
 
   return (
     <ContactList

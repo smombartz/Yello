@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { ContactDetail, ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, UpdateContactRequest } from '../api/types';
 import { useUpdateContact } from '../api/hooks';
 import { Button } from './ui/Button';
-import { EditableField, LinkedInSection, SaveErrors } from './ContactFormSections';
+import { EditableField, LinkedInSection, ReachOutBar, SaveErrors } from './ContactFormSections';
 import { ContactCardView } from './ContactCardView';
 import { EmailHistorySection } from './EmailHistorySection';
 import { ContactPhotoGallery } from './ContactPhotoGallery';
@@ -193,6 +193,7 @@ export function ContactRowExpanded({ contact, editRequest = 0 }: ContactRowExpan
   // ─── View Mode (Figma layout) ────────────────────────────────
   return (
     <div onClick={(e) => e.stopPropagation()}>
+      <ReachOutBar phones={contact.phones} emails={contact.emails} />
       <ContactCardView
         data={{
           phones: contact.phones,

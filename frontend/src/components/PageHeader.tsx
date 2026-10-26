@@ -1,8 +1,9 @@
 import { type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import logoSvg from '../assets/logo.svg';
 import { SearchBar } from './ui/SearchBar';
 import { Icon } from './Icon';
+import { UserAvatar } from './UserAvatar';
 
 export interface Breadcrumb {
   label: string;
@@ -43,6 +44,8 @@ export function PageHeader({
         <div className="page-header-col-left">
           <Link to="/dashboard" className="page-header-logo-link" aria-label="Go to dashboard">
             <img src={logoSvg} alt="Yello" className="page-header-logo" />
+            {/* Phones have no room for the wordmark: the mark alone stands in for it */}
+            <img src="/favicon.svg" alt="Yello" className="page-header-mark" />
           </Link>
         </div>
 
@@ -90,7 +93,13 @@ export function PageHeader({
           )}
         </div>
 
-        <div className="page-header-col-right" />
+        {/* Empty spacer on desktop (it mirrors the logo column); on phones it holds the
+            way to Profile, which the bottom tab bar has no room for. */}
+        <div className="page-header-col-right">
+          <NavLink to="/profile" className="page-header-user" aria-label="Profile">
+            <UserAvatar imgClassName="page-header-user-img" initialsClassName="page-header-user-initials" />
+          </NavLink>
+        </div>
       </div>
     </header>
   );

@@ -86,7 +86,7 @@ function formatBirthdayDays(daysUntil: number): string {
 }
 
 export function DashboardView() {
-  const { setHeaderConfig } = useOutletContext<OutletContext>();
+  const { setHeaderConfig, isMobile } = useOutletContext<OutletContext>();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const { data, isLoading, error } = useDashboardStats();
@@ -102,7 +102,8 @@ export function DashboardView() {
       onSearchChange: setSearch,
       onSearchSubmit: goToContacts,
       searchPlaceholder: 'Search contacts...',
-      actions: (
+      // Phones add from the tab bar's + button
+      actions: isMobile ? undefined : (
         <Button
           variant="primary"
           icon="circle-plus"
@@ -112,7 +113,7 @@ export function DashboardView() {
         </Button>
       ),
     });
-  }, [setHeaderConfig, search, navigate]);
+  }, [setHeaderConfig, search, navigate, isMobile]);
 
   const handleContactClick = (id: number) => {
     navigate(`/contacts/${id}`);

@@ -1,5 +1,49 @@
 # Change Log
 
+## 2026-10-25 — Phone layout tuned for lookup and reach-out
+
+**Session:** `ccd15ef7-4347-4d2d-a5b9-95249cd3d546`
+
+**What Changed:**
+- Phone header (≤768px): `--ds-header-height` is 56px + top safe area and drives the header, the body offset
+  and the sticky list toolbar. This closes the 16px gap where rows showed through under the header
+- Phone header shows the Yello mark (→ Dashboard) and the user's avatar (→ Profile), which phones
+  previously had no way to reach. The title loses its fixed 120px slot. "Add Contact" is hidden on phones
+  (the + tab does it), and so is the email on Profile
+- Expanded contacts open with a phone-only reach-out bar (Text · Call · WhatsApp · Email) for the
+  primary phone and email. The inline reach-out links grow from 24px to 40px
+- Fields render at 16px on phones, so iOS Safari no longer zooms into the search field on focus
+- Rows keep the role/company line on narrow phones; a tap shows pressed feedback; no stuck hover lift on touch
+- Bulk selection (Select Page, avatar tap-to-select, Merge/Archive/Delete) is off on phones
+- On phones the filter popover is a bottom sheet with a backdrop and 44px rows. Its outside-tap handler skips the
+  backdrop, so the closing tap doesn't fall through to the row behind
+- On phones the toast sits above the tab bar, modals cap at the viewport height and scroll, and content and the tab bar
+  respect the left and right safe areas in landscape
+- The Tools tab icon matches the desktop rail (screwdriver-wrench). The rail's avatar moved into a shared `UserAvatar`
+- DESIGN.md records the phone header, the reach-out bar, the 16px field rule, the filter sheet and the phone toast/modal rules
+
+**Why:**
+- The phone's jobs are finding someone and reaching them in one tap. Focus zoom, 24px call targets,
+  hidden company lines and the header gap all got in the way, and Dashboard and Profile (sharing your card) were unreachable
+
+**Files Modified:**
+- `frontend/src/index.css` — phone shell block (`--ds-header-height`, `.page-header-mark`, `.page-header-user`),
+  `.reach-out-bar`/`.reach-out-action`, `.filter-sheet-backdrop` + sheet `.filter-popover`, field font guard,
+  toast/modal phone rules, `@media (hover: none)`, `@keyframes sheet-up`
+- `frontend/src/components/PageHeader.tsx` — mark image, Profile `NavLink` in the right column
+- `frontend/src/components/UserAvatar.tsx` — new, shared photo-or-initials avatar
+- `frontend/src/components/NavRail.tsx` — uses `UserAvatar`, `aria-label` on the avatar button
+- `frontend/src/components/ContactFormSections.tsx` — `ReachOutBar`
+- `frontend/src/components/ContactRowExpanded.tsx` — renders `ReachOutBar` in view mode
+- `frontend/src/components/ContactList.tsx` — `selectionEnabled = !isMobile`, selection controls gated on it
+- `frontend/src/components/ContactFilters.tsx` — sheet backdrop, outside-tap handler skips it
+- `frontend/src/components/ContactsPage.tsx`, `DashboardView.tsx` — no header Add Contact on phones
+- `frontend/src/components/BottomTabBar.tsx` — Tools icon
+- `DESIGN.md` — Layout/Responsive, Contact Row, Inputs, Navigation, Toast & Modals, Motion; `reach-out-tile` component
+- `docs/plans/2026-10-25-mobile-adaptation.md` — plan
+
+---
+
 ## 2026-10-25 — iCloud listing works for large address books
 
 **Session:** `253a0b2b-6d1d-4520-a4f2-bf3bbe45b9b2`

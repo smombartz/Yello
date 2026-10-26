@@ -18,6 +18,9 @@ Name
 - qui
 - dige
 - clique
+- parea (παρέα): your group of friends, the people you spend evenings with. A very warm word
+- corrillo (spanish: a small knot of people chatting)
+- kliek (dutch), klik
 
 **Domains**
 - yello.you

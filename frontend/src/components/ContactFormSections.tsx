@@ -137,6 +137,53 @@ function EmailActions({ email }: { email: string }) {
   return <ContactActionLink href={`mailto:${email}`} icon="envelope" label="Send email" />;
 }
 
+/**
+ * Phones only (hidden above 768px by CSS): one-tap Text / Call / WhatsApp / Email tiles
+ * for the primary phone and email, opening the expanded card the way iOS Contacts does.
+ * Desktop keeps the inline links beside each value.
+ */
+export function ReachOutBar({ phones, emails }: { phones: ContactPhone[]; emails: ContactEmail[] }) {
+  const phone = phones.find(p => p.isPrimary) ?? phones[0];
+  const email = emails.find(e => e.isPrimary) ?? emails[0];
+  const dialable = phone?.phone.replace(/[^\d+]/g, '') ?? '';
+  const digits = phone?.phone.replace(/\D/g, '') ?? '';
+  const phoneLabel = phone?.phoneDisplay || phone?.phone;
+  if (!digits && !email?.email) return null;
+
+  return (
+    <nav className="reach-out-bar" aria-label="Reach out" onClick={(e) => e.stopPropagation()}>
+      {digits && (
+        <>
+          <a href={`sms:${dialable}`} className="reach-out-action" aria-label={`Text ${phoneLabel}`}>
+            <Icon name="comment-sms" />
+            <span className="reach-out-label">Text</span>
+          </a>
+          <a href={`tel:${dialable}`} className="reach-out-action" aria-label={`Call ${phoneLabel}`}>
+            <Icon name="phone" />
+            <span className="reach-out-label">Call</span>
+          </a>
+          <a
+            href={`https://wa.me/${digits}`}
+            className="reach-out-action whatsapp"
+            aria-label={`WhatsApp ${phoneLabel}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Icon name="whatsapp" style="brands" />
+            <span className="reach-out-label">WhatsApp</span>
+          </a>
+        </>
+      )}
+      {email?.email && (
+        <a href={`mailto:${email.email}`} className="reach-out-action" aria-label={`Email ${email.email}`}>
+          <Icon name="envelope" />
+          <span className="reach-out-label">Email</span>
+        </a>
+      )}
+    </nav>
+  );
+}
+
 function getEmailIcon(email: string): { icon: string; style?: 'solid' | 'regular' | 'brands' } {
   const lower = email.toLowerCase();
   if (lower.includes('@gmail') || lower.includes('@googlemail')) return { icon: 'google', style: 'brands' };

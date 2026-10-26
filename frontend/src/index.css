@@ -413,6 +413,12 @@ select:focus-visible {
   width: auto;
 }
 
+/* Phone-only header pieces (shown in the ≤768px shell block) */
+.page-header-mark,
+.page-header-user {
+  display: none;
+}
+
 .page-header-col-center {
   /* Target the content width but shrink below it on 769–1100px windows so
      the header column stays aligned with the main content column. */
@@ -1761,6 +1767,11 @@ a.nav-rail-item.active {
   color: var(--ds-color-whatsapp-hover);
 }
 
+/* Phone-only one-tap reach-out tiles (shown in the ≤768px block) */
+.reach-out-bar {
+  display: none;
+}
+
 .info-field-value .address-lines {
   display: flex;
   flex-direction: column;
@@ -2125,9 +2136,6 @@ a.nav-rail-item.active {
     display: none;
   }
   .contact-card-actions {
-    display: none;
-  }
-  .contact-role {
     display: none;
   }
   .expanded-row {
@@ -3235,6 +3243,11 @@ a.nav-rail-item.active {
 /* Filter Popover */
 .contact-filters-container {
   position: relative;
+}
+
+/* Phones turn the popover into a bottom sheet over this backdrop */
+.filter-sheet-backdrop {
+  display: none;
 }
 
 .filter-badge {
@@ -6716,22 +6729,44 @@ a.nav-rail-item.active {
     display: none;
   }
 
+  :root {
+    /* One value places the header, offsets the body below it and pins the
+       sticky list toolbar under it, so the three can't drift apart. */
+    --ds-header-height: calc(56px + env(safe-area-inset-top));
+  }
+
   .main-content {
     /* flex-basis (not width) — the desktop rule sets flex-basis, which
        would win over a width override. */
     flex: 1 1 100%;
     max-width: 100%;
-    padding: 0 1rem calc(56px + env(safe-area-inset-bottom));
+    padding: 0 max(var(--ds-space-4), env(safe-area-inset-right)) calc(56px + env(safe-area-inset-bottom)) max(var(--ds-space-4), env(safe-area-inset-left));
   }
 
+  /* Side padding matches .main-content, so search and avatar end on the
+     content column's edge. */
   .page-header {
-    height: auto;
-    min-height: 48px;
-    padding: 8px 12px;
+    padding: env(safe-area-inset-top) max(var(--ds-space-4), env(safe-area-inset-right)) 0 max(var(--ds-space-4), env(safe-area-inset-left));
   }
 
+  .page-header-row {
+    column-gap: var(--ds-space-3);
+  }
+
+  /* The logo column shrinks to the mark, a way back to the dashboard */
   .page-header-col-left {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .page-header-logo {
     display: none;
+  }
+
+  .page-header-mark {
+    display: block;
+    width: 28px;
+    height: 28px;
   }
 
   .page-header-col-center {
@@ -6741,6 +6776,12 @@ a.nav-rail-item.active {
 
   .page-header-center-row {
     gap: var(--ds-space-3);
+  }
+
+  /* No fixed title slot: there is no column for the search to line up with */
+  .page-header-title,
+  .page-header-breadcrumbs {
+    min-width: 0;
   }
 
   .search-bar--header {
@@ -6756,10 +6797,62 @@ a.nav-rail-item.active {
     display: none;
   }
 
+  /* The desktop spacer holds the Profile avatar instead, sized to it */
   .page-header-col-right {
-    /* The left (logo) column is hidden too — with both spacers gone the
-       center column gets the full width; keeping this visible would waste
-       its --ds-header-side-col-min floor on phone widths. */
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .page-header-user {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 44px touch target around the 32px avatar */
+  .page-header-user::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+  }
+
+  .page-header-user.active {
+    box-shadow: 0 0 0 2px var(--ds-bg-primary), 0 0 0 4px var(--ds-color-primary);
+  }
+
+  .page-header-user:focus-visible {
+    outline: 2px solid var(--ds-color-primary);
+    outline-offset: 2px;
+  }
+
+  .page-header-user-img,
+  .page-header-user-initials {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+  }
+
+  .page-header-user-img {
+    object-fit: cover;
+  }
+
+  .page-header-user-initials {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--ds-bg-tertiary);
+    color: var(--ds-text-primary);
+    font-size: var(--ds-font-xs);
+    font-weight: var(--ds-weight-semibold);
+  }
+
+  /* Profile's header: Logout stays, the email goes */
+  .page-header .header-user-email {
     display: none;
   }
 
@@ -6784,7 +6877,7 @@ a.nav-rail-item.active {
     left: 0;
     right: 0;
     height: calc(56px + env(safe-area-inset-bottom));
-    padding-bottom: env(safe-area-inset-bottom);
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     background: var(--ds-bg-primary);
     border-top: 1px solid var(--ds-border-color);
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
@@ -6864,6 +6957,187 @@ a.nav-rail-item.active {
   /* Contain overscroll on mobile */
   body {
     overscroll-behavior: contain;
+  }
+
+  /* iOS Safari zooms the page into any field under 16px when it takes focus,
+     so fields go up one step on phones. !important because the guard has to
+     beat every page's own field size, whatever its specificity. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: var(--ds-font-md) !important;
+  }
+
+  /* A tap on a row shows it was pressed (touch has no hover) */
+  .contact-card {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .contact-card .collapsed-content:active {
+    background-color: var(--ds-bg-secondary);
+  }
+
+  /* Reach-out: one tap from an open contact, the phone's main job */
+  .reach-out-bar {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: var(--ds-space-2);
+    /* Same 13px inset as .collapsed-content and .expanded-content around it */
+    padding: 0 13px;
+  }
+
+  .reach-out-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 56px;
+    padding: var(--ds-space-2) var(--ds-space-1);
+    border: 1px solid var(--ds-border-color);
+    border-radius: var(--ds-radius-lg);
+    background: var(--ds-bg-primary);
+    color: var(--ds-text-primary);
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color var(--ds-duration-fast) var(--ds-easing-default), border-color var(--ds-duration-fast) var(--ds-easing-default);
+  }
+
+  .reach-out-action [class*="fa-"] {
+    font-size: var(--ds-font-lg);
+    color: var(--ds-color-primary);
+  }
+
+  .reach-out-action.whatsapp [class*="fa-"] {
+    color: var(--ds-color-whatsapp);
+  }
+
+  .reach-out-label {
+    font-size: var(--ds-font-xs);
+    font-weight: var(--ds-weight-medium);
+    line-height: 1;
+  }
+
+  .reach-out-action:active {
+    background-color: var(--ds-bg-secondary);
+    border-color: var(--ds-border-dark);
+  }
+
+  .reach-out-action:focus-visible {
+    outline: 2px solid var(--ds-color-primary);
+    outline-offset: 2px;
+  }
+
+  /* Inline links beside each number and address grow to a thumb-sized target */
+  .contact-action-link {
+    width: 40px;
+    height: 40px;
+    font-size: var(--ds-font-md);
+  }
+
+  .info-field-actions {
+    gap: 0;
+  }
+
+  /* Filter popover becomes a bottom sheet. The sticky toolbar is a stacking
+     context below the header and tab bar, so it's lifted while the sheet is open. */
+  .contact-list-actions:has(.filter-popover) {
+    z-index: var(--ds-z-modal);
+  }
+
+  .filter-sheet-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: var(--ds-bg-overlay);
+    z-index: var(--ds-z-modal-backdrop);
+  }
+
+  .filter-popover {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--ds-z-modal);
+    min-width: 0;
+    max-height: 80dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--ds-space-2) env(safe-area-inset-right) calc(var(--ds-space-2) + env(safe-area-inset-bottom)) env(safe-area-inset-left);
+    border: none;
+    border-radius: var(--ds-radius-xl) var(--ds-radius-xl) 0 0;
+    box-shadow: var(--ds-modal-shadow);
+    animation: sheet-up var(--ds-duration-slow) var(--ds-easing-out);
+  }
+
+  .filter-popover-header {
+    padding: var(--ds-space-2) var(--ds-space-4) var(--ds-space-3);
+    font-size: var(--ds-font-md);
+  }
+
+  .filter-clear-btn {
+    min-height: var(--ds-control-height);
+    font-size: var(--ds-font-sm);
+  }
+
+  .filter-group-title {
+    padding: var(--ds-space-3) var(--ds-space-4) var(--ds-space-1);
+  }
+
+  .filter-row {
+    min-height: 44px;
+    padding: 0 var(--ds-space-4);
+    font-size: var(--ds-font-sm);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .filter-row:active {
+    background-color: var(--ds-bg-secondary);
+  }
+
+  /* The toast clears the tab bar instead of hiding behind it */
+  .toast {
+    max-width: calc(100vw - 2 * var(--ds-space-4));
+  }
+
+  body:has(.bottom-tab-bar) .toast {
+    bottom: calc(56px + env(safe-area-inset-bottom) + var(--ds-space-3));
+  }
+
+  /* Tall dialogs scroll inside the screen rather than run off it */
+  .modal-overlay {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  .modal-content {
+    max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Touch screens have no hover: a tap mustn't leave a card lifted */
+@media (hover: none) {
+  .card:hover,
+  .contact-card.expanded:hover {
+    box-shadow: var(--ds-shadow-xs);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filter-popover {
+    animation: none;
   }
 }
 

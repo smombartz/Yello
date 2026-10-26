@@ -1,7 +1,7 @@
-import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Icon } from './Icon';
+import { UserAvatar } from './UserAvatar';
 import { isAdmin } from '../lib/admin';
 
 interface NavRailItemProps {
@@ -27,17 +27,7 @@ function NavRailItem({ to, icon, label, end }: NavRailItemProps) {
 export function NavRail() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [avatarError, setAvatarError] = useState(false);
-
   const displayName = user?.name || 'User';
-  const primaryImage = user?.profileImages?.find(img => img.isPrimary);
-  const avatarUrl = primaryImage?.url || user?.avatarUrl;
-  const initials = displayName
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || 'U';
 
   return (
     <nav className="nav-rail">
@@ -59,18 +49,9 @@ export function NavRail() {
         type="button"
         className="nav-rail-item nav-rail-avatar-btn"
         onClick={() => navigate('/profile')}
+        aria-label={displayName}
       >
-        {avatarUrl && !avatarError ? (
-          <img
-            src={avatarUrl}
-            alt={displayName}
-            className="nav-rail-avatar-img"
-            referrerPolicy="no-referrer"
-            onError={() => setAvatarError(true)}
-          />
-        ) : (
-          <div className="nav-rail-avatar-initials">{initials}</div>
-        )}
+        <UserAvatar imgClassName="nav-rail-avatar-img" initialsClassName="nav-rail-avatar-initials" />
         <span className="nav-rail-label">{displayName}</span>
       </button>
     </nav>

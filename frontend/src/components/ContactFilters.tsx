@@ -47,10 +47,14 @@ export function ContactFilters({ filters, onFiltersChange }: ContactFiltersProps
   const [open, setOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
+      // The phone sheet's backdrop closes on its own click; closing here on mousedown
+      // would remove it before the click, which would then land on the row behind.
+      if (e.target === backdropRef.current) return;
       if (
         popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
         buttonRef.current && !buttonRef.current.contains(e.target as Node)
@@ -94,7 +98,10 @@ export function ContactFilters({ filters, onFiltersChange }: ContactFiltersProps
         {activeCount > 0 && <span className="filter-badge">{activeCount}</span>}
       </button>
       {open && (
-        <div ref={popoverRef} className="filter-popover">
+        <div ref={backdropRef} className="filter-sheet-backdrop" onClick={() => setOpen(false)} />
+      )}
+      {open && (
+        <div ref={popoverRef} className="filter-popover" role="dialog" aria-label="Filters">
           <div className="filter-popover-header">
             <span>Filters</span>
             {activeCount > 0 && (
