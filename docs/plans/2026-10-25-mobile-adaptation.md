@@ -48,6 +48,9 @@ keeps the design system (DESIGN.md) as it is. No redesign, no new breakpoints.
 - [x] Landscape: the content and tab bar respect the left and right safe-area insets.
 - [x] Tab bar: the Tools icon matches the desktop rail (screwdriver-wrench).
 - [x] Docs: DESIGN.md (phone header, reach-out bar, 16px fields), docs/log.md.
+- [x] Revision (user request): on phones, a header with search takes two rows; search gets its own 40px row,
+      and Contacts puts an icon-only sort & filter button at its far end. View, sort and filters all move into
+      that sheet (portalled to `<body>`); the list toolbar is gone on phones, leaving only active filter chips.
 
 ## Out of scope
 
@@ -60,3 +63,6 @@ Map view on phones, Tools subpages, onboarding/landing (they have their own resp
 - The filter backdrop needed its own close-on-click, because the popover's document `mousedown` handler would remove it before the
   click and let the tap fall through to the row behind.
 - The filter sheet's slide-up was added to DESIGN.md's short list of sanctioned entrances.
+- Revised on the user's request: search moved to its own header row, and sort/view moved into the filter sheet
+  behind an icon button beside it. The sheet is now portalled to `<body>` (the header is a fixed stacking
+  context under the tab bar), which made the sticky-toolbar `:has()` lift unnecessary, so it was removed.

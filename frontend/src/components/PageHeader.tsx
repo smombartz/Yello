@@ -20,6 +20,7 @@ interface PageHeaderProps {
   onSearchChange?: (value: string) => void;
   onSearchSubmit?: () => void;
   searchPlaceholder?: string;
+  searchAccessory?: ReactNode;
   info?: ReactNode;
   actions?: ReactNode;
   children?: ReactNode;
@@ -32,14 +33,16 @@ export function PageHeader({
   onSearchChange,
   onSearchSubmit,
   searchPlaceholder = 'Search...',
+  searchAccessory,
   info,
   actions,
   children,
 }: PageHeaderProps) {
   const showSearch = onSearchChange !== undefined;
 
+  // On phones a header with search gets a second row for it (see index.css)
   return (
-    <header className="page-header">
+    <header className={`page-header${showSearch ? ' page-header--search' : ''}`}>
       <div className="page-header-row">
         <div className="page-header-col-left">
           <Link to="/dashboard" className="page-header-logo-link" aria-label="Go to dashboard">
@@ -81,6 +84,10 @@ export function PageHeader({
                 placeholder={searchPlaceholder}
                 className="search-bar--header"
               />
+            )}
+
+            {showSearch && searchAccessory && (
+              <div className="page-header-search-accessory">{searchAccessory}</div>
             )}
 
             {info && <div className="page-header-info">{info}</div>}

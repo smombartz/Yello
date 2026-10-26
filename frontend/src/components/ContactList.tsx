@@ -15,6 +15,7 @@ import { EmptyState } from './ui/EmptyState';
 import { useToast } from './ui/Toast';
 import { EXPANDED_CONTACT_PARAM, useSearchParamUpdater } from '../hooks/useSearchParamUpdater';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { SORT_OPTIONS, DEFAULT_SORT } from '../constants/contactListOptions';
 import type { MergeConflict, ContactDetail, ContactListItem } from '../api/types';
 
 interface ContactListProps {
@@ -308,116 +309,121 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
   // Bulk merge/archive/delete is desk work, like the desktop-only Merge and Cleanup
   // routes. On a phone, tapping an avatar opens the row instead of selecting it.
   const selectionEnabled = !isMobile;
+  // Phones keep view, sort and the filter button in the header's sort & filter sheet;
+  // only the active filter chips stay above the list, and no toolbar when there are none.
+  const showToolbarControls = !isMobile;
+  const showToolbar = showToolbarControls || (filters?.size ?? 0) > 0;
 
   return (
     <div className="contact-list">
       {/* Selection toolbar */}
-      <div className="contact-list-actions">
-        {onViewModeChange && (
-          <div className="view-toggle">
-            <button
-              className={`contact-action-button ${viewMode === 'list' ? 'active' : ''}`}
-              onClick={() => onViewModeChange('list')}
-              title="List view"
-            >
-              <Icon name="list" />
-            </button>
-            <button
-              className={`contact-action-button ${viewMode === 'grid' ? 'active' : ''}`}
-              onClick={() => onViewModeChange('grid')}
-              title="Grid view"
-            >
-              <Icon name="table-cells-large" />
-            </button>
-          </div>
-        )}
-        {onSortChange && (
-          <select
-            className="contact-sort-select"
-            value={sort || 'name-asc'}
-            onChange={(e) => onSortChange(e.target.value)}
-          >
-            <option value="name-asc">A → Z</option>
-            <option value="name-desc">Z → A</option>
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-            <option value="updated">Recently updated</option>
-            <option value="last-contacted">Last contacted</option>
-          </select>
-        )}
-        {filters && onFiltersChange && (
-          <>
-            <ContactFilters filters={filters} onFiltersChange={onFiltersChange} />
-            {filters.size > 0 && (
-              <div className="filter-chips">
-                {Array.from(filters).map(key => (
-                  <span key={key} className="filter-chip">
-                    {getFilterLabel(key)}
-                    <button
-                      className="filter-chip-remove"
-                      onClick={() => {
-                        const next = new Set(filters);
-                        next.delete(key);
-                        onFiltersChange(next);
-                      }}
-                      aria-label={`Remove filter: ${getFilterLabel(key)}`}
-                    >
-                      <Icon name="xmark" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-        {selectionEnabled && (
-          <div className="contact-selection-actions">
-            <button
-              className="contact-action-button"
-              onClick={selectedIds.size > 0 ? handleSelectNone : handleSelectPage}
-            >
-              {selectedIds.size > 0 ? 'Select None' : 'Select Page'}
-            </button>
-          </div>
-        )}
-
-        {selectionEnabled && selectedIds.size > 0 && (
-          <div className="contact-action-buttons">
-            {selectedIds.size >= 2 && (
-              <Button
-                variant="primary"
-                icon="code-merge"
-                onClick={handleMergeClick}
-                disabled={mergePreviewMutation.isPending || mergeMutation.isPending}
+      {showToolbar && (
+        <div className="contact-list-actions">
+          {showToolbarControls && onViewModeChange && (
+            <div className="view-toggle">
+              <button
+                className={`contact-action-button ${viewMode === 'list' ? 'active' : ''}`}
+                onClick={() => onViewModeChange('list')}
+                title="List view"
               >
-                {mergePreviewMutation.isPending
-                  ? 'Loading...'
-                  : `Merge (${selectedIds.size})`}
+                <Icon name="list" />
+              </button>
+              <button
+                className={`contact-action-button ${viewMode === 'grid' ? 'active' : ''}`}
+                onClick={() => onViewModeChange('grid')}
+                title="Grid view"
+              >
+                <Icon name="table-cells-large" />
+              </button>
+            </div>
+          )}
+          {showToolbarControls && onSortChange && (
+            <select
+              className="contact-sort-select"
+              value={sort || DEFAULT_SORT}
+              onChange={(e) => onSortChange(e.target.value)}
+            >
+              {SORT_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          )}
+          {filters && onFiltersChange && (
+            <>
+              {showToolbarControls && (
+                <ContactFilters filters={filters} onFiltersChange={onFiltersChange} />
+              )}
+              {filters.size > 0 && (
+                <div className="filter-chips">
+                  {Array.from(filters).map(key => (
+                    <span key={key} className="filter-chip">
+                      {getFilterLabel(key)}
+                      <button
+                        className="filter-chip-remove"
+                        onClick={() => {
+                          const next = new Set(filters);
+                          next.delete(key);
+                          onFiltersChange(next);
+                        }}
+                        aria-label={`Remove filter: ${getFilterLabel(key)}`}
+                      >
+                        <Icon name="xmark" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+          {selectionEnabled && (
+            <div className="contact-selection-actions">
+              <button
+                className="contact-action-button"
+                onClick={selectedIds.size > 0 ? handleSelectNone : handleSelectPage}
+              >
+                {selectedIds.size > 0 ? 'Select None' : 'Select Page'}
+              </button>
+            </div>
+          )}
+
+          {selectionEnabled && selectedIds.size > 0 && (
+            <div className="contact-action-buttons">
+              {selectedIds.size >= 2 && (
+                <Button
+                  variant="primary"
+                  icon="code-merge"
+                  onClick={handleMergeClick}
+                  disabled={mergePreviewMutation.isPending || mergeMutation.isPending}
+                >
+                  {mergePreviewMutation.isPending
+                    ? 'Loading...'
+                    : `Merge (${selectedIds.size})`}
+                </Button>
+              )}
+              <Button
+                variant="secondary"
+                icon="box-archive"
+                onClick={() => setShowArchiveConfirm(true)}
+                disabled={archiveMutation.isPending}
+              >
+                {archiveMutation.isPending
+                  ? 'Archiving...'
+                  : `Archive (${selectedIds.size})`}
               </Button>
-            )}
-            <Button
-              variant="secondary"
-              icon="box-archive"
-              onClick={() => setShowArchiveConfirm(true)}
-              disabled={archiveMutation.isPending}
-            >
-              {archiveMutation.isPending
-                ? 'Archiving...'
-                : `Archive (${selectedIds.size})`}
-            </Button>
-            <Button
-              variant="danger"
-              icon="trash"
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending
-                ? 'Deleting...'
-                : `Delete (${selectedIds.size})`}
-            </Button>
-          </div>
-        )}
-      </div>
+              <Button
+                variant="danger"
+                icon="trash"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending
+                  ? 'Deleting...'
+                  : `Delete (${selectedIds.size})`}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {viewMode === 'list' ? (
         <div ref={listRef}>

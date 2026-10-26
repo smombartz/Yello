@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { ContactList } from './ContactList';
+import { ContactFilters } from './ContactFilters';
 import { Button } from './ui/Button';
 import { EXPANDED_CONTACT_PARAM, useSearchParamUpdater } from '../hooks/useSearchParamUpdater';
 import type { OutletContext } from './Layout';
@@ -42,6 +43,18 @@ export function ContactsPage() {
       search,
       onSearchChange: setSearch,
       searchPlaceholder: 'Search contacts...',
+      // Phones have no list toolbar: view, sort and filters live in one sheet behind this button
+      searchAccessory: isMobile ? (
+        <ContactFilters
+          iconOnly
+          filters={filters}
+          onFiltersChange={setFilters}
+          sort={sort}
+          onSortChange={setSort}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
+      ) : undefined,
       info: <span>{totalContacts.toLocaleString()} contacts</span>,
       // Phones add from the tab bar's + button
       actions: isMobile ? undefined : (
@@ -54,7 +67,7 @@ export function ContactsPage() {
         </Button>
       ),
     });
-  }, [setHeaderConfig, search, setSearch, totalContacts, navigate, isMobile]);
+  }, [setHeaderConfig, search, setSearch, totalContacts, navigate, isMobile, filters, setFilters, sort, setSort, viewMode, setViewMode]);
 
   return (
     <ContactList

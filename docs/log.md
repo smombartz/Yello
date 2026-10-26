@@ -1,5 +1,38 @@
 # Change Log
 
+## 2026-10-25 — Phone header: search on its own row, sort & filter behind one icon button
+
+**Session:** `ccd15ef7-4347-4d2d-a5b9-95249cd3d546`
+
+**What Changed:**
+- On phones (≤768px) a header with search becomes two rows: mark · title · actions · avatar, then a
+  full-width 40px search row. `--ds-header-height` grows to match (`:root:has(.page-header--search)`)
+- New `searchAccessory` header slot, placed at the far end of the search row. On phones, Contacts puts an
+  icon-only sort & filter button there (sliders icon, with an active-filter count badge)
+- `ContactFilters` gains an `iconOnly` mode with View (List | Grid) and Sort sections above the filter groups,
+  a Done button and Escape-to-close. The sheet is portalled to `<body>`
+- On phones the Contacts list toolbar is gone (view toggle, sort select and Filter button moved into the sheet).
+  Active filter chips still show above the list
+- The sort options moved to `constants/contactListOptions.ts`, shared by the desktop select and the sheet
+- Removed the sticky-toolbar `:has(.filter-popover)` z-index lift; the portal makes it unnecessary
+
+**Why:**
+- User request: give search its own row, and gather every sort, view and filter option behind one
+  icon button beside it
+
+**Files Modified:**
+- `frontend/src/components/PageHeader.tsx` — `searchAccessory` prop, `.page-header--search` modifier
+- `frontend/src/components/Layout.tsx` — `PageHeaderConfig.searchAccessory`
+- `frontend/src/components/ContactFilters.tsx` — `iconOnly`, `sort`/`onSortChange`, `viewMode`/`onViewModeChange`, portal, Escape
+- `frontend/src/components/ContactsPage.tsx` — passes the phone sort & filter button as the search accessory
+- `frontend/src/components/ContactList.tsx` — `showToolbarControls`/`showToolbar`, `SORT_OPTIONS` select
+- `frontend/src/constants/contactListOptions.ts` — new, `SORT_OPTIONS`, `DEFAULT_SORT`
+- `frontend/src/index.css` — two-row phone header grid, `.filter-icon-trigger`, `.filter-segmented`/`.filter-segment`,
+  `.filter-row-check`, `.filter-done-btn`, `.filter-popover-header-actions`
+- `DESIGN.md` — Responsive (two-row header, 40px search-row exception), Sort & filter sheet
+
+---
+
 ## 2026-10-25 — Phone layout tuned for lookup and reach-out
 
 **Session:** `ccd15ef7-4347-4d2d-a5b9-95249cd3d546`

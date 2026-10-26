@@ -3290,6 +3290,12 @@ a.nav-rail-item.active {
   margin-bottom: var(--ds-space-1);
 }
 
+.filter-popover-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-4);
+}
+
 .filter-clear-btn {
   background: none;
   border: none;
@@ -3340,6 +3346,75 @@ a.nav-rail-item.active {
 .filter-row-label {
   flex: 1;
   text-align: left;
+}
+
+/* Sort rows: the chosen order carries a violet check */
+.filter-row-check {
+  font-size: var(--ds-font-sm);
+  color: var(--ds-color-primary);
+}
+
+.filter-row.selected {
+  font-weight: var(--ds-weight-medium);
+}
+
+/* View: List | Grid, one segmented control */
+.filter-segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-1) 0.75rem var(--ds-space-2);
+}
+
+.filter-segment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+  height: var(--ds-control-height);
+  border: 1px solid var(--ds-border-color);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-bg-primary);
+  color: var(--ds-text-secondary);
+  font-family: inherit;
+  font-size: var(--ds-font-sm);
+  font-weight: var(--ds-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--ds-duration-normal) var(--ds-easing-default), border-color var(--ds-duration-normal) var(--ds-easing-default), color var(--ds-duration-normal) var(--ds-easing-default);
+}
+
+.filter-segment.selected {
+  background: var(--ds-color-primary-light);
+  border-color: var(--ds-color-primary);
+  color: var(--ds-color-primary);
+}
+
+.filter-done-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: var(--ds-font-sm);
+  font-weight: var(--ds-weight-semibold);
+  color: var(--ds-color-primary);
+  cursor: pointer;
+}
+
+/* Icon-only sort & filter trigger (phone header); the count rides its corner */
+.filter-icon-trigger {
+  position: relative;
+}
+
+.filter-icon-trigger .filter-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+}
+
+.filter-icon-trigger.is-active {
+  background-color: var(--ds-color-primary-light);
+  border-color: var(--ds-color-primary);
+  color: var(--ds-color-primary);
 }
 
 .filter-state {
@@ -6851,6 +6926,75 @@ a.nav-rail-item.active {
     font-weight: var(--ds-weight-semibold);
   }
 
+  /* With search, the phone header takes two rows: mark · title · actions · avatar,
+     then the search across the width, with its accessory (sort & filter) at
+     the end under the avatar. The center column's wrappers dissolve into
+     the grid so each piece can be placed. */
+  :root:has(.page-header--search) {
+    --ds-header-height: calc(56px + 40px + var(--ds-space-3) + env(safe-area-inset-top));
+  }
+
+  .page-header--search {
+    padding-bottom: var(--ds-space-3);
+  }
+
+  .page-header--search .page-header-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: 56px 40px;
+    align-items: center;
+    height: auto;
+  }
+
+  .page-header--search .page-header-col-center,
+  .page-header--search .page-header-center-row {
+    display: contents;
+  }
+
+  .page-header--search .page-header-col-left {
+    grid-area: 1 / 1;
+  }
+
+  .page-header--search .page-header-title,
+  .page-header--search .page-header-breadcrumbs {
+    grid-area: 1 / 2;
+  }
+
+  .page-header--search .page-header-actions {
+    grid-area: 1 / 3;
+  }
+
+  .page-header--search .page-header-col-right {
+    grid-area: 1 / 4;
+    justify-self: end;
+  }
+
+  .page-header--search .search-bar--header {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    max-width: none;
+    height: 40px;
+    margin-left: 0;
+  }
+
+  .page-header--search .page-header-row:has(.page-header-search-accessory) .search-bar--header {
+    grid-column: 1 / -2;
+  }
+
+  .page-header-search-accessory {
+    grid-area: 2 / 4;
+    justify-self: end;
+  }
+
+  .page-header-search-accessory .btn--icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .page-header--search .page-header-sub {
+    grid-column: 1 / -1;
+  }
+
   /* Profile's header: Logout stays, the email goes */
   .page-header .header-user-email {
     display: none;
@@ -7040,12 +7184,8 @@ a.nav-rail-item.active {
     gap: 0;
   }
 
-  /* Filter popover becomes a bottom sheet. The sticky toolbar is a stacking
-     context below the header and tab bar, so it's lifted while the sheet is open. */
-  .contact-list-actions:has(.filter-popover) {
-    z-index: var(--ds-z-modal);
-  }
-
+  /* Sort & filter becomes a bottom sheet, portalled to <body> so it sits
+     above the header and tab bar */
   .filter-sheet-backdrop {
     display: block;
     position: fixed;
@@ -7095,6 +7235,20 @@ a.nav-rail-item.active {
 
   .filter-row:active {
     background-color: var(--ds-bg-secondary);
+  }
+
+  .filter-segmented {
+    padding: var(--ds-space-1) var(--ds-space-4) var(--ds-space-2);
+  }
+
+  .filter-segment {
+    height: 40px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .filter-done-btn,
+  .filter-clear-btn {
+    min-height: 40px;
   }
 
   /* The toast clears the tab bar instead of hiding behind it */

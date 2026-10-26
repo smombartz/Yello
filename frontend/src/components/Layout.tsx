@@ -14,6 +14,8 @@ export interface PageHeaderConfig {
   onSearchChange?: (value: string) => void;
   onSearchSubmit?: () => void;
   searchPlaceholder?: string;
+  /** Beside the search field, at the end of its row (phones: the sort & filter button) */
+  searchAccessory?: ReactNode;
   info?: ReactNode;
   actions?: ReactNode;
   children?: ReactNode;
