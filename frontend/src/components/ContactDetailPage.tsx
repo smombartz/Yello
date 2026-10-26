@@ -56,7 +56,7 @@ export function ContactDetailPage() {
 
   return (
     <>
-      <div className="page-content">
+      <div className="page-content contact-detail-page">
         <div className="contact-detail-content">
           <div className="contact-detail-identity">
             <Avatar photoUrl={contact.photoUrl || contact.linkedinEnrichment?.photoLinkedin || null} name={contact.displayName} size={96} />
@@ -68,7 +68,7 @@ export function ContactDetailPage() {
             </div>
           </div>
 
-          <ContactRowExpanded contact={contact} />
+          <ContactRowExpanded contact={contact} onDeleted={() => navigate('/contacts', { replace: true })} />
           <RemoteVersionsPanel contactId={contact.id} />
         </div>
       </div>

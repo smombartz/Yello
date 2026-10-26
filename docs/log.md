@@ -1,5 +1,43 @@
 # Change Log
 
+## 2026-10-26 — Archived group, Delete in edit mode, pinned Save/Cancel
+
+**Session:** `86dfd478-37f7-4593-bde5-92c0b360c312`
+
+**What Changed:**
+- Archived contacts no longer show in the contact list, its search or category filter, Select All ids,
+  the contact count, the group counts (groups that only hold archived contacts disappear) or the map
+- Groups page gets a built-in **Archived** card (desktop, when any are archived) that opens the Archived
+  view; that view's breadcrumb now points to Groups instead of Tools (which never linked to it)
+- Edit mode gets a **Delete contact** button at the bottom of the card, with a confirm that names the
+  synced address books (iCloud / Google Contacts) it also deletes from. The list row collapses afterwards;
+  the detail page returns to Contacts
+- Edit mode's Save/Cancel row is now sticky under the page header (and under the desktop list toolbar), so
+  it stays in reach on a long contact. On phones only the buttons stick, above the stacked name fields
+- Archive, unarchive and delete also invalidate the `groups` and `map` queries
+
+**Why:**
+- User request: put archived contacts in an "Archived" group and keep them out of the main search, allow
+  deleting a contact from its edit form, and keep Save/Cancel at the top while editing
+- The main list query never filtered `archived_at`, so archived contacts were still listed and searchable
+
+**Files Modified:**
+- `backend/src/routes/contacts.ts` — `archived_at IS NULL` in `GET /`, `/ids`, `/count`, `/groups`
+- `backend/src/routes/map.ts` — `archived_at IS NULL` in every contact-id query
+- `backend/src/routes/__tests__/contacts.test.ts` — archived-contacts tests (list, search, group, groups, ids, count)
+- `frontend/src/components/GroupsView.tsx` — Archived card via `useArchivedCount`, hidden on phones
+- `frontend/src/components/ArchivedView.tsx` — breadcrumb → Groups, empty-state copy
+- `frontend/src/components/ContactRowExpanded.tsx` — `onDeleted`, `DeleteContactDialog` (portaled), Delete row
+- `frontend/src/components/ContactRow.tsx` — collapses the row on delete
+- `frontend/src/components/ContactDetailPage.tsx` — navigates to Contacts on delete, `.contact-detail-page`
+- `frontend/src/components/ContactList.tsx` — measures the sticky toolbar, `--contact-list-toolbar-height`
+- `frontend/src/api/archiveHooks.ts`, `frontend/src/api/cleanupHooks.ts` — invalidate `groups`, `map`
+- `frontend/src/index.css` — sticky `.expanded-top-row`, `.contact-card.expanded { overflow: clip }`,
+  `.expanded-delete-row`, phone sticky `.expanded-actions`
+- `docs/reference.md` — *Archived contacts: the Archived group*, *Edit mode: pinned Save/Cancel, Delete at the bottom*
+
+---
+
 ## 2026-10-25 — Phone header: search on its own row, sort & filter behind one icon button
 
 **Session:** `ccd15ef7-4347-4d2d-a5b9-95249cd3d546`

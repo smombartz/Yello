@@ -215,11 +215,12 @@ export default async function contactsRoutes(
     }
   }, async (request, _reply) => {
     const db = getUserDatabase(request.user!.id);
-    const result = db.prepare('SELECT COUNT(*) as count FROM contacts').get() as CountRow;
+    const result = db.prepare('SELECT COUNT(*) as count FROM contacts WHERE archived_at IS NULL').get() as CountRow;
     return { total: result.count };
   });
 
-  // GET /api/contacts/groups - Get all categories with contact counts
+  // GET /api/contacts/groups - Get all categories with contact counts.
+  // Archived contacts live in the Archived view, so they don't count toward (or keep alive) a group.
   fastify.get('/groups', {
     schema: {
       response: {
@@ -229,9 +230,11 @@ export default async function contactsRoutes(
   }, async (request, _reply) => {
     const db = getUserDatabase(request.user!.id);
     const groups = db.prepare(`
-      SELECT category, COUNT(DISTINCT contact_id) as contactCount
-      FROM contact_categories
-      GROUP BY category
+      SELECT cc.category, COUNT(DISTINCT cc.contact_id) as contactCount
+      FROM contact_categories cc
+      JOIN contacts c ON c.id = cc.contact_id
+      WHERE c.archived_at IS NULL
+      GROUP BY cc.category
       ORDER BY category
     `).all() as GroupRow[];
 
@@ -261,7 +264,8 @@ export default async function contactsRoutes(
       const rows = db.prepare(`
         SELECT c.id
         FROM contacts c
-        WHERE c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
+        WHERE c.archived_at IS NULL
+          AND c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
         ORDER BY c.last_name, c.first_name, c.display_name
       `).all(searchTerm) as { id: number }[];
 
@@ -270,6 +274,7 @@ export default async function contactsRoutes(
       const rows = db.prepare(`
         SELECT id
         FROM contacts
+        WHERE archived_at IS NULL
         ORDER BY last_name, first_name, display_name
       `).all() as { id: number }[];
 
@@ -349,7 +354,8 @@ export default async function contactsRoutes(
 
     // Build query parts dynamically
     const joins: string[] = [];
-    const conditions: string[] = [];
+    // Archived contacts only show in the Archived view (the "Archived" group).
+    const conditions: string[] = ['c.archived_at IS NULL'];
     const params: (string | number)[] = [];
 
     // Category filter
@@ -408,7 +414,7 @@ export default async function contactsRoutes(
       default: orderBy = 'c.last_name, c.first_name, c.display_name'; break;
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause = `WHERE ${conditions.join(' AND ')}`;
     const joinClause = joins.join('\n        ');
 
     // Count query

@@ -70,6 +70,8 @@ export function useDeleteContacts() {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       queryClient.invalidateQueries({ queryKey: ['contactCount'] });
       queryClient.invalidateQueries({ queryKey: ['duplicates'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['map'] });
     },
   });
 }

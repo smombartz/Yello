@@ -184,6 +184,34 @@ The three-dot button at the end of each list row opens a menu that works without
 
 The menu is the generic `ActionMenu` (`frontend/src/components/ui/ActionMenu.tsx`). It's portaled to `<body>` with fixed positioning, because `.contact-card` is `overflow: hidden` and each virtual row is transformed, which would clip it or stack it under the next row. React click events still bubble through the portal to the card, so both the trigger and the menu stop propagation. It supports arrow keys, Home and End. It closes on outside click, Escape (captured so Layout doesn't navigate away), Tab, scroll and resize. Below 640px the row's action icons are hidden, menu included.
 
+### Archived contacts: the Archived group
+
+Archived contacts (`archived_at` set) show **only** in the Archived view (`/archived`). The contact list,
+its search and category filter, Select All (`/api/contacts/ids`), `/api/contacts/count`, the group counts
+(`/api/contacts/groups`, which also drops groups whose contacts are all archived) and the map all filter
+`archived_at IS NULL`. Before 2026-10-26 the list, its search, groups and the map did not, so archived
+contacts kept showing up there.
+
+The Groups page shows a built-in **Archived** card (when there are archived contacts) that opens the
+Archived view, which keeps Restore, Delete permanently and Export. It is not a category: a real
+`Archived` category would sync to iCloud/Google as a group label and could clash with a user's own
+category of that name. The Archived view is desktop-only (bulk selection), so phones don't get the card.
+Archive, unarchive and delete invalidate the `groups` and `map` queries as well as `contacts`.
+
+### Edit mode: pinned Save/Cancel, Delete at the bottom
+
+- The edit form's top row (name fields + Cancel/Save) is `position: sticky` under the page header, and
+  under the contact list's sticky toolbar on desktop. `ContactList` measures that toolbar with a
+  `ResizeObserver` and passes `--contact-list-toolbar-height`. Below 640px the name fields stack, so the
+  row is `display: contents` and only the buttons stick, moved above the fields.
+- Sticky needs the window to be the scroll container: the expanded card uses `overflow: clip` instead of
+  `hidden`, and the detail page's `.page-content` (`.contact-detail-page`) is `overflow-y: visible`.
+- **Delete contact** shows only in edit mode, at the bottom of the card, behind a confirm. The dialog names
+  the synced address books it will also delete from (from `/api/sync/status`). It is portaled to `<body>`,
+  since the list row is transformed and clipped. It uses `DELETE /api/cleanup/delete` (a real
+  `DELETE FROM contacts`, so `contacts_bd_sync` tombstones the remote cards, and `/api/cleanup` is in
+  `EDITING_PREFIXES`). Afterwards the list row collapses, and the detail page goes back to Contacts.
+
 ### VCF import (background job)
 
 Importing a `.vcf` is a **staged, chunked background job**, not an inline request. This matters because a photo-heavy export (iPhone/iCloud) is routinely tens of megabytes and takes minutes to process.

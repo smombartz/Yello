@@ -46,6 +46,8 @@ export function useArchiveContacts() {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       queryClient.invalidateQueries({ queryKey: ['contactCount'] });
       queryClient.invalidateQueries({ queryKey: ['duplicates'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['map'] });
     }
   });
 }
@@ -65,6 +67,8 @@ export function useUnarchiveContacts() {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       queryClient.invalidateQueries({ queryKey: ['contactCount'] });
       queryClient.invalidateQueries({ queryKey: ['duplicates'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['map'] });
     }
   });
 }

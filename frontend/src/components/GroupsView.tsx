@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import type { OutletContext } from './Layout';
 import { useGroups } from '../api/hooks';
+import { useArchivedCount } from '../api/archiveHooks';
 import { ContactList } from './ContactList';
 import { Icon } from './Icon';
 import { LoadingSpinner } from './ui/LoadingSpinner';
@@ -9,7 +10,7 @@ import { EmptyState } from './ui/EmptyState';
 import { EXPANDED_CONTACT_PARAM, useSearchParamUpdater } from '../hooks/useSearchParamUpdater';
 
 export function GroupsView() {
-  const { setHeaderConfig } = useOutletContext<OutletContext>();
+  const { setHeaderConfig, isMobile } = useOutletContext<OutletContext>();
   const navigate = useNavigate();
   // The open group is the route (/groups/:category) and the search is ?q=, so both survive a copied link.
   const { category: selectedCategory = null } = useParams<{ category: string }>();
@@ -20,6 +21,10 @@ export function GroupsView() {
     return (localStorage.getItem('contactViewMode') as 'list' | 'grid') || 'list';
   });
   const { data, isLoading, error } = useGroups();
+  const { data: archivedData } = useArchivedCount();
+  // Archived is a built-in group, not a category: it opens the Archived view, which
+  // is desktop-only (bulk restore/delete), so phones don't get the card.
+  const archivedCount = isMobile ? 0 : archivedData?.count ?? 0;
 
   const setSearch = useCallback((q: string) => {
     updateParams({ q, [EXPANDED_CONTACT_PARAM]: null });
@@ -48,14 +53,16 @@ export function GroupsView() {
         search,
         onSearchChange: setSearch,
         searchPlaceholder: 'Search groups...',
-        info: data?.groups ? <span>{data.groups.length} groups</span> : undefined,
+        info: data?.groups ? <span>{data.groups.length + (archivedCount > 0 ? 1 : 0)} groups</span> : undefined,
       });
     }
-  }, [setHeaderConfig, selectedCategory, search, setSearch, handleBackToGroups, data?.groups]);
+  }, [setHeaderConfig, selectedCategory, search, setSearch, handleBackToGroups, data?.groups, archivedCount]);
 
+  const query = search.trim().toLowerCase();
   const filteredGroups = (data?.groups ?? []).filter((group) =>
-    group.category.toLowerCase().includes(search.trim().toLowerCase())
+    group.category.toLowerCase().includes(query)
   );
+  const showArchived = archivedCount > 0 && 'archived'.includes(query);
 
   // When a category is selected, show the filtered contact list
   if (selectedCategory) {
@@ -80,13 +87,13 @@ export function GroupsView() {
           <Icon name="circle-exclamation" />
           <p>Error loading groups: {error.message}</p>
         </div>
-      ) : !data?.groups.length ? (
+      ) : !data?.groups.length && archivedCount === 0 ? (
         <EmptyState
           icon="folder-minus"
           title="No Groups"
           description="Your contacts don't have any categories assigned yet."
         />
-      ) : !filteredGroups.length ? (
+      ) : !filteredGroups.length && !showArchived ? (
         <EmptyState
           icon="magnifying-glass"
           title="No matching groups"
@@ -112,6 +119,20 @@ export function GroupsView() {
               <Icon name="chevron-right" className="group-card-arrow" />
             </div>
           ))}
+          {showArchived && (
+            <div className="card group-card" onClick={() => navigate('/archived')}>
+              <div className="group-card-icon">
+                <Icon name="box-archive" />
+              </div>
+              <div className="group-card-info">
+                <span className="group-name">Archived</span>
+                <span className="group-count">
+                  {archivedCount} contact{archivedCount !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <Icon name="chevron-right" className="group-card-arrow" />
+            </div>
+          )}
         </div>
       )}
     </div>

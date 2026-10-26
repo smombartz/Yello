@@ -1,7 +1,12 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ContactDetail, ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, UpdateContactRequest } from '../api/types';
 import { useUpdateContact } from '../api/hooks';
+import { useDeleteContacts } from '../api/cleanupHooks';
+import { useSyncStatus } from '../api/syncHooks';
 import { Button } from './ui/Button';
+import { ConfirmDialog } from './ui/ConfirmDialog';
+import { useToast } from './ui/Toast';
 import { EditableField, LinkedInSection, ReachOutBar, SaveErrors } from './ContactFormSections';
 import { ContactCardView } from './ContactCardView';
 import { EmailHistorySection } from './EmailHistorySection';
@@ -13,6 +18,8 @@ interface ContactRowExpandedProps {
   contact: ContactDetail;
   /** Increment to open the edit form from outside (the card's menu). Ignored while already editing. */
   editRequest?: number;
+  /** Called once the contact has been deleted, so the host can collapse the row or leave the page. */
+  onDeleted?: () => void;
 }
 
 // Edit form state interface
@@ -33,7 +40,29 @@ interface EditFormState {
   relatedPeople: ContactRelatedPerson[];
 }
 
-export function ContactRowExpanded({ contact, editRequest = 0 }: ContactRowExpandedProps) {
+/** Names the synced address books the delete will also reach, so the warning is specific. */
+function DeleteContactDialog({ name, onConfirm, onCancel }: { name: string; onConfirm: () => void; onCancel: () => void }) {
+  const { data } = useSyncStatus();
+  const synced = (data?.providers ?? [])
+    .filter(p => p.enabled)
+    .map(p => (p.provider === 'icloud' ? 'iCloud' : 'Google Contacts'));
+  return (
+    <ConfirmDialog
+      title={`Delete ${name}?`}
+      message={
+        synced.length
+          ? `This can't be undone. ${name} is also deleted from ${synced.join(' and ')}. To keep it out of your list without deleting it, archive it instead.`
+          : `This can't be undone. To keep it out of your list without deleting it, archive it instead.`
+      }
+      confirmLabel="Delete"
+      danger
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    />
+  );
+}
+
+export function ContactRowExpanded({ contact, editRequest = 0, onDeleted }: ContactRowExpandedProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +71,11 @@ export function ContactRowExpanded({ contact, editRequest = 0 }: ContactRowExpan
   const problems = showProblems && editForm ? buildContactLists(editForm).problems : [];
   const [handledEditRequest, setHandledEditRequest] = useState(0);
   const updateContactMutation = useUpdateContact();
+  const deleteContactMutation = useDeleteContacts();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { showToast } = useToast();
   const copyLink = useCopyLink();
+  const isBusy = updateContactMutation.isPending || deleteContactMutation.isPending;
 
   // The URL already points at this contact (?contact= in a list, /contacts/:id on
   // the detail page). Copying it here also covers the desktop app, which has no address bar.
@@ -115,6 +148,17 @@ export function ContactRowExpanded({ contact, editRequest = 0 }: ContactRowExpan
     }
   };
 
+  const handleDelete = () => {
+    setShowDeleteConfirm(false);
+    deleteContactMutation.mutate([contact.id], {
+      onSuccess: () => {
+        showToast(`Deleted ${contact.displayName}`);
+        onDeleted?.();
+      },
+      onError: (err) => setError(err instanceof Error ? err.message : 'Failed to delete contact'),
+    });
+  };
+
   // ─── Edit Mode ───────────────────────────────────────────────
   if (isEditMode && editForm) {
     return (
@@ -147,7 +191,7 @@ export function ContactRowExpanded({ contact, editRequest = 0 }: ContactRowExpan
             <Button
               variant="secondary"
               onClick={handleCancel}
-              disabled={updateContactMutation.isPending}
+              disabled={isBusy}
             >
               Cancel
             </Button>
@@ -156,7 +200,7 @@ export function ContactRowExpanded({ contact, editRequest = 0 }: ContactRowExpan
               icon="floppy-disk"
               loading={updateContactMutation.isPending}
               onClick={handleSave}
-              disabled={updateContactMutation.isPending}
+              disabled={isBusy}
             >
               {updateContactMutation.isPending ? 'Saving...' : 'Save'}
             </Button>
@@ -186,6 +230,29 @@ export function ContactRowExpanded({ contact, editRequest = 0 }: ContactRowExpan
           }}
           showMetadata={false}
         />
+
+        {/* Bottom: Delete, only in edit mode. Save/Cancel stay pinned at the top. */}
+        <div className="expanded-bottom-actions expanded-delete-row">
+          <Button
+            variant="danger"
+            icon="trash-can"
+            loading={deleteContactMutation.isPending}
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={isBusy}
+          >
+            {deleteContactMutation.isPending ? 'Deleting...' : 'Delete contact'}
+          </Button>
+        </div>
+
+        {/* Portaled: the list row is transformed and clipped, which would trap a fixed overlay */}
+        {showDeleteConfirm && createPortal(
+          <DeleteContactDialog
+            name={contact.displayName || 'this contact'}
+            onConfirm={handleDelete}
+            onCancel={() => setShowDeleteConfirm(false)}
+          />,
+          document.body
+        )}
       </div>
     );
   }

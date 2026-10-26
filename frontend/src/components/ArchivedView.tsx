@@ -105,7 +105,7 @@ export function ArchivedView() {
   useEffect(() => {
     setHeaderConfig({
       title: 'Archived',
-      breadcrumbs: [{ label: 'Tools', to: '/tools' }],
+      breadcrumbs: [{ label: 'Groups', to: '/groups' }],
       info: <span>{archivedCount} contacts</span>,
       actions: archivedCount > 0 ? (
         <Button variant="secondary" icon="download" onClick={handleExport}>
@@ -158,7 +158,7 @@ export function ArchivedView() {
           <EmptyState
             icon="boxes-stacked"
             title="No Archived Contacts"
-            description="Contacts you archive will appear here."
+            description="Contacts you archive will appear here, out of your contact list and search."
           />
         ) : (
           <div className="archived-list">

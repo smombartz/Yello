@@ -1584,6 +1584,34 @@ a.nav-rail-item.active {
   gap: var(--ds-space-2);
 }
 
+/* Edit mode: Save/Cancel stay in reach on a long contact. The row sticks under the
+   page header, and under the contact list's sticky toolbar when there is one. */
+.expanded-content > .expanded-top-row {
+  position: sticky;
+  top: calc(var(--ds-header-height) + var(--contact-list-toolbar-height, 0px));
+  z-index: 2;
+  padding-block: var(--ds-space-2);
+  background: var(--ds-bg-primary);
+}
+
+/* `hidden` would make the card the sticky row's scroll container; `clip` still
+   clips to the radius without one, so the row sticks to the window instead. */
+.contact-card.expanded {
+  overflow: clip;
+}
+
+/* Same reason: the detail page's content box mustn't be a scroll container. */
+.page-content.contact-detail-page {
+  overflow-y: visible;
+}
+
+/* Edit mode: Delete sits alone at the bottom, away from Save. */
+.expanded-bottom-actions.expanded-delete-row {
+  justify-content: flex-start;
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-border-color);
+}
+
 /* Multi-row grid layout */
 .expanded-row {
   display: grid;
@@ -2148,6 +2176,20 @@ a.nav-rail-item.active {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--ds-space-4);
+  }
+  /* The stacked name fields are too tall to pin, so in edit mode the row dissolves
+     and only the buttons stick, moved above the name fields. */
+  .expanded-content > .expanded-top-row {
+    display: contents;
+  }
+  .expanded-content > .expanded-top-row > .expanded-actions {
+    order: -1;
+    position: sticky;
+    top: calc(var(--ds-header-height) + var(--contact-list-toolbar-height, 0px));
+    z-index: 2;
+    justify-content: flex-end;
+    padding-block: var(--ds-space-2);
+    background: var(--ds-bg-primary);
   }
 }
 

@@ -156,7 +156,11 @@ export function ContactRow({
             </div>
           )}
           {detailedContact && (
-            <ContactRowExpanded contact={detailedContact} editRequest={editRequest} />
+            <ContactRowExpanded
+              contact={detailedContact}
+              editRequest={editRequest}
+              onDeleted={() => onToggle(contact.id)}
+            />
           )}
         </>
       )}

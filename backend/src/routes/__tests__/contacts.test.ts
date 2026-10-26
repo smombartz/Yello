@@ -51,6 +51,47 @@ describe('contacts routes', () => {
     db.exec('DELETE FROM contacts_unified_fts');
   });
 
+  describe('archived contacts', () => {
+    // Archived contacts only show in the Archived view, never in the list, its search or groups.
+    function seed() {
+      const db = getUserDatabase(1);
+      const active = db.prepare('INSERT INTO contacts (display_name, company) VALUES (?, ?)').run('Ada Active', 'Acme').lastInsertRowid as number;
+      const archived = db.prepare("INSERT INTO contacts (display_name, company, archived_at) VALUES (?, ?, datetime('now'))").run('Arlo Archived', 'Acme').lastInsertRowid as number;
+      const onlyArchived = db.prepare("INSERT INTO contacts (display_name, archived_at) VALUES (?, datetime('now'))").run('Olive Old').lastInsertRowid as number;
+      for (const id of [active, archived, onlyArchived]) rebuildContactSearch(db, id);
+      db.prepare('INSERT INTO contact_categories (contact_id, category) VALUES (?, ?)').run(active, 'Friends');
+      db.prepare('INSERT INTO contact_categories (contact_id, category) VALUES (?, ?)').run(archived, 'Friends');
+      db.prepare('INSERT INTO contact_categories (contact_id, category) VALUES (?, ?)').run(onlyArchived, 'Old crew');
+      return { active, archived, onlyArchived };
+    }
+
+    it('are left out of the list and its search', async () => {
+      seed();
+      const list = (await app.inject({ method: 'GET', url: '/api/contacts' })).json();
+      expect(list.contacts.map((c: { displayName: string }) => c.displayName)).toEqual(['Ada Active']);
+      expect(list.total).toBe(1);
+
+      const search = (await app.inject({ method: 'GET', url: '/api/contacts?search=Acme' })).json();
+      expect(search.contacts.map((c: { displayName: string }) => c.displayName)).toEqual(['Ada Active']);
+    });
+
+    it('are left out of a group, its counts, and groups that only hold archived contacts', async () => {
+      seed();
+      const inGroup = (await app.inject({ method: 'GET', url: '/api/contacts?category=Friends' })).json();
+      expect(inGroup.total).toBe(1);
+
+      const groups = (await app.inject({ method: 'GET', url: '/api/contacts/groups' })).json();
+      expect(groups.groups).toEqual([{ category: 'Friends', contactCount: 1 }]);
+    });
+
+    it('are left out of Select All ids and the count', async () => {
+      const { active } = seed();
+      expect((await app.inject({ method: 'GET', url: '/api/contacts/ids' })).json().contactIds).toEqual([active]);
+      expect((await app.inject({ method: 'GET', url: '/api/contacts/ids?search=Acme' })).json().contactIds).toEqual([active]);
+      expect((await app.inject({ method: 'GET', url: '/api/contacts/count' })).json()).toEqual({ total: 1 });
+    });
+  });
+
   describe('GET /api/contacts/count', () => {
     it('should return count of 0 when no contacts', async () => {
       const response = await app.inject({

@@ -96,7 +96,8 @@ export default async function mapRoutes(
           SELECT DISTINCT c.id
           FROM contacts c
           INNER JOIN contact_categories cc ON c.id = cc.contact_id
-          WHERE c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
+          WHERE c.archived_at IS NULL
+          AND c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
           AND cc.category = ?
         `;
         params.push(searchTerm, category);
@@ -104,7 +105,8 @@ export default async function mapRoutes(
         contactIdsQuery = `
           SELECT DISTINCT c.id
           FROM contacts c
-          WHERE c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
+          WHERE c.archived_at IS NULL
+          AND c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
         `;
         params.push(searchTerm);
       }
@@ -113,11 +115,11 @@ export default async function mapRoutes(
         SELECT DISTINCT c.id
         FROM contacts c
         INNER JOIN contact_categories cc ON c.id = cc.contact_id
-        WHERE cc.category = ?
+        WHERE c.archived_at IS NULL AND cc.category = ?
       `;
       params.push(category);
     } else {
-      contactIdsQuery = 'SELECT id FROM contacts';
+      contactIdsQuery = 'SELECT id FROM contacts WHERE archived_at IS NULL';
     }
 
     // Get filtered contact IDs

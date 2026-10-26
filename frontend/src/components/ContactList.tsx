@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
+import type { CSSProperties } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useContacts, useMergePreview, useMergeSelectedContacts } from '../api/hooks';
@@ -56,6 +57,18 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+
+  // An expanded card's Save/Cancel stick just below this sticky toolbar, so CSS needs its height.
+  const [toolbarHeight, setToolbarHeight] = useState(0);
+  const toolbarRef = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    const observer = new ResizeObserver(() => setToolbarHeight(el.offsetHeight));
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      setToolbarHeight(0);
+    };
+  }, []);
 
   // Merge state
   const [showMergeModal, setShowMergeModal] = useState(false);
@@ -315,10 +328,10 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
   const showToolbar = showToolbarControls || (filters?.size ?? 0) > 0;
 
   return (
-    <div className="contact-list">
+    <div className="contact-list" style={{ '--contact-list-toolbar-height': `${toolbarHeight}px` } as CSSProperties}>
       {/* Selection toolbar */}
       {showToolbar && (
-        <div className="contact-list-actions">
+        <div className="contact-list-actions" ref={toolbarRef}>
           {showToolbarControls && onViewModeChange && (
             <div className="view-toggle">
               <button
