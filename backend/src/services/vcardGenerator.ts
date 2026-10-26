@@ -388,8 +388,17 @@ export function generateVcard(contact: ContactForVcard, options: GenerateVcardOp
   // BDAY (Birthday)
   if (contact.birthday) {
     // Try to format as ISO date (YYYY-MM-DD or YYYYMMDD)
-    const bday = contact.birthday.replace(/-/g, '');
-    lines.push(`BDAY${vp('BDAY')}:${bday}`);
+    const noYear = contact.birthday.match(/^--(\d{2})-?(\d{2})$/);
+    if (noYear) {
+      // A yearless --MM-DD (from Google, or entered without a year) is written
+      // the way Apple writes one: placeholder year 1604 plus X-APPLE-OMIT-YEAR.
+      // Stripping the dashes instead would emit an invalid BDAY:MMDD.
+      const params = { 'X-APPLE-OMIT-YEAR': ['1604'], ...contact.vcardParams?.BDAY };
+      lines.push(`BDAY${formatParams(params)}:1604${noYear[1]}${noYear[2]}`);
+    } else {
+      const bday = contact.birthday.replace(/-/g, '');
+      lines.push(`BDAY${vp('BDAY')}:${bday}`);
+    }
   }
 
   // Custom dates, labelled the way Apple writes them

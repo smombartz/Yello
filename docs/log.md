@@ -1,5 +1,26 @@
 # Change Log
 
+## 2026-10-26 — Yearless birthdays export as valid Apple BDAY
+
+**Session:** `69a17ea0-53bd-4d6f-9e8d-94f37623a791`
+
+**What Changed:**
+- `generateVcard` writes a `--MM-DD` birthday as `BDAY;X-APPLE-OMIT-YEAR=1604:1604MMDD` (Apple's
+  form) instead of stripping the dashes into `BDAY:MMDD`; stored BDAY params are kept and not doubled
+- Tests for dated, yearless and Apple-imported (`16040512` + stored `X-APPLE-OMIT-YEAR`) birthdays
+
+**Why:**
+- Yearless birthdays from Google (and the calendar birthdays import, see
+  `docs/plans/2026-10-26-calendar-birthdays-import.md`) were pushed to iCloud and exported as an
+  invalid date. The sync projection already treats `1604MMDD` and `--MM-DD` as equal, so the round
+  trip doesn't loop
+
+**Files Modified:**
+- `backend/src/services/vcardGenerator.ts` — BDAY in `generateVcard`
+- `backend/src/services/__tests__/vcardGenerator.test.ts` — `generateVcard birthdays`
+
+---
+
 ## 2026-10-26 — Archived group, Delete in edit mode, pinned Save/Cancel
 
 **Session:** `86dfd478-37f7-4593-bde5-92c0b360c312`

@@ -215,3 +215,24 @@ describe('injectGeoIntoVcard', () => {
     expect(result).toContain('yello2.GEO:52.5170365;13.3888599');
   });
 });
+
+describe('generateVcard birthdays', () => {
+  it('keeps a dated birthday as YYYYMMDD', () => {
+    expect(generateVcard(baseContact({ birthday: '1985-07-28' }))).toContain('BDAY:19850728');
+  });
+
+  it('writes a yearless --MM-DD birthday the way Apple does', () => {
+    const vcard = generateVcard(baseContact({ birthday: '--12-29' }));
+    expect(vcard).toContain('BDAY;X-APPLE-OMIT-YEAR=1604:16041229');
+    expect(parseVcf(vcard).contacts[0].birthday).toMatch(/^1604-?12-?29$/);
+  });
+
+  it('does not repeat X-APPLE-OMIT-YEAR when the stored params already carry it', () => {
+    const vcard = generateVcard(baseContact({
+      birthday: '16040512',
+      vcardParams: { BDAY: { 'X-APPLE-OMIT-YEAR': ['1604'] } }
+    }));
+    expect(vcard).toContain('BDAY;X-APPLE-OMIT-YEAR=1604:16040512');
+    expect(vcard.match(/X-APPLE-OMIT-YEAR/g)).toHaveLength(1);
+  });
+});
