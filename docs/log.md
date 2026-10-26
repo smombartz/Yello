@@ -1,5 +1,23 @@
 # Change Log
 
+## 2026-10-26 — Contact ID shown in the card's Meta Data
+
+**Session:** `29fc93d6-abff-4f0a-87e0-53cbdb828462`
+
+**What Changed:**
+- The Meta Data section at the bottom of an expanded contact card now shows `ID #<id>` after
+  Created and Updated
+- The view-mode card now receives `contactId` (previously only edit mode passed it)
+
+**Why:**
+- Makes it easy to identify a contact by its id (for support, debugging, or URLs)
+
+**Files Modified:**
+- `frontend/src/components/ContactCardView.tsx` — `MetadataSection` takes `contactId`, renders an ID pair
+- `frontend/src/components/ContactRowExpanded.tsx` — passes `contactId={contact.id}` in view mode
+
+---
+
 ## 2026-10-26 — Yearless birthdays export as valid Apple BDAY
 
 **Session:** `69a17ea0-53bd-4d6f-9e8d-94f37623a791`

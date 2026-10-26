@@ -275,6 +275,7 @@ export function ContactRowExpanded({ contact, editRequest = 0, onDeleted }: Cont
           createdAt: contact.createdAt,
           updatedAt: contact.updatedAt,
         }}
+        contactId={contact.id}
       >
         {contact.linkedinEnrichment && (
           <LinkedInSection enrichment={contact.linkedinEnrichment} contactPhotoUrl={contact.photoUrl} />

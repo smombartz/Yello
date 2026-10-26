@@ -18,12 +18,12 @@ One-off data task, not a feature. Source: `Contacts Backup/Birthdays_c_tt51i50a6
    choices in `window.__choices` and `localStorage.bdayChoices`.
 5. [x] Fix iCloud export of yearless birthdays first: `vcardGenerator` turned `--12-29` into the
    invalid `BDAY:1229`; it now writes `BDAY;X-APPLE-OMIT-YEAR=1604:16041229`.
-6. [ ] Deploy the fix (needs the user's OK to push).
-7. [ ] Apply the saved choices from the tab through the normal API, so two-way sync picks them up:
+6. [x] Deploy the fix (`8349619`, Railway deploy succeeded 16:52 UTC).
+7. [x] Apply the saved choices from the tab through the normal API, so two-way sync picks them up:
    ticked 2+ contacts → `POST /api/duplicates/merge { contactIds, primaryContactId }` first; then
    `PUT /api/contacts/:id { birthday: "--MM-DD" }` on the kept contact; *create new* →
    `POST /api/contacts { displayName, firstName, lastName, birthday }`. Deduplicate by contact id.
-8. [ ] Read back each updated contact and report counts.
+8. [x] Read back each updated contact: all 241 carry the date, all 31 merged-away duplicates return 404.
 
 ## Changes
 
@@ -34,3 +34,10 @@ One-off data task, not a feature. Source: `Contacts Backup/Birthdays_c_tt51i50a6
   (editable name) to every entry. Single close matches (e.g. Alex → Alexandra Checkiewicz) are
   pre-ticked under *Check*. Tabs: Same name, will merge (17) / Check (69) / No match (9) /
   Exact name match (152) / Already has this birthday (25).
+- 2026-10-26: applied 245 saved choices (241 contacts after spelling-variant duplicates): 27 merges,
+  14 new contacts, 167 birthdays set, 60 already had the date. The first pass ran into the API's
+  100 requests/minute limit (`@fastify/rate-limit` in `server.ts`) after ~55 writes; it was stopped
+  and rerun as an idempotent pass (checks which contacts still exist / already merged / already
+  dated before acting, ~80 req/min, waits out 429s). No errors, no existing birthday replaced.
+  iCloud sync was already paused before this ("Could not sign in to iCloud: cannot find homeUrl",
+  since 13:36 UTC), so the changes reach iCloud only once it is reconnected; Google syncs normally.

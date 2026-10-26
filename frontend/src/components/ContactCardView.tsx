@@ -81,7 +81,7 @@ interface ContactCardViewProps {
   sectionSuffixes?: SectionSuffixes;
   /** Section keys to hide entirely from edit mode. */
   hiddenSections?: Set<string>;
-  /** Id of the contact being edited, so related-people search excludes self. */
+  /** Id of the contact: shown in Meta Data, and excluded from related-people search in edit mode. */
   contactId?: number;
 }
 
@@ -93,7 +93,7 @@ function formatDate(dateString: string): string {
   });
 }
 
-function MetadataSection({ createdAt, updatedAt }: { createdAt: string; updatedAt: string }) {
+function MetadataSection({ createdAt, updatedAt, contactId }: { createdAt: string; updatedAt: string; contactId?: number }) {
   return (
     <div className="expanded-section-view gap-lg">
       <div className="section-heading">
@@ -111,6 +111,12 @@ function MetadataSection({ createdAt, updatedAt }: { createdAt: string; updatedA
           <span className="metadata-pair-label">Updated </span>
           <span className="metadata-pair-value">{formatDate(updatedAt)}</span>
         </div>
+        {contactId != null && (
+          <div className="metadata-pair">
+            <span className="metadata-pair-label">ID </span>
+            <span className="metadata-pair-value">#{contactId}</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -286,10 +292,10 @@ export function ContactCardView({
         data.notes ? (
           <div className="expanded-row expanded-row-notes">
             <NotesSection notes={data.notes} isEditMode={false} />
-            <MetadataSection createdAt={data.createdAt} updatedAt={data.updatedAt} />
+            <MetadataSection createdAt={data.createdAt} updatedAt={data.updatedAt} contactId={contactId} />
           </div>
         ) : (
-          <MetadataSection createdAt={data.createdAt} updatedAt={data.updatedAt} />
+          <MetadataSection createdAt={data.createdAt} updatedAt={data.updatedAt} contactId={contactId} />
         )
       ) : data.notes ? (
         <NotesSection notes={data.notes} isEditMode={false} />
