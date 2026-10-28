@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { activeOnly } from '../archivedDetails.js';
 import type { ContactForVcard } from '../vcardGenerator.js';
 import type { ParsedContact } from '../vcardParser.js';
 import type { SyncProvider } from './syncState.js';
@@ -183,14 +184,15 @@ function socialUrl(profile: { platform: string; username: string | null; profile
  * Yello sends social profiles as typed URLs, so they project as URLs there.
  */
 export function projectContact(contact: ContactForVcard, provider: SyncProvider): SyncProjection {
+  // Archived details are never synced, so they are no part of what is compared.
   // Google gets only the profiles that have a URL (see contactDataToPerson).
-  const socials = contact.socialProfiles
+  const socials = activeOnly(contact.socialProfiles)
     .filter(profile => provider !== 'google' || text(profile.profileUrl))
     .map(profile => ({ platform: profile.platform.trim().toLowerCase(), value: socialUrl(profile) }))
     .filter((s): s is { platform: string; value: string } => !!s.value)
     .map(s => ({ platform: s.platform, value: s.value.toLowerCase().replace(/\/+$/, '') }));
 
-  const urls = (contact.urls ?? [])
+  const urls = activeOnly(contact.urls ?? [])
     .map(u => ({ value: text(u.url)?.toLowerCase().replace(/\/+$/, '') ?? '', type: urlType(u) }))
     .filter(u => u.value);
 
@@ -209,13 +211,13 @@ export function projectContact(contact: ContactForVcard, provider: SyncProvider)
     birthday: normalizeDate(contact.birthday),
     gender: lower(contact.gender),
     isCompany: provider === 'icloud' ? !!contact.isCompany : false,
-    emails: sortUnique(contact.emails
+    emails: sortUnique(activeOnly(contact.emails)
       .map(e => ({ value: e.email.trim().toLowerCase(), type: emailType(e) }))
       .filter(e => e.value)),
-    phones: sortUnique(contact.phones
+    phones: sortUnique(activeOnly(contact.phones)
       .map(p => ({ value: normalizePhone(p.phone), type: phoneType(p, provider) }))
       .filter(p => p.value)),
-    addresses: sortUnique(contact.addresses.map(a => ({
+    addresses: sortUnique(activeOnly(contact.addresses).map(a => ({
       street: text(a.street), extended: text(a.extended), poBox: text(a.poBox), city: text(a.city),
       region: text(a.state), postalCode: text(a.postalCode), country: text(a.country), type: addressType(a)
     })).filter(a => a.street || a.city || a.region || a.postalCode || a.country || a.poBox)),
@@ -223,7 +225,7 @@ export function projectContact(contact: ContactForVcard, provider: SyncProvider)
       ? [...urls, ...socials.map(s => ({ value: s.value, type: s.platform }))]
       : urls),
     socials: provider === 'google' ? [] : sortUnique(socials),
-    ims: sortUnique((contact.instantMessages ?? [])
+    ims: sortUnique(activeOnly(contact.instantMessages ?? [])
       .map(im => ({ service: im.service.trim().toLowerCase(), handle: im.handle.trim().toLowerCase() }))
       .filter(im => im.handle)),
     related: sortUnique((contact.relatedPeople ?? [])
@@ -302,7 +304,7 @@ export function parsedToContactData(contact: ParsedContact): ContactForVcard {
     phones: contact.phones.map(p => ({ ...p, phoneDisplay: p.phoneDisplay ?? p.phone, isPrimary: !!p.isPrimary })),
     addresses: contact.addresses,
     socialProfiles: contact.socialProfiles.map(s => ({
-      platform: s.platform, username: s.username, profileUrl: s.url, params: s.params
+      platform: s.platform, username: s.username, profileUrl: s.url, params: s.params, archivedAt: s.archivedAt ?? null
     })),
     categories: contact.categories,
     urls: contact.urls,
@@ -334,18 +336,20 @@ export function contactDataToParsed(data: ContactForVcard): ParsedContact {
     isCompany: !!data.isCompany,
     emails: data.emails.map(e => ({
       email: e.email, type: e.type, extraTypes: e.extraTypes ?? null, label: e.label ?? null,
-      params: e.params ?? null, isPrimary: e.isPrimary
+      params: e.params ?? null, isPrimary: e.isPrimary, archivedAt: e.archivedAt ?? null
     })),
     phones: data.phones.map(p => ({
       phone: normalizePhone(p.phone) || p.phone, phoneDisplay: p.phoneDisplay, countryCode: null, type: p.type,
-      extraTypes: p.extraTypes ?? null, label: p.label ?? null, params: p.params ?? null, isPrimary: p.isPrimary
+      extraTypes: p.extraTypes ?? null, label: p.label ?? null, params: p.params ?? null, isPrimary: p.isPrimary,
+      archivedAt: p.archivedAt ?? null
     })),
     addresses: data.addresses.map(a => ({
       street: a.street, city: a.city, state: a.state, postalCode: a.postalCode, country: a.country,
       type: a.type, extraTypes: a.extraTypes ?? null, label: a.label ?? null, poBox: a.poBox ?? null,
       extended: a.extended ?? null, sublocality: a.sublocality ?? null,
       subadministrativeArea: a.subadministrativeArea ?? null, countryCode: a.countryCode ?? null,
-      params: a.params ?? null, latitude: a.latitude ?? null, longitude: a.longitude ?? null
+      params: a.params ?? null, latitude: a.latitude ?? null, longitude: a.longitude ?? null,
+      archivedAt: a.archivedAt ?? null
     })),
     categories: data.categories,
     instantMessages: (data.instantMessages ?? []).map(im => ({ ...im })),
@@ -353,7 +357,7 @@ export function contactDataToParsed(data: ContactForVcard): ParsedContact {
     relatedPeople: (data.relatedPeople ?? []).map(r => ({ ...r })),
     socialProfiles: data.socialProfiles
       .filter(s => s.profileUrl || s.username)
-      .map(s => ({ platform: s.platform, username: s.username, url: s.profileUrl ?? '', params: s.params ?? null })),
+      .map(s => ({ platform: s.platform, username: s.username, url: s.profileUrl ?? '', params: s.params ?? null, archivedAt: s.archivedAt ?? null })),
     dates: data.dates ?? [],
     photoBase64: data.photoBase64 ?? null,
     rawVcard: '',

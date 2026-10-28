@@ -104,8 +104,9 @@ describe('vCard model backfill', () => {
       department: 'Research',
       icloud_uid: '4bb11a808bd6e881'
     });
-    expect(db().prepare('SELECT type, extra_types, label FROM contact_emails WHERE contact_id = ?').get(id))
-      .toEqual({ type: 'internet', extra_types: 'other', label: 'Obsolete' });
+    // The Obsolete label is recovered, then converted into an archived detail
+    expect(db().prepare('SELECT type, extra_types, label, detail_archived_at IS NOT NULL AS archived FROM contact_emails WHERE contact_id = ?').get(id))
+      .toEqual({ type: 'internet', extra_types: 'other', label: null, archived: 1 });
     expect(db().prepare('SELECT type FROM contact_phones WHERE contact_id = ?').get(id)).toEqual({ type: null });
     expect(db().prepare('SELECT country_code FROM contact_addresses WHERE contact_id = ?').get(id))
       .toEqual({ country_code: 'gb' });

@@ -5,6 +5,7 @@ import path from 'path';
 import { backfillGroupedRelatedNames } from './relatedNamesBackfill.js';
 import { backfillVcardModel, backfillVcardModelV2 } from './vcardModelBackfill.js';
 import { retireRawVcards } from './rawVcardRetirement.js';
+import { ARCHIVABLE_TABLES, archiveObsoleteLabels } from './archivedDetails.js';
 
 const MAX_CACHE_SIZE = 50;
 
@@ -102,7 +103,8 @@ export function getUserDatabase(userId: number): DatabaseType {
       extra_types TEXT,
       label TEXT,
       is_primary INTEGER DEFAULT 0,
-      params TEXT
+      params TEXT,
+      detail_archived_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS contact_phones (
@@ -115,7 +117,8 @@ export function getUserDatabase(userId: number): DatabaseType {
       extra_types TEXT,
       label TEXT,
       is_primary INTEGER DEFAULT 0,
-      params TEXT
+      params TEXT,
+      detail_archived_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS contact_addresses (
@@ -137,7 +140,8 @@ export function getUserDatabase(userId: number): DatabaseType {
       latitude REAL DEFAULT NULL,
       longitude REAL DEFAULT NULL,
       geocoded_at TEXT DEFAULT NULL,
-      params TEXT
+      params TEXT,
+      detail_archived_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS contact_social_profiles (
@@ -147,7 +151,8 @@ export function getUserDatabase(userId: number): DatabaseType {
       username TEXT NOT NULL,
       profile_url TEXT,
       type TEXT,
-      params TEXT
+      params TEXT,
+      detail_archived_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS contact_categories (
@@ -162,7 +167,8 @@ export function getUserDatabase(userId: number): DatabaseType {
       service TEXT NOT NULL,
       handle TEXT NOT NULL,
       type TEXT,
-      params TEXT
+      params TEXT,
+      detail_archived_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS contact_urls (
@@ -171,7 +177,8 @@ export function getUserDatabase(userId: number): DatabaseType {
       url TEXT NOT NULL,
       label TEXT,
       type TEXT,
-      params TEXT
+      params TEXT,
+      detail_archived_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS contact_related_people (
@@ -662,7 +669,9 @@ export function getUserDatabase(userId: number): DatabaseType {
       'contact_instant_messages', 'contact_urls', 'contact_related_people', 'contact_dates']
       .map(table => `ALTER TABLE ${table} ADD COLUMN params TEXT`),
     `ALTER TABLE user_settings ADD COLUMN vcard_model_v2_backfilled_at TEXT`,
-    `ALTER TABLE user_settings ADD COLUMN raw_vcards_archived_at TEXT`
+    `ALTER TABLE user_settings ADD COLUMN raw_vcards_archived_at TEXT`,
+    // Archived details (an old number or address): kept, but not synced
+    ...ARCHIVABLE_TABLES.map(table => `ALTER TABLE ${table} ADD COLUMN detail_archived_at TEXT`)
   ]) {
     try {
       db.exec(statement);
@@ -690,6 +699,10 @@ export function getUserDatabase(userId: number): DatabaseType {
       db.exec(`UPDATE user_settings SET contact_uids_backfilled_at = datetime('now') WHERE id = 1`);
     })();
   }
+
+  // Details labelled Obsolete/Archived (Apple's way of marking a stale number)
+  // become archived details; idempotent, as converted rows lose the label.
+  archiveObsoleteLabels(db);
 
   cache.set(userId, db);
   return db;

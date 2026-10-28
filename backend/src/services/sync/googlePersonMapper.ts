@@ -1,4 +1,5 @@
 import type { ContactForVcard } from '../vcardGenerator.js';
+import { activeOnly } from '../archivedDetails.js';
 import { appleLabelName } from './syncProjection.js';
 import type { GooglePersonRaw } from './googlePeople.js';
 
@@ -271,6 +272,7 @@ const nonEmpty = <T>(items: T[]): T[] | undefined => (items.length ? items : und
  * The Person body Yello writes for a contact (createContact /
  * updateContact with updatePersonFields = MAPPED_PERSON_FIELDS). An empty
  * field is sent as an empty list so an update clears it on Google too.
+ * Archived details are never sent (see archivedDetails.ts).
  */
 export function contactDataToPerson(contact: ContactForVcard): GooglePersonBody {
   const name = {
@@ -283,7 +285,7 @@ export function contactDataToPerson(contact: ContactForVcard): GooglePersonBody 
   const hasName = Object.values(name).some(Boolean);
   const birthday = dateToGoogle(contact.birthday);
 
-  const socialUrls = contact.socialProfiles
+  const socialUrls = activeOnly(contact.socialProfiles)
     .filter(s => s.profileUrl)
     .map(s => ({ value: s.profileUrl!, type: s.platform.toLowerCase() }));
 
@@ -296,9 +298,9 @@ export function contactDataToPerson(contact: ContactForVcard): GooglePersonBody 
     biographies: contact.notes ? [{ value: contact.notes, contentType: 'TEXT_PLAIN' }] : [],
     birthdays: birthday ? [{ date: birthday }] : [],
     genders: contact.gender ? [{ value: contact.gender.toLowerCase() }] : [],
-    emailAddresses: contact.emails.filter(e => e.email).map(e => ({ value: e.email, type: emailToGoogle(e) })),
-    phoneNumbers: contact.phones.filter(p => p.phone).map(p => ({ value: p.phoneDisplay || p.phone, type: phoneToGoogle(p) })),
-    addresses: contact.addresses.map(a => ({
+    emailAddresses: activeOnly(contact.emails).filter(e => e.email).map(e => ({ value: e.email, type: emailToGoogle(e) })),
+    phoneNumbers: activeOnly(contact.phones).filter(p => p.phone).map(p => ({ value: p.phoneDisplay || p.phone, type: phoneToGoogle(p) })),
+    addresses: activeOnly(contact.addresses).map(a => ({
       streetAddress: a.street || undefined,
       extendedAddress: a.extended || undefined,
       poBox: a.poBox || undefined,
@@ -310,10 +312,10 @@ export function contactDataToPerson(contact: ContactForVcard): GooglePersonBody 
       type: addressToGoogle(a)
     })),
     urls: [
-      ...(contact.urls ?? []).filter(u => u.url).map(u => ({ value: u.url, type: urlToGoogle(u) })),
+      ...activeOnly(contact.urls ?? []).filter(u => u.url).map(u => ({ value: u.url, type: urlToGoogle(u) })),
       ...socialUrls
     ],
-    imClients: (contact.instantMessages ?? []).filter(im => im.handle).map(im => ({ username: im.handle, protocol: im.service })),
+    imClients: activeOnly(contact.instantMessages ?? []).filter(im => im.handle).map(im => ({ username: im.handle, protocol: im.service })),
     relations: (contact.relatedPeople ?? []).filter(r => r.name).map(r => ({ person: r.name, type: plainLabel(r.relationship) })),
     events: (contact.dates ?? [])
       .map(d => ({ date: dateToGoogle(d.date), type: plainLabel(d.label) }))

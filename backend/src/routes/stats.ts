@@ -49,13 +49,13 @@ function getOverviewStats(db: DatabaseType): OverviewStats {
   const totalCountries = db.prepare(
     `SELECT COUNT(DISTINCT country) as count
      FROM contact_addresses
-     WHERE country IS NOT NULL AND country != ''`
+     WHERE country IS NOT NULL AND country != '' AND detail_archived_at IS NULL`
   ).get() as { count: number };
 
   const totalCities = db.prepare(
     `SELECT COUNT(DISTINCT city) as count
      FROM contact_addresses
-     WHERE city IS NOT NULL AND city != ''`
+     WHERE city IS NOT NULL AND city != '' AND detail_archived_at IS NULL`
   ).get() as { count: number };
 
   const contactsWithPhotos = db.prepare(
@@ -211,7 +211,7 @@ function getGeographyStats(db: DatabaseType): GeographyStats {
   const topCountries = db.prepare(`
     SELECT country, COUNT(*) as count
     FROM contact_addresses
-    WHERE country IS NOT NULL AND country != ''
+    WHERE country IS NOT NULL AND country != '' AND detail_archived_at IS NULL
     GROUP BY country
     ORDER BY count DESC
     LIMIT 5
@@ -220,7 +220,7 @@ function getGeographyStats(db: DatabaseType): GeographyStats {
   const topCities = db.prepare(`
     SELECT city, country, COUNT(*) as count
     FROM contact_addresses
-    WHERE city IS NOT NULL AND city != ''
+    WHERE city IS NOT NULL AND city != '' AND detail_archived_at IS NULL
     GROUP BY city, country
     ORDER BY count DESC
     LIMIT 5

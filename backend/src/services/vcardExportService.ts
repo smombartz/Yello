@@ -34,6 +34,7 @@ interface TypedRow {
   extra_types: string | null;
   label: string | null;
   params: string | null;
+  detail_archived_at: string | null;
 }
 
 /** Reads a user's medium-size contact photo as base64, or null when missing. */
@@ -90,27 +91,27 @@ export function loadContactsForVcard(db: DatabaseType, options: LoadContactsOpti
   }
 
   const emails = db.prepare(`
-    SELECT email, type, extra_types, label, params, is_primary FROM contact_emails WHERE contact_id = ? ORDER BY id
+    SELECT email, type, extra_types, label, params, is_primary, detail_archived_at FROM contact_emails WHERE contact_id = ? ORDER BY id
   `);
   const phones = db.prepare(`
-    SELECT phone, phone_display, type, extra_types, label, params, is_primary FROM contact_phones WHERE contact_id = ? ORDER BY id
+    SELECT phone, phone_display, type, extra_types, label, params, is_primary, detail_archived_at FROM contact_phones WHERE contact_id = ? ORDER BY id
   `);
   const addresses = db.prepare(`
     SELECT street, city, state, postal_code, country, type, extra_types, label, params,
-           po_box, extended, sublocality, subadministrative_area, country_code, latitude, longitude
+           po_box, extended, sublocality, subadministrative_area, country_code, latitude, longitude, detail_archived_at
     FROM contact_addresses WHERE contact_id = ? ORDER BY id
   `);
   const socialProfiles = db.prepare(`
-    SELECT platform, username, profile_url, params FROM contact_social_profiles WHERE contact_id = ? ORDER BY id
+    SELECT platform, username, profile_url, params, detail_archived_at FROM contact_social_profiles WHERE contact_id = ? ORDER BY id
   `);
   const categories = db.prepare(`
     SELECT category FROM contact_categories WHERE contact_id = ? ORDER BY id
   `);
   const urls = db.prepare(`
-    SELECT url, label, type, params FROM contact_urls WHERE contact_id = ? ORDER BY id
+    SELECT url, label, type, params, detail_archived_at FROM contact_urls WHERE contact_id = ? ORDER BY id
   `);
   const instantMessages = db.prepare(`
-    SELECT service, handle, type, params FROM contact_instant_messages WHERE contact_id = ? ORDER BY id
+    SELECT service, handle, type, params, detail_archived_at FROM contact_instant_messages WHERE contact_id = ? ORDER BY id
   `);
   const relatedPeople = db.prepare(`
     SELECT name, relationship, params FROM contact_related_people WHERE contact_id = ? ORDER BY id
@@ -126,8 +127,12 @@ export function loadContactsForVcard(db: DatabaseType, options: LoadContactsOpti
     type: row.type,
     extraTypes: row.extra_types,
     label: row.label,
-    params: parseParamsJson(row.params)
+    params: parseParamsJson(row.params),
+    archivedAt: row.detail_archived_at
   });
+  /** An archivable row with its params parsed and its archive state named archivedAt. */
+  const archivable = <R extends { params: string | null; detail_archived_at: string | null }>(rows: R[]) =>
+    rows.map(({ detail_archived_at, ...row }) => ({ ...row, params: parseParamsJson(row.params), archivedAt: detail_archived_at }));
   /** Parses the `params` column of each row in place of the JSON text. */
   const withParams = <R extends { params: string | null }>(rows: R[]) =>
     rows.map(row => ({ ...row, params: parseParamsJson(row.params) }));
@@ -191,11 +196,11 @@ export function loadContactsForVcard(db: DatabaseType, options: LoadContactsOpti
         latitude: a.latitude,
         longitude: a.longitude
       })),
-      socialProfiles: (socialProfiles.all(contact.id) as Array<{ platform: string; username: string | null; profile_url: string | null; params: string | null }>)
-        .map(s => ({ platform: s.platform, username: s.username, profileUrl: s.profile_url, params: parseParamsJson(s.params) })),
+      socialProfiles: (socialProfiles.all(contact.id) as Array<{ platform: string; username: string | null; profile_url: string | null; params: string | null; detail_archived_at: string | null }>)
+        .map(s => ({ platform: s.platform, username: s.username, profileUrl: s.profile_url, params: parseParamsJson(s.params), archivedAt: s.detail_archived_at })),
       categories: (categories.all(contact.id) as Array<{ category: string }>).map(c => c.category),
-      urls: withParams(urls.all(contact.id) as Array<{ url: string; label: string | null; type: string | null; params: string | null }>),
-      instantMessages: withParams(instantMessages.all(contact.id) as Array<{ service: string; handle: string; type: string | null; params: string | null }>),
+      urls: archivable(urls.all(contact.id) as Array<{ url: string; label: string | null; type: string | null; params: string | null; detail_archived_at: string | null }>),
+      instantMessages: archivable(instantMessages.all(contact.id) as Array<{ service: string; handle: string; type: string | null; params: string | null; detail_archived_at: string | null }>),
       relatedPeople: withParams(relatedPeople.all(contact.id) as Array<{ name: string; relationship: string | null; params: string | null }>),
       dates: withParams(dates.all(contact.id) as Array<{ date: string; label: string | null; params: string | null }>),
       vcardParams: parseParamsJson<Record<string, Record<string, string[]>>>(contact.vcard_params),

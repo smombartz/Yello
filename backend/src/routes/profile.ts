@@ -303,24 +303,25 @@ function getContactData(db: DatabaseType, contactId: number) {
 
   if (!contact) return null;
 
+  // Archived details are not part of the profile (public or edited)
   const emails = db.prepare(`
-    SELECT id, contact_id, email, type, is_primary FROM contact_emails WHERE contact_id = ?
+    SELECT id, contact_id, email, type, is_primary FROM contact_emails WHERE contact_id = ? AND detail_archived_at IS NULL
   `).all(contactId) as EmailRow[];
 
   const phones = db.prepare(`
-    SELECT id, contact_id, phone, phone_display, country_code, type, is_primary FROM contact_phones WHERE contact_id = ?
+    SELECT id, contact_id, phone, phone_display, country_code, type, is_primary FROM contact_phones WHERE contact_id = ? AND detail_archived_at IS NULL
   `).all(contactId) as PhoneRow[];
 
   const addresses = db.prepare(`
-    SELECT id, contact_id, street, city, state, postal_code, country, type FROM contact_addresses WHERE contact_id = ?
+    SELECT id, contact_id, street, city, state, postal_code, country, type FROM contact_addresses WHERE contact_id = ? AND detail_archived_at IS NULL
   `).all(contactId) as AddressRow[];
 
   const socialProfiles = db.prepare(`
-    SELECT id, contact_id, platform, username, profile_url FROM contact_social_profiles WHERE contact_id = ?
+    SELECT id, contact_id, platform, username, profile_url FROM contact_social_profiles WHERE contact_id = ? AND detail_archived_at IS NULL
   `).all(contactId) as SocialProfileRow[];
 
   const urls = db.prepare(`
-    SELECT id, contact_id, url, label FROM contact_urls WHERE contact_id = ?
+    SELECT id, contact_id, url, label FROM contact_urls WHERE contact_id = ? AND detail_archived_at IS NULL
   `).all(contactId) as UrlRow[];
 
   // Extract social links from URLs and social profiles
@@ -530,8 +531,8 @@ export default async function profileRoutes(
         c.id,
         c.display_name,
         c.photo_hash,
-        (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
-        (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone
+        (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 AND detail_archived_at IS NULL LIMIT 1) as primary_email,
+        (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 AND detail_archived_at IS NULL LIMIT 1) as primary_phone
       FROM contacts c
       WHERE c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
       ORDER BY c.last_name, c.first_name, c.display_name
@@ -787,7 +788,7 @@ export default async function profileRoutes(
 
       // Update emails (replace all)
       if (updates.emails !== undefined) {
-        db.prepare('DELETE FROM contact_emails WHERE contact_id = ?').run(profile.linked_contact_id);
+        db.prepare('DELETE FROM contact_emails WHERE contact_id = ? AND detail_archived_at IS NULL').run(profile.linked_contact_id);
         const insertEmail = db.prepare(`
           INSERT INTO contact_emails (contact_id, email, type, is_primary)
           VALUES (?, ?, ?, ?)
@@ -799,7 +800,7 @@ export default async function profileRoutes(
 
       // Update phones (replace all)
       if (updates.phones !== undefined) {
-        db.prepare('DELETE FROM contact_phones WHERE contact_id = ?').run(profile.linked_contact_id);
+        db.prepare('DELETE FROM contact_phones WHERE contact_id = ? AND detail_archived_at IS NULL').run(profile.linked_contact_id);
         const insertPhone = db.prepare(`
           INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, is_primary)
           VALUES (?, ?, ?, ?, ?, ?)
@@ -811,7 +812,7 @@ export default async function profileRoutes(
 
       // Update addresses (replace all)
       if (updates.addresses !== undefined) {
-        db.prepare('DELETE FROM contact_addresses WHERE contact_id = ?').run(profile.linked_contact_id);
+        db.prepare('DELETE FROM contact_addresses WHERE contact_id = ? AND detail_archived_at IS NULL').run(profile.linked_contact_id);
         const insertAddress = db.prepare(`
           INSERT INTO contact_addresses (contact_id, street, city, state, postal_code, country, type)
           VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -826,7 +827,7 @@ export default async function profileRoutes(
         // Remove existing linkedin, instagram, whatsapp
         db.prepare(`
           DELETE FROM contact_social_profiles
-          WHERE contact_id = ? AND LOWER(platform) IN ('linkedin', 'instagram', 'whatsapp')
+          WHERE contact_id = ? AND detail_archived_at IS NULL AND LOWER(platform) IN ('linkedin', 'instagram', 'whatsapp')
         `).run(profile.linked_contact_id);
 
         const insertSocial = db.prepare(`
@@ -853,7 +854,7 @@ export default async function profileRoutes(
         // Remove non-standard social profiles
         db.prepare(`
           DELETE FROM contact_social_profiles
-          WHERE contact_id = ? AND LOWER(platform) NOT IN ('linkedin', 'instagram', 'whatsapp')
+          WHERE contact_id = ? AND detail_archived_at IS NULL AND LOWER(platform) NOT IN ('linkedin', 'instagram', 'whatsapp')
         `).run(profile.linked_contact_id);
 
         const insertSocial = db.prepare(`
@@ -868,7 +869,7 @@ export default async function profileRoutes(
       // Update website URL
       if (updates.website !== undefined) {
         db.prepare(`
-          DELETE FROM contact_urls WHERE contact_id = ? AND (LOWER(label) = 'website' OR LOWER(label) = 'homepage')
+          DELETE FROM contact_urls WHERE contact_id = ? AND detail_archived_at IS NULL AND (LOWER(label) = 'website' OR LOWER(label) = 'homepage')
         `).run(profile.linked_contact_id);
 
         if (updates.website) {

@@ -1829,6 +1829,50 @@ a.nav-rail-item.active {
   color: var(--ds-color-primary);
 }
 
+/* Archived details: a gray "N archived" link (the show-more pattern) revealing
+   muted, action-less entries with the month they were archived */
+.archived-details .show-more-button [class*="fa-"] {
+  font-size: 0.85em;
+  margin-left: 2px;
+}
+
+.archived-details-list {
+  padding-top: var(--ds-space-1);
+}
+
+.archived-field .info-field-icon [class*="fa-"],
+.editable-array-item:has(.archived-edit-value) > [class*="fa-"] {
+  color: var(--ds-text-tertiary);
+}
+
+.archived-field .info-field-value,
+.archived-edit-value {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--ds-text-secondary);
+}
+
+.archived-field-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: text;
+}
+
+.archived-field-date {
+  font-size: var(--ds-font-2xs);
+  color: var(--ds-text-secondary);
+  opacity: 0.8;
+}
+
+.archived-edit-value {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 0;
+  font-size: var(--ds-font-sm);
+}
+
 /* Notes field (Figma) */
 .notes-field {
   background: var(--ds-bg-secondary);
@@ -4002,6 +4046,12 @@ a.nav-rail-item.active {
 
 .remove-item-btn [class*="fa-"] {
   font-size: var(--ds-font-md);
+}
+
+/* Archive / restore sits beside remove; it is not destructive, so no red hover */
+.archive-item-btn:hover {
+  background-color: var(--ds-bg-secondary);
+  color: var(--ds-color-primary);
 }
 
 /* Holds the remove button's place on an auto-added blank row */

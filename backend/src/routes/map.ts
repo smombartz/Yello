@@ -140,6 +140,7 @@ export default async function mapRoutes(
       FROM contact_addresses a
       INNER JOIN contacts c ON a.contact_id = c.id
       WHERE a.contact_id IN (${placeholders})
+      AND a.detail_archived_at IS NULL
       AND a.latitude IS NOT NULL
       AND a.longitude IS NOT NULL
     `).all(...Array.from(contactIdSet)) as Array<AddressRow & ContactRow>;
@@ -197,6 +198,7 @@ export default async function mapRoutes(
       SELECT id, street, city, state, postal_code, country
       FROM contact_addresses
       WHERE latitude IS NULL
+      AND detail_archived_at IS NULL
       AND (city IS NOT NULL OR street IS NOT NULL)
       LIMIT ?
     `).all(limit) as Array<{
@@ -248,6 +250,7 @@ export default async function mapRoutes(
       FROM contact_addresses
       WHERE latitude IS NULL
       AND geocoded_at IS NULL
+      AND detail_archived_at IS NULL
       AND (city IS NOT NULL OR street IS NOT NULL)
     `).get() as { count: number };
 
@@ -284,6 +287,7 @@ export default async function mapRoutes(
         SUM(CASE WHEN latitude IS NULL AND geocoded_at IS NOT NULL THEN 1 ELSE 0 END) as failed,
         SUM(CASE WHEN latitude IS NULL AND geocoded_at IS NULL AND (city IS NOT NULL OR street IS NOT NULL) THEN 1 ELSE 0 END) as pending
       FROM contact_addresses
+      WHERE detail_archived_at IS NULL
     `).get() as {
       total: number;
       geocoded: number;

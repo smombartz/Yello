@@ -24,7 +24,9 @@ export const ContactEmailSchema = Type.Object({
   type: Type.Union([Type.String(), Type.Null()]),
   label: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   extraTypes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-  isPrimary: Type.Boolean()
+  isPrimary: Type.Boolean(),
+  /** Set when the detail is archived: kept, but hidden and never synced */
+  archivedAt: Type.Optional(Type.Union([Type.String(), Type.Null()]))
 });
 
 export const ContactPhoneSchema = Type.Object({
@@ -36,7 +38,9 @@ export const ContactPhoneSchema = Type.Object({
   type: Type.Union([Type.String(), Type.Null()]),
   label: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   extraTypes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-  isPrimary: Type.Boolean()
+  isPrimary: Type.Boolean(),
+  /** Set when the detail is archived: kept, but hidden and never synced */
+  archivedAt: Type.Optional(Type.Union([Type.String(), Type.Null()]))
 });
 
 export const ContactAddressSchema = Type.Object({
@@ -55,7 +59,9 @@ export const ContactAddressSchema = Type.Object({
   sublocality: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   subadministrativeArea: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   /** Apple's X-ABADR country-format hint (the phone row's countryCode is unrelated) */
-  addressCountryCode: Type.Optional(Type.Union([Type.String(), Type.Null()]))
+  addressCountryCode: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  /** Set when the detail is archived: kept, but hidden and never synced */
+  archivedAt: Type.Optional(Type.Union([Type.String(), Type.Null()]))
 });
 
 export const ContactSocialProfileSchema = Type.Object({
@@ -64,7 +70,9 @@ export const ContactSocialProfileSchema = Type.Object({
   platform: Type.String(),
   username: Type.String(),
   profileUrl: Type.Union([Type.String(), Type.Null()]),
-  type: Type.Union([Type.String(), Type.Null()])
+  type: Type.Union([Type.String(), Type.Null()]),
+  /** Set when the detail is archived: kept, but hidden and never synced */
+  archivedAt: Type.Optional(Type.Union([Type.String(), Type.Null()]))
 });
 
 export const ContactCategorySchema = Type.Object({
@@ -78,7 +86,9 @@ export const ContactInstantMessageSchema = Type.Object({
   contactId: Type.Number(),
   service: Type.String(),
   handle: Type.String(),
-  type: Type.Union([Type.String(), Type.Null()])
+  type: Type.Union([Type.String(), Type.Null()]),
+  /** Set when the detail is archived: kept, but hidden and never synced */
+  archivedAt: Type.Optional(Type.Union([Type.String(), Type.Null()]))
 });
 
 export const ContactUrlSchema = Type.Object({
@@ -86,7 +96,9 @@ export const ContactUrlSchema = Type.Object({
   contactId: Type.Number(),
   url: Type.String(),
   label: Type.Union([Type.String(), Type.Null()]),
-  type: Type.Union([Type.String(), Type.Null()])
+  type: Type.Union([Type.String(), Type.Null()]),
+  /** Set when the detail is archived: kept, but hidden and never synced */
+  archivedAt: Type.Optional(Type.Union([Type.String(), Type.Null()]))
 });
 
 export const ContactRelatedPersonSchema = Type.Object({
@@ -226,7 +238,9 @@ export const GroupsResponseSchema = Type.Object({
 export const UpdateContactEmailSchema = Type.Object({
   email: Type.String(),
   type: Type.Union([Type.String(), Type.Null()]),
-  isPrimary: Type.Boolean()
+  isPrimary: Type.Boolean(),
+  /** Set when the detail is archived: kept, but hidden and never synced */
+  archivedAt: Type.Optional(Type.Union([Type.String(), Type.Null()]))
 });
 
 export const UpdateContactPhoneSchema = Type.Object({
@@ -234,7 +248,9 @@ export const UpdateContactPhoneSchema = Type.Object({
   phoneDisplay: Type.String(),
   countryCode: Type.Union([Type.String(), Type.Null()]),
   type: Type.Union([Type.String(), Type.Null()]),
-  isPrimary: Type.Boolean()
+  isPrimary: Type.Boolean(),
+  /** Set when the detail is archived: kept, but hidden and never synced */
+  archivedAt: Type.Optional(Type.Union([Type.String(), Type.Null()]))
 });
 
 export const UpdateContactAddressSchema = Type.Object({
@@ -243,14 +259,18 @@ export const UpdateContactAddressSchema = Type.Object({
   state: Type.Union([Type.String(), Type.Null()]),
   postalCode: Type.Union([Type.String(), Type.Null()]),
   country: Type.Union([Type.String(), Type.Null()]),
-  type: Type.Union([Type.String(), Type.Null()])
+  type: Type.Union([Type.String(), Type.Null()]),
+  /** Set when the detail is archived: kept, but hidden and never synced */
+  archivedAt: Type.Optional(Type.Union([Type.String(), Type.Null()]))
 });
 
 export const UpdateContactSocialProfileSchema = Type.Object({
   platform: Type.String(),
   username: Type.String(),
   profileUrl: Type.Union([Type.String(), Type.Null()]),
-  type: Type.Union([Type.String(), Type.Null()])
+  type: Type.Union([Type.String(), Type.Null()]),
+  /** Set when the detail is archived: kept, but hidden and never synced */
+  archivedAt: Type.Optional(Type.Union([Type.String(), Type.Null()]))
 });
 
 export const UpdateContactCategorySchema = Type.Object({
@@ -260,13 +280,17 @@ export const UpdateContactCategorySchema = Type.Object({
 export const UpdateContactInstantMessageSchema = Type.Object({
   service: Type.String(),
   handle: Type.String(),
-  type: Type.Union([Type.String(), Type.Null()])
+  type: Type.Union([Type.String(), Type.Null()]),
+  /** Set when the detail is archived: kept, but hidden and never synced */
+  archivedAt: Type.Optional(Type.Union([Type.String(), Type.Null()]))
 });
 
 export const UpdateContactUrlSchema = Type.Object({
   url: Type.String(),
   label: Type.Union([Type.String(), Type.Null()]),
-  type: Type.Union([Type.String(), Type.Null()])
+  type: Type.Union([Type.String(), Type.Null()]),
+  /** Set when the detail is archived: kept, but hidden and never synced */
+  archivedAt: Type.Optional(Type.Union([Type.String(), Type.Null()]))
 });
 
 export const UpdateContactRelatedPersonSchema = Type.Object({

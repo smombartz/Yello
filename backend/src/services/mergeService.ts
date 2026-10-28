@@ -2,6 +2,7 @@ import { rebuildContactSearch, deleteContactsFromSearch } from './database.js';
 import { getPhotoUrl } from './photoProcessor.js';
 import { mergeVcardModelFields } from './vcardModelStore.js';
 import { carryMergedIdentities } from './mergedIdentities.js';
+import { normalizeArchivedPrimary, unarchiveDetailsActiveElsewhere } from './archivedDetails.js';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { ContactDetail, ContactSocialProfile } from '../types/index.js';
 
@@ -186,6 +187,9 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
 
   // Run merge in a transaction
   const mergeTransaction = db.transaction(() => {
+    // A detail archived on the primary but still in use on a secondary is active again
+    unarchiveDetailsActiveElsewhere(db, primaryContactId, secondaryContactIds);
+
     // Get existing emails for primary contact (for deduplication)
     const primaryEmails = db.prepare(`
       SELECT LOWER(email) as email FROM contact_emails WHERE contact_id = ?
@@ -214,8 +218,9 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
     // Merge emails from secondary contacts
     for (const secondaryId of secondaryContactIds) {
       const secondaryEmails = db.prepare(`
-        SELECT email, type, extra_types, label, params, is_primary FROM contact_emails WHERE contact_id = ?
+        SELECT email, type, extra_types, label, params, is_primary, detail_archived_at FROM contact_emails WHERE contact_id = ?
       `).all(secondaryId) as Array<{
+        detail_archived_at: string | null;
         email: string;
         type: string | null;
         extra_types: string | null;
@@ -227,9 +232,9 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
       for (const email of secondaryEmails) {
         if (!primaryEmailSet.has(email.email.toLowerCase())) {
           db.prepare(`
-            INSERT INTO contact_emails (contact_id, email, type, extra_types, label, params, is_primary)
-            VALUES (?, ?, ?, ?, ?, ?, 0)
-          `).run(primaryContactId, email.email, email.type, email.extra_types, email.label, email.params);
+            INSERT INTO contact_emails (contact_id, email, type, extra_types, label, params, is_primary, detail_archived_at)
+            VALUES (?, ?, ?, ?, ?, ?, 0, ?)
+          `).run(primaryContactId, email.email, email.type, email.extra_types, email.label, email.params, email.detail_archived_at);
           primaryEmailSet.add(email.email.toLowerCase());
         }
       }
@@ -238,8 +243,9 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
     // Merge phones from secondary contacts
     for (const secondaryId of secondaryContactIds) {
       const secondaryPhones = db.prepare(`
-        SELECT phone, phone_display, country_code, type, extra_types, label, params, is_primary FROM contact_phones WHERE contact_id = ?
+        SELECT phone, phone_display, country_code, type, extra_types, label, params, is_primary, detail_archived_at FROM contact_phones WHERE contact_id = ?
       `).all(secondaryId) as Array<{
+        detail_archived_at: string | null;
         phone: string;
         phone_display: string;
         country_code: string | null;
@@ -253,11 +259,11 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
       for (const phone of secondaryPhones) {
         if (!primaryPhoneSet.has(phone.phone)) {
           db.prepare(`
-            INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, extra_types, label, params, is_primary)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+            INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, extra_types, label, params, is_primary, detail_archived_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
           `).run(
             primaryContactId, phone.phone, phone.phone_display, phone.country_code, phone.type,
-            phone.extra_types, phone.label, phone.params
+            phone.extra_types, phone.label, phone.params, phone.detail_archived_at
           );
           primaryPhoneSet.add(phone.phone);
         }
@@ -268,7 +274,7 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
     for (const secondaryId of secondaryContactIds) {
       const secondaryAddresses = db.prepare(`
         SELECT street, city, state, postal_code, country, type, extra_types, label,
-               po_box, extended, sublocality, subadministrative_area, country_code, params,
+               po_box, extended, sublocality, subadministrative_area, country_code, params, detail_archived_at,
                LOWER(COALESCE(street, '')) || '|' || LOWER(COALESCE(city, '')) || '|' || LOWER(COALESCE(postal_code, '')) as key
         FROM contact_addresses WHERE contact_id = ?
       `).all(secondaryId) as Array<{
@@ -286,6 +292,7 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
         subadministrative_area: string | null;
         country_code: string | null;
         params: string | null;
+        detail_archived_at: string | null;
         key: string;
       }>;
 
@@ -294,13 +301,13 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
           db.prepare(`
             INSERT INTO contact_addresses (
               contact_id, street, city, state, postal_code, country, type, extra_types, label,
-              po_box, extended, sublocality, subadministrative_area, country_code, params
+              po_box, extended, sublocality, subadministrative_area, country_code, params, detail_archived_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
             primaryContactId, addr.street, addr.city, addr.state, addr.postal_code, addr.country, addr.type,
             addr.extra_types, addr.label, addr.po_box, addr.extended, addr.sublocality,
-            addr.subadministrative_area, addr.country_code, addr.params
+            addr.subadministrative_area, addr.country_code, addr.params, addr.detail_archived_at
           );
           primaryAddressSet.add(addr.key);
         }
@@ -310,7 +317,7 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
     // Merge social profiles from secondary contacts
     for (const secondaryId of secondaryContactIds) {
       const secondarySocials = db.prepare(`
-        SELECT platform, username, profile_url, type, params,
+        SELECT platform, username, profile_url, type, params, detail_archived_at,
                platform || ':' || username as key
         FROM contact_social_profiles WHERE contact_id = ?
       `).all(secondaryId) as Array<{
@@ -319,15 +326,16 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
         profile_url: string | null;
         type: string | null;
         params: string | null;
+        detail_archived_at: string | null;
         key: string;
       }>;
 
       for (const social of secondarySocials) {
         if (!primarySocialSet.has(social.key)) {
           db.prepare(`
-            INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url, type, params)
-            VALUES (?, ?, ?, ?, ?, ?)
-          `).run(primaryContactId, social.platform, social.username, social.profile_url, social.type, social.params);
+            INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url, type, params, detail_archived_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `).run(primaryContactId, social.platform, social.username, social.profile_url, social.type, social.params, social.detail_archived_at);
           primarySocialSet.add(social.key);
         }
       }
@@ -362,15 +370,15 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
 
     for (const secondaryId of secondaryContactIds) {
       const secondaryIMs = db.prepare(`
-        SELECT service, handle, type, params, LOWER(service) || ':' || LOWER(handle) as key
+        SELECT service, handle, type, params, detail_archived_at, LOWER(service) || ':' || LOWER(handle) as key
         FROM contact_instant_messages WHERE contact_id = ?
-      `).all(secondaryId) as Array<{ service: string; handle: string; type: string | null; params: string | null; key: string }>;
+      `).all(secondaryId) as Array<{ service: string; handle: string; type: string | null; params: string | null; detail_archived_at: string | null; key: string }>;
 
       for (const im of secondaryIMs) {
         if (!primaryIMSet.has(im.key)) {
           db.prepare(`
-            INSERT INTO contact_instant_messages (contact_id, service, handle, type, params) VALUES (?, ?, ?, ?, ?)
-          `).run(primaryContactId, im.service, im.handle, im.type, im.params);
+            INSERT INTO contact_instant_messages (contact_id, service, handle, type, params, detail_archived_at) VALUES (?, ?, ?, ?, ?, ?)
+          `).run(primaryContactId, im.service, im.handle, im.type, im.params, im.detail_archived_at);
           primaryIMSet.add(im.key);
         }
       }
@@ -384,14 +392,14 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
 
     for (const secondaryId of secondaryContactIds) {
       const secondaryUrls = db.prepare(`
-        SELECT url, label, type, params FROM contact_urls WHERE contact_id = ?
-      `).all(secondaryId) as Array<{ url: string; label: string | null; type: string | null; params: string | null }>;
+        SELECT url, label, type, params, detail_archived_at FROM contact_urls WHERE contact_id = ?
+      `).all(secondaryId) as Array<{ url: string; label: string | null; type: string | null; params: string | null; detail_archived_at: string | null }>;
 
       for (const urlRecord of secondaryUrls) {
         if (!primaryUrlSet.has(urlRecord.url.toLowerCase())) {
           db.prepare(`
-            INSERT INTO contact_urls (contact_id, url, label, type, params) VALUES (?, ?, ?, ?, ?)
-          `).run(primaryContactId, urlRecord.url, urlRecord.label, urlRecord.type, urlRecord.params);
+            INSERT INTO contact_urls (contact_id, url, label, type, params, detail_archived_at) VALUES (?, ?, ?, ?, ?, ?)
+          `).run(primaryContactId, urlRecord.url, urlRecord.label, urlRecord.type, urlRecord.params, urlRecord.detail_archived_at);
           primaryUrlSet.add(urlRecord.url.toLowerCase());
         }
       }
@@ -484,6 +492,7 @@ export function mergeContacts(database: DatabaseType, contactIds: number[], prim
     // Keep the merged-away contacts' iCloud UIDs and Google resource names,
     // so their cards in the remote address books still resolve to this one.
     carryMergedIdentities(db, primaryContactId, secondaryContactIds);
+    normalizeArchivedPrimary(db, primaryContactId);
 
     // Delete secondary contacts (cascades to related tables)
     const secondaryPlaceholders = secondaryContactIds.map(() => '?').join(',');

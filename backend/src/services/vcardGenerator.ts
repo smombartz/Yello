@@ -11,6 +11,7 @@
 
 import zlib from 'zlib';
 import { formatAddress, type AddressInput } from './addressFormatter.js';
+import { activeOnly, exportFields } from './archivedDetails.js';
 import { LINKEDIN_ENRICHMENT_PROPERTY, type ParsedVcardProperty, type VcardParams } from './vcardParser.js';
 
 /** Fields an email, phone or address row carries alongside its value. */
@@ -22,6 +23,8 @@ interface TypedEntry {
   label?: string | null;
   /** Leftover vCard parameters, written after the ones above */
   params?: VcardParams | null;
+  /** Archived detail: exported marked, never sent to a sync target */
+  archivedAt?: string | null;
 }
 
 /**
@@ -71,6 +74,7 @@ export interface ContactForVcard {
     username: string | null;
     profileUrl: string | null;
     params?: VcardParams | null;
+    archivedAt?: string | null;
   }>;
   categories: string[];
   photoBase64?: string;
@@ -80,12 +84,14 @@ export interface ContactForVcard {
     label: string | null;
     type: string | null;
     params?: VcardParams | null;
+    archivedAt?: string | null;
   }>;
   instantMessages?: Array<{
     service: string;
     handle: string;
     type: string | null;
     params?: VcardParams | null;
+    archivedAt?: string | null;
   }>;
   relatedPeople?: Array<{
     name: string;
@@ -302,8 +308,13 @@ export function generateVcard(contact: ContactForVcard, options: GenerateVcardOp
   const nextGroup = () => `item${++itemCounter}`;
   const labelLine = (group: string, label: string) => `${group}.X-ABLabel:${escapeVcardValue(label)}`;
 
+  // Archived details never reach a sync target; in an export they carry the
+  // label "Archived" and Yello's marker parameters (see archivedDetails.ts).
+  const entries = <E extends { archivedAt?: string | null; label?: string | null; params?: VcardParams | null }>(list: E[]): E[] =>
+    (options.sync ? activeOnly(list) : list).map(entry => entry.archivedAt ? { ...entry, ...exportFields(entry) } : entry);
+
   // EMAIL entries
-  for (const email of contact.emails) {
+  for (const email of entries(contact.emails)) {
     if (!email.email) continue;
     const typeParam = getTypeParam(email.type, email.extraTypes);
     const prefParam = email.isPrimary ? ';PREF=1' : '';
@@ -317,7 +328,7 @@ export function generateVcard(contact: ContactForVcard, options: GenerateVcardOp
   }
 
   // TEL entries
-  for (const phone of contact.phones) {
+  for (const phone of entries(contact.phones)) {
     if (!phone.phoneDisplay && !phone.phone) continue;
     const typeParam = getTypeParam(phone.type, phone.extraTypes);
     const prefParam = phone.isPrimary ? ';PREF=1' : '';
@@ -336,7 +347,7 @@ export function generateVcard(contact: ContactForVcard, options: GenerateVcardOp
   // Annotated addresses get an Apple-style item group so a per-address GEO,
   // label or country hint can be tied to its ADR (vCard 3.0 GEO is otherwise
   // card-level).
-  for (const address of contact.addresses) {
+  for (const address of entries(contact.addresses)) {
     const typeParam = getTypeParam(address.type, address.extraTypes);
     const adrValue = formatAdrValue(address);
     const hasGeo = address.latitude != null && address.longitude != null;
@@ -366,7 +377,7 @@ export function generateVcard(contact: ContactForVcard, options: GenerateVcardOp
   }
 
   // URL entries. A label travels as the X-ABLabel of the URL's item group.
-  for (const url of contact.urls ?? []) {
+  for (const url of entries(contact.urls ?? [])) {
     const typeParam = getTypeParam(url.type);
     const label = url.label;
     if (label) {
@@ -379,7 +390,7 @@ export function generateVcard(contact: ContactForVcard, options: GenerateVcardOp
   }
 
   // IMPP (instant messaging) entries
-  for (const im of contact.instantMessages ?? []) {
+  for (const im of entries(contact.instantMessages ?? [])) {
     const scheme = im.service.toLowerCase().replace(/[^a-z0-9+.-]/g, '') || 'x-apple';
     const typeParam = getTypeParam(im.type);
     lines.push(`IMPP;X-SERVICE-TYPE=${formatParamValue(im.service)}${typeParam}${formatParams(im.params)}:${scheme}:${im.handle}`);
@@ -423,7 +434,7 @@ export function generateVcard(contact: ContactForVcard, options: GenerateVcardOp
   }
 
   // X-SOCIALPROFILE entries, in the form Apple writes them
-  for (const profile of contact.socialProfiles) {
+  for (const profile of entries(contact.socialProfiles)) {
     if (profile.profileUrl) {
       const platformParam = profile.platform ? `;TYPE=${formatParamValue(profile.platform)}` : '';
       const usernameParam = profile.username ? `;X-USER=${formatParamValue(profile.username)}` : '';

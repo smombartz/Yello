@@ -488,6 +488,19 @@ Phase 5 (running on its own; behind `SYNC_ENGINE=1`):
   needed) and the next sync writes it out. Field-only entries from the cutover cannot be restored.
 - The Tools page's one-off Google / iCloud import sections turn into a note once that book is synced.
 
+### Archived contact details
+
+A phone, email, address, social profile, IM or web link can be **archived**: an old number or former address stays in Yello for reference (and so old email threads and messages can still be traced) but leaves the main view, so nobody dials or mails it by mistake. Contact-level archiving (`contacts.archived_at`, the Archived group) is a separate feature.
+
+- **Storage:** `detail_archived_at` on each detail table (`docs/database.md`). All rules live in `backend/src/services/archivedDetails.ts`.
+- **Card UI** (`ContactFormSections.tsx`): each section lists active entries; archived ones sit behind a gray "N archived" link (the `.show-more-link` pattern) and expand as muted plain text with "Archived Mon YYYY", without call/text/WhatsApp/mail actions. In edit mode each row has an archive button beside remove; archived rows get Restore and remove. Changes save with the form. `ReachOutBar` only uses active entries.
+- **Sync never sends them.** `generateVcard(…, { sync })` and `contactDataToPerson` skip archived entries, and `projectContact` leaves them out, so archiving is an ordinary local change and the next push removes the detail from iCloud/Google. `replaceContactFields` (a remote family taken in a merge) deletes only active rows, and drops an incoming entry that matches an archived row's value instead of re-adding it as active.
+- **Obsolete / Archived labels.** Any row written with the X-ABLabel (or Google custom type) `Obsolete` or `Archived` is stored archived, label cleared. This runs at storage, not in the parser, on purpose: the remote card still projects the entry, so after relabeling a number "Obsolete" on an iPhone, Yello archives it and its next push removes it from the phone. A one-off migration (`archiveObsoleteLabels`, every connection, idempotent) converted existing rows.
+- **VCF export/import.** The export keeps archived entries, written as an `Archived` label plus hidden parameters, e.g. `item3.TEL;TYPE=CELL;X-YELLO-ARCHIVED=2026-10-26;X-YELLO-LABEL=mobile:+1 415 555 0100` + `item3.X-ABLabel:Archived`. Other apps show "Archived"; a Yello import (`takeArchiveMarker` in the parser) restores the archived state and the original label. Social profiles and IMs carry only the parameters (Apple has no label for them).
+- **Who still sees archived entries:** search (FTS), Gmail history/discovery, Gravatar lookup, duplicate detection and import matching (an old email is still evidence of who someone is). **Who doesn't:** list primary email/phone and has-email/phone/address filters, map, geocoding and address cleanup (never geocoded or billed), stats, the public profile and the profile editor (whose save leaves archived rows alone).
+- **Merging contacts** carries the flag over; a value archived on one contact but active on another comes out active (`unarchiveDetailsActiveElsewhere`).
+- **Gotcha:** Fastify's request coercion turns a JSON `null` into `""` for a nullable string, so `PUT /api/contacts/:id` writes `archivedAt || null`.
+
 ### Public profile card (`/p/:slug`)
 
 Users can publish their contact card at a server-generated slug. Behavior notes:

@@ -1,5 +1,62 @@
 # Change Log
 
+## 2026-10-26 — Archive individual contact details
+
+**Session:** `52e72bcf-5ec8-4c1b-bb25-3f8336d77265`
+
+**What Changed:**
+- Phones, emails, addresses, social profiles, IMs and web links can be archived. Archived details
+  are kept and searchable, but hidden behind a gray "N archived" link in their card section.
+  When expanded they show as muted plain text ("Archived Oct 2026") with no call or mail actions.
+  In edit mode an archive button sits beside remove, and archived rows get Restore.
+- New `detail_archived_at` column on the six detail tables. One rule module covers labels,
+  export markers, the primary flag, the migration and contact merges.
+- Sync never sends archived details: they are left out of the iCloud vCard, the Google Person body
+  and the sync projection. Merging a remote family keeps archived rows and skips remote copies of
+  archived values.
+- A detail stored with the label "Obsolete" or "Archived" (from an import, an iCloud/Google pull or
+  existing data) becomes archived. A one-off idempotent migration converts existing rows.
+- VCF export writes archived details as `X-ABLabel:Archived` + `X-YELLO-ARCHIVED=<date>` +
+  `X-YELLO-LABEL=<original>`. A Yello import restores them.
+- List primary/has-filters, map, geocoding, address cleanup, stats, the public profile and the
+  ReachOutBar use active details only. Search, Gmail history and matching still see archived ones.
+- Contact merge carries the flag over, and an active copy wins.
+
+**Why:**
+- Stale numbers and addresses should stop being confused with current ones, but stay findable for
+  old emails and messages, stay out of Google/iCloud, and survive an export.
+
+**Files Modified:**
+- `backend/src/services/archivedDetails.ts` — new: `archiveStateForStorage`, `takeArchiveMarker`,
+  `exportFields`, `normalizeArchivedPrimary`, `archiveObsoleteLabels`, `unarchiveDetailsActiveElsewhere`
+- `backend/src/services/userDatabase.ts` — `detail_archived_at` columns + migration, label conversion
+- `backend/src/services/vcardParser.ts` — `archivedAt` on parsed entries, marker read
+- `backend/src/services/vcardGenerator.ts` — archived export form; skipped in sync cards
+- `backend/src/services/vcardExportService.ts` — `loadContactsForVcard` loads `archivedAt`
+- `backend/src/services/contactPersistence.ts` — inserts persist the archive state;
+  `replaceContactFields` keeps archived rows
+- `backend/src/services/sync/syncProjection.ts` — `projectContact` ignores archived;
+  adapters carry `archivedAt`
+- `backend/src/services/sync/googlePersonMapper.ts` — `contactDataToPerson` skips archived
+- `backend/src/services/vcardModelStore.ts` — `withVcardFields` returns `archivedAt`
+- `backend/src/services/mergeService.ts` — carries the flag over, active wins
+- `backend/src/schemas/contact.ts` — `archivedAt` on read/update detail schemas
+- `backend/src/routes/contacts.ts` — `PUT` writes `archivedAt` and skips geocoding archived
+  addresses; list filters active-only
+- `backend/src/routes/profile.ts` — profile shows active details only; save keeps archived rows
+- `backend/src/routes/map.ts`, `backend/src/routes/stats.ts`,
+  `backend/src/services/addressCleanupService.ts` — exclude archived addresses
+- `backend/src/services/__tests__/archivedDetails.test.ts` — new tests
+- `backend/src/routes/__tests__/contacts.test.ts` — PUT/GET and list-filter tests
+- `backend/src/services/__tests__/vcardModelBackfill.test.ts` — Obsolete label now archives
+- `frontend/src/api/types.ts`, `frontend/src/utils/contactPayload.ts` — `archivedAt`
+- `frontend/src/components/ContactFormSections.tsx` — `ArchivedDetails`, `ArchivedField`,
+  `ArchivedEditRow`, archive/restore buttons, active-only `ReachOutBar`
+- `frontend/src/index.css` — archived row and archive button styles
+- `docs/database.md`, `docs/reference.md`, `docs/plans/2026-10-26-archived-contact-details.md`
+
+---
+
 ## 2026-10-26 — Contact ID shown in the card's Meta Data
 
 **Session:** `29fc93d6-abff-4f0a-87e0-53cbdb828462`

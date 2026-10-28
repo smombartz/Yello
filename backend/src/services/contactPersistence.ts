@@ -2,6 +2,7 @@ import type { Database as DatabaseType, Statement } from 'better-sqlite3';
 import { rebuildContactSearch } from './database.js';
 import { insertContactDates, paramsJson, saveVcardModelFields } from './vcardModelStore.js';
 import { LINKEDIN_ENRICHMENT_COLUMNS } from './linkedinEnrichmentColumns.js';
+import { archiveStateForStorage, normalizeArchivedPrimary } from './archivedDetails.js';
 import type { ParsedContact } from './vcardParser.js';
 import type { SyncField } from './sync/syncProjection.js';
 
@@ -44,12 +45,13 @@ export function prepareContactStatements(db: DatabaseType): ContactStatements {
     `),
 
     insertEmail: db.prepare(`
-      INSERT INTO contact_emails (contact_id, email, type, extra_types, label, params, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO contact_emails (contact_id, email, type, extra_types, label, params, is_primary, detail_archived_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `),
 
     insertPhone: db.prepare(`
-      INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, extra_types, label, params, is_primary)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, extra_types, label, params, is_primary, detail_archived_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `),
 
     // geocoded_at is stamped alongside imported coordinates so the address
@@ -59,9 +61,9 @@ export function prepareContactStatements(db: DatabaseType): ContactStatements {
       INSERT INTO contact_addresses (
         contact_id, street, city, state, postal_code, country, type, extra_types, label,
         po_box, extended, sublocality, subadministrative_area, country_code, params,
-        latitude, longitude, geocoded_at
+        latitude, longitude, geocoded_at, detail_archived_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? IS NULL THEN NULL ELSE datetime('now') END)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? IS NULL THEN NULL ELSE datetime('now') END, ?)
     `),
 
     insertCategory: db.prepare(`
@@ -69,11 +71,11 @@ export function prepareContactStatements(db: DatabaseType): ContactStatements {
     `),
 
     insertInstantMessage: db.prepare(`
-      INSERT INTO contact_instant_messages (contact_id, service, handle, type, params) VALUES (?, ?, ?, ?, ?)
+      INSERT INTO contact_instant_messages (contact_id, service, handle, type, params, detail_archived_at) VALUES (?, ?, ?, ?, ?, ?)
     `),
 
     insertUrl: db.prepare(`
-      INSERT INTO contact_urls (contact_id, url, label, type, params) VALUES (?, ?, ?, ?, ?)
+      INSERT INTO contact_urls (contact_id, url, label, type, params, detail_archived_at) VALUES (?, ?, ?, ?, ?, ?)
     `),
 
     insertRelatedPerson: db.prepare(`
@@ -81,8 +83,8 @@ export function prepareContactStatements(db: DatabaseType): ContactStatements {
     `),
 
     insertSocialProfile: db.prepare(`
-      INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url, type, params)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url, type, params, detail_archived_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `),
 
     insertLinkedinEnrichment: db.prepare(`
@@ -123,21 +125,28 @@ type Url = ParsedContact['urls'][number];
 type RelatedPerson = ParsedContact['relatedPeople'][number];
 type SocialProfile = ParsedContact['socialProfiles'][number];
 
+// Every row is written through archiveStateForStorage, so an entry labelled
+// Obsolete/Archived is stored archived (see archivedDetails.ts). Callers run
+// normalizeArchivedPrimary afterwards.
+
 function insertEmailRow(stmts: Stmts, contactId: number, email: Email): void {
+  const { archivedAt, label } = archiveStateForStorage(email);
   stmts.insertEmail.run(
-    contactId, email.email, email.type, email.extraTypes ?? null, email.label ?? null,
-    paramsJson(email.params), email.isPrimary ? 1 : 0
+    contactId, email.email, email.type, email.extraTypes ?? null, label,
+    paramsJson(email.params), email.isPrimary ? 1 : 0, archivedAt
   );
 }
 
 function insertPhoneRow(stmts: Stmts, contactId: number, phone: Phone): void {
+  const { archivedAt, label } = archiveStateForStorage(phone);
   stmts.insertPhone.run(
     contactId, phone.phone, phone.phoneDisplay, phone.countryCode, phone.type,
-    phone.extraTypes ?? null, phone.label ?? null, paramsJson(phone.params), phone.isPrimary ? 1 : 0
+    phone.extraTypes ?? null, label, paramsJson(phone.params), phone.isPrimary ? 1 : 0, archivedAt
   );
 }
 
 function insertAddressRow(stmts: Stmts, contactId: number, addr: Address): void {
+  const { archivedAt, label } = archiveStateForStorage(addr);
   stmts.insertAddress.run(
     contactId,
     addr.street,
@@ -147,7 +156,7 @@ function insertAddressRow(stmts: Stmts, contactId: number, addr: Address): void 
     addr.country,
     addr.type,
     addr.extraTypes ?? null,
-    addr.label ?? null,
+    label,
     addr.poBox ?? null,
     addr.extended ?? null,
     addr.sublocality ?? null,
@@ -156,16 +165,18 @@ function insertAddressRow(stmts: Stmts, contactId: number, addr: Address): void 
     paramsJson(addr.params),
     addr.latitude,
     addr.longitude,
-    addr.latitude
+    addr.latitude,
+    archivedAt
   );
 }
 
 function insertInstantMessageRow(stmts: Stmts, contactId: number, im: InstantMessage): void {
-  stmts.insertInstantMessage.run(contactId, im.service, im.handle, im.type, paramsJson(im.params));
+  stmts.insertInstantMessage.run(contactId, im.service, im.handle, im.type, paramsJson(im.params), im.archivedAt ?? null);
 }
 
 function insertUrlRow(stmts: Stmts, contactId: number, url: Url): void {
-  stmts.insertUrl.run(contactId, url.url, url.label, url.type, paramsJson(url.params));
+  const { archivedAt, label } = archiveStateForStorage(url);
+  stmts.insertUrl.run(contactId, url.url, label, url.type, paramsJson(url.params), archivedAt);
 }
 
 function insertRelatedPersonRow(stmts: Stmts, contactId: number, person: RelatedPerson): void {
@@ -173,7 +184,9 @@ function insertRelatedPersonRow(stmts: Stmts, contactId: number, person: Related
 }
 
 function insertSocialProfileRow(stmts: Stmts, contactId: number, profile: SocialProfile): void {
-  stmts.insertSocialProfile.run(contactId, profile.platform, socialUsername(profile), profile.url, null, paramsJson(profile.params));
+  stmts.insertSocialProfile.run(
+    contactId, profile.platform, socialUsername(profile), profile.url, null, paramsJson(profile.params), profile.archivedAt ?? null
+  );
 }
 
 export interface InsertedContact {
@@ -239,6 +252,7 @@ export function insertParsedContact(
   }
 
   saveVcardModelFields(db, contactId, contact);
+  normalizeArchivedPrimary(db, contactId);
 
   rebuildContactSearch(db, contactId);
 
@@ -272,6 +286,9 @@ function incomingScalars(contact: ParsedContact): Record<MergeableScalarField, s
 }
 
 const lower = (value: string | null | undefined): string => (value || '').toLowerCase();
+
+const ADDRESS_KEY_SQL =
+  `LOWER(COALESCE(street, '')) || '|' || LOWER(COALESCE(city, '')) || '|' || LOWER(COALESCE(postal_code, ''))`;
 
 function existingKeys(db: DatabaseType, sql: string, contactId: number): Set<string> {
   return new Set((db.prepare(sql).all(contactId) as Array<{ key: string }>).map(r => r.key));
@@ -388,6 +405,7 @@ export function mergeParsedIntoContact(
     { first_name: string | null; last_name: string | null };
   const displayName = [names.first_name, names.last_name].filter(Boolean).join(' ') || incoming.displayName;
   db.prepare('UPDATE contacts SET display_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(displayName, id);
+  normalizeArchivedPrimary(db, id);
 
   rebuildContactSearch(db, id);
 }
@@ -398,8 +416,10 @@ export function mergeParsedIntoContact(
  * columns or child table; child rows are replaced wholesale, keeping the
  * incoming labels and parameters. Geocoding survives on addresses whose
  * street, city and postcode are unchanged, and a related person keeps its
- * link to another contact while the name is the same. Must be called inside a
- * transaction. Photos are left to the caller.
+ * link to another contact while the name is the same. Archived rows are
+ * Yello's alone (never synced): they are kept, and an incoming entry with an
+ * archived row's value is skipped rather than added as an active duplicate.
+ * Must be called inside a transaction. Photos are left to the caller.
  */
 export function replaceContactFields(
   stmts: ContactStatements,
@@ -414,6 +434,13 @@ export function replaceContactFields(
       .run(...columns.map(c => assignments[c] ?? null), contactId);
   };
   const clear = (table: string) => db.prepare(`DELETE FROM ${table} WHERE contact_id = ?`).run(contactId);
+  const clearActive = (table: string) =>
+    db.prepare(`DELETE FROM ${table} WHERE contact_id = ? AND detail_archived_at IS NULL`).run(contactId);
+  /** Incoming entries whose key no archived row of the contact already holds. */
+  const notArchived = <E>(table: string, keySql: string, entries: E[], keyOf: (entry: E) => string): E[] => {
+    const archived = existingKeys(db, `SELECT ${keySql} AS key FROM ${table} WHERE contact_id = ? AND detail_archived_at IS NOT NULL`, contactId);
+    return archived.size === 0 ? entries : entries.filter(entry => !archived.has(keyOf(entry)));
+  };
 
   for (const family of families) {
     switch (family) {
@@ -431,12 +458,16 @@ export function replaceContactFields(
       case 'gender': set({ gender: incoming.gender }); break;
       case 'isCompany': set({ is_company: incoming.isCompany ? 1 : 0 }); break;
       case 'emails':
-        clear('contact_emails');
-        for (const e of incoming.emails) insertEmailRow(stmts, contactId, e);
+        clearActive('contact_emails');
+        for (const e of notArchived('contact_emails', 'LOWER(email)', incoming.emails, e => lower(e.email))) {
+          insertEmailRow(stmts, contactId, e);
+        }
         break;
       case 'phones':
-        clear('contact_phones');
-        for (const p of incoming.phones) insertPhoneRow(stmts, contactId, p);
+        clearActive('contact_phones');
+        for (const p of notArchived('contact_phones', 'phone', incoming.phones, p => p.phone)) {
+          insertPhoneRow(stmts, contactId, p);
+        }
         break;
       case 'addresses': {
         const geo = new Map((db.prepare(`
@@ -444,24 +475,34 @@ export function replaceContactFields(
                  latitude, longitude
           FROM contact_addresses WHERE contact_id = ? AND latitude IS NOT NULL
         `).all(contactId) as Array<{ key: string; latitude: number; longitude: number }>).map(r => [r.key, r]));
-        clear('contact_addresses');
-        for (const a of incoming.addresses) {
+        clearActive('contact_addresses');
+        const incomingAddresses = notArchived('contact_addresses', ADDRESS_KEY_SQL, incoming.addresses,
+          a => `${lower(a.street)}|${lower(a.city)}|${lower(a.postalCode)}`);
+        for (const a of incomingAddresses) {
           const kept = a.latitude === null ? geo.get(`${lower(a.street)}|${lower(a.city)}|${lower(a.postalCode)}`) : undefined;
           insertAddressRow(stmts, contactId, kept ? { ...a, latitude: kept.latitude, longitude: kept.longitude } : a);
         }
         break;
       }
       case 'urls':
-        clear('contact_urls');
-        for (const u of incoming.urls) insertUrlRow(stmts, contactId, u);
+        clearActive('contact_urls');
+        for (const u of notArchived('contact_urls', 'LOWER(url)', incoming.urls, u => lower(u.url))) {
+          insertUrlRow(stmts, contactId, u);
+        }
         break;
       case 'socials':
-        clear('contact_social_profiles');
-        for (const sp of incoming.socialProfiles) insertSocialProfileRow(stmts, contactId, sp);
+        clearActive('contact_social_profiles');
+        for (const sp of notArchived('contact_social_profiles', `LOWER(platform) || ':' || LOWER(username)`, incoming.socialProfiles,
+          sp => `${lower(sp.platform)}:${lower(socialUsername(sp))}`)) {
+          insertSocialProfileRow(stmts, contactId, sp);
+        }
         break;
       case 'ims':
-        clear('contact_instant_messages');
-        for (const im of incoming.instantMessages) insertInstantMessageRow(stmts, contactId, im);
+        clearActive('contact_instant_messages');
+        for (const im of notArchived('contact_instant_messages', `LOWER(service) || ':' || LOWER(handle)`, incoming.instantMessages,
+          im => `${lower(im.service)}:${lower(im.handle)}`)) {
+          insertInstantMessageRow(stmts, contactId, im);
+        }
         break;
       case 'related': {
         const links = new Map((db.prepare(`
@@ -489,6 +530,7 @@ export function replaceContactFields(
     }
   }
 
+  normalizeArchivedPrimary(db, contactId);
   db.prepare('UPDATE contacts SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(contactId);
   rebuildContactSearch(db, contactId);
 }

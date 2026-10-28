@@ -51,6 +51,63 @@ describe('contacts routes', () => {
     db.exec('DELETE FROM contacts_unified_fts');
   });
 
+  describe('archived details', () => {
+    function seedWithPhones() {
+      const db = getUserDatabase(1);
+      const id = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Ada Lovelace').lastInsertRowid as number;
+      db.prepare('INSERT INTO contact_phones (contact_id, phone, phone_display, type, is_primary) VALUES (?, ?, ?, ?, 1)')
+        .run(id, '+14155550100', '+1 415 555 0100', 'cell');
+      return id;
+    }
+
+    it('round-trips archivedAt through PUT and GET, keeping the primary on an active row', async () => {
+      const id = seedWithPhones();
+      const response = await app.inject({
+        method: 'PUT',
+        url: `/api/contacts/${id}`,
+        payload: {
+          phones: [
+            { phone: '+14155550100', phoneDisplay: '+1 415 555 0100', countryCode: null, type: 'cell', isPrimary: true, archivedAt: '2026-10-26T10:00:00.000Z' },
+            { phone: '+14155550199', phoneDisplay: '+1 415 555 0199', countryCode: null, type: 'cell', isPrimary: false }
+          ],
+          emails: [{ email: 'old@example.com', type: 'home', isPrimary: true, archivedAt: '2026-10-01T00:00:00.000Z' }]
+        }
+      });
+      expect(response.statusCode).toBe(200);
+
+      const detail = (await app.inject({ method: 'GET', url: `/api/contacts/${id}` })).json();
+      expect(detail.phones.map((p: { phone: string; isPrimary: boolean; archivedAt: string | null }) => [p.phone, p.isPrimary, p.archivedAt]))
+        .toEqual([
+          ['+14155550100', false, '2026-10-26T10:00:00.000Z'],
+          ['+14155550199', true, null]
+        ]);
+      expect(detail.emails[0]).toMatchObject({ email: 'old@example.com', isPrimary: false, archivedAt: '2026-10-01T00:00:00.000Z' });
+
+      // Unarchiving is just sending it back without archivedAt
+      await app.inject({
+        method: 'PUT',
+        url: `/api/contacts/${id}`,
+        payload: { emails: [{ email: 'old@example.com', type: 'home', isPrimary: true, archivedAt: null }] }
+      });
+      const after = (await app.inject({ method: 'GET', url: `/api/contacts/${id}` })).json();
+      expect(after.emails[0]).toMatchObject({ isPrimary: true, archivedAt: null });
+    });
+
+    it('do not count for the list primary or the has-phone filter, but stay searchable', async () => {
+      const id = seedWithPhones();
+      const db = getUserDatabase(1);
+      db.prepare("UPDATE contact_phones SET detail_archived_at = '2026-10-26', is_primary = 0 WHERE contact_id = ?").run(id);
+      rebuildContactSearch(db, id);
+
+      const list = (await app.inject({ method: 'GET', url: '/api/contacts' })).json();
+      expect(list.contacts[0].primaryPhone ?? null).toBeNull();
+      const withPhone = (await app.inject({ method: 'GET', url: '/api/contacts?filter=has-phone' })).json();
+      expect(withPhone.total).toBe(0);
+      const search = (await app.inject({ method: 'GET', url: '/api/contacts?search=0100' })).json();
+      expect(search.contacts.map((c: { displayName: string }) => c.displayName)).toEqual(['Ada Lovelace']);
+    });
+  });
+
   describe('archived contacts', () => {
     // Archived contacts only show in the Archived view, never in the list, its search or groups.
     function seed() {

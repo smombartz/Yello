@@ -411,7 +411,7 @@ function getAddressesByContact(db: DatabaseType): Map<number, AddressRecord[]> {
       a.type
     FROM contact_addresses a
     JOIN contacts c ON a.contact_id = c.id
-    WHERE c.archived_at IS NULL
+    WHERE c.archived_at IS NULL AND a.detail_archived_at IS NULL
     ORDER BY a.contact_id, a.id
   `).all() as AddressRecord[];
 
@@ -1107,7 +1107,7 @@ export function getGeocodingSummary(db: DatabaseType): GeocodingSummary {
       COUNT(*) as total
     FROM contact_addresses a
     JOIN contacts c ON a.contact_id = c.id
-    WHERE c.archived_at IS NULL
+    WHERE c.archived_at IS NULL AND a.detail_archived_at IS NULL
   `).get() as { pending: number; failed: number; geocoded: number; total: number };
 
   return result;
@@ -1156,7 +1156,7 @@ export function findAddressesByGeoStatus(
       a.geocoded_at as geocodedAt
     FROM contact_addresses a
     JOIN contacts c ON a.contact_id = c.id
-    WHERE c.archived_at IS NULL ${statusCondition}
+    WHERE c.archived_at IS NULL AND a.detail_archived_at IS NULL ${statusCondition}
     ORDER BY a.contact_id, a.id
   `).all() as Array<{
     id: number;
@@ -1286,6 +1286,7 @@ export async function batchGeocode(db: DatabaseType, limit: number = 50): Promis
     FROM contact_addresses a
     JOIN contacts c ON a.contact_id = c.id
     WHERE c.archived_at IS NULL
+      AND a.detail_archived_at IS NULL
       AND a.geocoded_at IS NULL
     LIMIT ?
   `).all(limit) as Array<{

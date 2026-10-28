@@ -156,14 +156,17 @@ interface DetailWithEntries {
   emails: Array<{ id: number }>;
   phones: Array<{ id: number }>;
   addresses: Array<{ id: number }>;
+  socialProfiles?: Array<{ id: number }>;
+  instantMessages?: Array<{ id: number }>;
+  urls?: Array<{ id: number }>;
 }
 
 type EntryAnnotations = { label: string | null; extraTypes: string | null };
 
 /**
  * Adds the vCard-only fields to a contact detail response: person fields,
- * custom dates, generic properties (read-only), and each email/phone/address
- * row's label and extra TYPEs.
+ * custom dates, generic properties (read-only), each email/phone/address
+ * row's label and extra TYPEs, and every archivable row's archivedAt.
  */
 export function withVcardFields<T extends DetailWithEntries>(db: DatabaseType, detail: T) {
   const contact = db.prepare(`
@@ -207,6 +210,17 @@ export function withVcardFields<T extends DetailWithEntries>(db: DatabaseType, d
     }])
   );
 
+  const archivedAt = (table: string) => new Map(
+    (db.prepare(`SELECT id, detail_archived_at FROM ${table} WHERE contact_id = ?`)
+      .all(detail.id) as Array<{ id: number; detail_archived_at: string | null }>)
+      .map(row => [row.id, row.detail_archived_at])
+  );
+  const withArchived = <E extends { id: number }>(entries: E[] | undefined, table: string) => {
+    if (!entries) return undefined;
+    const byId = archivedAt(table);
+    return entries.map(entry => ({ ...entry, archivedAt: byId.get(entry.id) ?? null }));
+  };
+
   return {
     ...detail,
     middleName: contact?.middle_name ?? null,
@@ -216,10 +230,13 @@ export function withVcardFields<T extends DetailWithEntries>(db: DatabaseType, d
     gender: contact?.gender ?? null,
     department: contact?.department ?? null,
     isCompany: contact?.is_company === 1,
-    emails: annotate(detail.emails, annotations('contact_emails')),
-    phones: annotate(detail.phones, annotations('contact_phones')),
-    addresses: annotate(detail.addresses, annotations('contact_addresses'))
-      .map(address => ({ ...address, ...addressDetails.get(address.id) })),
+    emails: withArchived(annotate(detail.emails, annotations('contact_emails')), 'contact_emails')!,
+    phones: withArchived(annotate(detail.phones, annotations('contact_phones')), 'contact_phones')!,
+    addresses: withArchived(annotate(detail.addresses, annotations('contact_addresses'))
+      .map(address => ({ ...address, ...addressDetails.get(address.id) })), 'contact_addresses')!,
+    ...(detail.socialProfiles ? { socialProfiles: withArchived(detail.socialProfiles, 'contact_social_profiles')! } : {}),
+    ...(detail.instantMessages ? { instantMessages: withArchived(detail.instantMessages, 'contact_instant_messages')! } : {}),
+    ...(detail.urls ? { urls: withArchived(detail.urls, 'contact_urls')! } : {}),
     dates: db.prepare('SELECT id, date, label FROM contact_dates WHERE contact_id = ? ORDER BY id')
       .all(detail.id) as Array<{ id: number; date: string; label: string | null }>,
     extraProperties: loadVcardProperties(db, detail.id)

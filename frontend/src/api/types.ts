@@ -15,6 +15,8 @@ export interface ContactEmail {
   email: string;
   type: string | null;
   isPrimary: boolean;
+  /** Set when archived: kept and searchable, hidden behind the section's "archived" link, never synced */
+  archivedAt?: string | null;
 }
 
 export interface ContactPhone {
@@ -23,6 +25,8 @@ export interface ContactPhone {
   countryCode: string | null;
   type: string | null;
   isPrimary: boolean;
+  /** Set when archived: kept and searchable, hidden behind the section's "archived" link, never synced */
+  archivedAt?: string | null;
 }
 
 export interface ContactAddress {
@@ -32,6 +36,8 @@ export interface ContactAddress {
   postalCode: string | null;
   country: string | null;
   type: string | null;
+  /** Set when archived: kept and searchable, hidden behind the section's "archived" link, never synced */
+  archivedAt?: string | null;
 }
 
 export interface ContactSocialProfile {
@@ -41,6 +47,8 @@ export interface ContactSocialProfile {
   username: string;
   profileUrl: string | null;
   type: string | null;
+  /** Set when archived: kept and searchable, hidden behind the section's "archived" link, never synced */
+  archivedAt?: string | null;
 }
 
 export interface ContactCategory {
@@ -55,6 +63,8 @@ export interface ContactInstantMessage {
   service: string;
   handle: string;
   type: string | null;
+  /** Set when archived: kept and searchable, hidden behind the section's "archived" link, never synced */
+  archivedAt?: string | null;
 }
 
 export interface ContactUrl {
@@ -63,6 +73,8 @@ export interface ContactUrl {
   url: string;
   label: string | null;
   type: string | null;
+  /** Set when archived: kept and searchable, hidden behind the section's "archived" link, never synced */
+  archivedAt?: string | null;
 }
 
 export interface ContactRelatedPerson {
@@ -339,6 +351,7 @@ export interface UpdateContactEmail {
   email: string;
   type: string | null;
   isPrimary: boolean;
+  archivedAt?: string | null;
 }
 
 export interface UpdateContactPhone {
@@ -347,6 +360,7 @@ export interface UpdateContactPhone {
   countryCode: string | null;
   type: string | null;
   isPrimary: boolean;
+  archivedAt?: string | null;
 }
 
 export interface UpdateContactAddress {
@@ -356,6 +370,7 @@ export interface UpdateContactAddress {
   postalCode: string | null;
   country: string | null;
   type: string | null;
+  archivedAt?: string | null;
 }
 
 export interface UpdateContactSocialProfile {
@@ -363,6 +378,7 @@ export interface UpdateContactSocialProfile {
   username: string;
   profileUrl: string | null;
   type: string | null;
+  archivedAt?: string | null;
 }
 
 export interface UpdateContactCategory {
@@ -373,12 +389,14 @@ export interface UpdateContactInstantMessage {
   service: string;
   handle: string;
   type: string | null;
+  archivedAt?: string | null;
 }
 
 export interface UpdateContactUrl {
   url: string;
   label: string | null;
   type: string | null;
+  archivedAt?: string | null;
 }
 
 export interface UpdateContactRelatedPerson {

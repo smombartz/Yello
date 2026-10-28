@@ -45,16 +45,17 @@ function SectionHeading({ icon, label, iconStyle, zodiacSign }: {
   );
 }
 
-function InfoField({ icon, iconStyle, children, flagEmoji, actions }: {
+function InfoField({ icon, iconStyle, children, flagEmoji, actions, className }: {
   icon?: string;
   iconStyle?: 'solid' | 'regular' | 'brands';
   children: React.ReactNode;
   flagEmoji?: string;
   /** Rendered beside the value (not inside it) so a long value truncates without hiding them. */
   actions?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="info-field">
+    <div className={`info-field${className ? ` ${className}` : ''}`}>
       <div className="info-field-icon">
         {flagEmoji ? (
           <span className="flag-emoji">{flagEmoji}</span>
@@ -137,12 +138,115 @@ function EmailActions({ email }: { email: string }) {
   return <ContactActionLink href={`mailto:${email}`} icon="envelope" label="Send email" />;
 }
 
+// ─── Archived details ────────────────────────────────────────────
+
+/**
+ * A phone, email, address, social link, IM or web link can be archived: kept (and
+ * searchable) but out of the main list, never synced to iCloud/Google. Each section
+ * lists its active entries and puts the archived ones behind a gray "N archived" link.
+ */
+type Archivable = { archivedAt?: string | null };
+
+const isArchived = (item: Archivable) => !!item.archivedAt;
+
+interface Indexed<T> { item: T; index: number }
+
+/** Active and archived entries, each keeping its index in the full list. */
+function splitArchived<T extends Archivable>(items: T[]): { active: Indexed<T>[]; archived: Indexed<T>[] } {
+  const indexed = items.map((item, index) => ({ item, index }));
+  return { active: indexed.filter(e => !isArchived(e.item)), archived: indexed.filter(e => isArchived(e.item)) };
+}
+
+/** Keeps a list's primary flag on an active entry: the first one, when the primary is archived. */
+function withActivePrimary<T extends Archivable>(items: T[]): T[] {
+  if (!items.some(item => 'isPrimary' in item)) return items;
+  const flagged = items.findIndex(item => (item as { isPrimary?: boolean }).isPrimary && !isArchived(item));
+  const primary = flagged >= 0 ? flagged : items.findIndex(item => !isArchived(item));
+  return items.map((item, i) => ({ ...item, isPrimary: i === primary }));
+}
+
+/** Archives or restores one entry. */
+function withArchived<T extends Archivable>(items: T[], index: number, archived: boolean): T[] {
+  return withActivePrimary(items.map((item, i) => (
+    i === index ? { ...item, archivedAt: archived ? new Date().toISOString() : null } : item
+  )));
+}
+
+function archivedSince(archivedAt: string): string {
+  const date = new Date(archivedAt);
+  return Number.isNaN(date.getTime())
+    ? 'Archived'
+    : `Archived ${date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+}
+
+/** The gray "N archived" link at the foot of a section, and the entries it reveals. */
+function ArchivedDetails<T>({ entries, children }: {
+  entries: Indexed<T>[];
+  children: (entry: Indexed<T>) => React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  if (entries.length === 0) return null;
+  return (
+    <div className="archived-details">
+      <div className="show-more-link">
+        <button
+          type="button"
+          className="show-more-button"
+          aria-expanded={open}
+          onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        >
+          {entries.length} archived <Icon name={open ? 'chevron-up' : 'chevron-down'} />
+        </button>
+      </div>
+      {open && <div className="archived-details-list">{entries.map(children)}</div>}
+    </div>
+  );
+}
+
+/** An archived entry in view mode: muted plain text (no call/text/mail actions), and when it was archived. */
+function ArchivedField({ icon, iconStyle, value, archivedAt }: {
+  icon: string;
+  iconStyle?: 'solid' | 'regular' | 'brands';
+  value: string;
+  archivedAt: string;
+}) {
+  return (
+    <InfoField icon={icon} iconStyle={iconStyle} className="archived-field">
+      <span className="archived-field-value">{value}</span>
+      <span className="archived-field-date">{archivedSince(archivedAt)}</span>
+    </InfoField>
+  );
+}
+
+/** An archived entry in edit mode: read-only, with Restore and Remove. */
+function ArchivedEditRow({ icon, iconStyle, value, archivedAt, onRestore, onRemove }: {
+  icon: string;
+  iconStyle?: 'solid' | 'regular' | 'brands';
+  value: string;
+  archivedAt: string;
+  onRestore: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <EditableArrayItem onRestore={onRestore} onRemove={onRemove}>
+      <Icon name={icon} style={iconStyle} />
+      <div className="archived-field archived-edit-value">
+        <span className="archived-field-value">{value}</span>
+        <span className="archived-field-date">{archivedSince(archivedAt)}</span>
+      </div>
+    </EditableArrayItem>
+  );
+}
+
 /**
  * Phones only (hidden above 768px by CSS): one-tap Text / Call / WhatsApp / Email tiles
  * for the primary phone and email, opening the expanded card the way iOS Contacts does.
  * Desktop keeps the inline links beside each value.
  */
-export function ReachOutBar({ phones, emails }: { phones: ContactPhone[]; emails: ContactEmail[] }) {
+export function ReachOutBar({ phones: allPhones, emails: allEmails }: { phones: ContactPhone[]; emails: ContactEmail[] }) {
+  // Never reach out on an archived (stale) number or address
+  const phones = allPhones.filter(p => !isArchived(p));
+  const emails = allEmails.filter(e => !isArchived(e));
   const phone = phones.find(p => p.isPrimary) ?? phones[0];
   const email = emails.find(e => e.isPrimary) ?? emails[0];
   const dialable = phone?.phone.replace(/[^\d+]/g, '') ?? '';
@@ -238,17 +342,39 @@ export function SaveErrors({ message, problems }: { message: string | null; prob
   );
 }
 
-/** Without `onRemove` (an auto-added blank row) a spacer keeps the inputs aligned with the rows above. */
+/**
+ * Without `onRemove` (an auto-added blank row) a spacer keeps the inputs aligned with
+ * the rows above; `reserveArchive` does the same for the archive button.
+ */
 export function EditableArrayItem({
   children,
-  onRemove
+  onRemove,
+  onArchive,
+  onRestore,
+  reserveArchive
 }: {
   children: React.ReactNode;
   onRemove?: () => void;
+  onArchive?: () => void;
+  onRestore?: () => void;
+  reserveArchive?: boolean;
 }) {
   return (
     <div className="editable-array-item">
       {children}
+      {onArchive ? (
+        <button type="button" className="remove-item-btn archive-item-btn" onClick={onArchive}
+          title="Archive: keep it, but hide it and stop syncing it" aria-label="Archive">
+          <Icon name="box-archive" />
+        </button>
+      ) : onRestore ? (
+        <button type="button" className="remove-item-btn archive-item-btn" onClick={onRestore}
+          title="Restore: show and sync it again" aria-label="Restore">
+          <Icon name="arrow-rotate-left" />
+        </button>
+      ) : reserveArchive ? (
+        <span className="remove-item-spacer" aria-hidden="true" />
+      ) : null}
       {onRemove ? (
         <button type="button" className="remove-item-btn" onClick={onRemove} title="Remove">
           <Icon name="xmark" />
@@ -307,9 +433,11 @@ function useDragState() {
     const [movedItem] = updated.splice(fromIndex, 1);
     updated.splice(toIndex, 0, movedItem);
 
+    // The first active entry is primary (archived ones never are)
+    const firstActive = updated.findIndex(item => !(item && typeof item === 'object' && isArchived(item as Archivable)));
     const result = updated.map((item, idx) => {
       if (item && typeof item === 'object' && 'isPrimary' in item) {
-        return { ...item, isPrimary: idx === 0 };
+        return { ...item, isPrimary: idx === firstActive };
       }
       return item;
     });
@@ -331,6 +459,7 @@ function DraggableArrayItem({
   onDragOver,
   onDrop,
   onRemove,
+  onArchive,
   isBlankRow,
   children,
 }: {
@@ -342,6 +471,8 @@ function DraggableArrayItem({
   onDragOver: (index: number) => void;
   onDrop: (fromIndex: number, toIndex: number) => void;
   onRemove: () => void;
+  /** Sections whose entries can be archived (see ArchivedDetails). */
+  onArchive?: () => void;
   /** The auto-added blank row: not draggable, not a drop target, nothing to remove. */
   isBlankRow?: boolean;
   children: React.ReactNode;
@@ -349,7 +480,7 @@ function DraggableArrayItem({
   if (isBlankRow) {
     return (
       <div className="draggable-array-item">
-        <EditableArrayItem>{children}</EditableArrayItem>
+        <EditableArrayItem reserveArchive={!!onArchive}>{children}</EditableArrayItem>
       </div>
     );
   }
@@ -367,7 +498,7 @@ function DraggableArrayItem({
         }
       }}
     >
-      <EditableArrayItem onRemove={onRemove}>
+      <EditableArrayItem onRemove={onRemove} onArchive={onArchive}>
         {children}
       </EditableArrayItem>
     </div>
@@ -389,7 +520,7 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
 
   if (!isEditMode && !phones.length) return null;
 
-  const newPhone = (): ContactPhone => ({ phone: '', phoneDisplay: '', countryCode: null, type: null, isPrimary: phones.length === 0 });
+  const newPhone = (): ContactPhone => ({ phone: '', phoneDisplay: '', countryCode: null, type: null, isPrimary: !phones.some(p => !isArchived(p)) });
   const { rows, blankIndex, commit } = autoRows(
     phones, p => !p.phone && !p.phoneDisplay && !p.type, newPhone, onPhonesChange,
   );
@@ -405,6 +536,7 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
   };
 
   const removePhone = (index: number) => commit(phones.filter((_, i) => i !== index));
+  const archive = (index: number, archived: boolean) => onPhonesChange?.(withArchived(phones, index, archived));
 
 
   if (isEditMode) {
@@ -412,7 +544,7 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
       <div className="expanded-section">
         <h4 className="section-header">Phone</h4>
         <div className="section-content edit-section-content">
-          {rows.map((phone, i) => (
+          {rows.map((phone, i) => i !== blankIndex && isArchived(phone) ? null : (
             <div key={`phone-${i}`} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
               <DraggableArrayItem
                 index={i}
@@ -424,6 +556,7 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
                 onDragOver={dragState.handleDragOver}
                 onDrop={(from, to) => dragState.handleDrop(from, to, phones, onPhonesChange || (() => {}))}
                 onRemove={() => removePhone(i)}
+                onArchive={() => archive(i, true)}
               >
                 <Icon name="phone" />
                 <div className="edit-field-group">
@@ -442,18 +575,25 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
               {i !== blankIndex && renderItemSuffix?.(i)}
             </div>
           ))}
+          <ArchivedDetails entries={splitArchived(phones).archived}>
+            {({ item, index }) => (
+              <ArchivedEditRow key={`archived-phone-${index}`} icon="phone" value={item.phoneDisplay || item.phone}
+                archivedAt={item.archivedAt!} onRestore={() => archive(index, false)} onRemove={() => removePhone(index)} />
+            )}
+          </ArchivedDetails>
         </div>
       </div>
     );
   }
 
-  const visible = showAll ? phones : phones.slice(0, initialLimit);
-  const remaining = phones.length - initialLimit;
+  const { active, archived } = splitArchived(phones);
+  const visible = showAll ? active : active.slice(0, initialLimit);
+  const remaining = active.length - initialLimit;
 
   return (
     <div className="expanded-section-view">
       <SectionHeading icon="phone" label="Phone" />
-      {visible.map((phone, i) => {
+      {visible.map(({ item: phone, index: i }) => {
         const flag = getCountryFlag(phone.countryCode);
         const countryName = getCountryName(phone.countryCode);
         const field = (
@@ -484,6 +624,11 @@ export function PhoneSection({ phones, isEditMode, onPhonesChange, initialLimit 
           </button>
         </div>
       )}
+      <ArchivedDetails entries={archived}>
+        {({ item, index }) => (
+          <ArchivedField key={index} icon="phone" value={item.phoneDisplay || item.phone} archivedAt={item.archivedAt!} />
+        )}
+      </ArchivedDetails>
     </div>
   );
 }
@@ -503,7 +648,7 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
 
   if (!isEditMode && !emails.length) return null;
 
-  const newEmail = (): ContactEmail => ({ email: '', type: null, isPrimary: emails.length === 0 });
+  const newEmail = (): ContactEmail => ({ email: '', type: null, isPrimary: !emails.some(e => !isArchived(e)) });
   const { rows, blankIndex, commit } = autoRows(emails, e => !e.email && !e.type, newEmail, onEmailsChange);
 
 
@@ -514,6 +659,7 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
   };
 
   const removeEmail = (index: number) => commit(emails.filter((_, i) => i !== index));
+  const archive = (index: number, archived: boolean) => onEmailsChange?.(withArchived(emails, index, archived));
 
 
   if (isEditMode) {
@@ -521,7 +667,7 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
       <div className="expanded-section">
         <h4 className="section-header">Email</h4>
         <div className="section-content edit-section-content">
-          {rows.map((email, i) => (
+          {rows.map((email, i) => i !== blankIndex && isArchived(email) ? null : (
             <div key={`email-${i}`} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
               <DraggableArrayItem
                 index={i}
@@ -533,6 +679,7 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
                 onDragOver={dragState.handleDragOver}
                 onDrop={(from, to) => dragState.handleDrop(from, to, emails, onEmailsChange || (() => {}))}
                 onRemove={() => removeEmail(i)}
+                onArchive={() => archive(i, true)}
               >
                 <Icon name="envelope" />
                 <div className="edit-field-group">
@@ -552,18 +699,25 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
               {i !== blankIndex && renderItemSuffix?.(i)}
             </div>
           ))}
+          <ArchivedDetails entries={splitArchived(emails).archived}>
+            {({ item, index }) => (
+              <ArchivedEditRow key={`archived-email-${index}`} icon="envelope" value={item.email}
+                archivedAt={item.archivedAt!} onRestore={() => archive(index, false)} onRemove={() => removeEmail(index)} />
+            )}
+          </ArchivedDetails>
         </div>
       </div>
     );
   }
 
-  const visible = showAll ? emails : emails.slice(0, initialLimit);
-  const remaining = emails.length - initialLimit;
+  const { active, archived } = splitArchived(emails);
+  const visible = showAll ? active : active.slice(0, initialLimit);
+  const remaining = active.length - initialLimit;
 
   return (
     <div className="expanded-section-view">
       <SectionHeading icon="envelope" label="Email" />
-      {visible.map((email, i) => {
+      {visible.map(({ item: email, index: i }) => {
         const { icon, style } = getEmailIcon(email.email);
         const field = (
           <InfoField icon={icon} iconStyle={style} actions={<EmailActions email={email.email} />}>
@@ -586,6 +740,12 @@ export function EmailSection({ emails, isEditMode, onEmailsChange, initialLimit 
           </button>
         </div>
       )}
+      <ArchivedDetails entries={archived}>
+        {({ item, index }) => {
+          const { icon, style } = getEmailIcon(item.email);
+          return <ArchivedField key={index} icon={icon} iconStyle={style} value={item.email} archivedAt={item.archivedAt!} />;
+        }}
+      </ArchivedDetails>
     </div>
   );
 }
@@ -618,6 +778,7 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange, ren
   };
 
   const removeAddress = (index: number) => commit(addresses.filter((_, i) => i !== index));
+  const archive = (index: number, archived: boolean) => onAddressesChange?.(withArchived(addresses, index, archived));
 
 
   if (isEditMode) {
@@ -625,7 +786,7 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange, ren
       <div className="expanded-section">
         <h4 className="section-header">Address</h4>
         <div className="section-content edit-section-content">
-          {rows.map((addr, i) => (
+          {rows.map((addr, i) => i !== blankIndex && isArchived(addr) ? null : (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
               <DraggableArrayItem
                 index={i}
@@ -637,6 +798,7 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange, ren
                 onDragOver={dragState.handleDragOver}
                 onDrop={(from, to) => dragState.handleDrop(from, to, addresses, onAddressesChange || (() => {}))}
                 onRemove={() => removeAddress(i)}
+                onArchive={() => archive(i, true)}
               >
                 <Icon name="location-dot" />
                 <div className="edit-field-group address-fields">
@@ -679,6 +841,12 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange, ren
               {i !== blankIndex && renderItemSuffix?.(i)}
             </div>
           ))}
+          <ArchivedDetails entries={splitArchived(addresses).archived}>
+            {({ item, index }) => (
+              <ArchivedEditRow key={`archived-address-${index}`} icon="location-dot" value={formatAddressLines(item).join(', ')}
+                archivedAt={item.archivedAt!} onRestore={() => archive(index, false)} onRemove={() => removeAddress(index)} />
+            )}
+          </ArchivedDetails>
         </div>
       </div>
     );
@@ -687,7 +855,7 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange, ren
   return (
     <div className="expanded-section-view">
       <SectionHeading icon="location-dot" label="Address" />
-      {addresses.map((addr, i) => {
+      {splitArchived(addresses).active.map(({ item: addr, index: i }) => {
         const lines = formatAddressLines(addr);
         if (lines.length === 1 && lines[0] === '(Empty address)') return null;
 
@@ -712,6 +880,11 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange, ren
           <React.Fragment key={i}>{field}</React.Fragment>
         );
       })}
+      <ArchivedDetails entries={splitArchived(addresses).archived}>
+        {({ item, index }) => (
+          <ArchivedField key={index} icon="location-dot" value={formatAddressLines(item).join(', ')} archivedAt={item.archivedAt!} />
+        )}
+      </ArchivedDetails>
     </div>
   );
 }
@@ -764,6 +937,7 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
   };
 
   const removeProfile = (index: number) => commit(socialProfiles.filter((_, i) => i !== index));
+  const archive = (index: number, archived: boolean) => onSocialProfilesChange?.(withArchived(socialProfiles, index, archived));
 
 
   if (isEditMode) {
@@ -771,7 +945,7 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
       <div className="expanded-section">
         <h4 className="section-header">Social Links</h4>
         <div className="section-content edit-section-content">
-          {rows.map((profile, i) => (
+          {rows.map((profile, i) => i !== blankIndex && isArchived(profile) ? null : (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
               <DraggableArrayItem
                 index={i}
@@ -783,6 +957,7 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
                 onDragOver={dragState.handleDragOver}
                 onDrop={(from, to) => dragState.handleDrop(from, to, socialProfiles, onSocialProfilesChange || (() => {}))}
                 onRemove={() => removeProfile(i)}
+                onArchive={() => archive(i, true)}
               >
                 <Icon name={getPlatformIcon(profile.platform)} style={getPlatformIconStyle(profile.platform)} />
                 <div className="edit-field-group">
@@ -807,6 +982,13 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
               {i !== blankIndex && renderItemSuffix?.(i)}
             </div>
           ))}
+          <ArchivedDetails entries={splitArchived(socialProfiles).archived}>
+            {({ item, index }) => (
+              <ArchivedEditRow key={`archived-social-${index}`} icon={getPlatformIcon(item.platform)} iconStyle={getPlatformIconStyle(item.platform)}
+                value={item.profileUrl || item.username || item.platform}
+                archivedAt={item.archivedAt!} onRestore={() => archive(index, false)} onRemove={() => removeProfile(index)} />
+            )}
+          </ArchivedDetails>
         </div>
       </div>
     );
@@ -815,7 +997,7 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
   return (
     <div className="expanded-section-view">
       <SectionHeading icon="share-nodes" label="Social Links" />
-      {socialProfiles.map((profile, i) => {
+      {splitArchived(socialProfiles).active.map(({ item: profile, index: i }) => {
         const field = (
           <InfoField icon={getPlatformIcon(profile.platform)} iconStyle={getPlatformIconStyle(profile.platform)}>
             {profile.profileUrl ? (
@@ -836,6 +1018,12 @@ export function SocialLinksSection({ socialProfiles, isEditMode, onSocialProfile
           <React.Fragment key={profile.id}>{field}</React.Fragment>
         );
       })}
+      <ArchivedDetails entries={splitArchived(socialProfiles).archived}>
+        {({ item, index }) => (
+          <ArchivedField key={index} icon={getPlatformIcon(item.platform)} iconStyle={getPlatformIconStyle(item.platform)}
+            value={item.profileUrl || item.username || item.platform} archivedAt={item.archivedAt!} />
+        )}
+      </ArchivedDetails>
     </div>
   );
 }
@@ -993,6 +1181,7 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
   };
 
   const removeIM = (index: number) => commit(instantMessages.filter((_, i) => i !== index));
+  const archive = (index: number, archived: boolean) => onInstantMessagesChange?.(withArchived(instantMessages, index, archived));
 
 
   if (isEditMode) {
@@ -1000,7 +1189,7 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
       <div className="expanded-section">
         <h4 className="section-header">Instant Messages</h4>
         <div className="section-content edit-section-content">
-          {rows.map((im, i) => (
+          {rows.map((im, i) => i !== blankIndex && isArchived(im) ? null : (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
               <DraggableArrayItem
                 index={i}
@@ -1012,6 +1201,7 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
                 onDragOver={dragState.handleDragOver}
                 onDrop={(from, to) => dragState.handleDrop(from, to, instantMessages, onInstantMessagesChange || (() => {}))}
                 onRemove={() => removeIM(i)}
+                onArchive={() => archive(i, true)}
               >
                 <Icon name={getServiceIcon(im.service)} />
                 <div className="edit-field-group">
@@ -1030,6 +1220,12 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
               {i !== blankIndex && renderItemSuffix?.(i)}
             </div>
           ))}
+          <ArchivedDetails entries={splitArchived(instantMessages).archived}>
+            {({ item, index }) => (
+              <ArchivedEditRow key={`archived-im-${index}`} icon={getServiceIcon(item.service)} value={`${item.service}: ${item.handle}`}
+                archivedAt={item.archivedAt!} onRestore={() => archive(index, false)} onRemove={() => removeIM(index)} />
+            )}
+          </ArchivedDetails>
         </div>
       </div>
     );
@@ -1038,11 +1234,16 @@ export function InstantMessagesSection({ instantMessages, isEditMode, onInstantM
   return (
     <div className="expanded-section-view">
       <SectionHeading icon="message" label="Instant Messages" />
-      {instantMessages.map((im) => (
-        <InfoField key={im.id} icon={getServiceIcon(im.service)}>
+      {splitArchived(instantMessages).active.map(({ item: im, index }) => (
+        <InfoField key={index} icon={getServiceIcon(im.service)}>
           <span>{im.handle}</span>
         </InfoField>
       ))}
+      <ArchivedDetails entries={splitArchived(instantMessages).archived}>
+        {({ item, index }) => (
+          <ArchivedField key={index} icon={getServiceIcon(item.service)} value={item.handle} archivedAt={item.archivedAt!} />
+        )}
+      </ArchivedDetails>
     </div>
   );
 }
@@ -1070,6 +1271,7 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange, renderItemSuffix }
   };
 
   const removeUrl = (index: number) => commit(urls.filter((_, i) => i !== index));
+  const archive = (index: number, archived: boolean) => onUrlsChange?.(withArchived(urls, index, archived));
 
 
   if (isEditMode) {
@@ -1077,7 +1279,7 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange, renderItemSuffix }
       <div className="expanded-section">
         <h4 className="section-header">Web Links</h4>
         <div className="section-content edit-section-content">
-          {rows.map((u, i) => (
+          {rows.map((u, i) => i !== blankIndex && isArchived(u) ? null : (
             <div key={i} className={renderItemSuffix ? 'edit-item-with-suffix' : undefined}>
               <DraggableArrayItem
                 index={i}
@@ -1089,6 +1291,7 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange, renderItemSuffix }
                 onDragOver={dragState.handleDragOver}
                 onDrop={(from, to) => dragState.handleDrop(from, to, urls, onUrlsChange || (() => {}))}
                 onRemove={() => removeUrl(i)}
+                onArchive={() => archive(i, true)}
               >
                 <Icon name={getUrlIcon(u.url, u.label)} />
                 <div className="edit-field-group">
@@ -1107,6 +1310,12 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange, renderItemSuffix }
               {i !== blankIndex && renderItemSuffix?.(i)}
             </div>
           ))}
+          <ArchivedDetails entries={splitArchived(urls).archived}>
+            {({ item, index }) => (
+              <ArchivedEditRow key={`archived-url-${index}`} icon={getUrlIcon(item.url, item.label)} value={item.url}
+                archivedAt={item.archivedAt!} onRestore={() => archive(index, false)} onRemove={() => removeUrl(index)} />
+            )}
+          </ArchivedDetails>
         </div>
       </div>
     );
@@ -1115,7 +1324,7 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange, renderItemSuffix }
   return (
     <div className="expanded-section-view">
       <SectionHeading icon="link" label="Web Links" />
-      {urls.map((u, i) => {
+      {splitArchived(urls).active.map(({ item: u, index: i }) => {
         const field = (
           <InfoField icon={getUrlIcon(u.url, u.label)}>
             <a href={u.url} target="_blank" rel="noopener noreferrer">
@@ -1132,6 +1341,11 @@ export function UrlsSection({ urls, isEditMode, onUrlsChange, renderItemSuffix }
           <React.Fragment key={u.id}>{field}</React.Fragment>
         );
       })}
+      <ArchivedDetails entries={splitArchived(urls).archived}>
+        {({ item, index }) => (
+          <ArchivedField key={index} icon={getUrlIcon(item.url, item.label)} value={item.url} archivedAt={item.archivedAt!} />
+        )}
+      </ArchivedDetails>
     </div>
   );
 }

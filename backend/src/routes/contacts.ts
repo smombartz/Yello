@@ -7,6 +7,7 @@ import { detectMergeConflicts, mergeContactsWithResolutions } from '../services/
 import { geocodeAddress, isValidCoordinate } from '../services/geocoding.js';
 import { contactPhotoReader, exportContactsAsVcf } from '../services/vcardExportService.js';
 import { preserveEntryAnnotations, withVcardFields } from '../services/vcardModelStore.js';
+import { normalizeArchivedPrimary } from '../services/archivedDetails.js';
 
 import {
   ContactListQuerySchema,
@@ -321,8 +322,8 @@ export default async function contactsRoutes(
         c.id,
         c.display_name,
         c.photo_hash,
-        (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
-        (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone
+        (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 AND detail_archived_at IS NULL LIMIT 1) as primary_email,
+        (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 AND detail_archived_at IS NULL LIMIT 1) as primary_phone
       FROM contacts c
       WHERE c.id IN (SELECT rowid FROM contacts_unified_fts WHERE contacts_unified_fts MATCH ?)
         AND c.archived_at IS NULL${excludeClause}
@@ -379,20 +380,20 @@ export default async function contactsRoutes(
       switch (f) {
         case 'has-photo': conditions.push('c.photo_hash IS NOT NULL'); break;
         case 'no-photo': conditions.push('c.photo_hash IS NULL'); break;
-        case 'has-email': conditions.push('EXISTS (SELECT 1 FROM contact_emails WHERE contact_id = c.id)'); break;
-        case 'no-email': conditions.push('NOT EXISTS (SELECT 1 FROM contact_emails WHERE contact_id = c.id)'); break;
-        case 'has-phone': conditions.push('EXISTS (SELECT 1 FROM contact_phones WHERE contact_id = c.id)'); break;
-        case 'no-phone': conditions.push('NOT EXISTS (SELECT 1 FROM contact_phones WHERE contact_id = c.id)'); break;
-        case 'has-address': conditions.push('EXISTS (SELECT 1 FROM contact_addresses WHERE contact_id = c.id)'); break;
-        case 'no-address': conditions.push('NOT EXISTS (SELECT 1 FROM contact_addresses WHERE contact_id = c.id)'); break;
+        case 'has-email': conditions.push('EXISTS (SELECT 1 FROM contact_emails WHERE contact_id = c.id AND detail_archived_at IS NULL)'); break;
+        case 'no-email': conditions.push('NOT EXISTS (SELECT 1 FROM contact_emails WHERE contact_id = c.id AND detail_archived_at IS NULL)'); break;
+        case 'has-phone': conditions.push('EXISTS (SELECT 1 FROM contact_phones WHERE contact_id = c.id AND detail_archived_at IS NULL)'); break;
+        case 'no-phone': conditions.push('NOT EXISTS (SELECT 1 FROM contact_phones WHERE contact_id = c.id AND detail_archived_at IS NULL)'); break;
+        case 'has-address': conditions.push('EXISTS (SELECT 1 FROM contact_addresses WHERE contact_id = c.id AND detail_archived_at IS NULL)'); break;
+        case 'no-address': conditions.push('NOT EXISTS (SELECT 1 FROM contact_addresses WHERE contact_id = c.id AND detail_archived_at IS NULL)'); break;
         case 'has-birthday': conditions.push('c.birthday IS NOT NULL'); break;
         case 'no-birthday': conditions.push('c.birthday IS NULL'); break;
         case 'has-enrichment': conditions.push('EXISTS (SELECT 1 FROM linkedin_enrichment WHERE contact_id = c.id)'); break;
         case 'no-enrichment': conditions.push('NOT EXISTS (SELECT 1 FROM linkedin_enrichment WHERE contact_id = c.id)'); break;
-        case 'has-instagram': conditions.push("EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'instagram')"); break;
-        case 'no-instagram': conditions.push("NOT EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'instagram')"); break;
-        case 'has-linkedin': conditions.push("EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'linkedin')"); break;
-        case 'no-linkedin': conditions.push("NOT EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'linkedin')"); break;
+        case 'has-instagram': conditions.push("EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND detail_archived_at IS NULL AND platform = 'instagram')"); break;
+        case 'no-instagram': conditions.push("NOT EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND detail_archived_at IS NULL AND platform = 'instagram')"); break;
+        case 'has-linkedin': conditions.push("EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND detail_archived_at IS NULL AND platform = 'linkedin')"); break;
+        case 'no-linkedin': conditions.push("NOT EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND detail_archived_at IS NULL AND platform = 'linkedin')"); break;
       }
     }
 
@@ -435,11 +436,11 @@ export default async function contactsRoutes(
         c.company,
         c.title,
         c.photo_hash,
-        (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_email,
-        (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone,
-        (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 LIMIT 1) as primary_phone_country_code,
-        (SELECT profile_url FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'linkedin' LIMIT 1) as linkedin_url,
-        (SELECT url FROM contact_urls WHERE contact_id = c.id LIMIT 1) as website_url
+        (SELECT email FROM contact_emails WHERE contact_id = c.id AND is_primary = 1 AND detail_archived_at IS NULL LIMIT 1) as primary_email,
+        (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 AND detail_archived_at IS NULL LIMIT 1) as primary_phone,
+        (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 AND detail_archived_at IS NULL LIMIT 1) as primary_phone_country_code,
+        (SELECT profile_url FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'linkedin' AND detail_archived_at IS NULL LIMIT 1) as linkedin_url,
+        (SELECT url FROM contact_urls WHERE contact_id = c.id AND detail_archived_at IS NULL LIMIT 1) as website_url
         ${lastContactedSelect}
       FROM contacts c
       ${joinClause}
@@ -1052,16 +1053,17 @@ export default async function contactsRoutes(
     // in the edit form; keep them on rows whose value survives the
     // delete-and-reinsert below.
     const restoreAnnotations = preserveEntryAnnotations(db, id);
+    // archivedAt: request coercion turns a JSON null into "", hence `|| null` below
 
     // Update emails (delete all and re-insert)
     if (updates.emails !== undefined) {
       db.prepare('DELETE FROM contact_emails WHERE contact_id = ?').run(id);
       const insertEmail = db.prepare(`
-        INSERT INTO contact_emails (contact_id, email, type, is_primary)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO contact_emails (contact_id, email, type, is_primary, detail_archived_at)
+        VALUES (?, ?, ?, ?, ?)
       `);
       for (const email of updates.emails) {
-        insertEmail.run(id, email.email, email.type, email.isPrimary ? 1 : 0);
+        insertEmail.run(id, email.email, email.type, email.isPrimary ? 1 : 0, email.archivedAt || null);
       }
     }
 
@@ -1069,11 +1071,11 @@ export default async function contactsRoutes(
     if (updates.phones !== undefined) {
       db.prepare('DELETE FROM contact_phones WHERE contact_id = ?').run(id);
       const insertPhone = db.prepare(`
-        INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, is_primary)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, is_primary, detail_archived_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       for (const phone of updates.phones) {
-        insertPhone.run(id, phone.phone, phone.phoneDisplay, phone.countryCode, phone.type, phone.isPrimary ? 1 : 0);
+        insertPhone.run(id, phone.phone, phone.phoneDisplay, phone.countryCode, phone.type, phone.isPrimary ? 1 : 0, phone.archivedAt || null);
       }
     }
 
@@ -1081,8 +1083,8 @@ export default async function contactsRoutes(
     if (updates.addresses !== undefined) {
       db.prepare('DELETE FROM contact_addresses WHERE contact_id = ?').run(id);
       const insertAddress = db.prepare(`
-        INSERT INTO contact_addresses (contact_id, street, city, state, postal_code, country, type)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO contact_addresses (contact_id, street, city, state, postal_code, country, type, detail_archived_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const updateGeocode = db.prepare(`
         UPDATE contact_addresses
@@ -1091,8 +1093,11 @@ export default async function contactsRoutes(
       `);
 
       for (const addr of updates.addresses) {
-        const result = insertAddress.run(id, addr.street, addr.city, addr.state, addr.postalCode, addr.country, addr.type);
+        const result = insertAddress.run(id, addr.street, addr.city, addr.state, addr.postalCode, addr.country, addr.type, addr.archivedAt || null);
         const addressId = result.lastInsertRowid;
+
+        // An archived address is off the map, so it is not geocoded (or billed)
+        if (addr.archivedAt) continue;
 
         // Geocode in background (don't await to keep response fast)
         geocodeAddress({
@@ -1115,11 +1120,11 @@ export default async function contactsRoutes(
     if (updates.socialProfiles !== undefined) {
       db.prepare('DELETE FROM contact_social_profiles WHERE contact_id = ?').run(id);
       const insertSocial = db.prepare(`
-        INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url, type)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO contact_social_profiles (contact_id, platform, username, profile_url, type, detail_archived_at)
+        VALUES (?, ?, ?, ?, ?, ?)
       `);
       for (const profile of updates.socialProfiles) {
-        insertSocial.run(id, profile.platform, profile.username, profile.profileUrl, profile.type);
+        insertSocial.run(id, profile.platform, profile.username, profile.profileUrl, profile.type, profile.archivedAt || null);
       }
     }
 
@@ -1139,11 +1144,11 @@ export default async function contactsRoutes(
     if (updates.instantMessages !== undefined) {
       db.prepare('DELETE FROM contact_instant_messages WHERE contact_id = ?').run(id);
       const insertIM = db.prepare(`
-        INSERT INTO contact_instant_messages (contact_id, service, handle, type)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO contact_instant_messages (contact_id, service, handle, type, detail_archived_at)
+        VALUES (?, ?, ?, ?, ?)
       `);
       for (const im of updates.instantMessages) {
-        insertIM.run(id, im.service, im.handle, im.type);
+        insertIM.run(id, im.service, im.handle, im.type, im.archivedAt || null);
       }
     }
 
@@ -1151,11 +1156,11 @@ export default async function contactsRoutes(
     if (updates.urls !== undefined) {
       db.prepare('DELETE FROM contact_urls WHERE contact_id = ?').run(id);
       const insertUrl = db.prepare(`
-        INSERT INTO contact_urls (contact_id, url, label, type)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO contact_urls (contact_id, url, label, type, detail_archived_at)
+        VALUES (?, ?, ?, ?, ?)
       `);
       for (const url of updates.urls) {
-        insertUrl.run(id, url.url, url.label, url.type);
+        insertUrl.run(id, url.url, url.label, url.type, url.archivedAt || null);
       }
     }
 
@@ -1173,6 +1178,7 @@ export default async function contactsRoutes(
     }
 
     restoreAnnotations();
+    normalizeArchivedPrimary(db, id);
 
     // Fetch and return the updated contact (reuse the GET logic)
     const contact = db.prepare(`

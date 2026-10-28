@@ -56,17 +56,17 @@ export function buildContactLists(form: ContactFormLists): { lists: ContactLists
     phones: collect(form.phones, 'Phone',
       p => [p.phone, p.type],
       p => (has(p.phone) ? null : 'has no phone number'),
-      p => ({ phone: p.phone, phoneDisplay: p.phoneDisplay, countryCode: p.countryCode, type: p.type, isPrimary: p.isPrimary })),
+      p => ({ phone: p.phone, phoneDisplay: p.phoneDisplay, countryCode: p.countryCode, type: p.type, isPrimary: p.isPrimary, archivedAt: p.archivedAt ?? null })),
 
     emails: collect(form.emails, 'Email',
       e => [e.email, e.type],
       e => (has(e.email) ? null : 'has no email address'),
-      e => ({ email: e.email, type: e.type, isPrimary: e.isPrimary })),
+      e => ({ email: e.email, type: e.type, isPrimary: e.isPrimary, archivedAt: e.archivedAt ?? null })),
 
     addresses: collect(form.addresses, 'Address',
       a => [a.street, a.city, a.state, a.postalCode, a.country, a.type],
       a => ([a.street, a.city, a.state, a.postalCode, a.country].some(has) ? null : 'has no address filled in'),
-      a => ({ street: a.street, city: a.city, state: a.state, postalCode: a.postalCode, country: a.country, type: a.type })),
+      a => ({ street: a.street, city: a.city, state: a.state, postalCode: a.postalCode, country: a.country, type: a.type, archivedAt: a.archivedAt ?? null })),
 
     // A URL alone is enough: platform and username are derived from it.
     socialProfiles: collect(form.socialProfiles, 'Social link',
@@ -79,6 +79,7 @@ export function buildContactLists(form: ContactFormLists): { lists: ContactLists
           username: has(s.username) ? s.username : fromUrl!.username,
           profileUrl: s.profileUrl,
           type: s.type,
+          archivedAt: s.archivedAt ?? null,
         };
       }),
 
@@ -90,12 +91,12 @@ export function buildContactLists(form: ContactFormLists): { lists: ContactLists
     instantMessages: collect(form.instantMessages, 'Instant message',
       im => [im.handle, im.service, im.type],
       im => (!has(im.handle) ? 'has no handle' : !has(im.service) ? 'has no service (Skype, AIM…)' : null),
-      im => ({ service: im.service, handle: im.handle, type: im.type })),
+      im => ({ service: im.service, handle: im.handle, type: im.type, archivedAt: im.archivedAt ?? null })),
 
     urls: collect(form.urls, 'Web link',
       u => [u.url, u.label, u.type],
       u => (has(u.url) ? null : 'has no URL'),
-      u => ({ url: u.url, label: u.label, type: u.type })),
+      u => ({ url: u.url, label: u.label, type: u.type, archivedAt: u.archivedAt ?? null })),
 
     relatedPeople: collect(form.relatedPeople, 'Related person',
       rp => [rp.name, rp.relationship],

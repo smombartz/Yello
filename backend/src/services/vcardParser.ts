@@ -1,6 +1,7 @@
 import ICAL from 'ical.js';
 import zlib from 'zlib';
 import { parsePhoneNumber } from 'libphonenumber-js';
+import { takeArchiveMarker, type ArchivableEntry } from './archivedDetails.js';
 
 /**
  * Carries a contact's linkedin_enrichment row through a VCF export/import.
@@ -22,6 +23,8 @@ export interface ParsedEmail {
   /** vCard parameters no other field holds (e.g. X-APPLE-OMIT-YEAR), re-emitted on export. */
   params?: VcardParams | null;
   isPrimary: boolean;
+  /** Set when the detail is archived (kept, but not synced); see archivedDetails.ts. */
+  archivedAt?: string | null;
 }
 
 export interface ParsedPhone {
@@ -34,6 +37,8 @@ export interface ParsedPhone {
   /** vCard parameters no other field holds (e.g. X-APPLE-OMIT-YEAR), re-emitted on export. */
   params?: VcardParams | null;
   isPrimary: boolean;
+  /** Set when the detail is archived (kept, but not synced); see archivedDetails.ts. */
+  archivedAt?: string | null;
 }
 
 export interface ParsedAddress {
@@ -57,6 +62,8 @@ export interface ParsedAddress {
   /** From a GEO property tied to this ADR. Null unless the file carried one. */
   latitude: number | null;
   longitude: number | null;
+  /** Set when the detail is archived (kept, but not synced); see archivedDetails.ts. */
+  archivedAt?: string | null;
 }
 
 export interface ParsedInstantMessage {
@@ -65,6 +72,8 @@ export interface ParsedInstantMessage {
   type: string | null;
   /** vCard parameters no other field holds (e.g. X-APPLE-OMIT-YEAR), re-emitted on export. */
   params?: VcardParams | null;
+  /** Set when the detail is archived (kept, but not synced); see archivedDetails.ts. */
+  archivedAt?: string | null;
 }
 
 export interface ParsedUrl {
@@ -73,6 +82,8 @@ export interface ParsedUrl {
   type: string | null;
   /** vCard parameters no other field holds (e.g. X-APPLE-OMIT-YEAR), re-emitted on export. */
   params?: VcardParams | null;
+  /** Set when the detail is archived (kept, but not synced); see archivedDetails.ts. */
+  archivedAt?: string | null;
 }
 
 export interface ParsedRelatedPerson {
@@ -88,6 +99,8 @@ export interface ParsedSocialProfile {
   url: string;
   /** vCard parameters no other field holds (e.g. X-APPLE-OMIT-YEAR), re-emitted on export. */
   params?: VcardParams | null;
+  /** Set when the detail is archived (kept, but not synced); see archivedDetails.ts. */
+  archivedAt?: string | null;
 }
 
 /** Upper-cased parameter names to their values; a bare parameter maps to []. */
@@ -839,6 +852,9 @@ export function parseSingleVcard(rawText: string): ParsedContact | null {
     photoConsumed: photoBase64 !== null
   });
 
+  // Yello's own export marks archived details; restore them as archived
+  const archived = <E extends ArchivableEntry>(entries: E[]) => entries.map(takeArchiveMarker);
+
   return {
     firstName,
     lastName,
@@ -857,14 +873,14 @@ export function parseSingleVcard(rawText: string): ParsedContact | null {
     title,
     notes,
     birthday,
-    emails,
-    phones,
-    addresses,
+    emails: archived(emails),
+    phones: archived(phones),
+    addresses: archived(addresses),
     categories,
-    instantMessages,
-    urls,
+    instantMessages: archived(instantMessages),
+    urls: archived(urls),
     relatedPeople,
-    socialProfiles,
+    socialProfiles: archived(socialProfiles),
     photoBase64,
     rawVcard: vcardText,
     uid: normalizeUid(comp.getFirstPropertyValue('uid') as string | null),
