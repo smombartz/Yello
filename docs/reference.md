@@ -254,14 +254,21 @@ Archive, unarchive and delete invalidate the `groups` and `map` queries as well 
 
 ### Adding a contact to a group from the group view
 
-An open group (`/groups/<category>`) has an **Add a contact** typeahead above its list
-(`AddToGroupField.tsx`). It searches with `GET /api/contacts/search?q=…&notInCategory=<category>`, so
-current members and archived contacts aren't suggested. Picking one (click, or arrow keys + Enter; Enter
-alone takes the first match) calls `POST /api/contacts/:id/categories` with `{ category }`. That route
+An open group (`/groups/<category>`) has a **search-or-add** field above its list
+(`AddToGroupField.tsx`). What's typed is the group's search: it sets `?q=`, which filters the group's
+list. At the same time its dropdown suggests contacts to add, from
+`GET /api/contacts/search?q=…&notInCategory=<category>`, so current members and archived contacts aren't
+suggested. Because typing is a search, Enter adds only a highlighted suggestion (arrow keys), never the
+first match on its own. Inside a group the header search is the universal contact search, as on the
+Dashboard: Enter opens `/contacts?q=…`. The field stacks just above the list's sticky toolbar
+(`--ds-z-sticky`), or the toolbar covers its dropdown.
+
+Picking a suggestion calls `POST /api/contacts/:id/categories` with `{ category }`. That route
 adds the one category without resending the contact's others, is a no-op (`added: false`) if the contact
 already has it, bumps `updated_at`, and 404s for archived or missing contacts. It's under `/api/contacts`,
 so it triggers a sync. Sync spots the change through the projection hash (categories are projected for
-iCloud; Google holds no labels in the projection). The field clears and keeps focus for the next add.
+iCloud; Google holds no labels in the projection). The field clears (so the list shows the whole group
+again) and keeps focus for the next add.
 
 ### Edit mode: pinned Save/Cancel, Delete at the bottom
 

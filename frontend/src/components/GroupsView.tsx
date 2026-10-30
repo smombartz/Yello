@@ -17,7 +17,10 @@ export function GroupsView() {
   const { category: selectedCategory = null } = useParams<{ category: string }>();
   const [searchParams] = useSearchParams();
   const updateParams = useSearchParamUpdater();
+  // Groups grid: ?q= filters the groups. Open group: ?q= is the group's own search,
+  // typed in AddToGroupField, while the header search is the universal contact search.
   const search = searchParams.get('q') ?? '';
+  const [contactSearch, setContactSearch] = useState('');
   const [viewMode] = useState<'list' | 'grid'>(() => {
     return (localStorage.getItem('contactViewMode') as 'list' | 'grid') || 'list';
   });
@@ -41,12 +44,18 @@ export function GroupsView() {
 
   useEffect(() => {
     if (selectedCategory) {
+      // Same as the Dashboard: Enter searches all contacts on the Contacts page.
+      const goToContacts = () => {
+        const trimmed = contactSearch.trim();
+        navigate(trimmed ? `/contacts?q=${encodeURIComponent(trimmed)}` : '/contacts');
+      };
       setHeaderConfig({
         title: selectedCategory,
         breadcrumbs: [{ label: 'Groups', onClick: handleBackToGroups }],
-        search,
-        onSearchChange: setSearch,
-        searchPlaceholder: `Search in ${selectedCategory}...`,
+        search: contactSearch,
+        onSearchChange: setContactSearch,
+        onSearchSubmit: goToContacts,
+        searchPlaceholder: 'Search contacts...',
       });
     } else {
       setHeaderConfig({
@@ -57,7 +66,7 @@ export function GroupsView() {
         info: data?.groups ? <span>{data.groups.length + (archivedCount > 0 ? 1 : 0)} groups</span> : undefined,
       });
     }
-  }, [setHeaderConfig, selectedCategory, search, setSearch, handleBackToGroups, data?.groups, archivedCount]);
+  }, [setHeaderConfig, selectedCategory, search, setSearch, contactSearch, navigate, handleBackToGroups, data?.groups, archivedCount]);
 
   const query = search.trim().toLowerCase();
   const filteredGroups = (data?.groups ?? []).filter((group) =>
@@ -69,7 +78,12 @@ export function GroupsView() {
   if (selectedCategory) {
     return (
       <div className="groups-view groups-filtered">
-        <AddToGroupField key={selectedCategory} category={selectedCategory} />
+        <AddToGroupField
+          key={selectedCategory}
+          category={selectedCategory}
+          search={search}
+          onSearchChange={setSearch}
+        />
         <ContactList
           categoryFilter={selectedCategory}
           search={search}

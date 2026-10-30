@@ -27,3 +27,10 @@ suggestion is picked, adds that contact to the group.
 
 - 2026-10-30: Enter with no highlighted suggestion adds the first match, so typing a name and pressing
   Enter works without the arrow keys.
+- 2026-10-30 (revision, user request): the field is now also the group's search. It drives `?q=`, which
+  filters the group's list, while its dropdown suggests non-members to add. Because typing is now a
+  search, Enter only adds a *highlighted* suggestion (reverts the change above). The header search in a
+  group becomes the app's universal contact search, like the Dashboard: Enter goes to
+  `/contacts?q=…`. Bugs fixed: `.edit-input`'s padding (declared later, same specificity) overrode the
+  input's left padding so the icon covered the text; the dropdown sat under the list's sticky toolbar
+  (`--ds-z-sticky`), so `.add-to-group` now stacks just above it.

@@ -3821,8 +3821,12 @@ a.nav-rail-item.active {
   flex-direction: column;
 }
 
-/* Add-a-contact typeahead above a group's contact list */
+/* Search-or-add field above a group's contact list. Stacks just above the list's
+   sticky toolbar (--ds-z-sticky) so its dropdown isn't hidden behind it, and
+   below the page header (--ds-z-fixed) it scrolls under. */
 .add-to-group {
+  position: relative;
+  z-index: calc(var(--ds-z-sticky) + 1);
   max-width: 28rem;
   margin-bottom: var(--ds-space-3);
 }
@@ -3837,9 +3841,19 @@ a.nav-rail-item.active {
   pointer-events: none;
 }
 
-.add-to-group-input {
+/* Two classes, to beat .edit-input's padding, which is declared later in this file */
+.add-to-group .add-to-group-input {
   height: var(--ds-control-height);
   padding-left: 2.25rem;
+}
+
+.add-to-group-dropdown-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  font-size: var(--ds-font-xs);
+  color: var(--ds-text-secondary);
 }
 
 .add-to-group-notice {

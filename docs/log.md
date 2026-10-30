@@ -1,5 +1,31 @@
 # Change Log
 
+## 2026-10-30 — Group view: the add field is also the group's search; header search goes universal
+
+**Session:** `f80da6b2-dbc0-4c58-9407-c3c36e04145f`
+
+**What Changed:**
+- The field above a group's list now filters the group (drives `?q=`) while still suggesting
+  non-members to add; Enter adds only a highlighted suggestion, so a search never adds anyone by accident
+- The dropdown is labelled "Add to <group>" so its suggestions read as additions, not search results
+- In a group, the header search is the universal contact search (Enter opens `/contacts?q=…`), as on
+  the Dashboard
+- Fixed the leading icon covering the text: `.edit-input`'s padding, declared later with the same
+  specificity, overrode the input's left padding
+- Fixed the dropdown hidden behind the list's sticky toolbar: `.add-to-group` now stacks at
+  `--ds-z-sticky + 1`, still under the page header
+
+**Why:**
+- User request: one search for the group in the page, one app-wide search in the header; two visual bugs
+
+**Files Modified:**
+- `frontend/src/components/AddToGroupField.tsx` — controlled `search`/`onSearchChange`, Enter rule, dropdown label
+- `frontend/src/components/GroupsView.tsx` — `contactSearch` header state, `goToContacts`, field owns `?q=`
+- `frontend/src/index.css` — `.add-to-group` stacking, `.add-to-group .add-to-group-input`, `.add-to-group-dropdown-label`
+- `docs/reference.md` — group view section
+
+---
+
 ## 2026-10-30 — "Last, First" FN imports as "First Last"
 
 **Session:** `3c6dcbe5-f95e-47cd-8758-543229003fa8`
@@ -11,6 +37,11 @@
 **Why:**
 - Outlook-style "File As" cards write FN as "Last, First". Apple Contacts displays from N, so they look right there, but Yello showed "Erbel, Mark". Seven contacts in the local copy of user 3's data had this pattern.
 - Existing contacts keep their stored display name until they are saved (the edit form's save rebuilds it from first/last name) or re-imported.
+
+**Production cleanup (same day):**
+- User 1 on production had 8 contacts with this pattern. 7 were rewritten to "First [Middle] Last" (`display_name`, `updated_at` bumped, search index rebuilt): IDs 32111, 32488, 33248, 33993, 36486, 36613, 38296. Run as a one-off script over `railway ssh`; the next scheduled sync pushes the new names (it detects the change by projection hash).
+- Left as is: 32695 "Consular, Malta" (an organisation, not a person).
+- Backup taken first: `/data/users/1/contacts.db.bak-2026-10-30-file-as` on the production volume.
 
 **Files Modified:**
 - `backend/src/services/vcardParser.ts` — `parseSingleVcard` display name normalisation
