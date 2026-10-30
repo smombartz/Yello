@@ -165,6 +165,7 @@ The root record. Everything else in this database hangs off it via `ON DELETE CA
 | `gender` | TEXT | *(migration)* Apple `X-GENDER`, as written (`Male`, `Female`, …) |
 | `department` | TEXT | *(migration)* `ORG` components after the company, `;`-joined |
 | `is_company` | INTEGER DEFAULT 0 | *(migration)* Apple `X-ABShowAs:COMPANY` — the card is an organisation |
+| `placeholder_name` | TEXT | *(migration)* Stand-in name of a card imported or synced with no name at all (no `FN`, empty `N`): its company, else primary email, else primary phone, else `No Name`. `display_name` is set to the same value. Cleanup's **No Name** list is the contacts whose `display_name` still equals it (with no first/last name); renaming the contact takes it off the list |
 | `vcard_params` | TEXT | *(migration)* JSON leftover parameters of the single-valued properties, keyed by property: `{"BDAY": {"X-APPLE-OMIT-YEAR": ["1604"]}}`. See *Leftover parameters* |
 | ~~`raw_vcard`~~ | — | **Retired 2026-09-27.** Held each card as imported. Dropped once every property was modeled; the originals are in `archive/original-cards-<date>.vcf.gz`. See *raw_vcard retirement* below |
 | `archived_at` | DATETIME DEFAULT NULL | **`NULL` means active.** Soft-delete — see below |
@@ -172,7 +173,8 @@ The root record. Everything else in this database hangs off it via `ON DELETE CA
 | `gmail_last_sync_at` | TEXT | |
 | `google_resource_name` | TEXT | *(migration)* Google People API `resourceName` |
 | `icloud_uid` | TEXT | *(migration)* vCard `UID`, `urn:uuid:` stripped. **Every contact has one** since 2026-10-25: trigger `contacts_ai_uid` gives a new contact without one a random uppercase v4 UUID, and a one-time backfill (marker `user_settings.contact_uids_backfilled_at`, run after the `raw_vcard` backfills so a card's own UID wins) did the same for existing contacts. It names the contact's card in iCloud and is written to Google as `clientData` `yelloUid`. Despite the name it is the contact's UID for every source |
-| `created_at` / `updated_at` | DATETIME DEFAULT CURRENT_TIMESTAMP | |
+| `created_via` | TEXT | *(migration 2026-10-28)* How the contact was created: `manual`, `profile`, `demo`, `vcf_import`, `icloud_import`, `google_import`, `linkedin_import`, `icloud_sync`, `google_sync`. NULL for contacts created before the column. No CHECK; the values are `ContactOrigin` in `contactPersistence.ts`. Read by the Recent page (`routes/stats.ts`) |
+| `created_at` / `updated_at` | DATETIME DEFAULT CURRENT_TIMESTAMP | UTC, `YYYY-MM-DD HH:MM:SS` with no zone: parse as UTC |
 
 Indexes: `display_name`, `(last_name, first_name)`, `archived_at`, partial `google_resource_name WHERE NOT NULL`, partial `icloud_uid WHERE NOT NULL`.
 

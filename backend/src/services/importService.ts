@@ -144,7 +144,7 @@ async function processBatch(
   db.transaction(() => {
     for (const { index, contact } of parsed) {
       try {
-        const inserted = insertParsedContact(stmts, db, contact);
+        const inserted = insertParsedContact(stmts, db, contact, { createdVia: 'vcf_import' });
 
         if (inserted === null) {
           totals.skipped++;

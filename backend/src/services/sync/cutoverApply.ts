@@ -280,7 +280,7 @@ function applyStep(
         photoBase64: null,
         // An iCloud card keeps its UID (CardDAV never lets it change); Google's get a new one.
         uid: provider === 'icloud' ? card.remoteUid : null
-      }, { skipExistingUid: false });
+      }, { skipExistingUid: false, createdVia: provider === 'icloud' ? 'icloud_sync' : 'google_sync' });
       if (!inserted) return;
       links.set(item.remoteId!, inserted.contactId);
       linkedContacts.add(inserted.contactId);

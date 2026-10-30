@@ -115,8 +115,8 @@ export default async function googleContactsRoutes(
     const errors: Array<{ line: number; reason: string }> = [];
 
     const insertContact = db.prepare(`
-      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, photo_hash, google_resource_name)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, photo_hash, google_resource_name, created_via)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'google_import')
     `);
     const insertEmail = db.prepare('INSERT INTO contact_emails (contact_id, email, type, is_primary) VALUES (?, ?, ?, ?)');
     const insertPhone = db.prepare('INSERT INTO contact_phones (contact_id, phone, phone_display, country_code, type, is_primary) VALUES (?, ?, ?, ?, ?, ?)');

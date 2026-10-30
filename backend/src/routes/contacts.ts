@@ -485,8 +485,8 @@ export default async function contactsRoutes(
 
     // Insert main contact
     const insertContact = db.prepare(`
-      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, created_via, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'manual', datetime('now'), datetime('now'))
     `);
 
     const result = insertContact.run(
@@ -1179,6 +1179,11 @@ export default async function contactsRoutes(
 
     restoreAnnotations();
     normalizeArchivedPrimary(db, id);
+
+    // Refresh the unified FTS index: the contacts_au trigger only covers display_name/company,
+    // so a rename (first/last name) or an edited email/phone/etc. would otherwise stay searchable
+    // under its old values.
+    rebuildContactSearch(db, id);
 
     // Fetch and return the updated contact (reuse the GET logic)
     const contact = db.prepare(`

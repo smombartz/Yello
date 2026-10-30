@@ -14,6 +14,12 @@ import type { SyncField } from './sync/syncProjection.js';
 
 type ContactStatement = Statement<unknown[]>;
 
+/** Where a contact came from, stored in `contacts.created_via` (NULL for contacts older than the column). */
+export type ContactOrigin =
+  | 'manual' | 'profile' | 'demo'
+  | 'vcf_import' | 'icloud_import' | 'google_import' | 'linkedin_import'
+  | 'icloud_sync' | 'google_sync';
+
 export interface ContactStatements {
   findByUid: ContactStatement;
   insertContact: ContactStatement;
@@ -40,8 +46,8 @@ export function prepareContactStatements(db: DatabaseType): ContactStatements {
     findByUid: db.prepare('SELECT id FROM contacts WHERE icloud_uid = ? LIMIT 1'),
 
     insertContact: db.prepare(`
-      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, photo_hash, icloud_uid)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, photo_hash, icloud_uid, created_via)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `),
 
     insertEmail: db.prepare(`
@@ -203,7 +209,7 @@ export function insertParsedContact(
   stmts: ContactStatements,
   db: DatabaseType,
   contact: ParsedContact,
-  options: { skipExistingUid?: boolean } = {}
+  options: { skipExistingUid?: boolean; createdVia?: ContactOrigin } = {}
 ): InsertedContact | null {
   // Stable-identifier dedupe: a re-import of the same export is a no-op for
   // any card carrying a UID we have already seen.
@@ -221,7 +227,8 @@ export function insertParsedContact(
     contact.notes,
     contact.birthday,
     null,
-    contact.uid
+    contact.uid,
+    options.createdVia ?? null
   );
   const contactId = result.lastInsertRowid as number;
 
@@ -448,7 +455,8 @@ export function replaceContactFields(
         set({
           first_name: incoming.firstName, last_name: incoming.lastName, middle_name: incoming.middleName,
           name_prefix: incoming.namePrefix, name_suffix: incoming.nameSuffix,
-          display_name: incoming.displayName || [incoming.firstName, incoming.lastName].filter(Boolean).join(' ') || 'Unknown'
+          display_name: incoming.displayName || [incoming.firstName, incoming.lastName].filter(Boolean).join(' ') || 'Unknown',
+          placeholder_name: incoming.namePlaceholder ? incoming.displayName : null
         });
         break;
       case 'nickname': set({ nickname: incoming.nickname }); break;

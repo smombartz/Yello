@@ -3,7 +3,7 @@ import { deleteContactsFromSearch } from './database.js';
 import type { ContactDetail, ContactSocialProfile } from '../types/index.js';
 import { getPhotoUrl } from './photoProcessor.js';
 
-export type EmptyContactType = 'truly_empty' | 'name_only';
+export type EmptyContactType = 'truly_empty' | 'no_name' | 'name_only';
 export type ProblematicContactType = 'many_domains' | 'same_domain';
 export type NoIdentityContactType = 'no_identity';
 
@@ -15,6 +15,7 @@ export interface CleanupContact extends ContactDetail {
 export interface CleanupSummary {
   empty: {
     trulyEmpty: number;
+    noName: number;
     nameOnly: number;
     total: number;
   };
@@ -29,95 +30,70 @@ export interface CleanupSummary {
 // Empty Contacts Detection
 // ============================================================
 
+const blank = (column: string) => `TRIM(COALESCE(c.${column}, '')) = ''`;
+
 /**
- * Count truly empty contacts (no name AND no other data)
+ * No real name: the display name is empty, or it is still the stand-in a
+ * nameless card was given on import (its company, email or phone).
  */
-function countTrulyEmptyContacts(db: DatabaseType): number {
+const NO_REAL_NAME_SQL = `(
+  ${blank('display_name')}
+  OR (c.placeholder_name IS NOT NULL AND c.display_name = c.placeholder_name
+      AND ${blank('first_name')} AND ${blank('last_name')})
+)`;
+
+/** Tables whose rows are information about the contact (archived rows count too). */
+const DATA_TABLES = [
+  'contact_emails', 'contact_phones', 'contact_addresses', 'contact_social_profiles',
+  'contact_instant_messages', 'contact_urls', 'contact_related_people', 'contact_dates',
+  'contact_photos', 'linkedin_enrichment'
+];
+
+/** Contact columns that hold information beyond the name. */
+const DATA_COLUMNS = ['company', 'title', 'department', 'notes', 'birthday', 'gender', 'photo_hash'];
+
+/**
+ * Nothing but a name: no contact details, notes, birthday, dates, photo, work
+ * info, related people or LinkedIn data. Group membership doesn't count.
+ */
+const NO_DATA_SQL = `(
+  ${DATA_COLUMNS.map(blank).join('\n  AND ')}
+  AND ${DATA_TABLES.map(t => `NOT EXISTS (SELECT 1 FROM ${t} x WHERE x.contact_id = c.id)`).join('\n  AND ')}
+)`;
+
+const EMPTY_TYPE_WHERE: Record<EmptyContactType, string> = {
+  truly_empty: `${NO_REAL_NAME_SQL} AND ${NO_DATA_SQL}`,
+  no_name: `${NO_REAL_NAME_SQL} AND NOT ${NO_DATA_SQL}`,
+  name_only: `NOT ${NO_REAL_NAME_SQL} AND ${NO_DATA_SQL}`
+};
+
+const EMPTY_TYPE_ORDER: Record<EmptyContactType, string> = {
+  truly_empty: 'c.id',
+  no_name: 'c.display_name COLLATE NOCASE, c.id',
+  name_only: 'c.display_name COLLATE NOCASE, c.id'
+};
+
+const EMPTY_TYPE_DETAILS: Record<EmptyContactType, string> = {
+  truly_empty: 'No name or other information',
+  no_name: 'No name: showing its company, email or phone instead',
+  name_only: 'Has a name but no other information'
+};
+
+const ALL_EMPTY_TYPES: EmptyContactType[] = ['truly_empty', 'no_name', 'name_only'];
+
+function countEmptyContacts(db: DatabaseType, type: EmptyContactType): number {
   const result = db.prepare(`
-    SELECT COUNT(*) as count
-    FROM contacts c
-    LEFT JOIN contact_emails ce ON ce.contact_id = c.id
-    LEFT JOIN contact_phones cp ON cp.contact_id = c.id
-    LEFT JOIN contact_addresses ca ON ca.contact_id = c.id
-    LEFT JOIN contact_social_profiles csp ON csp.contact_id = c.id
-    WHERE (c.display_name IS NULL OR TRIM(c.display_name) = '')
-      AND ce.id IS NULL
-      AND cp.id IS NULL
-      AND ca.id IS NULL
-      AND csp.id IS NULL
-      AND c.archived_at IS NULL
+    SELECT COUNT(*) as count FROM contacts c
+    WHERE c.archived_at IS NULL AND ${EMPTY_TYPE_WHERE[type]}
   `).get() as { count: number };
   return result.count;
 }
 
-/**
- * Count name-only contacts (has name but no other useful info)
- */
-function countNameOnlyContacts(db: DatabaseType): number {
-  const result = db.prepare(`
-    SELECT COUNT(*) as count
-    FROM contacts c
-    LEFT JOIN contact_emails ce ON ce.contact_id = c.id
-    LEFT JOIN contact_phones cp ON cp.contact_id = c.id
-    LEFT JOIN contact_addresses ca ON ca.contact_id = c.id
-    LEFT JOIN contact_social_profiles csp ON csp.contact_id = c.id
-    WHERE c.display_name IS NOT NULL AND TRIM(c.display_name) != ''
-      AND ce.id IS NULL
-      AND cp.id IS NULL
-      AND ca.id IS NULL
-      AND csp.id IS NULL
-      AND (c.company IS NULL OR TRIM(c.company) = '')
-      AND (c.title IS NULL OR TRIM(c.title) = '')
-      AND (c.notes IS NULL OR TRIM(c.notes) = '')
-      AND c.archived_at IS NULL
-  `).get() as { count: number };
-  return result.count;
-}
-
-/**
- * Find truly empty contact IDs
- */
-function findTrulyEmptyContactIds(db: DatabaseType, limit: number, offset: number): number[] {
+function findEmptyContactIds(db: DatabaseType, type: EmptyContactType, limit = -1, offset = 0): number[] {
   const rows = db.prepare(`
-    SELECT c.id
-    FROM contacts c
-    LEFT JOIN contact_emails ce ON ce.contact_id = c.id
-    LEFT JOIN contact_phones cp ON cp.contact_id = c.id
-    LEFT JOIN contact_addresses ca ON ca.contact_id = c.id
-    LEFT JOIN contact_social_profiles csp ON csp.contact_id = c.id
-    WHERE (c.display_name IS NULL OR TRIM(c.display_name) = '')
-      AND ce.id IS NULL
-      AND cp.id IS NULL
-      AND ca.id IS NULL
-      AND csp.id IS NULL
-      AND c.archived_at IS NULL
-    ORDER BY c.id
-    LIMIT ? OFFSET ?
-  `).all(limit, offset) as Array<{ id: number }>;
-  return rows.map(r => r.id);
-}
-
-/**
- * Find name-only contact IDs
- */
-function findNameOnlyContactIds(db: DatabaseType, limit: number, offset: number): number[] {
-  const rows = db.prepare(`
-    SELECT c.id
-    FROM contacts c
-    LEFT JOIN contact_emails ce ON ce.contact_id = c.id
-    LEFT JOIN contact_phones cp ON cp.contact_id = c.id
-    LEFT JOIN contact_addresses ca ON ca.contact_id = c.id
-    LEFT JOIN contact_social_profiles csp ON csp.contact_id = c.id
-    WHERE c.display_name IS NOT NULL AND TRIM(c.display_name) != ''
-      AND ce.id IS NULL
-      AND cp.id IS NULL
-      AND ca.id IS NULL
-      AND csp.id IS NULL
-      AND (c.company IS NULL OR TRIM(c.company) = '')
-      AND (c.title IS NULL OR TRIM(c.title) = '')
-      AND (c.notes IS NULL OR TRIM(c.notes) = '')
-      AND c.archived_at IS NULL
-    ORDER BY c.display_name
+    SELECT c.id FROM contacts c
+    WHERE c.archived_at IS NULL AND ${EMPTY_TYPE_WHERE[type]}
+    ORDER BY ${EMPTY_TYPE_ORDER[type]}
     LIMIT ? OFFSET ?
   `).all(limit, offset) as Array<{ id: number }>;
   return rows.map(r => r.id);
@@ -336,16 +312,18 @@ function getContactDetails(db: DatabaseType, contactIds: number[]): ContactDetai
  * Get summary counts for all cleanup categories
  */
 export function getCleanupSummary(db: DatabaseType, threshold: number = 3): CleanupSummary {
-  const trulyEmpty = countTrulyEmptyContacts(db);
-  const nameOnly = countNameOnlyContacts(db);
+  const trulyEmpty = countEmptyContacts(db, 'truly_empty');
+  const noName = countEmptyContacts(db, 'no_name');
+  const nameOnly = countEmptyContacts(db, 'name_only');
   const manyDomains = countManyDomainsContacts(db, threshold);
   const sameDomain = countSameDomainContacts(db);
 
   return {
     empty: {
       trulyEmpty,
+      noName,
       nameOnly,
-      total: trulyEmpty + nameOnly
+      total: trulyEmpty + noName + nameOnly
     },
     problematic: {
       manyDomains,
@@ -364,57 +342,28 @@ export function findEmptyContacts(
   offset: number,
   types?: EmptyContactType[]
 ): { contacts: CleanupContact[]; total: number } {
-  const includeTypes = types && types.length > 0
-    ? types
-    : ['truly_empty', 'name_only'] as EmptyContactType[];
+  const includeTypes = ALL_EMPTY_TYPES.filter(t => !types || types.length === 0 || types.includes(t));
 
   const results: CleanupContact[] = [];
   let totalCount = 0;
-
-  // Calculate totals and gather contacts based on type filters
-  if (includeTypes.includes('truly_empty')) {
-    const trulyEmptyTotal = countTrulyEmptyContacts(db);
-    totalCount += trulyEmptyTotal;
-  }
-  if (includeTypes.includes('name_only')) {
-    const nameOnlyTotal = countNameOnlyContacts(db);
-    totalCount += nameOnlyTotal;
-  }
-
-  // For pagination, we need to handle the union of both types
-  // Simple approach: get from each type and combine
   let remaining = limit;
   let currentOffset = offset;
 
-  if (includeTypes.includes('truly_empty') && remaining > 0) {
-    const trulyEmptyCount = countTrulyEmptyContacts(db);
-    if (currentOffset < trulyEmptyCount) {
-      const ids = findTrulyEmptyContactIds(db, remaining, currentOffset);
-      const contacts = getContactDetails(db, ids);
-      for (const contact of contacts) {
-        results.push({
-          ...contact,
-          issueType: 'truly_empty',
-          issueDetails: 'No name or contact information'
-        });
-      }
-      remaining -= ids.length;
-      currentOffset = 0;
-    } else {
-      currentOffset -= trulyEmptyCount;
+  // The types are listed one after the other; the page window walks across them
+  for (const type of includeTypes) {
+    const count = countEmptyContacts(db, type);
+    totalCount += count;
+    if (remaining <= 0) continue;
+    if (currentOffset >= count) {
+      currentOffset -= count;
+      continue;
     }
-  }
-
-  if (includeTypes.includes('name_only') && remaining > 0) {
-    const ids = findNameOnlyContactIds(db, remaining, currentOffset);
-    const contacts = getContactDetails(db, ids);
-    for (const contact of contacts) {
-      results.push({
-        ...contact,
-        issueType: 'name_only',
-        issueDetails: 'Has name but no contact information'
-      });
+    const ids = findEmptyContactIds(db, type, remaining, currentOffset);
+    for (const contact of getContactDetails(db, ids)) {
+      results.push({ ...contact, issueType: type, issueDetails: EMPTY_TYPE_DETAILS[type] });
     }
+    remaining -= ids.length;
+    currentOffset = 0;
   }
 
   return { contacts: results, total: totalCount };
@@ -496,54 +445,9 @@ export function findProblematicContacts(
  * Get all empty contact IDs (no pagination, for bulk selection)
  */
 export function getAllEmptyContactIds(db: DatabaseType, types?: EmptyContactType[]): number[] {
-  const includeTypes = types && types.length > 0
-    ? types
-    : ['truly_empty', 'name_only'] as EmptyContactType[];
-
-  const results: number[] = [];
-
-  if (includeTypes.includes('truly_empty')) {
-    const rows = db.prepare(`
-      SELECT c.id
-      FROM contacts c
-      LEFT JOIN contact_emails ce ON ce.contact_id = c.id
-      LEFT JOIN contact_phones cp ON cp.contact_id = c.id
-      LEFT JOIN contact_addresses ca ON ca.contact_id = c.id
-      LEFT JOIN contact_social_profiles csp ON csp.contact_id = c.id
-      WHERE (c.display_name IS NULL OR TRIM(c.display_name) = '')
-        AND ce.id IS NULL
-        AND cp.id IS NULL
-        AND ca.id IS NULL
-        AND csp.id IS NULL
-        AND c.archived_at IS NULL
-      ORDER BY c.id
-    `).all() as Array<{ id: number }>;
-    results.push(...rows.map(r => r.id));
-  }
-
-  if (includeTypes.includes('name_only')) {
-    const rows = db.prepare(`
-      SELECT c.id
-      FROM contacts c
-      LEFT JOIN contact_emails ce ON ce.contact_id = c.id
-      LEFT JOIN contact_phones cp ON cp.contact_id = c.id
-      LEFT JOIN contact_addresses ca ON ca.contact_id = c.id
-      LEFT JOIN contact_social_profiles csp ON csp.contact_id = c.id
-      WHERE c.display_name IS NOT NULL AND TRIM(c.display_name) != ''
-        AND ce.id IS NULL
-        AND cp.id IS NULL
-        AND ca.id IS NULL
-        AND csp.id IS NULL
-        AND (c.company IS NULL OR TRIM(c.company) = '')
-        AND (c.title IS NULL OR TRIM(c.title) = '')
-        AND (c.notes IS NULL OR TRIM(c.notes) = '')
-        AND c.archived_at IS NULL
-      ORDER BY c.display_name
-    `).all() as Array<{ id: number }>;
-    results.push(...rows.map(r => r.id));
-  }
-
-  return results;
+  return ALL_EMPTY_TYPES
+    .filter(t => !types || types.length === 0 || types.includes(t))
+    .flatMap(type => findEmptyContactIds(db, type));
 }
 
 /**

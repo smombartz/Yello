@@ -85,8 +85,8 @@ export async function importLinkedInContacts(
   `);
 
   const insertContact = db.prepare(`
-    INSERT INTO contacts (first_name, last_name, display_name, company, title, notes)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, created_via)
+    VALUES (?, ?, ?, ?, ?, ?, 'linkedin_import')
   `);
 
   const insertEmail = db.prepare(`

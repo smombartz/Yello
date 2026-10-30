@@ -333,7 +333,7 @@ class ICloudSyncRun {
       return;
     }
 
-    const inserted = insertParsedContact(this.stmts, this.db, { ...remote.parsed, photoBase64: null }, { skipExistingUid: false });
+    const inserted = insertParsedContact(this.stmts, this.db, { ...remote.parsed, photoBase64: null }, { skipExistingUid: false, createdVia: 'icloud_sync' });
     if (!inserted) return;
     const contactId = inserted.contactId;
     const local = projectContact(this.loadContacts([contactId]).get(contactId)!.loaded.contact, PROVIDER);

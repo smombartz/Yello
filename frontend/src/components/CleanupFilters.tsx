@@ -14,6 +14,7 @@ interface CleanupFiltersProps {
 
 const EMPTY_FILTERS: { type: EmptyContactType; label: string }[] = [
   { type: 'truly_empty', label: 'Truly Empty' },
+  { type: 'no_name', label: 'No Name' },
   { type: 'name_only', label: 'Name Only' },
 ];
 
@@ -36,6 +37,8 @@ export function CleanupFilters({
     switch (type) {
       case 'truly_empty':
         return summary.empty.trulyEmpty;
+      case 'no_name':
+        return summary.empty.noName;
       case 'name_only':
         return summary.empty.nameOnly;
       case 'many_domains':

@@ -10,6 +10,7 @@ interface CleanupContactCardProps {
 
 const ISSUE_BADGES: Record<string, { label: string; className: string }> = {
   truly_empty: { label: 'Truly Empty', className: 'badge-empty' },
+  no_name: { label: 'No Name', className: 'badge-no-name' },
   name_only: { label: 'Name Only', className: 'badge-name-only' },
   many_domains: { label: 'Many Domains', className: 'badge-many-domains' },
   same_domain: { label: 'Same Domain', className: 'badge-same-domain' },
@@ -67,6 +68,36 @@ export function CleanupContactCard({
                 {email.type && <span className="type">{email.type}</span>}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* A nameless contact: show what it holds, to tell which one it is */}
+        {contact.issueType === 'no_name' && (
+          <div className="cleanup-card-summary">
+            {contact.company && contact.company !== contact.displayName && (
+              <div className="cleanup-card-field">
+                <Icon name="building" />
+                <span>{contact.company}</span>
+              </div>
+            )}
+            {contact.emails.map((email, idx) => (
+              <div key={`e${idx}`} className="cleanup-card-field">
+                <Icon name="envelope" />
+                <span>{email.email}</span>
+              </div>
+            ))}
+            {contact.phones.map((phone, idx) => (
+              <div key={`p${idx}`} className="cleanup-card-field">
+                <Icon name="phone" />
+                <span>{phone.phoneDisplay || phone.phone}</span>
+              </div>
+            ))}
+            {contact.notes && (
+              <div className="cleanup-card-field">
+                <Icon name="sticky-note" style="regular" />
+                <span className="notes-preview">{contact.notes.slice(0, 100)}{contact.notes.length > 100 ? '...' : ''}</span>
+              </div>
+            )}
           </div>
         )}
 

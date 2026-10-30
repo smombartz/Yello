@@ -271,7 +271,7 @@ export interface MergeResponse {
 // Cleanup types
 export type CleanupMode = 'empty' | 'problematic' | 'social-links' | 'invalid-links' | 'addresses';
 
-export type EmptyContactType = 'truly_empty' | 'name_only';
+export type EmptyContactType = 'truly_empty' | 'no_name' | 'name_only';
 
 export type ProblematicContactType = 'many_domains' | 'same_domain';
 
@@ -290,6 +290,7 @@ export interface CleanupResponse {
 export interface CleanupSummary {
   empty: {
     trulyEmpty: number;
+    noName: number;
     nameOnly: number;
     total: number;
   };

@@ -1,5 +1,6 @@
 import type { ContactForVcard } from '../vcardGenerator.js';
 import { activeOnly } from '../archivedDetails.js';
+import { placeholderName } from '../vcardParser.js';
 import { appleLabelName } from './syncProjection.js';
 import type { GooglePersonRaw } from './googlePeople.js';
 
@@ -177,11 +178,15 @@ export function personToContactData(person: GooglePersonRaw, options: PersonToCo
   const emails = contactValues(person.emailAddresses, all).filter(e => e.value);
   const firstName = name?.givenName || null;
   const lastName = name?.familyName || null;
-  const displayName = name?.displayName
-    || [firstName, lastName].filter(Boolean).join(' ')
-    || org?.name
-    || emails[0]?.value
-    || 'Unknown';
+  const realName = name?.displayName || [firstName, lastName].filter(Boolean).join(' ');
+  const phoneValues = contactValues(person.phoneNumbers, all).filter(p => p.value);
+  // No name at all: a stand-in from the company, email or phone, flagged so
+  // Cleanup lists the contact under No Name.
+  const displayName = realName || placeholderName(
+    org?.name,
+    emails.map(e => ({ email: e.value!, isPrimary: e.metadata?.primary })),
+    phoneValues.map(p => ({ phone: p.value!, isPrimary: p.metadata?.primary }))
+  );
 
   const urls: NonNullable<ContactForVcard['urls']> = [];
   const socialProfiles: ContactForVcard['socialProfiles'] = [];
@@ -210,6 +215,7 @@ export function personToContactData(person: GooglePersonRaw, options: PersonToCo
     firstName,
     lastName,
     displayName,
+    ...(realName ? {} : { namePlaceholder: true }),
     middleName: name?.middleName || null,
     namePrefix: name?.honorificPrefix || null,
     nameSuffix: name?.honorificSuffix || null,
@@ -225,7 +231,7 @@ export function personToContactData(person: GooglePersonRaw, options: PersonToCo
       isPrimary: e.metadata?.primary ?? i === 0,
       ...fromGoogleType(e.type, e.formattedType, EMAIL_FROM_GOOGLE)
     })),
-    phones: contactValues(person.phoneNumbers, all).filter(p => p.value).map((p, i) => ({
+    phones: phoneValues.map((p, i) => ({
       phone: p.canonicalForm || p.value!,
       phoneDisplay: p.value!,
       isPrimary: p.metadata?.primary ?? i === 0,

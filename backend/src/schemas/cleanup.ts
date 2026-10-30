@@ -14,6 +14,7 @@ export type CleanupMode = Static<typeof CleanupModeSchema>;
 
 export const EmptyContactTypeSchema = Type.Union([
   Type.Literal('truly_empty'),
+  Type.Literal('no_name'),
   Type.Literal('name_only')
 ]);
 
@@ -74,6 +75,7 @@ export const CleanupResponseSchema = Type.Object({
 export const CleanupSummaryResponseSchema = Type.Object({
   empty: Type.Object({
     trulyEmpty: Type.Number(),
+    noName: Type.Number(),
     nameOnly: Type.Number(),
     total: Type.Number()
   }),

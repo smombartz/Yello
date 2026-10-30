@@ -185,9 +185,152 @@
     white-space: nowrap;
   }
 
+  /* Used by the landing page's sample dashboard */
   .birthday-badge {
     background: var(--ds-color-error-light);
     color: var(--ds-color-error);
+  }
+
+  /* "See all" link under a dashboard card's list */
+  .dashboard-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ds-space-2);
+    padding: 12px 20px;
+    border-top: 1px solid var(--ds-border-light);
+    font-size: var(--ds-font-sm);
+    font-weight: var(--ds-weight-medium);
+    color: var(--ds-color-primary);
+    text-decoration: none;
+    transition: background-color var(--ds-duration-normal) var(--ds-easing-default);
+  }
+
+  .dashboard-card-footer:hover {
+    background: var(--ds-bg-secondary);
+  }
+
+  .dashboard-card-footer i {
+    font-size: var(--ds-font-xs);
+  }
+
+  /* Birthdays page: one card per month. Recent page: one card per kind of change */
+  .birthdays-view .dashboard-content,
+  .recent-view .dashboard-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-4);
+  }
+
+  .birthdays-month .card-header,
+  .recent-group .card-header {
+    justify-content: space-between;
+  }
+
+  .birthdays-month-count,
+  .recent-group-count {
+    font-size: var(--ds-font-xs);
+    color: var(--ds-text-secondary);
+  }
+
+  .recent-group-title {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+  }
+
+  .recent-group-title i {
+    color: var(--ds-color-primary);
+  }
+
+  .recent-group-more {
+    margin: 0;
+    padding: 0 20px var(--ds-space-3);
+    font-size: var(--ds-font-xs);
+    color: var(--ds-text-secondary);
+  }
+
+  /* Contact tiles: photo on top, name underneath (ContactTileGrid: Birthdays and Recent) */
+  .contact-tile-grid {
+    list-style: none;
+    margin: 0;
+    padding: var(--ds-space-2) var(--ds-space-3);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+    gap: var(--ds-space-1);
+  }
+
+  .contact-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: var(--ds-space-2) 4px;
+    border-radius: var(--ds-radius-lg);
+    color: var(--ds-text-primary);
+    text-decoration: none;
+    transition: background-color var(--ds-duration-normal) var(--ds-easing-default);
+  }
+
+  .contact-tile:hover,
+  .contact-tile:focus-visible {
+    background: var(--ds-bg-secondary);
+  }
+
+  .contact-tile-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--ds-border-color);
+  }
+
+  .contact-tile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .contact-tile-avatar .avatar-placeholder {
+    font-size: var(--ds-font-sm);
+  }
+
+  .contact-tile-name {
+    width: 100%;
+    font-size: var(--ds-font-2xs);
+    line-height: 1.25;
+    text-align: center;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Hover tooltip, portalled to <body> and fixed-positioned by ContactTileGrid */
+  .contact-tile-tip {
+    position: fixed;
+    z-index: var(--ds-z-popover);
+    transform: translate(-50%, -100%);
+    padding: 6px 10px;
+    border-radius: var(--ds-radius-md);
+    background: var(--ds-text-primary);
+    color: var(--ds-bg-primary);
+    box-shadow: var(--ds-shadow-md);
+    font-size: var(--ds-font-xs);
+    line-height: 1.4;
+    text-align: center;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .contact-tile-tip.below {
+    transform: translate(-50%, 0);
+  }
+
+  .contact-tile-tip-title {
+    font-weight: var(--ds-weight-semibold);
   }
 
   /* Geography List */

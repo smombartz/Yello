@@ -2530,6 +2530,11 @@ a.nav-rail-item.active {
   color: var(--ds-color-error-dark);
 }
 
+.cleanup-badge.badge-no-name {
+  background: var(--ds-color-info-light);
+  color: var(--ds-color-info-dark);
+}
+
 .cleanup-badge.badge-name-only {
   background: var(--ds-color-warning-light);
   color: var(--ds-color-warning-dark);

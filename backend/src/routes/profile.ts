@@ -649,8 +649,8 @@ export default async function profileRoutes(
 
     // Create new contact
     const result = db.prepare(`
-      INSERT INTO contacts (first_name, last_name, display_name, created_at, updated_at)
-      VALUES (?, ?, ?, datetime('now'), datetime('now'))
+      INSERT INTO contacts (first_name, last_name, display_name, created_via, created_at, updated_at)
+      VALUES (?, ?, ?, 'profile', datetime('now'), datetime('now'))
     `).run(firstName, lastName, displayName);
 
     const contactId = result.lastInsertRowid as number;

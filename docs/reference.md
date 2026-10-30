@@ -129,6 +129,60 @@ Public routes declared before the `*` catch-all, so they work signed in, signed 
 
 **Display type.** The page uses front-door display sizes beyond the app's 30px ceiling. They are defined as `--lp-*` custom properties on `.landing` and are not global tokens.
 
+### Dashboard birthdays and the Birthdays page (`/dashboard/birthdays`)
+
+- The dashboard's **Upcoming Birthdays** card lists only birthdays from today through 14 days ahead
+  (`UPCOMING_BIRTHDAY_DAYS` in `routes/stats.ts`). A **See all birthdays** link under it, and the
+  **With Birthdays** stat card, open the Birthdays page.
+- The Birthdays page (`BirthdaysView.tsx`) lists every birthday, soonest first, in one card per
+  month of the next occurrence (current month first, later years labelled with the year). The
+  header search filters by name.
+- Both the dashboard card and the page use `ContactTileGrid.tsx` (see *Contact tiles* below), with
+  days-until and the date/age (`birthdayTile()` in `utils/birthdays.ts`) as the tooltip.
+- Data: `GET /api/stats/dashboard` and `GET /api/stats/birthdays` both take `?today=YYYY-MM-DD`,
+  the browser's local date, so "today" follows the user's calendar rather than the server's UTC
+  clock. Days are counted on calendar dates, so a birthday today is `daysUntil: 0` ("Today!").
+- Birthday parsing (`parseBirthdayMonthDay`) accepts `--MM-DD`, `YYYY-MM-DD`, `YYYYMMDD`, `MM-DD`
+  and Apple's `1604-MM-DD`; the frontend (`utils/birthdays.ts`) treats 1604 as "no year" when
+  showing the age. Feb 29 birthdays fall on Mar 1 in non-leap years.
+
+### Dashboard Recent card and the Recent changes page (`/dashboard/recent`)
+
+- The dashboard's **Recent** card (formerly *Recently Added*) shows up to 12 active contacts added,
+  imported, synced or edited in the last 7 days, newest first, one tile per contact (its latest
+  change). **See all recent changes** opens the page.
+- The Recent changes page (`RecentView.tsx`) covers the last 30 days with one card per kind:
+  **Added**, **Imported**, **Synced**, **Updated**, **Archived**. Tabs filter by kind (with
+  counts); the header search filters by name. A contact can show under two kinds (imported, then
+  edited). Each kind shows its 300 newest, with a "Showing N of M" note past that.
+- Where a contact came from is `contacts.created_via`, set by every insert path (`manual`,
+  `profile`, `demo`, `vcf_import`, `icloud_import`, `google_import`, `linkedin_import`,
+  `icloud_sync`, `google_sync`; type `ContactOrigin` in `contactPersistence.ts`). Contacts created
+  before the column existed have NULL and count as *Added*. **A new way of creating contacts must
+  set it.**
+- Rules (`getRecentChanges` / `getDashboardRecent` in `routes/stats.ts`): creation in the window →
+  added/imported/synced from `created_via`; `updated_at` in the window and more than 5 minutes
+  after creation, contact not archived → updated (the grace keeps an import's own follow-up
+  writes, like photos, from reading as edits); `archived_at` in the window → archived.
+  `updated_at` is best effort: not every writer bumps it.
+- Data: `GET /api/stats/recent?days=30` (1–365) → `{ days, counts, changes }`; the dashboard
+  response carries `recent` and `recentTotal`. Window comparisons use `julianday()` on both sides,
+  and timestamps go out as ISO UTC with `Z`.
+- **Timestamps in the browser:** SQLite's `CURRENT_TIMESTAMP` is UTC with no zone
+  (`YYYY-MM-DD HH:MM:SS`), which `new Date()` reads as *local* time. That put fresh contacts in the
+  future west of UTC and showed "-1 days ago". Parse server times with `parseServerTime()` and
+  format with `formatRelativeDay()` (`utils/relativeTime.ts`: "Today, 3:14 PM", "Yesterday", "3
+  days ago", then a date; never negative).
+
+### Contact tiles (`ContactTileGrid.tsx`)
+
+The reusable photo-and-name tile grid used by the Birthdays and Recent cards and pages. Each tile
+(`ContactTile`) links to the contact and supplies a two-line tooltip (`tipTitle`, `tipText`) shown
+on hover or keyboard focus. The tooltip is portalled to `<body>` with fixed positioning so cards
+never clip it, flips below a tile near the top of the window, and hides on scroll; the tile's
+`aria-label` carries the same text. Touch devices have no hover, so a tap simply opens the contact.
+Styles: `.contact-tile-grid`, `.contact-tile*`, `.contact-tile-tip*` in `styles/pages/dashboard.css`.
+
 ### Shareable URLs for views and expanded contacts
 
 Copying the address bar reproduces what you're looking at, not only which view you're in. The URL holds the state: pages read it from `useParams` / `useSearchParams` rather than `useState`, so nothing has to keep the two in sync.
@@ -211,6 +265,23 @@ Archive, unarchive and delete invalidate the `groups` and `map` queries as well 
   since the list row is transformed and clipped. It uses `DELETE /api/cleanup/delete` (a real
   `DELETE FROM contacts`, so `contacts_bd_sync` tombstones the remote cards, and `/api/cleanup` is in
   `EDITING_PREFIXES`). Afterwards the list row collapses, and the detail page goes back to Contacts.
+
+### Nameless cards and the Cleanup "Empty Contacts" lists
+
+- A vCard with no name (empty `FN` and `N`) used to be rejected ("Unreadable card: Missing required FN
+  or N field"), which left it out of Yello and raised a problem on every iCloud sync. `parseSingleVcard`
+  now gives it a stand-in name via `placeholderName()` (company → primary email → primary phone →
+  `No Name`) and sets `namePlaceholder`. Google's `personToContactData` does the same. The stand-in is
+  stored in `contacts.placeholder_name` on insert, and refreshed when a sync rewrites the name family
+  (`replaceContactFields`). Parsing is deterministic, so the iCloud projection matches and no push is
+  triggered by the stand-in alone.
+- Cleanup → Empty Contacts has three non-overlapping lists (`cleanupService.ts`, `EMPTY_TYPE_WHERE`):
+  **Truly Empty** (no real name, no data), **No Name** (no real name, has data), **Name Only** (a name and
+  nothing else). "No real name" = empty `display_name`, or `display_name = placeholder_name` with no
+  first/last name. "No data" = blank `company`, `title`, `department`, `notes`, `birthday`, `gender`,
+  `photo_hash`, and no rows in emails, phones, addresses, social profiles, IMs, URLs, related people,
+  dates, photos or LinkedIn enrichment (archived rows count as data). Group membership and nickname
+  don't count.
 
 ### VCF import (background job)
 

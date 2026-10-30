@@ -196,6 +196,7 @@ N:Contact;Valid;;;
 END:VCARD
 BEGIN:VCARD
 VERSION:3.0
+this is not a property
 END:VCARD`);
 
     expect(result.imported).toBe(1);

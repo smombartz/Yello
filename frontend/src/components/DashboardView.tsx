@@ -1,89 +1,14 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
 import { useDashboardStats } from '../api/dashboardHooks';
 import { Icon } from './Icon';
 import { Button } from './ui/Button';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { LaunchBanner } from './LaunchBanner';
-
-function getPhotoUrl(photoHash: string | null): string | null {
-  if (!photoHash) return null;
-  return `/photos/small/${photoHash.slice(0, 2)}/${photoHash}.jpg`;
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
-  return date.toLocaleDateString();
-}
-
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-function getOrdinalSuffix(n: number): string {
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 13) return 'th';
-  switch (n % 10) {
-    case 1: return 'st';
-    case 2: return 'nd';
-    case 3: return 'rd';
-    default: return 'th';
-  }
-}
-
-function formatBirthday(birthday: string): string {
-  let year: number | null = null;
-  let month: number;
-  let day: number;
-
-  if (birthday.startsWith('--')) {
-    const parts = birthday.slice(2).split('-');
-    month = parseInt(parts[0], 10);
-    day = parseInt(parts[1], 10);
-  } else if (birthday.includes('-')) {
-    const parts = birthday.split('-');
-    if (parts.length === 3) {
-      year = parseInt(parts[0], 10);
-      month = parseInt(parts[1], 10);
-      day = parseInt(parts[2], 10);
-    } else {
-      month = parseInt(parts[0], 10);
-      day = parseInt(parts[1], 10);
-    }
-  } else {
-    return birthday;
-  }
-
-  const monthName = MONTH_NAMES[month! - 1] || '';
-
-  if (year) {
-    const now = new Date();
-    const thisYear = now.getFullYear();
-    const birthdayThisYear = new Date(thisYear, month! - 1, day);
-    // Age they will turn on the next occurrence of this birthday
-    const age = birthdayThisYear >= new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      ? thisYear - year
-      : thisYear + 1 - year;
-    return `${monthName} ${day}, ${age}${getOrdinalSuffix(age)} Birthday`;
-  }
-
-  return `${day} ${monthName}`;
-}
-
-function formatBirthdayDays(daysUntil: number): string {
-  if (daysUntil === 0) return 'Today!';
-  if (daysUntil === 1) return 'Tomorrow';
-  return `In ${daysUntil} days`;
-}
+import { ContactTileGrid } from './ContactTileGrid';
+import { birthdayTile } from '../utils/birthdays';
+import { recentTile } from '../utils/recentChanges';
 
 export function DashboardView() {
   const { setHeaderConfig, isMobile } = useOutletContext<OutletContext>();
@@ -114,10 +39,6 @@ export function DashboardView() {
       ),
     });
   }, [setHeaderConfig, search, navigate, isMobile]);
-
-  const handleContactClick = (id: number) => {
-    navigate(`/contacts/${id}`);
-  };
 
   if (isLoading) {
     return (
@@ -188,7 +109,7 @@ export function DashboardView() {
               </div>
             </div>
 
-            <div className="card stat-card">
+            <div className="card stat-card" onClick={() => navigate('/dashboard/birthdays')}>
               <div className="stat-icon birthdays">
                 <Icon name="cake-candles" />
               </div>
@@ -213,77 +134,40 @@ export function DashboardView() {
                 {data.upcomingBirthdays.length === 0 ? (
                   <div className="empty-state">
                     <Icon name="calendar-xmark" />
-                    <p>No birthdays this month or next</p>
+                    <p>No birthdays in the next 14 days</p>
                   </div>
                 ) : (
-                  <ul className="dash-activity-list">
-                    {data.upcomingBirthdays.map((contact) => (
-                      <li
-                        key={contact.id}
-                        className="contact-item"
-                        onClick={() => handleContactClick(contact.id)}
-                      >
-                        <div className="contact-avatar">
-                          {getPhotoUrl(contact.photoHash) ? (
-                            <img src={getPhotoUrl(contact.photoHash)!} alt="" />
-                          ) : (
-                            <span className="avatar-placeholder">
-                              {contact.displayName.charAt(0).toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-                        <div className="dash-activity-info">
-                          <div className="dash-activity-name">{contact.displayName}</div>
-                          <div className="contact-meta">{formatBirthday(contact.birthday)}</div>
-                        </div>
-                        <div className="contact-badge birthday-badge">
-                          {formatBirthdayDays(contact.daysUntil)}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  <ContactTileGrid tiles={data.upcomingBirthdays.map(birthdayTile)} />
                 )}
               </div>
+              {data.overview.contactsWithBirthdays > 0 && (
+                <Link to="/dashboard/birthdays" className="dashboard-card-footer">
+                  See all birthdays
+                  <Icon name="chevron-right" />
+                </Link>
+              )}
             </div>
 
-            {/* Recently Added */}
+            {/* Recent: added, imported, synced or updated in the last 7 days */}
             <div className="card dashboard-card">
               <div className="card-header">
-                <Icon name="user-plus" />
-                <h2>Recently Added</h2>
+                <Icon name="clock-rotate-left" />
+                <h2>Recent</h2>
               </div>
               <div className="card-content">
-                {data.recentlyAdded.length === 0 ? (
+                {data.recent.length === 0 ? (
                   <div className="empty-state">
                     <Icon name="user-slash" />
-                    <p>No new contacts in the last 7 days</p>
+                    <p>No contacts added or changed in the last 7 days</p>
                   </div>
                 ) : (
-                  <ul className="dash-activity-list">
-                    {data.recentlyAdded.map((contact) => (
-                      <li
-                        key={contact.id}
-                        className="contact-item"
-                        onClick={() => handleContactClick(contact.id)}
-                      >
-                        <div className="contact-avatar">
-                          {getPhotoUrl(contact.photoHash) ? (
-                            <img src={getPhotoUrl(contact.photoHash)!} alt="" />
-                          ) : (
-                            <span className="avatar-placeholder">
-                              {contact.displayName.charAt(0).toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-                        <div className="dash-activity-info">
-                          <div className="dash-activity-name">{contact.displayName}</div>
-                          <div className="contact-meta">{formatDate(contact.createdAt)}</div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  <ContactTileGrid tiles={data.recent.map(recentTile)} />
                 )}
               </div>
+              <Link to="/dashboard/recent" className="dashboard-card-footer">
+                See all recent changes
+                <Icon name="chevron-right" />
+              </Link>
             </div>
           </div>
         </section>

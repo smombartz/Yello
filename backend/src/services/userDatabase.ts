@@ -88,9 +88,11 @@ export function getUserDatabase(userId: number): DatabaseType {
       department TEXT,
       is_company INTEGER DEFAULT 0,
       vcard_params TEXT,
+      placeholder_name TEXT,
       archived_at DATETIME DEFAULT NULL,
       gmail_history_id TEXT DEFAULT NULL,
       gmail_last_sync_at TEXT DEFAULT NULL,
+      created_via TEXT DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -651,6 +653,8 @@ export function getUserDatabase(userId: number): DatabaseType {
     `ALTER TABLE contacts ADD COLUMN gender TEXT`,
     `ALTER TABLE contacts ADD COLUMN department TEXT`,
     `ALTER TABLE contacts ADD COLUMN is_company INTEGER DEFAULT 0`,
+    // How the contact got here (manual, vcf_import, icloud_sync, ...), for the Recent page
+    `ALTER TABLE contacts ADD COLUMN created_via TEXT`,
     `ALTER TABLE contact_emails ADD COLUMN extra_types TEXT`,
     `ALTER TABLE contact_emails ADD COLUMN label TEXT`,
     `ALTER TABLE contact_phones ADD COLUMN extra_types TEXT`,
@@ -665,6 +669,8 @@ export function getUserDatabase(userId: number): DatabaseType {
     `ALTER TABLE user_settings ADD COLUMN vcard_model_backfilled_at TEXT`,
     // Leftover vCard parameters (X-APPLE-OMIT-YEAR, TYPE=pref on a URL, ...)
     `ALTER TABLE contacts ADD COLUMN vcard_params TEXT`,
+    // Stand-in name of a card that had none (its company, email or phone)
+    `ALTER TABLE contacts ADD COLUMN placeholder_name TEXT`,
     ...['contact_emails', 'contact_phones', 'contact_addresses', 'contact_social_profiles',
       'contact_instant_messages', 'contact_urls', 'contact_related_people', 'contact_dates']
       .map(table => `ALTER TABLE ${table} ADD COLUMN params TEXT`),

@@ -143,7 +143,7 @@ const TOOL_GROUPS: ToolGroup[] = [
             id: 'cleanup-empty',
             name: 'Empty Contacts',
             icon: 'user-slash',
-            how: 'Finds truly-empty contacts (no name and no data) and name-only contacts (a name but nothing else), so you can bulk-archive or delete them in one pass.',
+            how: 'Finds truly-empty contacts (no name and no data), no-name contacts (cards imported without a name, shown under their company, email or phone until renamed) and name-only contacts (a name and nothing else: no contact details, notes, birthday, dates, photo or work info), so you can bulk-archive or delete them in one pass.',
             deps: {
               tables: ['contacts + child tables', 'contacts_unified_fts'],
               services: ['cleanupService'],

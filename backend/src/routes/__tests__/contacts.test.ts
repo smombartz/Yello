@@ -108,6 +108,28 @@ describe('contacts routes', () => {
     });
   });
 
+  describe('search after edit', () => {
+    it('finds a renamed contact by its new name and not its old one', async () => {
+      const db = getUserDatabase(1);
+      const id = db.prepare('INSERT INTO contacts (first_name, last_name, display_name) VALUES (?, ?, ?)')
+        .run('Brian', 'Benasich', 'Brian Benasich').lastInsertRowid as number;
+      rebuildContactSearch(db, id);
+
+      const put = await app.inject({
+        method: 'PUT',
+        url: `/api/contacts/${id}`,
+        payload: { firstName: 'Bryan', lastName: 'Benasich' }
+      });
+      expect(put.statusCode).toBe(200);
+
+      const byNew = (await app.inject({ method: 'GET', url: '/api/contacts?search=bryan%20benasich' })).json();
+      expect(byNew.contacts.map((c: { id: number }) => c.id)).toEqual([id]);
+
+      const byOld = (await app.inject({ method: 'GET', url: '/api/contacts?search=brian' })).json();
+      expect(byOld.contacts).toHaveLength(0);
+    });
+  });
+
   describe('archived contacts', () => {
     // Archived contacts only show in the Archived view, never in the list, its search or groups.
     function seed() {

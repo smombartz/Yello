@@ -12,6 +12,8 @@ import { SettingsView } from './components/SettingsView';
 import { MigrationView } from './components/MigrationView';
 import { UserProfilePage } from './components/UserProfilePage';
 import { DashboardView } from './components/DashboardView';
+import { BirthdaysView } from './components/BirthdaysView';
+import { RecentView } from './components/RecentView';
 import { WelcomeView } from './components/WelcomeView';
 import { AdminView } from './components/AdminView';
 import { DocsView } from './components/DocsView';
@@ -136,6 +138,8 @@ function AppRoutes() {
         }
       >
         <Route path="dashboard" element={<DashboardView />} />
+        <Route path="dashboard/birthdays" element={<BirthdaysView />} />
+        <Route path="dashboard/recent" element={<RecentView />} />
         <Route path="welcome" element={<WelcomeView />} />
         <Route path="contacts/new" element={<AddContactPage />} />
         <Route path="contacts/:id" element={<ContactDetailPage />} />

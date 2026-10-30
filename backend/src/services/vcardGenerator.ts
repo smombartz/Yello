@@ -34,6 +34,8 @@ export interface ContactForVcard {
   firstName: string | null;
   lastName: string | null;
   displayName: string;
+  /** displayName is a stand-in for a card with no name (see placeholderName). */
+  namePlaceholder?: boolean;
   company: string | null;
   title: string | null;
   notes: string | null;

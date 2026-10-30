@@ -127,6 +127,8 @@ export interface ParsedContact {
   firstName: string | null;
   lastName: string | null;
   displayName: string;
+  /** The card had no name: displayName is a stand-in (see placeholderName). */
+  namePlaceholder?: boolean;
   company: string | null;
   title: string | null;
   notes: string | null;
@@ -510,6 +512,25 @@ function parsePhone(rawPhone: string): { phone: string; phoneDisplay: string; co
   return { phone: cleaned, phoneDisplay: rawPhone, countryCode: null };
 }
 
+/**
+ * Stand-in name for a card that has none: the company, else the primary (or
+ * first) email, else the primary (or first) phone, else "No Name". The
+ * contact keeps it as `placeholder_name` so Cleanup can list it under No Name.
+ */
+export function placeholderName(
+  company: string | null | undefined,
+  emails: Array<{ email: string; isPrimary?: boolean }>,
+  phones: Array<{ phone: string; phoneDisplay?: string | null; isPrimary?: boolean }>
+): string {
+  const pick = <E extends { isPrimary?: boolean }>(list: E[]) => list.find(e => e.isPrimary) ?? list[0];
+  const email = pick(emails.filter(e => e.email?.trim()));
+  const phone = pick(phones.filter(p => (p.phoneDisplay || p.phone)?.trim()));
+  return company?.trim()
+    || email?.email.trim()
+    || (phone ? (phone.phoneDisplay || phone.phone).trim() : '')
+    || 'No Name';
+}
+
 export function parseSingleVcard(rawText: string): ParsedContact | null {
   const { text: vcardText, enrichment: linkedinEnrichment } = extractLinkedinEnrichment(rawText);
   const jcalData = ICAL.parse(vcardText);
@@ -543,11 +564,14 @@ export function parseSingleVcard(rawText: string): ParsedContact | null {
     }
   }
 
-  if (!displayName) {
+  // A card with no name at all (FN and N both empty) still comes in: it gets a
+  // stand-in name further down, once the company, emails and phones are read.
+  let namePlaceholder = false;
+  if (!displayName || !String(displayName).trim()) {
     if (firstName || lastName) {
       displayName = [firstName, lastName].filter(Boolean).join(' ');
     } else {
-      throw new Error('Missing required FN or N field');
+      namePlaceholder = true;
     }
   }
 
@@ -855,6 +879,8 @@ export function parseSingleVcard(rawText: string): ParsedContact | null {
   // Yello's own export marks archived details; restore them as archived
   const archived = <E extends ArchivableEntry>(entries: E[]) => entries.map(takeArchiveMarker);
 
+  if (namePlaceholder) displayName = placeholderName(company, emails, phones);
+
   return {
     firstName,
     lastName,
@@ -869,6 +895,7 @@ export function parseSingleVcard(rawText: string): ParsedContact | null {
     extraProperties,
     vcardParams: Object.keys(vcardParams).length > 0 ? vcardParams : null,
     displayName,
+    ...(namePlaceholder ? { namePlaceholder: true } : {}),
     company: company || null,
     title,
     notes,

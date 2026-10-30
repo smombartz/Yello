@@ -302,7 +302,7 @@ class GoogleSyncRun {
     }
 
     const parsed = contactDataToParsed({ ...data, uid: null });
-    const inserted = insertParsedContact(this.stmts, this.db, { ...parsed, photoBase64: null }, { skipExistingUid: false });
+    const inserted = insertParsedContact(this.stmts, this.db, { ...parsed, photoBase64: null }, { skipExistingUid: false, createdVia: 'google_sync' });
     if (!inserted) return;
     const contactId = inserted.contactId;
     const local = this.loadContacts([contactId]).get(contactId)!.projection;

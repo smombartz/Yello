@@ -20,7 +20,7 @@ export function saveVcardModelFields(db: DatabaseType, contactId: number, contac
   db.prepare(`
     UPDATE contacts SET
       middle_name = ?, name_prefix = ?, name_suffix = ?, nickname = ?,
-      gender = ?, department = ?, is_company = ?, vcard_params = ?
+      gender = ?, department = ?, is_company = ?, vcard_params = ?, placeholder_name = ?
     WHERE id = ?
   `).run(
     contact.middleName ?? null,
@@ -31,6 +31,7 @@ export function saveVcardModelFields(db: DatabaseType, contactId: number, contac
     contact.department ?? null,
     contact.isCompany ? 1 : 0,
     paramsJson(contact.vcardParams),
+    contact.namePlaceholder ? contact.displayName : null,
     contactId
   );
 

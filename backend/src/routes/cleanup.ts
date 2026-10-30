@@ -58,7 +58,7 @@ export default async function cleanupRoutes(
     const { mode, types, threshold = 3 } = request.query;
 
     if (mode === 'empty') {
-      const validEmptyTypes: EmptyContactType[] = ['truly_empty', 'name_only'];
+      const validEmptyTypes: EmptyContactType[] = ['truly_empty', 'no_name', 'name_only'];
       const typeFilter = types
         ? types.split(',').map(t => t.trim()).filter((t): t is EmptyContactType => validEmptyTypes.includes(t as EmptyContactType))
         : undefined;
@@ -93,7 +93,7 @@ export default async function cleanupRoutes(
 
     if (mode === 'empty') {
       // Parse types filter
-      const validEmptyTypes: EmptyContactType[] = ['truly_empty', 'name_only'];
+      const validEmptyTypes: EmptyContactType[] = ['truly_empty', 'no_name', 'name_only'];
       const typeFilter = types
         ? types.split(',').map(t => t.trim()).filter((t): t is EmptyContactType => validEmptyTypes.includes(t as EmptyContactType))
         : undefined;

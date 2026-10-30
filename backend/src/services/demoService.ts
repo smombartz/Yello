@@ -381,8 +381,8 @@ async function seedDemoPhotos(db: DatabaseType, userId: number): Promise<void> {
  */
 function seedDemoContacts(db: DatabaseType): void {
   const insertContact = db.prepare(`
-    INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, created_via)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'demo')
   `);
 
   const insertEmail = db.prepare(`

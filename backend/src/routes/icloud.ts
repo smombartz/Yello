@@ -134,7 +134,7 @@ export default async function icloudRoutes(
     for (const contact of (newContacts || [])) {
       try {
         const inserted = db.transaction(() =>
-          insertParsedContact(stmts, db, contact, { skipExistingUid: false })
+          insertParsedContact(stmts, db, contact, { skipExistingUid: false, createdVia: 'icloud_import' })
         )();
         if (inserted && contact.photoBase64) await attachPhoto(inserted.contactId, contact.photoBase64);
         imported++;

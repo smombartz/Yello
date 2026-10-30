@@ -1,5 +1,188 @@
 # Change Log
 
+## 2026-10-29 — Edited contacts stay findable by their new name
+
+**Session:** `3c6dcbe5-f95e-47cd-8758-543229003fa8`
+
+**What Changed:**
+- `PUT /api/contacts/:id` now rebuilds the contact's unified search index before responding
+- Added a regression test: rename Brian → Bryan, then search finds "bryan benasich" and no longer finds "brian"
+
+**Why:**
+- Renaming a contact (e.g. correcting "Brian" to "Bryan") left the search index holding the old name. Searching the new name returned nothing; the old name still matched.
+- Cause: only the create path called `rebuildContactSearch`. The `contacts_au` trigger covers just `display_name`/`company` and updates the older `contacts_fts`, so the unified index (`contacts_unified_fts`) was never refreshed on edit.
+- Existing contacts that were edited before this fix keep stale entries until they are edited again or `backend/src/scripts/reindexSearch.ts` is run.
+
+**Files Modified:**
+- `backend/src/routes/contacts.ts` — `PUT /:id` handler, `rebuildContactSearch` call
+- `backend/src/routes/__tests__/contacts.test.ts` — new `search after edit` test
+
+---
+
+## 2026-10-28 — Nameless cards import with a stand-in name; Cleanup No Name list; stricter Name Only
+
+**Session:** `02529a47-bdc3-48b8-83bb-39417bd69ec2`
+
+**What Changed:**
+- `vcardParser` no longer rejects a card with no `FN`/`N`: it gets a stand-in name (company, else primary
+  email, else primary phone, else "No Name") and is flagged `namePlaceholder`. Google contacts with no
+  name get the same treatment
+- New column `contacts.placeholder_name` holds the stand-in; set on insert and when a sync rewrites the name
+- Cleanup → Empty Contacts has a new **No Name** filter (nameless contacts that hold data), with a badge
+  and a card showing their emails, phones and company. Truly Empty / No Name / Name Only no longer overlap
+- **Name Only** now means a name and nothing else: it also rules out birthday, department, gender, photo,
+  IMs, URLs, related people, custom dates and LinkedIn data (it already ruled out emails, phones, addresses,
+  socials, company, title and notes)
+- Two tests that used a blank card as "malformed" now use a syntactically broken one
+
+**Why:**
+- Two nameless cards in iCloud raised "Unreadable card: Missing required FN or N field" on every scheduled
+  sync and couldn't be found from Yello. Now they come in and can be renamed or deleted from Cleanup
+- Name Only listed contacts that had real information (birthdays, URLs, dates, ...)
+
+**Files Modified:**
+- `backend/src/services/vcardParser.ts` — `placeholderName`, `ParsedContact.namePlaceholder`, no throw on missing name
+- `backend/src/services/sync/googlePersonMapper.ts` — `personToContactData` uses `placeholderName`
+- `backend/src/services/vcardGenerator.ts` — `ContactForVcard.namePlaceholder`
+- `backend/src/services/sync/syncProjection.ts` — `parsedToContactData` / `contactDataToParsed` carry the flag
+- `backend/src/services/vcardModelStore.ts` — `saveVcardModelFields` writes `placeholder_name`
+- `backend/src/services/contactPersistence.ts` — `replaceContactFields` name family refreshes `placeholder_name`
+- `backend/src/services/userDatabase.ts` — `placeholder_name` column + migration
+- `backend/src/services/cleanupService.ts` — `NO_REAL_NAME_SQL`, `NO_DATA_SQL`, `no_name` type, rewritten empty-contact queries
+- `backend/src/schemas/cleanup.ts`, `backend/src/routes/cleanup.ts` — `no_name`, `noName`
+- `frontend/src/api/types.ts`, `frontend/src/components/CleanupFilters.tsx`, `frontend/src/components/CleanupContactCard.tsx`, `frontend/src/index.css` — No Name chip, badge, card details
+- `frontend/src/components/DocsView.tsx` — Empty Contacts description
+- `backend/src/services/__tests__/nameless.test.ts` (new), `vcardParser.test.ts`, `routes/__tests__/import.test.ts`
+- `docs/database.md`, `docs/reference.md`, `docs/plans/2026-10-28-nameless-cards-cleanup.md`
+
+---
+
+## 2026-10-28 — Recent card, Recent changes page, reusable contact tiles
+
+**Session:** `2d8b4e5f-7951-4496-87f3-dfcefeebca00`
+
+**What Changed:**
+- Dashboard "Recently Added" renamed **Recent**: up to 12 contacts added, imported, synced or edited
+  in the last 7 days, as photo-and-name tiles, with a **See all recent changes** link
+- New **Recent changes** page at `/dashboard/recent`: last 30 days, one card per kind (Added,
+  Imported, Synced, Updated, Archived), kind tabs with counts, name search
+- New column `contacts.created_via`, set by every insert path, so imported and synced contacts can
+  be told apart from hand-added ones
+- New `GET /api/stats/recent?days=`; the dashboard response's `recentlyAdded` / `recentlyModified`
+  replaced by `recent` / `recentTotal`. Timestamps go out as ISO UTC, window checks use `julianday()`
+- Fixed "-1 days ago": SQLite UTC timestamps were parsed as local time, so west of UTC a new
+  contact looked like it was in the future. New `parseServerTime` / `formatRelativeDay`
+- `BirthdayGrid` generalised into the reusable `ContactTileGrid` (tooltip content per tile), used by
+  both Birthdays and Recent; CSS classes renamed `.birthday-tile*` → `.contact-tile*`
+
+**Why:**
+- Roadmap item `ccyvry`: a clearer Recent card, a page showing every kind of recent change, and
+  one shared tile component
+
+**Files Modified:**
+- `backend/src/services/userDatabase.ts` — `created_via` column + migration
+- `backend/src/services/contactPersistence.ts` — `ContactOrigin`, `insertParsedContact({ createdVia })`
+- `backend/src/services/importService.ts`, `routes/icloud.ts`, `services/sync/icloudSyncEngine.ts`,
+  `services/sync/googleSyncEngine.ts`, `services/sync/cutoverApply.ts` — pass `createdVia`
+- `backend/src/routes/contacts.ts`, `routes/profile.ts`, `routes/googleContacts.ts`,
+  `services/linkedinImportService.ts`, `services/demoService.ts` — insert `created_via`
+- `backend/src/routes/stats.ts` — `getDashboardRecent`, `getRecentChanges`, `/recent` route;
+  removed `getRecentlyAdded`, `getRecentlyModified`
+- `backend/src/routes/__tests__/stats.test.ts` — recent-changes tests
+- `frontend/src/components/ContactTileGrid.tsx` — new (replaces `BirthdayGrid.tsx`)
+- `frontend/src/components/RecentView.tsx` — new page
+- `frontend/src/components/DashboardView.tsx` — Recent card, tiles, link
+- `frontend/src/components/BirthdaysView.tsx` — uses `ContactTileGrid`
+- `frontend/src/utils/relativeTime.ts` — new: `parseServerTime`, `daysAgo`, `formatRelativeDay`
+- `frontend/src/utils/recentChanges.ts` — new: kind labels/icons, `describeChange`, `recentTile`
+- `frontend/src/utils/birthdays.ts` — `birthdayTile`
+- `frontend/src/api/dashboardHooks.ts` — `RecentChange`, `useRecentChanges`
+- `frontend/src/App.tsx` — `/dashboard/recent` route
+- `frontend/src/styles/pages/dashboard.css` — `.contact-tile*`, `.recent-*`
+- `docs/database.md`, `docs/reference.md`, `docs/plans/2026-10-28-recent-changes-page.md`
+
+---
+
+## 2026-10-28 — Birthday tiles with hover tooltip
+
+**Session:** `ef4f744f-0bef-4aa7-bbd5-70e530a09f46`
+
+**What Changed:**
+- Birthdays on the dashboard card and the Birthdays page are tiles in a grid: 40px photo on top,
+  the name (11px, up to two lines) underneath
+- The date, age and days-until moved into a tooltip shown on hover or keyboard focus. It is
+  portalled to `<body>` with fixed positioning so card edges never clip it, flips below the tile
+  near the top of the window, stays clear of the window edges and hides on scroll
+- Each tile is a link to the contact; its `aria-label` carries the tooltip text for screen readers
+- Replaced the compact-row styles from the previous change (`.birthday-list`, `.birthdays-grid`,
+  `.birthday-badge-later`)
+
+**Why:**
+- Fit more birthdays in less space, with the secondary details on demand
+
+**Files Modified:**
+- `frontend/src/components/BirthdayGrid.tsx` — new: tiles and tooltip, shared by both views
+- `frontend/src/components/BirthdaysView.tsx` — month cards render `BirthdayGrid`
+- `frontend/src/components/DashboardView.tsx` — Upcoming Birthdays renders `BirthdayGrid`
+- `frontend/src/styles/pages/dashboard.css` — `.birthday-grid`, `.birthday-tile*`, `.birthday-tip*`
+- `docs/reference.md` — Birthdays layout
+
+---
+
+## 2026-10-28 — Birthdays in a grid, compact birthday rows
+
+**Session:** `ef4f744f-0bef-4aa7-bbd5-70e530a09f46`
+
+**What Changed:**
+- Birthdays page: each month's birthdays sit in a responsive grid (columns of at least 240px)
+  instead of one full-width row per person
+- Birthday rows on the dashboard card and the Birthdays page are compact: 32px avatars (was 40px),
+  12px names, 11px dates, tighter padding and badges
+
+**Why:**
+- Save space; the full-width rows wasted most of the line on wide screens
+
+**Files Modified:**
+- `frontend/src/styles/pages/dashboard.css` — `.birthday-list`, `.birthdays-grid`
+- `frontend/src/components/BirthdaysView.tsx` — grid classes on the month list
+- `frontend/src/components/DashboardView.tsx` — `birthday-list` class on Upcoming Birthdays
+- `docs/reference.md` — Birthdays page layout
+
+---
+
+## 2026-10-28 — Upcoming Birthdays limited to 14 days, new Birthdays page
+
+**Session:** `ef4f744f-0bef-4aa7-bbd5-70e530a09f46`
+
+**What Changed:**
+- Dashboard "Upcoming Birthdays" card now shows only the next 14 days (was "this month or next"),
+  with a "See all birthdays" link underneath
+- The "With Birthdays" stat card links to the new Birthdays page at `/dashboard/birthdays`: every
+  birthday, soonest first, grouped by month, with a name search
+- New `GET /api/stats/birthdays`; both it and `/api/stats/dashboard` take `?today=YYYY-MM-DD` (the
+  browser's local date)
+- Days-until is counted on calendar dates. Before, a birthday falling today was compared against
+  the current time and pushed a year out, so "Today!" never showed
+- One birthday parser for every stored format, including Apple's `1604-MM-DD` (shown without an
+  age); empty-string birthdays no longer count toward "With Birthdays"
+
+**Why:**
+- Roadmap item `gulnne`: the dashboard list grew too long, and there was no place to see all birthdays
+
+**Files Modified:**
+- `backend/src/routes/stats.ts` — `parseBirthdayMonthDay`, `daysUntilBirthday`, `getAllBirthdays`,
+  `UPCOMING_BIRTHDAY_DAYS`, `resolveToday`, `/birthdays` route
+- `backend/src/routes/__tests__/stats.test.ts` — new tests for parsing, day counting and both routes
+- `frontend/src/utils/birthdays.ts` — new: `parseBirthday`, `formatBirthdayLine`, `formatDaysUntil`, `localToday`
+- `frontend/src/api/dashboardHooks.ts` — `useDashboardStats` sends `today`; new `useAllBirthdays`
+- `frontend/src/components/BirthdaysView.tsx` — new page
+- `frontend/src/components/DashboardView.tsx` — 14-day empty text, footer link, clickable stat card
+- `frontend/src/App.tsx` — `dashboard/birthdays` route
+- `frontend/src/styles/pages/dashboard.css` — `.dashboard-card-footer`, `.birthday-badge-later`, `.birthdays-*`
+- `docs/reference.md` — Dashboard birthdays section
+
+---
+
 ## 2026-10-26 — Archive individual contact details
 
 **Session:** `52e72bcf-5ec8-4c1b-bb25-3f8336d77265`

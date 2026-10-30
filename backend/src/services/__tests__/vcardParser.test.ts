@@ -57,6 +57,7 @@ describe('vcardParser', () => {
   it('should handle malformed vCards gracefully', () => {
     const malformed = `BEGIN:VCARD
 VERSION:3.0
+this is not a property
 END:VCARD`;
     const result = parseVcf(malformed);
     expect(result.errors.length).toBeGreaterThan(0);
