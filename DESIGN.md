@@ -399,7 +399,7 @@ Refined and restrained: compact, bordered by default, with exactly one filled ac
 ### Contact Row (signature)
 The core repeated unit of the desk, built for 10K-row virtualized scrolling.
 - A full-width card with a **48px avatar**, then the name (Subtitle, Ink, ellipsized) over the role or company (Body Small, Graphite).
-- To the right sit two fixed-width detail columns (email, and phone with a country flag) in Graphite with 16px icons. They are capped at 220px each and truncate.
+- To the right sit two detail columns (email, and phone with a country flag) in Graphite with 16px icons. They line up down the list, sized to the widest email and phone shown, so values are never cut off; the role line ellipsizes instead. At ≤1024px email stacks over phone in one column.
 - A right action strip is set off by a full-height vertical hairline. Its 16px Graphite reach-out icons turn Ink on hover.
 - Rows stack with a 12px gap. Clicking expands the row in place, and it becomes a 56px-minimum touch target on phones. A row selected for a bulk action gets a 2px inset Signal Violet ring.
 - **On phones** the detail columns and action strip drop out, but the role/company line stays, so people with the same name can still be told apart. A tap shows Shaded Paper as pressed feedback, and touch never leaves a card in its hover lift.

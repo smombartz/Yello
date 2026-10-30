@@ -1,5 +1,28 @@
 # Change Log
 
+## 2026-10-30 — Contact rows show the full email and phone in aligned columns
+
+**Session:** `70a71902-a48c-4dbd-bb1f-7ed3cb436e1e`
+
+**What Changed:**
+- Each collapsed contact row is a CSS grid with the same columns on every row (name/role, email, phone, action strip), so emails and phones start at the same x down the list
+- `ContactList` measures the widest loaded email and phone from an off-screen copy of those cells and sets `--contact-email-col` / `--contact-phone-col`, so the full value always fits; re-measured on list or font changes
+- The role/company line is what ellipsizes when space is short; the email column is capped at 40% of the row
+- At ≤1024px email stacks over phone in one column; at ≤640px only the name column remains (unchanged behaviour); rows stay 74px tall
+- DESIGN.md Contact Row spec and docs/reference.md updated
+
+**Why:**
+- User request: rows cut email and phone off at 220px and the values didn't line up; name, email and phone matter more than the full title
+
+**Files Modified:**
+- `frontend/src/components/ContactRow.tsx` — new `ContactEmailDetail`, `ContactPhoneDetail` (cells shared with the sizer); `ContactRow` uses them
+- `frontend/src/components/ContactList.tsx` — `detailColumns` state, `columnSizerRef` (ResizeObserver), `.contact-column-sizer` markup, CSS vars on `.contact-list`
+- `frontend/src/index.css` — `.contact-card .collapsed-content` grid columns, `.contact-card .contact-details` (`display: contents` / stacked at ≤1024px), `.contact-column-sizer`, `.contact-list-rows`, ≤640px overrides
+- `DESIGN.md` — Contact Row detail columns bullet
+- `docs/reference.md` — "Contact row columns: full email and phone, aligned"
+
+---
+
 ## 2026-10-30 — Dashboard: today's birthdays get an outline and a Today label
 
 **Session:** `70a71902-a48c-4dbd-bb1f-7ed3cb436e1e`

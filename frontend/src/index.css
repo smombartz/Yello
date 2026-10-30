@@ -840,15 +840,88 @@ a.nav-rail-item.active {
   color: var(--ds-text-secondary);
 }
 
-.contact-details > .contact-detail-item {
-  width: min(220px, 100%);
-  overflow: hidden;
+/* Contact row columns. Each row is its own grid, but every row gets the same tracks:
+   name/role | email | phone | action strip. ContactList measures the widest email and
+   phone it has loaded into --contact-email-col / --contact-phone-col, so those columns
+   start at the same x on every row and show the full value. The name/role column takes
+   what is left, and its role line is what ellipsizes. Only a pathologically long email
+   (over 40% of the row) is capped and truncates. The action strip is always the same
+   width (empty icon slots keep their place). The fallbacks cover a row rendered outside
+   ContactList, e.g. the style guide. */
+.contact-card .collapsed-content {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    min(var(--contact-email-col, 220px), 40%)
+    var(--contact-phone-col, 160px)
+    auto;
+  column-gap: var(--ds-space-6);
+}
+
+/* Email and phone sit on the row's grid as two cells of their own */
+.contact-card .contact-details {
+  display: contents;
+}
+
+.contact-card .contact-details > .contact-detail-item {
+  min-width: 0;
+  margin: 0;
+  line-height: 20px;
 }
 
 .contact-details > .contact-detail-item span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.contact-card .contact-detail-item [class*="fa-"],
+.contact-card .contact-detail-item .phone-flag {
+  flex-shrink: 0;
+}
+
+/* Narrower content column (≤1024px windows: it is under 880px): email stacks over
+   phone in one column, as wide as the wider of the two, so the name keeps its room. */
+@media (max-width: 1024px) {
+  .contact-card .collapsed-content {
+    grid-template-columns:
+      minmax(0, 1fr)
+      min(max(var(--contact-email-col, 220px), var(--contact-phone-col, 160px)), 50%)
+      auto;
+  }
+
+  .contact-card .contact-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    min-width: 0;
+  }
+}
+
+/* The off-screen copy of every loaded email and phone cell that ContactList measures
+   to size the columns above. Each column div shrink-wraps its widest cell. */
+.contact-list-rows {
+  position: relative;
+}
+
+.contact-column-sizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.contact-column-sizer > div {
+  width: max-content;
+}
+
+.contact-column-sizer .contact-detail-item {
+  margin: 0;
+  line-height: 20px;
 }
 
 .contact-detail-item [class*="fa-"] {
@@ -1543,12 +1616,12 @@ a.nav-rail-item.active {
   transform: none;
 }
 
+/* Its grid columns are set with the row's other column rules, under Contact Card */
 .contact-card .collapsed-content {
-  display: flex;
   align-items: center;
   padding: 13px;
   cursor: pointer;
-  width: 100%;  /* Ensures full width for flex layout */
+  width: 100%;  /* Fills the card, which is a flex row */
 }
 
 .contact-card.expanded .collapsed-content {
@@ -2211,11 +2284,16 @@ a.nav-rail-item.active {
 }
 
 @media (max-width: 640px) {
-  .contact-details {
+  .contact-details,
+  .contact-card .contact-details {
     display: none;
   }
   .contact-card-actions {
     display: none;
+  }
+  /* Only the name/role column is left */
+  .contact-card .collapsed-content {
+    grid-template-columns: minmax(0, 1fr);
   }
   .expanded-row {
     grid-template-columns: 1fr;

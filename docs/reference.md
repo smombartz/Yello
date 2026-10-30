@@ -245,6 +245,15 @@ New Contact and the contact edit form build their save payload with `buildContac
 - **Social links:** a profile URL alone is enough. If Platform or Username is empty, `socialProfileFromUrl` fills it at save time, following VCF import's rule: a recognised platform, otherwise the host (`bsky.app`); the username from the URL, otherwise its last path segment, otherwise the host. Without a URL, a social link needs both a platform and a username.
 - Server errors appear in the same box (`SaveErrors` in `ContactFormSections.tsx`).
 
+### Contact row columns: full email and phone, aligned
+
+List rows show the whole primary email and phone, and every row's email and phone start at the same x.
+
+- Each collapsed row (`.contact-card .collapsed-content`) is a CSS grid with the same tracks on every row: name/role `minmax(0, 1fr)`, email, phone, action strip. `.contact-details` is `display: contents`, so its two cells sit on the row's grid.
+- The email and phone tracks are as wide as the widest value in the loaded list. `ContactList` renders an off-screen copy of every loaded email and phone cell (`.contact-column-sizer`, using the row's own `ContactEmailDetail` / `ContactPhoneDetail`), measures each column with a `ResizeObserver` (rounded up, re-run when the contacts or the web font change) and sets `--contact-email-col` / `--contact-phone-col` on `.contact-list`. Measuring the full list rather than the rendered rows keeps the columns steady while the virtualizer scrolls.
+- When space is short, the role/company line is what ellipsizes. The email track is capped at 40% of the row, so only an unusually long email truncates.
+- At ≤1024px windows (content column under 880px) email stacks over phone in one column; at ≤640px the details and action strip drop out as before. The row stays 74px tall in every layout.
+
 ### Contact row menu (⋮)
 
 The three-dot button at the end of each list row opens a menu that works without expanding the card first:

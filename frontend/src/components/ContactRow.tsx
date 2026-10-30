@@ -20,6 +20,40 @@ interface ContactRowProps {
   onArchive?: (contact: ContactListItem) => void;
 }
 
+/** The row's email cell. ContactList also renders it off-screen to size the email column. */
+export function ContactEmailDetail({ email }: { email: string | null }) {
+  return (
+    <div className="contact-detail-item">
+      {email && (
+        <>
+          <Icon name="envelope" />
+          <span>{email}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** The row's phone cell, flagged by the number's country. Sized off-screen like the email cell. */
+export function ContactPhoneDetail({ phone, countryCode }: { phone: string | null; countryCode: string | null }) {
+  return (
+    <div className="contact-detail-item">
+      {phone && (
+        <>
+          {countryCode ? (
+            <span className="phone-flag" title={getCountryName(countryCode)}>
+              {getCountryFlag(countryCode)}
+            </span>
+          ) : (
+            <Icon name="phone" />
+          )}
+          <span>{phone}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function ContactRow({
   contact,
   isExpanded,
@@ -98,28 +132,8 @@ export function ContactRow({
           </div>
         </div>
         <div className="contact-details">
-          <div className="contact-detail-item">
-            {contact.primaryEmail && (
-              <>
-                <Icon name="envelope" />
-                <span>{contact.primaryEmail}</span>
-              </>
-            )}
-          </div>
-          <div className="contact-detail-item">
-            {contact.primaryPhone && (
-              <>
-                {contact.primaryPhoneCountryCode ? (
-                  <span className="phone-flag" title={getCountryName(contact.primaryPhoneCountryCode)}>
-                    {getCountryFlag(contact.primaryPhoneCountryCode)}
-                  </span>
-                ) : (
-                  <Icon name="phone" />
-                )}
-                <span>{contact.primaryPhone}</span>
-              </>
-            )}
-          </div>
+          <ContactEmailDetail email={contact.primaryEmail} />
+          <ContactPhoneDetail phone={contact.primaryPhone} countryCode={contact.primaryPhoneCountryCode} />
         </div>
         <div className="contact-card-actions">
           <span className="contact-action-icon">

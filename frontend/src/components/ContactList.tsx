@@ -5,7 +5,7 @@ import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useContacts, useMergePreview, useMergeSelectedContacts } from '../api/hooks';
 import { useDeleteContacts } from '../api/cleanupHooks';
 import { useArchiveContacts, useUnarchiveContacts } from '../api/archiveHooks';
-import { ContactRow } from './ContactRow';
+import { ContactRow, ContactEmailDetail, ContactPhoneDetail } from './ContactRow';
 import { ContactGridCard } from './ContactGridCard';
 import { ContactFilters, getFilterLabel } from './ContactFilters';
 import { Icon } from './Icon';
@@ -68,6 +68,27 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
       observer.disconnect();
       setToolbarHeight(0);
     };
+  }, []);
+
+  // Every row lays out on the same grid tracks, so emails and phones start at the same x.
+  // The tracks are as wide as the widest email and phone loaded, measured from an
+  // off-screen copy of those cells, so neither is ever cut off (see index.css).
+  const [detailColumns, setDetailColumns] = useState<{ email: number; phone: number } | null>(null);
+  const columnSizerRef = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    const [emailColumn, phoneColumn] = Array.from(el.children);
+    const measure = () => {
+      // Round up: a track a fraction of a pixel short would ellipsize the text
+      const email = Math.ceil(emailColumn.getBoundingClientRect().width);
+      const phone = Math.ceil(phoneColumn.getBoundingClientRect().width);
+      setDetailColumns(prev => (prev?.email === email && prev.phone === phone ? prev : { email, phone }));
+    };
+    measure();
+    // Fires again when the loaded contacts change or the web font arrives
+    const observer = new ResizeObserver(measure);
+    observer.observe(emailColumn);
+    observer.observe(phoneColumn);
+    return () => observer.disconnect();
   }, []);
 
   // Merge state
@@ -328,7 +349,16 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
   const showToolbar = showToolbarControls || (filters?.size ?? 0) > 0;
 
   return (
-    <div className="contact-list" style={{ '--contact-list-toolbar-height': `${toolbarHeight}px` } as CSSProperties}>
+    <div
+      className="contact-list"
+      style={{
+        '--contact-list-toolbar-height': `${toolbarHeight}px`,
+        ...(detailColumns && {
+          '--contact-email-col': `${detailColumns.email}px`,
+          '--contact-phone-col': `${detailColumns.phone}px`,
+        }),
+      } as CSSProperties}
+    >
       {/* Selection toolbar */}
       {showToolbar && (
         <div className="contact-list-actions" ref={toolbarRef}>
@@ -439,7 +469,19 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
       )}
 
       {viewMode === 'list' ? (
-        <div ref={listRef}>
+        <div ref={listRef} className="contact-list-rows">
+          <div className="contact-column-sizer" aria-hidden="true" ref={columnSizerRef}>
+            <div>
+              {data.contacts.map(c => c.primaryEmail && (
+                <ContactEmailDetail key={c.id} email={c.primaryEmail} />
+              ))}
+            </div>
+            <div>
+              {data.contacts.map(c => c.primaryPhone && (
+                <ContactPhoneDetail key={c.id} phone={c.primaryPhone} countryCode={c.primaryPhoneCountryCode} />
+              ))}
+            </div>
+          </div>
           <div
             style={{
               height: `${virtualizer.getTotalSize()}px`,
