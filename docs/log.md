@@ -1,5 +1,23 @@
 # Change Log
 
+## 2026-10-30 — Dashboard: With Photos opens the contacts list filtered to photos
+
+**Session:** `70a71902-a48c-4dbd-bb1f-7ed3cb436e1e`
+
+**What Changed:**
+- The With Photos stat card links to `/contacts?filter=has-photo`, the list's existing Photo filter
+- New test checking that the card's `contactsWithPhotos` equals the `has-photo` list total (archived contacts left out of both)
+
+**Why:**
+- User request: the card showed a number you couldn't open; clicking it should show those contacts, and the list total should match the card
+
+**Files Modified:**
+- `frontend/src/components/DashboardView.tsx` — `DashboardView` With Photos card as `Link`
+- `backend/src/routes/__tests__/dashboardPhotoCount.test.ts` — new test: `/api/stats/dashboard` vs `/api/contacts?filter=has-photo`
+- `docs/reference.md` — "Dashboard stat cards": With Photos link and count rule
+
+---
+
 ## 2026-10-30 — Dashboard: Cities folds into the Countries card, which opens the map
 
 **Session:** `70a71902-a48c-4dbd-bb1f-7ed3cb436e1e`

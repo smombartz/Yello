@@ -137,7 +137,9 @@ Public routes declared before the `*` catch-all, so they work signed in, signed 
 - **Total Contacts** → `/contacts`.
 - **Countries**, with the distinct city count as a secondary line (`.stat-detail`) → `/map`.
   Cities used to be a card of their own.
-- **With Photos**.
+- **With Photos** → `/contacts?filter=has-photo`, the list's existing Photo filter. The card
+  counts `photo_hash IS NOT NULL AND archived_at IS NULL`, the same rule as the filter, so the
+  list total matches the card (`__tests__/dashboardPhotoCount.test.ts`).
 - **With Birthdays** → `/dashboard/birthdays`.
 
 ### Dashboard birthdays and the Birthdays page (`/dashboard/birthdays`)

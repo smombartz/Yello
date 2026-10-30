@@ -93,7 +93,8 @@ export function DashboardView() {
               </div>
             </Link>
 
-            <div className="card stat-card">
+            {/* Same rule as the list's Photo filter, so the list total matches this number */}
+            <Link to="/contacts?filter=has-photo" className="card stat-card">
               <div className="stat-icon photos">
                 <Icon name="camera" />
               </div>
@@ -101,7 +102,7 @@ export function DashboardView() {
                 <div className="stat-value">{data.overview.contactsWithPhotos.toLocaleString()}</div>
                 <div className="stat-label">With Photos</div>
               </div>
-            </div>
+            </Link>
 
             <Link to="/dashboard/birthdays" className="card stat-card">
               <div className="stat-icon birthdays">
