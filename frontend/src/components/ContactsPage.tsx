@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { ContactList } from './ContactList';
 import { ContactFilters } from './ContactFilters';
@@ -11,7 +11,6 @@ export function ContactsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const updateParams = useSearchParamUpdater();
-  const [totalContacts, setTotalContacts] = useState<number>(0);
 
   // The URL holds the list state so a copied link reproduces this exact view.
   const search = searchParams.get('q') ?? '';
@@ -55,7 +54,6 @@ export function ContactsPage() {
           onViewModeChange={setViewMode}
         />
       ) : undefined,
-      info: <span>{totalContacts.toLocaleString()} contacts</span>,
       // Phones add from the tab bar's + button
       actions: isMobile ? undefined : (
         <Button
@@ -67,14 +65,13 @@ export function ContactsPage() {
         </Button>
       ),
     });
-  }, [setHeaderConfig, search, setSearch, totalContacts, navigate, isMobile, filters, setFilters, sort, setSort, viewMode, setViewMode]);
+  }, [setHeaderConfig, search, setSearch, navigate, isMobile, filters, setFilters, sort, setSort, viewMode, setViewMode]);
 
   return (
     <ContactList
       search={search}
       viewMode={viewMode}
       onViewModeChange={setViewMode}
-      onTotalChange={setTotalContacts}
       sort={sort}
       onSortChange={setSort}
       filters={filters}

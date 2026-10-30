@@ -1,5 +1,25 @@
 # Change Log
 
+## 2026-10-30 — Contact list shows how many contacts it lists
+
+**Session:** `70a71902-a48c-4dbd-bb1f-7ed3cb436e1e`
+
+**What Changed:**
+- The contact list's sticky toolbar shows how many contacts the view lists, pinned right ahead of Select Page: "1,284 contacts", or "12 results" while searching
+- The number is the API's `total` (same WHERE clause as the page: search, filters, group), not the 100 loaded rows; a tooltip says "Showing the first 100" when more match
+- Lives in `ContactList`, so group lists show it too; replaces the Contacts page's header count
+
+**Why:**
+- User request: show the count for the current view/search/filter; the only count was in the Contacts page header, easy to miss, hidden on phones and absent from group lists
+
+**Files Modified:**
+- `frontend/src/components/ContactList.tsx` — `.contact-list-count` in the toolbar; removed `onTotalChange` prop and its effect
+- `frontend/src/components/ContactsPage.tsx` — removed header `info` count, `totalContacts` state and `onTotalChange`
+- `frontend/src/index.css` — `.contact-list-count`, `.contact-list-count + .contact-selection-actions`
+- `docs/reference.md` — "Contact list count"
+
+---
+
 ## 2026-10-30 — Contact rows show the full email and phone in aligned columns
 
 **Session:** `70a71902-a48c-4dbd-bb1f-7ed3cb436e1e`

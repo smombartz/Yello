@@ -3395,6 +3395,21 @@ a.nav-rail-item.active {
   margin-left: auto;
 }
 
+/* How many contacts the view lists. Pinned right, ahead of Select Page, which then
+   drops its own auto margin to sit beside it. */
+.contact-list-count {
+  margin-left: auto;
+  margin-right: var(--ds-space-2);
+  font-size: var(--ds-font-sm);
+  color: var(--ds-text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.contact-list-count + .contact-selection-actions {
+  margin-left: 0;
+}
+
 /* Sort Select */
 .contact-sort-select {
   height: 2rem;

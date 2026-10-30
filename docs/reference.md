@@ -254,6 +254,10 @@ List rows show the whole primary email and phone, and every row's email and phon
 - When space is short, the role/company line is what ellipsizes. The email track is capped at 40% of the row, so only an unusually long email truncates.
 - At ≤1024px windows (content column under 880px) email stacks over phone in one column; at ≤640px the details and action strip drop out as before. The row stays 74px tall in every layout.
 
+### Contact list count
+
+The list's sticky toolbar shows how many contacts the view lists, pinned right ahead of Select Page: "1,284 contacts", or "12 results" while searching. It is `total` from `GET /api/contacts`, counted with the same WHERE clause as the page (search, filters, group), so it is the full match count, not the 100 loaded rows; when more match than are loaded, its tooltip says "Showing the first 100". It lives in `ContactList`, so a group's list (`/groups/:category`) shows it too. It replaced the Contacts page's header count. On phones it shows only when the toolbar does (filter chips active); an empty result shows the "No matches" state instead.
+
 ### Contact row menu (⋮)
 
 The three-dot button at the end of each list row opens a menu that works without expanding the card first:

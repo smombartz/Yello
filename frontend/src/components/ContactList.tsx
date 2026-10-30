@@ -24,7 +24,6 @@ interface ContactListProps {
   categoryFilter?: string;
   viewMode: 'list' | 'grid';
   onViewModeChange?: (mode: 'list' | 'grid') => void;
-  onTotalChange?: (total: number) => void;
   sort?: string;
   onSortChange?: (sort: string) => void;
   filters?: Set<string>;
@@ -37,7 +36,7 @@ const EXPANDED_HEIGHT = 450;   // expanded card height
 const ROW_GAP = 8;             // space between cards
 const PAGE_SIZE = 100;
 
-export function ContactList({ search = '', categoryFilter, viewMode, onViewModeChange, onTotalChange, sort, onSortChange, filters, onFiltersChange, filterString }: ContactListProps) {
+export function ContactList({ search = '', categoryFilter, viewMode, onViewModeChange, sort, onSortChange, filters, onFiltersChange, filterString }: ContactListProps) {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const listRef = useRef<HTMLDivElement>(null);
@@ -111,13 +110,6 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
   useEffect(() => {
     setSelectedIds(new Set());
   }, [search]);
-
-  // Report total count to parent
-  useEffect(() => {
-    if (onTotalChange && data?.total !== undefined) {
-      onTotalChange(data.total);
-    }
-  }, [data?.total, onTotalChange]);
 
   const handleToggle = useCallback((id: number) => {
     updateParams({ [EXPANDED_CONTACT_PARAM]: id === expandedId ? null : String(id) });
@@ -418,6 +410,15 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
               )}
             </>
           )}
+          {/* The total matching the search, filters and group, not just the loaded page */}
+          <span
+            className="contact-list-count"
+            title={data.total > data.contacts.length ? `Showing the first ${data.contacts.length.toLocaleString()}` : undefined}
+          >
+            {search
+              ? `${data.total.toLocaleString()} result${data.total === 1 ? '' : 's'}`
+              : `${data.total.toLocaleString()} contact${data.total === 1 ? '' : 's'}`}
+          </span>
           {selectionEnabled && (
             <div className="contact-selection-actions">
               <button
