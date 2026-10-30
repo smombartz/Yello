@@ -1,5 +1,26 @@
 # Change Log
 
+## 2026-10-30 — Dashboard: Cities folds into the Countries card, which opens the map
+
+**Session:** `70a71902-a48c-4dbd-bb1f-7ed3cb436e1e`
+
+**What Changed:**
+- Removed the standalone Cities stat card; its count is now a secondary line under Countries ("312 cities")
+- The Countries card links to `/map`
+- Stat cards are real links (`<Link>`) instead of clickable divs (Total Contacts, Countries, With Birthdays)
+- New `.stat-detail` style for a stat card's secondary figure; four cards reflow to one row on desktop and 2×2 on phones
+
+**Why:**
+- User request: countries and cities are both geography, so one card that leads to the map is enough
+- Links make the cards keyboard-accessible and openable in a new tab
+
+**Files Modified:**
+- `frontend/src/components/DashboardView.tsx` — `DashboardView` stat cards: merged Countries/Cities, cards as `Link`
+- `frontend/src/styles/pages/dashboard.css` — `.stat-card` link reset, new `.stat-detail`
+- `docs/reference.md` — new "Dashboard stat cards" section
+
+---
+
 ## 2026-10-30 — Cleanup No Name lists nameless contacts that predate placeholder_name
 
 **Session:** `70a71902-a48c-4dbd-bb1f-7ed3cb436e1e`

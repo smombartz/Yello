@@ -69,7 +69,7 @@ export function DashboardView() {
         {/* Overview Stats Row */}
         <section className="dashboard-section overview-section">
           <div className="stat-cards-grid">
-            <div className="card stat-card" onClick={() => navigate('/contacts')}>
+            <Link to="/contacts" className="card stat-card">
               <div className="stat-icon">
                 <Icon name="address-book" />
               </div>
@@ -77,27 +77,21 @@ export function DashboardView() {
                 <div className="stat-value">{data.overview.totalContacts.toLocaleString()}</div>
                 <div className="stat-label">Total Contacts</div>
               </div>
-            </div>
+            </Link>
 
-            <div className="card stat-card">
+            {/* Countries, with the city count underneath: both are places on the map */}
+            <Link to="/map" className="card stat-card">
               <div className="stat-icon countries">
                 <Icon name="globe" />
               </div>
               <div className="stat-info">
                 <div className="stat-value">{data.overview.totalCountries.toLocaleString()}</div>
                 <div className="stat-label">Countries</div>
+                <div className="stat-detail">
+                  {data.overview.totalCities.toLocaleString()} {data.overview.totalCities === 1 ? 'city' : 'cities'}
+                </div>
               </div>
-            </div>
-
-            <div className="card stat-card">
-              <div className="stat-icon cities">
-                <Icon name="city" />
-              </div>
-              <div className="stat-info">
-                <div className="stat-value">{data.overview.totalCities.toLocaleString()}</div>
-                <div className="stat-label">Cities</div>
-              </div>
-            </div>
+            </Link>
 
             <div className="card stat-card">
               <div className="stat-icon photos">
@@ -109,7 +103,7 @@ export function DashboardView() {
               </div>
             </div>
 
-            <div className="card stat-card" onClick={() => navigate('/dashboard/birthdays')}>
+            <Link to="/dashboard/birthdays" className="card stat-card">
               <div className="stat-icon birthdays">
                 <Icon name="cake-candles" />
               </div>
@@ -117,7 +111,7 @@ export function DashboardView() {
                 <div className="stat-value">{data.overview.contactsWithBirthdays.toLocaleString()}</div>
                 <div className="stat-label">With Birthdays</div>
               </div>
-            </div>
+            </Link>
           </div>
         </section>
 

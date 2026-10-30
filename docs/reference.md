@@ -129,6 +129,17 @@ Public routes declared before the `*` catch-all, so they work signed in, signed 
 
 **Display type.** The page uses front-door display sizes beyond the app's 30px ceiling. They are defined as `--lp-*` custom properties on `.landing` and are not global tokens.
 
+### Dashboard stat cards
+
+`DashboardView.tsx` opens with four stat cards, each a link (data: `overview` from
+`GET /api/stats/dashboard`, `getOverviewStats` in `routes/stats.ts`):
+
+- **Total Contacts** → `/contacts`.
+- **Countries**, with the distinct city count as a secondary line (`.stat-detail`) → `/map`.
+  Cities used to be a card of their own.
+- **With Photos**.
+- **With Birthdays** → `/dashboard/birthdays`.
+
 ### Dashboard birthdays and the Birthdays page (`/dashboard/birthdays`)
 
 - The dashboard's **Upcoming Birthdays** card lists only birthdays from today through 14 days ahead
