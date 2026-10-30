@@ -132,7 +132,13 @@ export function DashboardView() {
                     <p>No birthdays in the next 14 days</p>
                   </div>
                 ) : (
-                  <ContactTileGrid tiles={data.upcomingBirthdays.map(birthdayTile)} />
+                  // daysUntil is counted server-side from the browser's local date (?today=), so 0 is today here
+                  <ContactTileGrid
+                    tiles={data.upcomingBirthdays.map((b) => ({
+                      ...birthdayTile(b),
+                      badge: b.daysUntil === 0 ? 'Today' : undefined,
+                    }))}
+                  />
                 )}
               </div>
               {data.overview.contactsWithBirthdays > 0 && (

@@ -155,6 +155,8 @@ Public routes declared before the `*` catch-all, so they work signed in, signed 
 - Data: `GET /api/stats/dashboard` and `GET /api/stats/birthdays` both take `?today=YYYY-MM-DD`,
   the browser's local date, so "today" follows the user's calendar rather than the server's UTC
   clock. Days are counted on calendar dates, so a birthday today is `daysUntil: 0` ("Today!").
+- On the dashboard card, today's birthdays (`daysUntil === 0`) get a violet outline with a small
+  **Today** label on its top edge (`ContactTile.badge`). The Birthdays page doesn't use it.
 - Birthday parsing (`parseBirthdayMonthDay`) accepts `--MM-DD`, `YYYY-MM-DD`, `YYYYMMDD`, `MM-DD`
   and Apple's `1604-MM-DD`; the frontend (`utils/birthdays.ts`) treats 1604 as "no year" when
   showing the age. Feb 29 birthdays fall on Mar 1 in non-leap years.
@@ -194,6 +196,9 @@ The reusable photo-and-name tile grid used by the Birthdays and Recent cards and
 on hover or keyboard focus. The tooltip is portalled to `<body>` with fixed positioning so cards
 never clip it, flips below a tile near the top of the window, and hides on scroll; the tile's
 `aria-label` carries the same text. Touch devices have no hover, so a tap simply opens the contact.
+An optional `badge` outlines the tile (`.has-badge`, an inset shadow so it takes no space) and
+centres the label on the outline's top edge (`.contact-tile-badge`); it is `aria-hidden`, since the
+`aria-label` already says the same.
 Styles: `.contact-tile-grid`, `.contact-tile*`, `.contact-tile-tip*` in `styles/pages/dashboard.css`.
 
 ### Shareable URLs for views and expanded contacts

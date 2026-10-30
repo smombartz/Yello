@@ -1,5 +1,25 @@
 # Change Log
 
+## 2026-10-30 — Dashboard: today's birthdays get an outline and a Today label
+
+**Session:** `70a71902-a48c-4dbd-bb1f-7ed3cb436e1e`
+
+**What Changed:**
+- Upcoming Birthdays tiles for today (`daysUntil === 0`) get a Signal Violet outline with a small "Today" label centred on its top edge
+- `ContactTileGrid` takes an optional `badge` per tile; other tile grids are unchanged
+- "Today" uses the same server-side day count as the card (the browser's local date sent as `?today=`)
+
+**Why:**
+- User request: a birthday today needs acting on now, so it should stand out from the next two weeks' birthdays
+
+**Files Modified:**
+- `frontend/src/components/ContactTileGrid.tsx` — `ContactTile.badge`, `has-badge` class, `.contact-tile-badge` element
+- `frontend/src/components/DashboardView.tsx` — `DashboardView` Upcoming Birthdays tiles set `badge: 'Today'`
+- `frontend/src/styles/pages/dashboard.css` — `.contact-tile.has-badge`, `.contact-tile-badge`
+- `docs/reference.md` — "Dashboard birthdays" and "Contact tiles" sections
+
+---
+
 ## 2026-10-30 — Dashboard: With Photos opens the contacts list filtered to photos
 
 **Session:** `70a71902-a48c-4dbd-bb1f-7ed3cb436e1e`

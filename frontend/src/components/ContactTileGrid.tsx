@@ -12,6 +12,8 @@ export interface ContactTile {
   tipTitle: string;
   /** Second line of the tooltip, e.g. "March 4, 40th Birthday" or "2 days ago" */
   tipText: string;
+  /** Outlines the tile and sits this label on the outline's top edge, e.g. "Today" */
+  badge?: string;
 }
 
 function photoUrl(photoHash: string | null): string | null {
@@ -64,13 +66,15 @@ export function ContactTileGrid({ tiles }: { tiles: ContactTile[] }) {
             <li key={t.key}>
               <Link
                 to={`/contacts/${t.contactId}`}
-                className="contact-tile"
+                className={`contact-tile${t.badge ? ' has-badge' : ''}`}
                 aria-label={`${t.displayName}, ${t.tipTitle}, ${t.tipText}`}
                 onMouseEnter={(e) => showTip(e.currentTarget, t)}
                 onMouseLeave={hideTip}
                 onFocus={(e) => showTip(e.currentTarget, t)}
                 onBlur={hideTip}
               >
+                {/* The aria-label already says it (tipTitle), so screen readers skip the badge */}
+                {t.badge && <span className="contact-tile-badge" aria-hidden="true">{t.badge}</span>}
                 <span className="contact-tile-avatar">
                   {photo ? (
                     <img src={photo} alt="" />
