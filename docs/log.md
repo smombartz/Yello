@@ -1,5 +1,26 @@
 # Change Log
 
+## 2026-10-30 — Cleanup lists switch as tabs instead of filter chips
+
+**Session:** `70a71902-a48c-4dbd-bb1f-7ed3cb436e1e`
+
+**What Changed:**
+- Truly Empty / No Name / Name Only are now a tab bar (the shared `<Tabs>`: `role="tablist"`, `aria-selected`, arrow keys) showing one list at a time, instead of toggle chips that combined lists
+- Problematic Emails' Many Domains / Same Domain use the same tabs; its threshold control sits below them
+- Each mode opens on its first list; switching tabs resets the page and clears the selection
+- Removed the unused `.cleanup-filters` rule (the chip class stays for the Style Guide)
+
+**Why:**
+- They are separate lists, so the control should behave and look like tabs rather than a filter; clearing the selection stops a bulk archive/delete from touching contacts in a list you can't see
+
+**Files Modified:**
+- `frontend/src/components/CleanupFilters.tsx` — `CleanupFilters` renders `<Tabs>`; new `defaultCleanupListType`, `CleanupListType`
+- `frontend/src/components/CleanupView.tsx` — single `selectedType` state, `handleTypeChange`, `handleModeChange` sets the mode's first list
+- `frontend/src/index.css` — dropped `.cleanup-filters`
+- `docs/reference.md` — Cleanup lists are tabs
+
+---
+
 ## 2026-10-30 — Group view: the add field is also the group's search; header search goes universal
 
 **Session:** `f80da6b2-dbc0-4c58-9407-c3c36e04145f`

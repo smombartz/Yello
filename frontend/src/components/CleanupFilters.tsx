@@ -1,3 +1,4 @@
+import { Tabs } from './ui/Tabs';
 import type {
   CleanupMode,
   CleanupSummary,
@@ -5,69 +6,63 @@ import type {
   ProblematicContactType
 } from '../api/types';
 
+export type CleanupListType = EmptyContactType | ProblematicContactType;
+
 interface CleanupFiltersProps {
   mode: CleanupMode;
-  selectedTypes: Set<EmptyContactType | ProblematicContactType>;
-  onToggleType: (type: EmptyContactType | ProblematicContactType) => void;
+  selectedType: CleanupListType;
+  onTypeChange: (type: CleanupListType) => void;
   summary: CleanupSummary | undefined;
+  disabled?: boolean;
 }
 
-const EMPTY_FILTERS: { type: EmptyContactType; label: string }[] = [
-  { type: 'truly_empty', label: 'Truly Empty' },
-  { type: 'no_name', label: 'No Name' },
-  { type: 'name_only', label: 'Name Only' },
+const EMPTY_LISTS: { id: EmptyContactType; label: string }[] = [
+  { id: 'truly_empty', label: 'Truly Empty' },
+  { id: 'no_name', label: 'No Name' },
+  { id: 'name_only', label: 'Name Only' },
 ];
 
-const PROBLEMATIC_FILTERS: { type: ProblematicContactType; label: string }[] = [
-  { type: 'many_domains', label: 'Many Domains' },
-  { type: 'same_domain', label: 'Same Domain' },
+const PROBLEMATIC_LISTS: { id: ProblematicContactType; label: string }[] = [
+  { id: 'many_domains', label: 'Many Domains' },
+  { id: 'same_domain', label: 'Same Domain' },
 ];
 
+/** The list a mode opens on: its first tab. */
+export function defaultCleanupListType(mode: CleanupMode): CleanupListType {
+  return mode === 'problematic' ? PROBLEMATIC_LISTS[0].id : EMPTY_LISTS[0].id;
+}
+
+function countOf(type: CleanupListType, summary: CleanupSummary | undefined): number | null {
+  if (!summary) return null;
+  switch (type) {
+    case 'truly_empty': return summary.empty.trulyEmpty;
+    case 'no_name': return summary.empty.noName;
+    case 'name_only': return summary.empty.nameOnly;
+    case 'many_domains': return summary.problematic.manyDomains;
+    case 'same_domain': return summary.problematic.sameDomain;
+  }
+}
+
+/**
+ * The lists inside a cleanup mode (Truly Empty / No Name / Name Only, or
+ * Many Domains / Same Domain) as a tab bar: one list shown at a time.
+ */
 export function CleanupFilters({
   mode,
-  selectedTypes,
-  onToggleType,
-  summary
+  selectedType,
+  onTypeChange,
+  summary,
+  disabled = false
 }: CleanupFiltersProps) {
-  const filters = mode === 'empty' ? EMPTY_FILTERS : PROBLEMATIC_FILTERS;
-
-  const getCount = (type: EmptyContactType | ProblematicContactType): number => {
-    if (!summary) return 0;
-
-    switch (type) {
-      case 'truly_empty':
-        return summary.empty.trulyEmpty;
-      case 'no_name':
-        return summary.empty.noName;
-      case 'name_only':
-        return summary.empty.nameOnly;
-      case 'many_domains':
-        return summary.problematic.manyDomains;
-      case 'same_domain':
-        return summary.problematic.sameDomain;
-      default:
-        return 0;
-    }
-  };
+  const lists: { id: CleanupListType; label: string }[] = mode === 'problematic' ? PROBLEMATIC_LISTS : EMPTY_LISTS;
 
   return (
-    <div className="cleanup-filters">
-      {filters.map(({ type, label }) => {
-        const count = getCount(type);
-        const isActive = selectedTypes.size === 0 || selectedTypes.has(type);
-
-        return (
-          <button
-            key={type}
-            type="button"
-            className={`cleanup-filter-chip ${isActive ? 'active' : ''}`}
-            onClick={() => onToggleType(type)}
-            aria-pressed={isActive}
-          >
-            {label} ({count})
-          </button>
-        );
-      })}
-    </div>
+    <Tabs
+      items={lists.map(({ id, label }) => ({ id, label, count: countOf(id, summary) }))}
+      value={selectedType}
+      onChange={onTypeChange}
+      disabled={disabled}
+      aria-label={mode === 'problematic' ? 'Problematic email list' : 'Empty contact list'}
+    />
   );
 }

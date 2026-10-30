@@ -2374,12 +2374,7 @@ a.nav-rail-item.active {
   box-shadow: var(--ds-shadow-focus);
 }
 
-/* Cleanup Filters */
-.cleanup-filters {
-  display: flex;
-  gap: var(--ds-space-2);
-}
-
+/* Filter chip (class pattern, shown in the Style Guide) */
 .cleanup-filter-chip {
   padding: 0 0.75rem;
   border-radius: 1rem;

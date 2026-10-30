@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
 import { CleanupModeSelector } from './CleanupModeSelector';
 import { ThresholdSelector } from './ThresholdSelector';
-import { CleanupFilters } from './CleanupFilters';
+import { CleanupFilters, defaultCleanupListType, type CleanupListType } from './CleanupFilters';
 import { CleanupContactList } from './CleanupContactList';
 import { SocialLinksCleanup } from './SocialLinksCleanup';
 import { InvalidLinksCleanup } from './InvalidLinksCleanup';
@@ -31,7 +31,7 @@ export function CleanupView() {
   const [currentPage, setCurrentPage] = useState(1);
   const [threshold, setThreshold] = useState(3);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [selectedTypes, setSelectedTypes] = useState<Set<EmptyContactType | ProblematicContactType>>(new Set());
+  const [selectedType, setSelectedType] = useState<CleanupListType>(defaultCleanupListType('empty'));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [isSelectingAll, setIsSelectingAll] = useState(false);
@@ -40,9 +40,8 @@ export function CleanupView() {
   const { data: socialLinksSummary } = useSocialLinksSummary();
   const { data: addressCleanupSummary } = useAddressCleanupSummary();
 
-  const typesArray = selectedTypes.size > 0
-    ? Array.from(selectedTypes) as (EmptyContactType[] | ProblematicContactType[])
-    : undefined;
+  // One list at a time: the selected tab's type
+  const typesArray = [selectedType] as EmptyContactType[] | ProblematicContactType[];
 
   // Only fetch cleanup contacts when not in social-links, invalid-links, or addresses mode
   const shouldFetchContacts = selectedMode !== 'social-links' && selectedMode !== 'invalid-links' && selectedMode !== 'addresses';
@@ -67,32 +66,30 @@ export function CleanupView() {
   useEffect(() => {
     setCurrentPage(1);
     setSelectedIds(new Set());
-    setSelectedTypes(new Set());
   }, [selectedMode]);
 
-  // Reset page when filters or threshold change
+  // Reset page and selection when switching lists; reset page when the threshold changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedTypes, threshold]);
+    setSelectedIds(new Set());
+  }, [selectedType]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [threshold]);
+
+  // Each mode opens on its first list (set together so no request mixes modes)
   const handleModeChange = useCallback((mode: CleanupMode) => {
     setSelectedMode(mode);
+    setSelectedType(defaultCleanupListType(mode));
   }, []);
 
   const handleThresholdChange = useCallback((newThreshold: number) => {
     setThreshold(newThreshold);
   }, []);
 
-  const handleToggleType = useCallback((type: EmptyContactType | ProblematicContactType) => {
-    setSelectedTypes(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(type)) {
-        newSet.delete(type);
-      } else {
-        newSet.add(type);
-      }
-      return newSet;
-    });
+  const handleTypeChange = useCallback((type: CleanupListType) => {
+    setSelectedType(type);
   }, []);
 
   const handleToggleSelect = useCallback((contactId: number) => {
@@ -199,22 +196,22 @@ export function CleanupView() {
 
         {selectedMode !== 'social-links' && selectedMode !== 'invalid-links' && selectedMode !== 'addresses' && (
           <>
-            <div className="cleanup-controls">
-              {selectedMode === 'problematic' && (
+            <CleanupFilters
+              mode={selectedMode}
+              selectedType={selectedType}
+              onTypeChange={handleTypeChange}
+              summary={summary}
+            />
+
+            {selectedMode === 'problematic' && (
+              <div className="cleanup-controls">
                 <ThresholdSelector
                   threshold={threshold}
                   onThresholdChange={handleThresholdChange}
                   disabled={isContactsLoading}
                 />
-              )}
-
-              <CleanupFilters
-                mode={selectedMode}
-                selectedTypes={selectedTypes}
-                onToggleType={handleToggleType}
-                summary={summary}
-              />
-            </div>
+              </div>
+            )}
 
             {!isContactsLoading && (
               <div className="cleanup-stats-row">

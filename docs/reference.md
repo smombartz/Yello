@@ -300,6 +300,9 @@ again) and keeps focus for the next add.
   `photo_hash`, and no rows in emails, phones, addresses, social profiles, IMs, URLs, related people,
   dates, photos or LinkedIn enrichment (archived rows count as data). Group membership and nickname
   don't count.
+- The lists are tabs (`CleanupFilters.tsx` renders the shared `<Tabs>`), one list at a time; Problematic
+  Emails' Many Domains / Same Domain work the same way. Switching tabs clears the selection, so a bulk
+  archive or delete only ever touches contacts in the visible list.
 
 ### VCF import (background job)
 
