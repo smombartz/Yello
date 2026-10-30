@@ -564,6 +564,13 @@ export function parseSingleVcard(rawText: string): ParsedContact | null {
     }
   }
 
+  // Some address books (Outlook's "File As") write FN as "Last, First". When it is
+  // exactly N reversed, show it the way Apple Contacts does: "First Middle Last".
+  if (displayName && lastName && firstName) {
+    const given = [firstName, middleName].filter(Boolean).join(' ');
+    if (String(displayName).trim() === `${lastName}, ${given}`) displayName = `${given} ${lastName}`;
+  }
+
   // A card with no name at all (FN and N both empty) still comes in: it gets a
   // stand-in name further down, once the company, emails and phones are read.
   let namePlaceholder = false;

@@ -1,5 +1,23 @@
 # Change Log
 
+## 2026-10-30 — "Last, First" FN imports as "First Last"
+
+**Session:** `3c6dcbe5-f95e-47cd-8758-543229003fa8`
+
+**What Changed:**
+- `parseSingleVcard`: when FN is exactly N reversed with a comma ("Erbel, Mark", or "Erbel, Mark A." with a middle name), the display name becomes "Mark Erbel" / "Mark A. Erbel". FNs where the comma means something else ("Mark Erbel, Ph.D.") are kept.
+- Tests in `vcardParser.test.ts` (`file-as names`)
+
+**Why:**
+- Outlook-style "File As" cards write FN as "Last, First". Apple Contacts displays from N, so they look right there, but Yello showed "Erbel, Mark". Seven contacts in the local copy of user 3's data had this pattern.
+- Existing contacts keep their stored display name until they are saved (the edit form's save rebuilds it from first/last name) or re-imported.
+
+**Files Modified:**
+- `backend/src/services/vcardParser.ts` — `parseSingleVcard` display name normalisation
+- `backend/src/services/__tests__/vcardParser.test.ts` — `file-as names` tests
+
+---
+
 ## 2026-10-30 — Add a contact to a group from the group view
 
 **Session:** `f80da6b2-dbc0-4c58-9407-c3c36e04145f`

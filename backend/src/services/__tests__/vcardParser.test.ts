@@ -117,6 +117,21 @@ describe('vcardParser text escaping', () => {
   });
 });
 
+describe('vcardParser file-as names', () => {
+  const named = (fn: string, n: string) =>
+    parseVcf(['BEGIN:VCARD', 'VERSION:3.0', `FN:${fn}`, `N:${n}`, 'END:VCARD'].join('\n')).contacts[0];
+
+  it('turns an FN written "Last, First" from the same N into "First Last"', () => {
+    expect(named('Erbel\\, Mark', 'Erbel;Mark;;;').displayName).toBe('Mark Erbel');
+    expect(named('Erbel\\, Mark A.', 'Erbel;Mark;A.;;').displayName).toBe('Mark A. Erbel');
+  });
+
+  it('keeps an FN with a comma that is not the N reversed', () => {
+    expect(named('Mark Erbel\\, Ph.D.', 'Erbel;Mark;;;Ph.D.').displayName).toBe('Mark Erbel, Ph.D.');
+    expect(named('Consulate\\, Malta', 'Consular;Malta;;;').displayName).toBe('Consulate, Malta');
+  });
+});
+
 describe('vcardParser categories', () => {
   it('reads every category of a contact that has several', () => {
     const { contacts } = parseVcf(card('CATEGORIES:Work,LinkedIn Connection,Saturday Peg'));
