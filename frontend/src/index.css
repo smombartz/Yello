@@ -1594,6 +1594,13 @@ a.nav-rail-item.active {
   background: var(--ds-bg-primary);
 }
 
+/* Opening edit scrolls the card's top back into view (ContactRowExpanded); land it
+   below the same header and toolbar the row sticks under. */
+.contact-card,
+.expanded-content {
+  scroll-margin-top: calc(var(--ds-header-height) + var(--contact-list-toolbar-height, 0px));
+}
+
 /* `hidden` would make the card the sticky row's scroll container; `clip` still
    clips to the radius without one, so the row sticks to the window instead. */
 .contact-card.expanded {

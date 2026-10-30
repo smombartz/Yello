@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ContactDetail, ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, UpdateContactRequest } from '../api/types';
 import { useUpdateContact } from '../api/hooks';
@@ -76,6 +76,20 @@ export function ContactRowExpanded({ contact, editRequest = 0, onDeleted }: Cont
   const { showToast } = useToast();
   const copyLink = useCopyLink();
   const isBusy = updateContactMutation.isPending || deleteContactMutation.isPending;
+  const editContentRef = useRef<HTMLDivElement>(null);
+
+  // Edit sits at the bottom of the card, and the edit form is often shorter than the view
+  // it replaces (no LinkedIn, email history or photos), so the page can be left scrolled
+  // past the form's top. The sticky name row is then held at the bottom of the card.
+  // Bring the card's top back into view whenever the form opens above the viewport.
+  useEffect(() => {
+    if (!isEditMode) return;
+    const content = editContentRef.current;
+    if (!content) return;
+    const target = content.closest<HTMLElement>('.contact-card') ?? content;
+    const offset = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+    if (target.getBoundingClientRect().top < offset) target.scrollIntoView({ block: 'start' });
+  }, [isEditMode]);
 
   // The URL already points at this contact (?contact= in a list, /contacts/:id on
   // the detail page). Copying it here also covers the desktop app, which has no address bar.
@@ -162,7 +176,7 @@ export function ContactRowExpanded({ contact, editRequest = 0, onDeleted }: Cont
   // ─── Edit Mode ───────────────────────────────────────────────
   if (isEditMode && editForm) {
     return (
-      <div className="expanded-content" onClick={(e) => e.stopPropagation()}>
+      <div className="expanded-content" ref={editContentRef} onClick={(e) => e.stopPropagation()}>
         {/* Name fields + Save/Cancel */}
         <div className="expanded-top-row">
           <div className="edit-name-fields">

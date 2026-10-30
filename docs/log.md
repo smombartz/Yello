@@ -1,5 +1,22 @@
 # Change Log
 
+## 2026-10-30 — Edit form opens with the name fields in view
+
+**Session:** `3c6dcbe5-f95e-47cd-8758-543229003fa8`
+
+**What Changed:**
+- Entering edit mode scrolls the card's top back into view when the form opens above the viewport
+- `.contact-card` and `.expanded-content` get a `scroll-margin-top` matching the sticky header + list toolbar offset
+
+**Why:**
+- Edit sits at the bottom of the card. The edit form is often shorter than the view it replaces (no LinkedIn, email history or photos), so the page stayed scrolled past the form's top, and the sticky name/Save row was held at the bottom of the card. The name fields seemed to be missing (reported on contact 36224, "Nicola 🇺🇸").
+
+**Files Modified:**
+- `frontend/src/components/ContactRowExpanded.tsx` — `editContentRef`, scroll-into-view effect on `isEditMode`
+- `frontend/src/index.css` — `scroll-margin-top` on `.contact-card`, `.expanded-content`
+
+---
+
 ## 2026-10-29 — Edited contacts stay findable by their new name
 
 **Session:** `3c6dcbe5-f95e-47cd-8758-543229003fa8`
