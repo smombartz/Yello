@@ -3821,6 +3821,37 @@ a.nav-rail-item.active {
   flex-direction: column;
 }
 
+/* Add-a-contact typeahead above a group's contact list */
+.add-to-group {
+  max-width: 28rem;
+  margin-bottom: var(--ds-space-3);
+}
+
+.add-to-group-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ds-text-secondary);
+  font-size: var(--ds-font-sm);
+  pointer-events: none;
+}
+
+.add-to-group-input {
+  height: var(--ds-control-height);
+  padding-left: 2.25rem;
+}
+
+.add-to-group-notice {
+  margin: var(--ds-space-1) 0 0;
+  font-size: var(--ds-font-xs);
+  color: var(--ds-text-secondary);
+}
+
+.add-to-group-notice.error {
+  color: var(--ds-color-error);
+}
+
 /* ============================================================
    Contact Edit Mode Styles
    ============================================================ */

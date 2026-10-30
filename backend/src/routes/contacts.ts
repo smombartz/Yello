@@ -285,15 +285,17 @@ export default async function contactsRoutes(
     return { contactIds };
   });
 
-  // GET /api/contacts/search - Typeahead search for linking related people.
-  // Excludes archived contacts and (optionally) the contact being edited.
-  fastify.get<{ Querystring: { q: string; exclude?: number } }>('/search', {
+  // GET /api/contacts/search - Typeahead search for linking related people and adding to a group.
+  // Excludes archived contacts, (optionally) the contact being edited, and (optionally)
+  // contacts already in a group, so the add-to-group field only suggests new members.
+  fastify.get<{ Querystring: { q: string; exclude?: number; notInCategory?: string } }>('/search', {
     schema: {
       querystring: {
         type: 'object',
         properties: {
           q: { type: 'string', minLength: 1 },
-          exclude: { type: 'number' }
+          exclude: { type: 'number' },
+          notInCategory: { type: 'string', minLength: 1 }
         },
         required: ['q']
       },
@@ -306,7 +308,7 @@ export default async function contactsRoutes(
     }
   }, async (request, _reply) => {
     const db = getUserDatabase(request.user!.id);
-    const { q, exclude } = request.query;
+    const { q, exclude, notInCategory } = request.query;
     const escapedSearch = q.replace(/"/g, '""');
     const searchTerm = `"${escapedSearch}"*`;
 
@@ -315,6 +317,10 @@ export default async function contactsRoutes(
     if (exclude != null) {
       excludeClause = ' AND c.id != ?';
       params.push(exclude);
+    }
+    if (notInCategory) {
+      excludeClause += ' AND c.id NOT IN (SELECT contact_id FROM contact_categories WHERE category = ?)';
+      params.push(notInCategory);
     }
 
     const contacts = db.prepare(`
@@ -338,6 +344,51 @@ export default async function contactsRoutes(
       primaryEmail: c.primary_email,
       primaryPhone: c.primary_phone,
     }));
+  });
+
+  // POST /api/contacts/:id/categories - Add one contact to a group (category) without
+  // resending its other categories. A no-op when the contact is already in the group.
+  fastify.post<{ Params: ContactIdParams; Body: { category: string } }>('/:id/categories', {
+    schema: {
+      params: ContactIdParamsSchema,
+      body: {
+        type: 'object',
+        properties: { category: { type: 'string', minLength: 1 } },
+        required: ['category']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: { added: { type: 'boolean' } },
+          required: ['added']
+        },
+        400: ContactNotFoundSchema,
+        404: ContactNotFoundSchema
+      }
+    }
+  }, async (request, reply) => {
+    const { id } = request.params;
+    const category = request.body.category.trim();
+    if (!category) {
+      return reply.status(400).send({ error: 'Category is required' });
+    }
+    const db = getUserDatabase(request.user!.id);
+
+    // Archived contacts aren't in any group's list, so they can't be added from one.
+    const contact = db.prepare('SELECT id FROM contacts WHERE id = ? AND archived_at IS NULL').get(id);
+    if (!contact) {
+      return reply.status(404).send({ error: 'Contact not found' });
+    }
+
+    const added = db.transaction(() => {
+      const existing = db.prepare('SELECT 1 FROM contact_categories WHERE contact_id = ? AND category = ?').get(id, category);
+      if (existing) return false;
+      db.prepare('INSERT INTO contact_categories (contact_id, category) VALUES (?, ?)').run(id, category);
+      db.prepare('UPDATE contacts SET updated_at = datetime(\'now\') WHERE id = ?').run(id);
+      return true;
+    })();
+
+    return { added };
   });
 
   // GET /api/contacts

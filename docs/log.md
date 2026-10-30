@@ -1,5 +1,52 @@
 # Change Log
 
+## 2026-10-30 — Add a contact to a group from the group view
+
+**Session:** `f80da6b2-dbc0-4c58-9407-c3c36e04145f`
+
+**What Changed:**
+- An open group shows an "Add a contact to <group>" typeahead above its contact list; picking a
+  suggestion adds that contact to the group, then the field clears for the next one
+- New `POST /api/contacts/:id/categories` adds one category (no-op if present, bumps `updated_at`,
+  404 for archived/missing contacts)
+- `GET /api/contacts/search` takes `notInCategory` so current members aren't suggested
+
+**Why:**
+- Adding someone to a group meant opening their card, editing, and typing the category by hand
+
+**Files Modified:**
+- `backend/src/routes/contacts.ts` — `POST /:id/categories`, `notInCategory` on `/search`
+- `backend/src/routes/__tests__/contacts.test.ts` — "add contact to group" tests
+- `frontend/src/api/hooks.ts` — `useAddContactToGroup`, `notInCategory` on `useSearchContacts`
+- `frontend/src/components/AddToGroupField.tsx` — new typeahead
+- `frontend/src/components/GroupsView.tsx` — renders it above the group's list
+- `frontend/src/index.css` — `.add-to-group*` styles
+- `docs/reference.md` — "Adding a contact to a group from the group view"
+
+---
+
+## 2026-10-30 — "BDay 2026" group created on production (data change)
+
+**Session:** `f80da6b2-dbc0-4c58-9407-c3c36e04145f`
+
+**What Changed:**
+- Added the `BDay 2026` category to 74 contacts for s@mombartz.com, matched from the
+  BirthdayAllDayBrunch_10-29 guest CSV (37 exact matches, 37 assigned by hand through a temporary artifact)
+- Written first to the local dev DB (`backend/data/users/3`), then to production (`/data/users/1`) over
+  `railway ssh`, matched by display name, in one transaction after a `db.backup()` to
+  `/data/users/1/contacts-before-bday2026-20261030.db`
+- Registered a dedicated Railway SSH key (`~/.ssh/railway_ed25519`); no code changed
+
+**Why:**
+- The guest list needed to become a group in Yello; production has its own volume and contact IDs,
+  so the local write did not reach it
+
+**Files Modified:**
+- `docs/plans/2026-10-30-bday-2026-group-production.md` — plan and record of the production update
+- `contact_categories` rows (data only, local and production)
+
+---
+
 ## 2026-10-30 — Edit form opens with the name fields in view
 
 **Session:** `3c6dcbe5-f95e-47cd-8758-543229003fa8`

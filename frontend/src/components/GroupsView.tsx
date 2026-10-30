@@ -4,6 +4,7 @@ import type { OutletContext } from './Layout';
 import { useGroups } from '../api/hooks';
 import { useArchivedCount } from '../api/archiveHooks';
 import { ContactList } from './ContactList';
+import { AddToGroupField } from './AddToGroupField';
 import { Icon } from './Icon';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { EmptyState } from './ui/EmptyState';
@@ -68,6 +69,7 @@ export function GroupsView() {
   if (selectedCategory) {
     return (
       <div className="groups-view groups-filtered">
+        <AddToGroupField key={selectedCategory} category={selectedCategory} />
         <ContactList
           categoryFilter={selectedCategory}
           search={search}

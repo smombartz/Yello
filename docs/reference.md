@@ -252,6 +252,17 @@ Archived view, which keeps Restore, Delete permanently and Export. It is not a c
 category of that name. The Archived view is desktop-only (bulk selection), so phones don't get the card.
 Archive, unarchive and delete invalidate the `groups` and `map` queries as well as `contacts`.
 
+### Adding a contact to a group from the group view
+
+An open group (`/groups/<category>`) has an **Add a contact** typeahead above its list
+(`AddToGroupField.tsx`). It searches with `GET /api/contacts/search?q=…&notInCategory=<category>`, so
+current members and archived contacts aren't suggested. Picking one (click, or arrow keys + Enter; Enter
+alone takes the first match) calls `POST /api/contacts/:id/categories` with `{ category }`. That route
+adds the one category without resending the contact's others, is a no-op (`added: false`) if the contact
+already has it, bumps `updated_at`, and 404s for archived or missing contacts. It's under `/api/contacts`,
+so it triggers a sync. Sync spots the change through the projection hash (categories are projected for
+iCloud; Google holds no labels in the projection). The field clears and keeps focus for the next add.
+
 ### Edit mode: pinned Save/Cancel, Delete at the bottom
 
 - The edit form's top row (name fields + Cancel/Save) is `position: sticky` under the page header, and

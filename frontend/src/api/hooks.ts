@@ -49,18 +49,39 @@ export function useGroups() {
   });
 }
 
-// Typeahead search for linking related people. Optionally excludes a contact
-// (the one being edited) so it can't be linked to itself.
-export function useSearchContacts(query: string, excludeId?: number) {
+// Typeahead search for linking related people and adding to a group. Optionally
+// excludes a contact (the one being edited) so it can't be linked to itself, and
+// contacts already in a group so the add-to-group field only suggests new members.
+export function useSearchContacts(query: string, excludeId?: number, notInCategory?: string) {
   return useQuery({
-    queryKey: ['contactSearch', query, excludeId],
+    queryKey: ['contactSearch', query, excludeId, notInCategory],
     queryFn: () => {
       const params = new URLSearchParams({ q: query });
       if (excludeId != null) params.set('exclude', String(excludeId));
+      if (notInCategory) params.set('notInCategory', notInCategory);
       return fetchApi<ContactSearchResult[]>(`/api/contacts/search?${params}`);
     },
     enabled: query.length >= 1,
     staleTime: 5000,
+  });
+}
+
+export function useAddContactToGroup() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ contactId, category }: { contactId: number; category: string }) =>
+      fetchApi<{ added: boolean }>(`/api/contacts/${contactId}/categories`, {
+        method: 'POST',
+        body: JSON.stringify({ category }),
+      }),
+    onSuccess: (_result, { contactId }) => {
+      queryClient.invalidateQueries({ queryKey: ['contact', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      // The new member must drop out of the field's suggestions.
+      queryClient.invalidateQueries({ queryKey: ['contactSearch'] });
+    },
   });
 }
 

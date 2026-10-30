@@ -171,6 +171,63 @@ describe('contacts routes', () => {
     });
   });
 
+  describe('add contact to group', () => {
+    function seed() {
+      const db = getUserDatabase(1);
+      const member = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Ruth Member').lastInsertRowid as number;
+      const other = db.prepare('INSERT INTO contacts (display_name) VALUES (?)').run('Ruthie Other').lastInsertRowid as number;
+      const archived = db.prepare("INSERT INTO contacts (display_name, archived_at) VALUES (?, datetime('now'))").run('Ruthann Gone').lastInsertRowid as number;
+      for (const id of [member, other, archived]) rebuildContactSearch(db, id);
+      db.prepare('INSERT INTO contact_categories (contact_id, category) VALUES (?, ?)').run(member, 'BDay 2026');
+      db.prepare('INSERT INTO contact_categories (contact_id, category) VALUES (?, ?)').run(other, 'Work');
+      return { member, other, archived };
+    }
+
+    const categoriesOf = (id: number) => (getUserDatabase(1)
+      .prepare('SELECT category FROM contact_categories WHERE contact_id = ? ORDER BY category').all(id) as { category: string }[])
+      .map(r => r.category);
+
+    it('adds the category, keeps the others, and bumps updated_at', async () => {
+      const { other } = seed();
+      getUserDatabase(1).prepare("UPDATE contacts SET updated_at = '2000-01-01 00:00:00' WHERE id = ?").run(other);
+
+      const res = await app.inject({ method: 'POST', url: `/api/contacts/${other}/categories`, payload: { category: 'BDay 2026' } });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ added: true });
+      expect(categoriesOf(other)).toEqual(['BDay 2026', 'Work']);
+
+      const { updated_at } = getUserDatabase(1).prepare('SELECT updated_at FROM contacts WHERE id = ?').get(other) as { updated_at: string };
+      expect(updated_at).not.toBe('2000-01-01 00:00:00');
+
+      const inGroup = (await app.inject({ method: 'GET', url: '/api/contacts?category=BDay%202026' })).json();
+      expect(inGroup.total).toBe(2);
+    });
+
+    it('is a no-op for a contact already in the group', async () => {
+      const { member } = seed();
+      const res = await app.inject({ method: 'POST', url: `/api/contacts/${member}/categories`, payload: { category: 'BDay 2026' } });
+      expect(res.json()).toEqual({ added: false });
+      expect(categoriesOf(member)).toEqual(['BDay 2026']);
+    });
+
+    it('refuses archived and missing contacts, and a blank category', async () => {
+      const { archived, other } = seed();
+      expect((await app.inject({ method: 'POST', url: `/api/contacts/${archived}/categories`, payload: { category: 'BDay 2026' } })).statusCode).toBe(404);
+      expect((await app.inject({ method: 'POST', url: '/api/contacts/999999/categories', payload: { category: 'BDay 2026' } })).statusCode).toBe(404);
+      expect((await app.inject({ method: 'POST', url: `/api/contacts/${other}/categories`, payload: { category: '   ' } })).statusCode).toBe(400);
+      expect(categoriesOf(archived)).toEqual([]);
+    });
+
+    it('search with notInCategory leaves out current members', async () => {
+      const { other } = seed();
+      const all = (await app.inject({ method: 'GET', url: '/api/contacts/search?q=ruth' })).json();
+      expect(all.map((c: { displayName: string }) => c.displayName).sort()).toEqual(['Ruth Member', 'Ruthie Other']);
+
+      const candidates = (await app.inject({ method: 'GET', url: '/api/contacts/search?q=ruth&notInCategory=BDay%202026' })).json();
+      expect(candidates.map((c: { id: number }) => c.id)).toEqual([other]);
+    });
+  });
+
   describe('GET /api/contacts/count', () => {
     it('should return count of 0 when no contacts', async () => {
       const response = await app.inject({
