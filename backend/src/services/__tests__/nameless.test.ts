@@ -82,6 +82,34 @@ describe('cleanup empty categories', () => {
     expect(page.contacts.map(c => [c.id, c.issueType])).toEqual([[nameless, 'no_name'], [nameOnly, 'name_only']]);
   });
 
+  it('lists nameless contacts that have no placeholder_name (imported before stand-ins)', () => {
+    // These cards came in with the stand-in written into FN by the source
+    // (or an older import): no first/last name, and placeholder_name is NULL.
+    const db = getUserDatabase(USER_ID);
+    const localPart = insert(card('FN:peter', 'EMAIL:peter@peterp.me'));
+    const fullEmail = insert(card('FN:awemerald@gmail.com', 'EMAIL:awemerald@gmail.com'));
+    const noNamePhone = insert(card('FN:No Name', 'TEL;TYPE=CELL:+1 443 326 5452'));
+    const phoneAsName = insert(card('FN:(212) 555-0100', 'TEL;TYPE=CELL:+1 212 555 0100'));
+    const noNameEmpty = insert(card('FN:No Name'));
+    // Real names and company cards stay out of No Name
+    insert(card('FN:Peter Pan', 'EMAIL:peter@pan.com'));
+    insert(card('N:;peter;;;', 'FN:peter', 'EMAIL:peter@example.com'));
+    insert(card('FN:Acme Inc.', 'ORG:Acme Inc.;', 'X-ABSHOWAS:COMPANY', 'EMAIL:info@acme.com'));
+
+    const placeholders = db.prepare('SELECT COUNT(*) AS n FROM contacts WHERE placeholder_name IS NOT NULL').get() as { n: number };
+    expect(placeholders.n).toBe(0);
+
+    const noName = getAllEmptyContactIds(db, ['no_name']);
+    expect([...noName].sort((a, b) => a - b)).toEqual([localPart, fullEmail, noNamePhone, phoneAsName].sort((a, b) => a - b));
+    expect(getAllEmptyContactIds(db, ['truly_empty'])).toEqual([noNameEmpty]);
+    expect(getCleanupSummary(db).empty.noName).toBe(4);
+
+    const page = findEmptyContacts(db, 50, 0, ['no_name']);
+    expect(page.total).toBe(4);
+    expect(page.contacts).toHaveLength(4);
+    expect(page.contacts.every(c => c.issueType === 'no_name')).toBe(true);
+  });
+
   it('drops a contact from No Name once it is given a name', () => {
     const db = getUserDatabase(USER_ID);
     const id = insert(card('EMAIL:who@x.com'));

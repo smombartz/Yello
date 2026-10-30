@@ -32,14 +32,30 @@ export interface CleanupSummary {
 
 const blank = (column: string) => `TRIM(COALESCE(c.${column}, '')) = ''`;
 
+/** A phone number written any way ("(212) 555-0100", "+1 212 555 0100") down to its digits and "+". */
+const phoneDigits = (expr: string) =>
+  ["' '", "'-'", "'('", "')'", "'.'", "char(160)"].reduce((sql, ch) => `REPLACE(${sql}, ${ch}, '')`, `TRIM(${expr})`);
+
 /**
- * No real name: the display name is empty, or it is still the stand-in a
- * nameless card was given on import (its company, email or phone).
+ * No real name: the display name is empty, or (with no first or last name) it
+ * is only a stand-in for one:
+ * - the stand-in Yello gave a nameless card on import (`placeholder_name`);
+ * - a stand-in already written into FN by the source or an older import, which
+ *   left `placeholder_name` NULL: "No Name" / "Unknown", one of the contact's
+ *   emails or its part before the @, or a phone number (no letters at all).
  */
 const NO_REAL_NAME_SQL = `(
   ${blank('display_name')}
-  OR (c.placeholder_name IS NOT NULL AND c.display_name = c.placeholder_name
-      AND ${blank('first_name')} AND ${blank('last_name')})
+  OR (${blank('first_name')} AND ${blank('last_name')} AND (
+    (c.placeholder_name IS NOT NULL AND c.display_name = c.placeholder_name)
+    OR TRIM(c.display_name) IN ('No Name', 'Unknown')
+    OR EXISTS (SELECT 1 FROM contact_emails e WHERE e.contact_id = c.id AND (
+      LOWER(TRIM(e.email)) = LOWER(TRIM(c.display_name))
+      OR (INSTR(TRIM(e.email), '@') > 1
+          AND LOWER(SUBSTR(TRIM(e.email), 1, INSTR(TRIM(e.email), '@') - 1)) = LOWER(TRIM(c.display_name)))
+    ))
+    OR ${phoneDigits('c.display_name')} NOT GLOB '*[^0-9+]*'
+  ))
 )`;
 
 /** Tables whose rows are information about the contact (archived rows count too). */

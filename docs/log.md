@@ -1,5 +1,23 @@
 # Change Log
 
+## 2026-10-30 — Cleanup No Name lists nameless contacts that predate placeholder_name
+
+**Session:** `70a71902-a48c-4dbd-bb1f-7ed3cb436e1e`
+
+**What Changed:**
+- "No real name" (`NO_REAL_NAME_SQL`) now also matches, when there is no first/last name, a display name of `No Name`/`Unknown`, one of the contact's emails or the part before its `@`, or a bare phone number, in addition to `display_name = placeholder_name`
+- Added a test with placeholder-free nameless contacts (and real-name and company-card cases that must stay out)
+
+**Why:**
+- No Name showed only one contact in production. It matched only `placeholder_name`, which is set just for cards imported since stand-in names. Older nameless contacts (FN "info", "peter", "No Name") have it NULL and fell into no list: 0 of 77 in the local copy of user 12, 77 of 77 after the fix
+
+**Files Modified:**
+- `backend/src/services/cleanupService.ts` — `NO_REAL_NAME_SQL`, new `phoneDigits` helper
+- `backend/src/services/__tests__/nameless.test.ts` — "lists nameless contacts that have no placeholder_name"
+- `docs/reference.md` — "No real name" definition
+
+---
+
 ## 2026-10-30 — Cleanup lists switch as tabs instead of filter chips
 
 **Session:** `70a71902-a48c-4dbd-bb1f-7ed3cb436e1e`

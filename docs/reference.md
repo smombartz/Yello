@@ -295,8 +295,13 @@ again) and keeps focus for the next add.
   triggered by the stand-in alone.
 - Cleanup → Empty Contacts has three non-overlapping lists (`cleanupService.ts`, `EMPTY_TYPE_WHERE`):
   **Truly Empty** (no real name, no data), **No Name** (no real name, has data), **Name Only** (a name and
-  nothing else). "No real name" = empty `display_name`, or `display_name = placeholder_name` with no
-  first/last name. "No data" = blank `company`, `title`, `department`, `notes`, `birthday`, `gender`,
+  nothing else). "No real name" = empty `display_name`, or no first/last name and a `display_name`
+  that is only a stand-in: `placeholder_name`, `No Name` / `Unknown`, one of the contact's emails or
+  the part before its `@`, or a phone number (nothing but digits and phone punctuation). The stand-ins
+  other than `placeholder_name` matter because most nameless contacts predate that column (or arrive
+  with the stand-in already in `FN`), so `placeholder_name` is NULL on them: matching on it alone left
+  No Name with 0 of the 77 nameless contacts in the local copy of user 12. Company cards
+  (`display_name` = `company`) are named and stay out. "No data" = blank `company`, `title`, `department`, `notes`, `birthday`, `gender`,
   `photo_hash`, and no rows in emails, phones, addresses, social profiles, IMs, URLs, related people,
   dates, photos or LinkedIn enrichment (archived rows count as data). Group membership and nickname
   don't count.
