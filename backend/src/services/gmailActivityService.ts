@@ -2,7 +2,7 @@ import type { Database as DatabaseType } from 'better-sqlite3';
 import { getAuthDatabase } from './authDatabase.js';
 import { getValidAccessToken } from './googleAuthService.js';
 import { gmailFetch, getHeader, type GmailMessage, type GmailMessageListResponse } from './emailSyncService.js';
-import { ingestActivity, setSourceStatus, todayString, type IngestActivity, type IngestHandle } from './messageActivityService.js';
+import { ingestActivity, setSourceStatus, type IngestActivity, type IngestHandle } from './messageActivityService.js';
 
 /**
  * Gmail's part of Top contacts: counts the user's emails per correspondent
@@ -137,7 +137,11 @@ function dedupe<T extends { email: string }>(list: T[]): T[] {
   return list.filter(x => (seen.has(x.email) ? false : (seen.add(x.email), true)));
 }
 
-/** Store a finished tally for [from, to], dropping the user's own addresses. */
+/**
+ * Store a finished tally for [from, to], dropping the user's own addresses.
+ * Days outside the range are left out: the Gmail query starts a day early
+ * (its date boundary is in Pacific time), so its first day is partial.
+ */
 export function saveTally(db: DatabaseType, tally: GmailTally, from: string, to: string): void {
   const handles: IngestHandle[] = [];
   const activity: IngestActivity[] = [];
@@ -145,6 +149,7 @@ export function saveTally(db: DatabaseType, tally: GmailTally, from: string, to:
     if (tally.me.has(email)) continue;
     handles.push({ handle: email, kind: 'email', displayName: name });
     for (const [day, c] of tally.activity.get(email) ?? []) {
+      if (day < from || day > to) continue;
       activity.push({ handle: email, day, sent: c.sent, received: c.received, group: c.group });
     }
   }
@@ -169,7 +174,8 @@ export async function startGmailScan(db: DatabaseType, userId: number, timeZone:
 
   const source = db.prepare('SELECT covered_through FROM message_sources WHERE channel = ?').get('gmail') as
     { covered_through: string | null } | undefined;
-  const today = todayString();
+  // Days are in the user's time zone, so "today" is too
+  const today = dayIn(timeZone, Date.now());
   const from = source?.covered_through
     ? shiftDay(source.covered_through, -RESCAN_OVERLAP_DAYS)
     : shiftDay(today, -FIRST_SCAN_DAYS);
@@ -224,8 +230,10 @@ async function runScan(db: DatabaseType, userId: number, userEmail: string, from
     }
   }
 
-  // 3. Store, replacing the range's previous counts
-  saveTally(db, tally, from, to);
+  // 3. Store, replacing the range's previous counts. A long scan can run past
+  // midnight, so the range runs through the day it finished.
+  const finishedDay = dayIn(timeZone, Date.now());
+  saveTally(db, tally, from, finishedDay > to ? finishedDay : to);
   setSourceStatus(db, 'gmail', { status: 'idle', progressDone: ids.length, progressTotal: ids.length, error: null });
 }
 

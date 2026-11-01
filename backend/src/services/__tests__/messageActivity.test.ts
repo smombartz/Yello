@@ -240,6 +240,8 @@ describe('message activity', () => {
     tallyMessage(tally, msg({ From: 'News <news@shop.com>', To: 'me@gmail.com', 'List-Unsubscribe': '<x>' }, ['INBOX']), 'UTC');
     tallyMessage(tally, msg({ From: 'noreply@service.com', To: 'me@gmail.com' }, ['INBOX']), 'UTC');
     tallyMessage(tally, msg({ From: 'me@gmail.com', To: 'a@x.com, b@x.com', Cc: 'c@x.com' }, ['SENT']), 'UTC');
+    // The Gmail query starts a day early: that day is left out instead of failing the scan
+    tallyMessage(tally, msg({ From: 'Carol <carol@example.com>', To: 'me@gmail.com' }, ['INBOX'], '2026-09-30T12:00:00Z'), 'UTC');
     saveTally(db, tally, '2026-10-01', '2026-10-31');
 
     const rows = db.prepare(`SELECT handle, sent, received, group_messages FROM message_activity WHERE channel = 'gmail' ORDER BY handle`).all();

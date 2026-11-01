@@ -73,6 +73,21 @@ export function Composer({ desktop, busy }: ComposerProps) {
   const heldBack = recipients.length - sendable.length;
   const firstText = selected[0]?.text ?? '';
 
+  // Why "Send test" is disabled, shown next to it (null = ready).
+  const testBlocker = !desktop
+    ? 'Open this page in the Yello desktop app to send a test.'
+    : busy
+      ? 'Wait until the blast that is sending now finishes.'
+      : !firstText
+        ? !hasSource
+          ? 'Pick a group or a CSV first. The test sends the first person\'s text.'
+          : preview.isFetching
+            ? 'Building the list…'
+            : 'Tick at least one person who can be texted. The test sends the first one\'s text.'
+        : !testPhone.trim()
+          ? 'Type your own number.'
+          : null;
+
   const onCsvChange = async (file: File | null) => {
     setCsvFile(file);
     if (!file) {
@@ -264,10 +279,12 @@ export function Composer({ desktop, busy }: ComposerProps) {
               value={testPhone}
               onChange={(e) => setTestPhone(e.target.value)}
             />
-            <Button variant="secondary" icon="vial" loading={testing} disabled={!desktop || !firstText || !testPhone.trim() || busy} onClick={sendTest}>
+            <Button variant="secondary" icon="vial" loading={testing} disabled={testBlocker !== null} onClick={sendTest}>
               Send test
             </Button>
-            <span className="text-blast-muted">Sends the first person's text to you. The blast isn't touched.</span>
+            <span className={testBlocker ? 'text-blast-warning-text text-blast-muted' : 'text-blast-muted'}>
+              {testBlocker ?? 'Sends the first person\'s text to you. The blast isn\'t touched.'}
+            </span>
           </div>
           {testResult && <p className="text-blast-test-result">{testResult}</p>}
 

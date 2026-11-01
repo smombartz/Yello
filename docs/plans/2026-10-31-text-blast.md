@@ -332,3 +332,6 @@ interface Blast { id: number; createdAt: string; template: string; country: stri
     `fetchWithSession`).
   - A parallel session (Top contacts from message activity) adds `yelloDesktop.messageActivity` next to `textBlast` in
     the same preload. We agreed on the split over cross-session messages.
+- 2026-11-01: after the first real use, "Send test" says why it's disabled (no desktop app, no group/CSV picked,
+  nobody ticked, no test number, or a blast already sending). The test still needs a list, since it sends the first
+  person's rendered text.

@@ -1,5 +1,41 @@
 # Change Log
 
+## 2026-11-01 — Text Blast: "Send test" says why it's disabled
+
+**Session:** `18a2e642-baa3-46d4-87b7-6e6d15b27c0c`
+
+**What Changed:**
+- The line next to "Send test" now names what's missing when the button is disabled: the desktop app, a group or
+  CSV (the test sends the first person's text), a ticked person who can be texted, your own number, or a blast
+  that is already sending
+
+**Why:**
+- The user found the button disabled with no hint why
+
+**Files Modified:**
+- `frontend/src/components/textBlast/Composer.tsx` — `testBlocker`
+- `docs/plans/2026-10-31-text-blast.md` — Changes
+
+---
+
+## 2026-11-01 — Fix: Gmail scan failed with "day … outside …" at the end
+
+**Session:** `99d5fac3-6203-4cfe-981a-cd9de1f9f5e8`
+
+**What Changed:**
+- `saveTally` leaves out days outside the scan range instead of handing them to `ingestActivity`, which rejected the whole batch
+- The scan range's "today" is the user's day (`dayIn(timeZone, …)`), not the server's UTC day, and the range runs through the day the scan finished, so a scan that crosses midnight keeps the new day's mail
+- Test: a message from the day before the range is skipped, not fatal
+
+**Why:**
+- The Gmail query starts a day before the range (`after:` is a Pacific-time boundary), so the first scan always picked up mail from the day before and failed when saving: "day 2024-10-31 outside 2024-11-01..2026-11-01". All the fetching was lost because counts are saved at the end
+
+**Files Modified:**
+- `backend/src/services/gmailActivityService.ts` — `saveTally` range filter; `startGmailScan` and `runScan` use the user's day
+- `backend/src/services/__tests__/messageActivity.test.ts`
+
+---
+
 ## 2026-11-01 — Top contacts: ranking table with channel columns, name matches first
 
 **Session:** `99d5fac3-6203-4cfe-981a-cd9de1f9f5e8`
