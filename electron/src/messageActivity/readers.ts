@@ -72,6 +72,12 @@ export function localDay(unix: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** The day after a YYYY-MM-DD day. */
+export function nextDay(day: string): string {
+  const [y, m, d] = day.split('-').map(Number);
+  return localDay(new Date(y, m - 1, d + 1, 12).getTime() / 1000);
+}
+
 /** Local midnight of a YYYY-MM-DD day, as Unix seconds. */
 export function dayStartUnix(day: string): number {
   const [y, m, d] = day.split('-').map(Number);
@@ -207,7 +213,7 @@ const WA_SKIPPED_TYPES = [6, 10];
  * Contacts identified only by a privacy ID (…@lid) keep their name, so
  * Yello can suggest a match by name.
  */
-export function readWhatsApp(dbPath: string, sinceDay: string | null): ScanResult {
+export function readWhatsApp(dbPath: string, sinceDay: string | null, untilDay: string | null = null): ScanResult {
   const db = open(dbPath);
   try {
     requireColumns(db, 'ZWACHATSESSION', ['Z_PK', 'ZCONTACTJID', 'ZSESSIONTYPE'], 'WhatsApp');
@@ -252,6 +258,7 @@ export function readWhatsApp(dbPath: string, sinceDay: string | null): ScanResul
     const filters = ['ZMESSAGEDATE IS NOT NULL'];
     if (messageCols.has('ZMESSAGETYPE')) filters.push(`COALESCE(ZMESSAGETYPE, 0) NOT IN (${WA_SKIPPED_TYPES.join(', ')})`);
     if (sinceDay) filters.push(`ZMESSAGEDATE >= ${dayStartUnix(sinceDay) - APPLE_EPOCH}`);
+    if (untilDay) filters.push(`ZMESSAGEDATE < ${dayStartUnix(nextDay(untilDay)) - APPLE_EPOCH}`);
     const groupMemberCol = messageCols.has('ZGROUPMEMBER') ? 'ZGROUPMEMBER' : 'NULL';
     const fromJidCol = messageCols.has('ZFROMJID') ? 'ZFROMJID' : 'NULL';
 

@@ -11,7 +11,7 @@ import {
   ingestActivity, getTopContacts, listHandles, linkHandles, ignoreHandles, unlinkHandles,
   acceptAllSuggestions, getContactMessageStats, getSources, scoreOf, decay, clearChannel,
 } from '../messageActivityService.js';
-import { parseAddressList, newTally, tallyMessage, saveTally } from '../gmailActivityService.js';
+import { parseAddressList, newTally, tallyMessage, saveTally, yearWindows, scanRange } from '../gmailActivityService.js';
 import type { GmailMessage } from '../emailSyncService.js';
 
 describe('handle normalization', () => {
@@ -253,6 +253,26 @@ describe('message activity', () => {
     ]);
     expect(db.prepare(`SELECT contact_id, display_name FROM message_handles WHERE handle = 'carol@example.com'`).get())
       .toEqual({ contact_id: ids.carol, display_name: 'Lovelace, Ada' });
+  });
+
+  it('splits Gmail scans into calendar years, newest first', () => {
+    expect(yearWindows('2024-11-01', '2026-11-01')).toEqual([
+      { from: '2026-01-01', to: '2026-11-01' },
+      { from: '2025-01-01', to: '2025-12-31' },
+      { from: '2024-11-01', to: '2024-12-31' },
+    ]);
+    expect(yearWindows('2026-03-05', '2026-03-07')).toEqual([{ from: '2026-03-05', to: '2026-03-07' }]);
+  });
+
+  it('picks the Gmail scan range: first, new mail, older mail', () => {
+    const today = '2026-11-01';
+    expect(scanRange(undefined, today)).toEqual({ from: '2024-11-01', to: today });
+    const covered = { covered_from: '2024-11-01', covered_through: '2026-10-20' };
+    expect(scanRange(covered, today)).toEqual({ from: '2026-10-18', to: today });
+    expect(scanRange(covered, today, '5y')).toEqual({ from: '2021-11-01', to: '2024-10-31' });
+    expect(scanRange(covered, today, 'all')).toEqual({ from: '2004-01-01', to: '2024-10-31' });
+    // Already scanned back past 5 years: nothing to do
+    expect(scanRange({ covered_from: '2020-01-01', covered_through: today }, today, '5y')).toBeNull();
   });
 
   it('parses quoted address lists', () => {

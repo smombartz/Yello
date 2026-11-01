@@ -23,8 +23,32 @@ export interface DesktopScanResult {
   messages: number;
 }
 
+/** An iPhone backup Finder made on this Mac */
+export interface IPhoneBackup {
+  id: string;
+  deviceName: string;
+  /** ISO time the backup was made */
+  date: string | null;
+  encrypted: boolean;
+}
+
+export interface IPhoneBackupList {
+  state: 'ready' | 'not_found' | 'needs_full_disk_access' | 'error';
+  backups: IPhoneBackup[];
+  error?: string;
+}
+
+export interface BackupScanResult extends DesktopScanResult {
+  backupDay: string | null;
+  /** Last day counted: the day before the backup */
+  untilDay: string | null;
+}
+
 export interface DesktopMessageActivity {
   status(): Promise<Record<DesktopChannel, DesktopReaderStatus>>;
+  /** Missing in desktop app builds from before iPhone backup support */
+  backups?(): Promise<IPhoneBackupList>;
+  scanBackup?(backupId: string, password: string | null): Promise<BackupScanResult>;
   /** Counts from sinceDay (YYYY-MM-DD) on, or the whole history when null */
   scan(channel: DesktopChannel, sinceDay: string | null): Promise<DesktopScanResult>;
   openFullDiskAccessSettings(): Promise<void>;
@@ -105,7 +129,10 @@ export function syncDesktopChannel(
     const desktop = getDesktopMessages();
     if (!desktop) return null;
     onProgress?.('Reading on this Mac…');
-    const since = coveredThrough ? incrementalScanStart(coveredThrough) : null;
+    // A full WhatsApp rescan starts after an imported iPhone backup: the backup has the
+    // complete older history, the Mac only what the phone sent over when it was linked
+    const backupThrough = channel === 'whatsapp' ? getBackupThrough() : null;
+    const since = coveredThrough ? incrementalScanStart(coveredThrough) : backupThrough ? shiftDay(backupThrough, 1) : null;
     const result = await desktop.scan(channel, since);
     if (result.activity.length) {
       const from = since && since < result.from ? since : result.from;
@@ -117,4 +144,45 @@ export function syncDesktopChannel(
   })();
   inFlight.set(channel, job);
   return job.finally(() => inFlight.delete(channel));
+}
+
+/* --- WhatsApp's older history from an iPhone backup --- */
+
+const BACKUP_THROUGH_KEY = 'yello.messages.whatsappBackupThrough';
+
+/** Last day an imported iPhone backup covers (this Mac), or null */
+export function getBackupThrough(): string | null {
+  return localStorage.getItem(BACKUP_THROUGH_KEY);
+}
+
+/** The error codes the desktop app sends back, in words */
+export function backupErrorText(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes('wrong_password')) return 'That password doesn’t unlock this backup. It’s the one you set for encrypted backups in Finder.';
+  if (message.includes('password_required')) return 'This backup is encrypted. Enter its password.';
+  if (message.includes('no_whatsapp')) return 'This backup has no WhatsApp data.';
+  return message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
+}
+
+/**
+ * Read WhatsApp's full history from an iPhone backup and upload the counts,
+ * through the day before the backup was made. Those days are replaced with
+ * the backup's counts, which are complete; the Mac's own scans cover the rest.
+ */
+export async function importWhatsAppBackup(
+  backupId: string,
+  password: string | null,
+  onProgress?: (label: string) => void,
+): Promise<{ messages: number; untilDay: string | null }> {
+  const desktop = getDesktopMessages();
+  if (!desktop?.scanBackup) throw new Error('Update the Yello desktop app to read iPhone backups.');
+  onProgress?.(password ? 'Unlocking the backup (this takes a few seconds)…' : 'Reading the backup…');
+  const result = await desktop.scanBackup(backupId, password);
+  if (result.activity.length) {
+    const to = result.untilDay && result.untilDay > result.to ? result.untilDay : result.to;
+    await uploadActivity('whatsapp', result.from, to, result.handles, result.activity,
+      (done, total) => onProgress?.(`Uploading ${done} of ${total}…`));
+  }
+  if (result.untilDay) localStorage.setItem(BACKUP_THROUGH_KEY, result.untilDay);
+  return { messages: result.messages, untilDay: result.untilDay };
 }

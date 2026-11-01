@@ -1,5 +1,33 @@
 # Change Log
 
+## 2026-11-01 — Top contacts: Gmail older than 2 years, WhatsApp history from an iPhone backup
+
+**Session:** `99d5fac3-6203-4cfe-981a-cd9de1f9f5e8`
+
+**What Changed:**
+- Gmail card: *Scan older emails, back 5 years / 10 years / all the way*, for mail before the earliest covered day. `POST /api/messages/gmail/scan` takes `older`
+- Every Gmail scan now works a calendar year at a time (newest first) and saves each year when it's done, so a long scan that stops part-way keeps what it counted
+- WhatsApp card: *Older history from your iPhone* finds Finder backups on this Mac and reads WhatsApp's database from one (encrypted backups unlock with the backup password, which isn't stored). Counts cover every day up to the day before the backup; a full Mac rescan starts after that
+- Desktop app: `iphoneBackup.ts` (backup list, keybag unlock, Manifest.db and file decryption, WAL folding), `plist.ts` (binary and XML plists, NSKeyedArchiver), `readWhatsApp` up-to-day limit, IPC `messages:backups` and `messages:scan-backup`
+
+**Why:**
+- The user wants more than two years of Gmail, and WhatsApp on the Mac starts in 2023 because the Mac only has what the phone sent over when it was linked
+
+**Files Modified:**
+- `backend/src/services/gmailActivityService.ts` — `yearWindows`, `scanRange`, `OlderRange`, windowed `runScan`, `saveTally` `final`
+- `backend/src/routes/messages.ts` — `older` body field, `409 already_covered`
+- `backend/src/services/__tests__/messageActivity.test.ts`
+- `electron/src/messageActivity/iphoneBackup.ts`, `plist.ts`, `iphoneBackup.test.ts` — new
+- `electron/src/messageActivity/readers.ts` — `readWhatsApp` `untilDay`, `nextDay`
+- `electron/src/messageActivity/worker.ts`, `ipc.ts`, `electron/src/preload.ts`
+- `frontend/src/api/messageHooks.ts` — `useStartGmailScan(older)`
+- `frontend/src/lib/desktopMessages.ts` — `importWhatsAppBackup`, `backupErrorText`, `getBackupThrough`
+- `frontend/src/components/MessageSourcesPanel.tsx` — older-mail choices, `WhatsAppBackupImport`
+- `frontend/src/styles/pages/top-contacts.css`
+- `docs/plans/2026-11-01-older-message-history.md`, `docs/reference.md`, `electron/README.md`
+
+---
+
 ## 2026-11-01 — Text Blast: "Send test" says why it's disabled
 
 **Session:** `18a2e642-baa3-46d4-87b7-6e6d15b27c0c`

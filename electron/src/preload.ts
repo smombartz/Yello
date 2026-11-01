@@ -24,5 +24,7 @@ contextBridge.exposeInMainWorld('yelloDesktop', {
     scan: (channel: 'imessage' | 'whatsapp', sinceDay: string | null) => ipcRenderer.invoke('messages:scan', channel, sinceDay),
     openFullDiskAccessSettings: () => ipcRenderer.invoke('messages:open-settings'),
     relaunch: () => ipcRenderer.invoke('messages:relaunch'),
+    backups: () => ipcRenderer.invoke('messages:backups'),
+    scanBackup: (backupId: string, password: string | null) => ipcRenderer.invoke('messages:scan-backup', backupId, password),
   },
 });

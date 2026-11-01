@@ -10,7 +10,8 @@ import { ingestActivity, setSourceStatus, type IngestActivity, type IngestHandle
  * them through ingestActivity like every other channel.
  *
  * The first scan covers FIRST_SCAN_DAYS; later scans start a couple of days
- * before the last covered day. Runs in the background; progress lives in
+ * before the last covered day, and "Scan older emails" goes further back.
+ * Scans work a calendar year at a time, saving each as it finishes. Runs in the background; progress lives in
  * message_sources and is polled through GET /api/messages/sources.
  */
 
@@ -142,7 +143,7 @@ function dedupe<T extends { email: string }>(list: T[]): T[] {
  * Days outside the range are left out: the Gmail query starts a day early
  * (its date boundary is in Pacific time), so its first day is partial.
  */
-export function saveTally(db: DatabaseType, tally: GmailTally, from: string, to: string): void {
+export function saveTally(db: DatabaseType, tally: GmailTally, from: string, to: string, final = true): void {
   const handles: IngestHandle[] = [];
   const activity: IngestActivity[] = [];
   for (const [email, name] of tally.handles) {
@@ -153,15 +154,68 @@ export function saveTally(db: DatabaseType, tally: GmailTally, from: string, to:
       activity.push({ handle: email, day, sent: c.sent, received: c.received, group: c.group });
     }
   }
-  ingestActivity(db, { channel: 'gmail', from, to, handles, activity, final: true });
+  // final marks the source imported (and idle): only the scan's last piece
+  ingestActivity(db, { channel: 'gmail', from, to, handles, activity, final });
+}
+
+/** How far back "Scan older emails" goes */
+export type OlderRange = '5y' | '10y' | 'all';
+/** "All mail" stops here: Gmail opened in April 2004 */
+const GMAIL_START = '2004-01-01';
+
+export interface DayRange { from: string; to: string }
+
+/** Calendar-year pieces of [from, to], newest first. Each is counted and saved on its own. */
+export function yearWindows(from: string, to: string): DayRange[] {
+  const out: DayRange[] = [];
+  let end = to;
+  while (end >= from) {
+    const yearStart = `${end.slice(0, 4)}-01-01`;
+    const start = yearStart < from ? from : yearStart;
+    out.push({ from: start, to: end });
+    end = shiftDay(start, -1);
+  }
+  return out;
+}
+
+/**
+ * The days a scan covers. New mail: 2 years on the first scan, then from a
+ * couple of days before the last covered day. Older mail: from the chosen
+ * point up to the day before the earliest covered day.
+ */
+export function scanRange(
+  coverage: { covered_from: string | null; covered_through: string | null } | undefined,
+  today: string,
+  older?: OlderRange,
+): DayRange | null {
+  if (older) {
+    const years = older === '5y' ? 5 : 10;
+    const from = older === 'all' ? GMAIL_START : shiftDay(today, -Math.round(years * 365.25));
+    const to = coverage?.covered_from ? shiftDay(coverage.covered_from, -1) : today;
+    return from <= to ? { from, to } : null;
+  }
+  const from = coverage?.covered_through
+    ? shiftDay(coverage.covered_through, -RESCAN_OVERLAP_DAYS)
+    : shiftDay(today, -FIRST_SCAN_DAYS);
+  return { from, to: today };
 }
 
 /**
  * Scan Gmail into message activity. Resolves when done; callers normally
- * don't await it. Throws 'gmail_scope_required' / 'no_token' before starting.
+ * don't await it. Throws 'gmail_scope_required' / 'no_token' /
+ * 'already_running' / 'already_covered' before starting.
  */
-export async function startGmailScan(db: DatabaseType, userId: number, timeZone: string): Promise<() => Promise<void>> {
+export async function startGmailScan(
+  db: DatabaseType, userId: number, timeZone: string, older?: OlderRange,
+): Promise<() => Promise<void>> {
   if (running.has(userId)) throw new Error('already_running');
+
+  const source = db.prepare('SELECT covered_from, covered_through FROM message_sources WHERE channel = ?').get('gmail') as
+    { covered_from: string | null; covered_through: string | null } | undefined;
+  // Days are in the user's time zone, so "today" is too
+  const range = scanRange(source, dayIn(timeZone, Date.now()), older);
+  if (!range) throw new Error('already_covered');
+
   const accessToken = await getValidAccessToken(userId);
   if (!accessToken) throw new Error('no_token');
 
@@ -172,20 +226,12 @@ export async function startGmailScan(db: DatabaseType, userId: number, timeZone:
   const user = getAuthDatabase().prepare('SELECT email FROM users WHERE id = ?').get(userId) as { email: string } | undefined;
   if (!user) throw new Error('user_not_found');
 
-  const source = db.prepare('SELECT covered_through FROM message_sources WHERE channel = ?').get('gmail') as
-    { covered_through: string | null } | undefined;
-  // Days are in the user's time zone, so "today" is too
-  const today = dayIn(timeZone, Date.now());
-  const from = source?.covered_through
-    ? shiftDay(source.covered_through, -RESCAN_OVERLAP_DAYS)
-    : shiftDay(today, -FIRST_SCAN_DAYS);
-
   running.add(userId);
   setSourceStatus(db, 'gmail', { status: 'running', progressDone: 0, progressTotal: null, error: null });
 
   return async () => {
     try {
-      await runScan(db, userId, user.email, from, today, timeZone);
+      await runScan(db, userId, user.email, range, timeZone, !older);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setSourceStatus(db, 'gmail', { status: 'failed', error: message.slice(0, 500) });
@@ -196,45 +242,67 @@ export async function startGmailScan(db: DatabaseType, userId: number, timeZone:
   };
 }
 
-async function runScan(db: DatabaseType, userId: number, userEmail: string, from: string, to: string, timeZone: string): Promise<void> {
-  // Gmail's after: is a day boundary in PST; a day earlier is safe since the range replaces counts
-  const after = shiftDay(from, -1).replace(/-/g, '/');
-  const query = encodeURIComponent(`after:${after} ${EXCLUDE_QUERY}`);
+/** Gmail search dates are Pacific-time days: ask for a day more on each side; saveTally trims to the window. */
+function windowQuery(w: DayRange): string {
+  const gmailDay = (day: string) => day.replace(/-/g, '/');
+  return encodeURIComponent(`after:${gmailDay(shiftDay(w.from, -1))} before:${gmailDay(shiftDay(w.to, 2))} ${EXCLUDE_QUERY}`);
+}
 
-  // 1. Every message id in the range
-  const ids: string[] = [];
-  let pageToken: string | undefined;
+async function runScan(
+  db: DatabaseType, userId: number, userEmail: string, range: DayRange, timeZone: string, throughToday: boolean,
+): Promise<void> {
+  const windows = yearWindows(range.from, range.to);
   let token = await getValidAccessToken(userId);
-  do {
-    const page = await fetchWithRetry<GmailMessageListResponse>(token!,
-      `/messages?maxResults=500&q=${query}${pageToken ? `&pageToken=${pageToken}` : ''}`);
-    if (page.scopeError) throw new Error('gmail_scope_required');
-    for (const m of page.data?.messages ?? []) ids.push(m.id);
-    pageToken = page.data?.nextPageToken;
-    setSourceStatus(db, 'gmail', { progressDone: 0, progressTotal: ids.length });
-  } while (pageToken);
 
-  // 2. Headers of each, a few at a time
-  const tally = newTally(userEmail);
-  const headers = ['From', 'To', 'Cc', 'List-Unsubscribe', 'Precedence'].map(h => `metadataHeaders=${h}`).join('&');
-  for (let i = 0; i < ids.length; i += PARALLEL_FETCHES) {
-    if (i % 1000 === 0) token = await getValidAccessToken(userId); // refresh before the hour runs out
-    const batch = ids.slice(i, i + PARALLEL_FETCHES);
-    const messages = await Promise.all(batch.map(id =>
-      fetchWithRetry<GmailMetadata>(token!, `/messages/${id}?format=metadata&${headers}`).then(r => r.data)));
-    for (const message of messages) {
-      if (message && Number(message.internalDate) > 0) tallyMessage(tally, message, timeZone);
-    }
-    if ((i / PARALLEL_FETCHES) % (PROGRESS_EVERY / PARALLEL_FETCHES) === 0) {
-      setSourceStatus(db, 'gmail', { progressDone: Math.min(i + PARALLEL_FETCHES, ids.length) });
-    }
+  // 1. Every message id, per window, for an overall progress total
+  const idsByWindow: string[][] = [];
+  let total = 0;
+  for (const w of windows) {
+    const ids: string[] = [];
+    let pageToken: string | undefined;
+    do {
+      const page = await fetchWithRetry<GmailMessageListResponse>(token!,
+        `/messages?maxResults=500&q=${windowQuery(w)}${pageToken ? `&pageToken=${pageToken}` : ''}`);
+      if (page.scopeError) throw new Error('gmail_scope_required');
+      for (const m of page.data?.messages ?? []) ids.push(m.id);
+      pageToken = page.data?.nextPageToken;
+      setSourceStatus(db, 'gmail', { progressDone: 0, progressTotal: total + ids.length });
+    } while (pageToken);
+    idsByWindow.push(ids);
+    total += ids.length;
   }
 
-  // 3. Store, replacing the range's previous counts. A long scan can run past
-  // midnight, so the range runs through the day it finished.
-  const finishedDay = dayIn(timeZone, Date.now());
-  saveTally(db, tally, from, finishedDay > to ? finishedDay : to);
-  setSourceStatus(db, 'gmail', { status: 'idle', progressDone: ids.length, progressTotal: ids.length, error: null });
+  // 2. Headers of each message, a few at a time; each window is saved when it's done,
+  // so a scan that stops part-way keeps the years it finished. The user's own
+  // addresses (aliases show up as senders of sent mail) carry over between windows.
+  const headers = ['From', 'To', 'Cc', 'List-Unsubscribe', 'Precedence'].map(h => `metadataHeaders=${h}`).join('&');
+  const me = new Set([userEmail.toLowerCase()]);
+  let done = 0;
+  for (let w = 0; w < windows.length; w++) {
+    const ids = idsByWindow[w];
+    const tally = { ...newTally(userEmail), me };
+    for (let i = 0; i < ids.length; i += PARALLEL_FETCHES) {
+      if (done % 1000 < PARALLEL_FETCHES) token = await getValidAccessToken(userId); // refresh before the hour runs out
+      const batch = ids.slice(i, i + PARALLEL_FETCHES);
+      const messages = await Promise.all(batch.map(id =>
+        fetchWithRetry<GmailMetadata>(token!, `/messages/${id}?format=metadata&${headers}`).then(r => r.data)));
+      for (const message of messages) {
+        if (message && Number(message.internalDate) > 0) tallyMessage(tally, message, timeZone);
+      }
+      done += batch.length;
+      if (done % PROGRESS_EVERY < PARALLEL_FETCHES) setSourceStatus(db, 'gmail', { progressDone: done });
+    }
+    // The newest window of a new-mail scan runs through the day it finished (a long scan can pass midnight)
+    let to = windows[w].to;
+    if (w === 0 && throughToday) {
+      const finishedDay = dayIn(timeZone, Date.now());
+      if (finishedDay > to) to = finishedDay;
+    }
+    saveTally(db, tally, windows[w].from, to, w === windows.length - 1);
+    setSourceStatus(db, 'gmail', { progressDone: done });
+  }
+
+  setSourceStatus(db, 'gmail', { status: 'idle', progressDone: total, progressTotal: total, error: null });
 }
 
 /** A scan the server restart interrupted shows as failed instead of running forever. */

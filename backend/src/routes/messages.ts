@@ -80,7 +80,11 @@ type RefsBody = Static<typeof RefsBodySchema>;
 const AcceptBodySchema = Type.Object({ channel: Type.Optional(ChannelSchema) });
 type AcceptBody = Static<typeof AcceptBodySchema>;
 
-const GmailScanBodySchema = Type.Object({ timeZone: Type.Optional(Type.String({ maxLength: 100 })) });
+const GmailScanBodySchema = Type.Object({
+  timeZone: Type.Optional(Type.String({ maxLength: 100 })),
+  /** Scan mail older than what's covered, back this far */
+  older: Type.Optional(Type.Union([Type.Literal('5y'), Type.Literal('10y'), Type.Literal('all')])),
+});
 type GmailScanBody = Static<typeof GmailScanBodySchema>;
 
 const ChannelParamsSchema = Type.Object({ channel: ChannelSchema });
@@ -115,14 +119,14 @@ export default async function messagesRoutes(fastify: FastifyInstance, _opts: Fa
     return { ok: true };
   });
 
-  // POST /api/messages/gmail/scan — count Gmail in the background
+  // POST /api/messages/gmail/scan { timeZone, older? } — count Gmail in the background
   fastify.post<{ Body: GmailScanBody }>('/gmail/scan', {
     schema: { body: GmailScanBodySchema },
   }, async (request, reply) => {
     const userId = request.user!.id;
     const db = getUserDatabase(userId);
     try {
-      const run = await startGmailScan(db, userId, request.body?.timeZone || 'UTC');
+      const run = await startGmailScan(db, userId, request.body?.timeZone || 'UTC', request.body?.older);
       run().catch(err => request.log.error({ err }, 'Gmail activity scan failed'));
       return reply.code(202).send({ started: true });
     } catch (err) {
@@ -130,6 +134,7 @@ export default async function messagesRoutes(fastify: FastifyInstance, _opts: Fa
       if (message === 'gmail_scope_required') return reply.code(403).send({ error: 'gmail_scope_required' });
       if (message === 'no_token') return reply.code(400).send({ error: 'no_token' });
       if (message === 'already_running') return reply.code(409).send({ error: 'already_running' });
+      if (message === 'already_covered') return reply.code(409).send({ error: 'already_covered' });
       throw err;
     }
   });

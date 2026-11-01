@@ -203,12 +203,16 @@ export function useInvalidateMessageQueries() {
   return useInvalidateMessages();
 }
 
+/** How far back "Scan older emails" goes */
+export type GmailOlderRange = '5y' | '10y' | 'all';
+
+/** Start a Gmail scan: new mail, or with `older` mail before what's covered */
 export function useStartGmailScan() {
   const invalidate = useInvalidateMessages();
   return useMutation({
-    mutationFn: () => fetchApi<{ started: boolean }>('/api/messages/gmail/scan', {
+    mutationFn: (older?: GmailOlderRange) => fetchApi<{ started: boolean }>('/api/messages/gmail/scan', {
       method: 'POST',
-      body: JSON.stringify({ timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
+      body: JSON.stringify({ timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, ...(older ? { older } : {}) }),
     }),
     onSettled: invalidate,
   });

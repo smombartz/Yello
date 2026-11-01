@@ -7,10 +7,11 @@ import { useToast } from './ui/Toast';
 import { formatRelativeDay } from '../utils/relativeTime';
 import {
   CHANNEL_ICONS, CHANNEL_LABELS, MESSAGE_CHANNELS, uploadActivity, useClearChannel, useInvalidateMessageQueries,
-  useMessageSources, useStartGmailScan, type MessageChannel, type MessageSource,
+  useMessageSources, useStartGmailScan, type GmailOlderRange, type MessageChannel, type MessageSource,
 } from '../api/messageHooks';
 import {
-  getDesktopMessages, incrementalScanStart, syncDesktopChannel, type DesktopChannel, type DesktopReaderStatus,
+  backupErrorText, getDesktopMessages, importWhatsAppBackup, incrementalScanStart, syncDesktopChannel,
+  type DesktopChannel, type DesktopReaderStatus, type IPhoneBackupList,
 } from '../lib/desktopMessages';
 import { useDesktopAutoRefresh } from '../hooks/useDesktopMessageSync';
 
@@ -52,9 +53,27 @@ function SourceCard({ source, children, onClear }: { source: MessageSource; chil
   );
 }
 
+const OLDER_CHOICES: Array<{ id: GmailOlderRange; label: string; years: number | null }> = [
+  { id: '5y', label: '5 years', years: 5 },
+  { id: '10y', label: '10 years', years: 10 },
+  { id: 'all', label: 'all the way', years: null },
+];
+
+/** Whether a "scan older" choice would reach further back than what's covered */
+function reachesFurther(choice: { years: number | null }, coveredFrom: string): boolean {
+  if (choice.years === null) return coveredFrom > '2004-01-01';
+  const target = new Date();
+  target.setDate(target.getDate() - Math.round(choice.years * 365.25));
+  return target.toISOString().slice(0, 10) < coveredFrom;
+}
+
 function GmailSource({ source }: { source: MessageSource }) {
   const scan = useStartGmailScan();
   const scopeMissing = scan.error?.message === 'gmail_scope_required';
+  const olderChoices = source.coveredFrom ? OLDER_CHOICES.filter(c => reachesFurther(c, source.coveredFrom!)) : [];
+  const errorText = scan.error?.message === 'already_covered'
+    ? 'Those emails are already counted.'
+    : scan.error?.message === 'already_running' ? 'A scan is already running.' : scan.error?.message;
   if (source.status === 'running') {
     const pct = source.progressTotal ? Math.round(((source.progressDone ?? 0) / source.progressTotal) * 100) : 0;
     return (
@@ -73,8 +92,8 @@ function GmailSource({ source }: { source: MessageSource }) {
   return (
     <>
       <p className="settings-description">
-        Counts emails you sent and received over the last two years, from the sender and recipient lines only.
-        Newsletters, promotions and no-reply senders are skipped.
+        Counts emails you sent and received, from the sender and recipient lines only. The first scan covers the
+        last two years; you can scan older mail after. Newsletters, promotions and no-reply senders are skipped.
       </p>
       {source.status === 'failed' && source.error && <p className="import-error-text">{source.error}</p>}
       {scopeMissing ? (
@@ -86,13 +105,146 @@ function GmailSource({ source }: { source: MessageSource }) {
         </>
       ) : (
         <>
-          {scan.error && <p className="import-error-text">{scan.error.message}</p>}
-          <Button icon="envelope" loading={scan.isPending} onClick={() => scan.mutate()}>
-            {source.messages ? 'Scan new emails' : 'Scan Gmail'}
-          </Button>
+          {errorText && <p className="import-error-text">{errorText}</p>}
+          <div className="message-source-actions">
+            <Button icon="envelope" loading={scan.isPending && !scan.variables} onClick={() => scan.mutate(undefined)}>
+              {source.messages ? 'Scan new emails' : 'Scan Gmail'}
+            </Button>
+          </div>
+          {olderChoices.length > 0 && (
+            <div className="source-older">
+              <span>Scan older emails, back</span>
+              {olderChoices.map(c => (
+                <Button
+                  key={c.id} size="sm" variant="ghost" icon="clock-rotate-left"
+                  loading={scan.isPending && scan.variables === c.id} disabled={scan.isPending}
+                  onClick={() => scan.mutate(c.id)}
+                  title={c.years ? `Count emails from the last ${c.years} years` : 'Count every email, back to your first one'}
+                >
+                  {c.label}
+                </Button>
+              ))}
+            </div>
+          )}
+          {olderChoices.length > 0 && (
+            <p className="source-summary muted source-older-note">
+              Older mail is counted a year at a time and saved as each year finishes. A large mailbox can take a while.
+            </p>
+          )}
         </>
       )}
     </>
+  );
+}
+
+function backupLabel(b: { deviceName: string; date: string | null; encrypted: boolean }): string {
+  const date = b.date ? new Date(b.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'unknown date';
+  return `${b.deviceName}, backed up ${date}${b.encrypted ? ' (encrypted)' : ''}`;
+}
+
+/**
+ * WhatsApp's older history from an iPhone backup Finder made on this Mac.
+ * WhatsApp on the Mac only has what the phone sent over when it was linked.
+ */
+function WhatsAppBackupImport({ coveredFrom }: { coveredFrom: string | null }) {
+  const desktop = getDesktopMessages();
+  const invalidate = useInvalidateMessageQueries();
+  const { showToast } = useToast();
+  const [list, setList] = useState<IPhoneBackupList | null>(null);
+  const [looking, setLooking] = useState(false);
+  const [selected, setSelected] = useState('');
+  const [password, setPassword] = useState('');
+  const [progress, setProgress] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const backup = list?.backups.find(b => b.id === selected) ?? list?.backups[0] ?? null;
+
+  const find = async () => {
+    if (!desktop?.backups) return;
+    setLooking(true);
+    setError(null);
+    try {
+      const found = await desktop.backups();
+      setList(found);
+      setSelected(found.backups[0]?.id ?? '');
+    } catch (e) {
+      setError(backupErrorText(e));
+    } finally {
+      setLooking(false);
+    }
+  };
+
+  const read = async () => {
+    if (!backup) return;
+    setError(null);
+    try {
+      const result = await importWhatsAppBackup(backup.id, backup.encrypted ? password : null, setProgress);
+      setPassword('');
+      showToast(result.messages
+        ? `Counted ${result.messages.toLocaleString()} WhatsApp messages from the backup`
+        : 'No WhatsApp messages in this backup');
+    } catch (e) {
+      setError(backupErrorText(e));
+    } finally {
+      setProgress(null);
+      invalidate();
+    }
+  };
+
+  return (
+    <div className="source-backup">
+      <h3>Older history from your iPhone</h3>
+      <p className="settings-description">
+        WhatsApp on a Mac only has the messages your phone sent over when you linked it
+        {coveredFrom ? <> (here: from {formatDay(coveredFrom)})</> : null}. Your iPhone has the rest. Back it up to this
+        Mac in Finder (select your iPhone › General › <em>Back up all of the data on your iPhone to this Mac</em> › Back Up
+        Now), then read the backup here. Only counts per person are uploaded.
+      </p>
+      {!desktop?.backups ? (
+        <p className="source-summary muted">Update the Yello desktop app to read iPhone backups.</p>
+      ) : !list ? (
+        <Button icon="mobile-screen" loading={looking} onClick={() => void find()}>Find iPhone backups</Button>
+      ) : !list.backups.length ? (
+        <div className="message-source-actions">
+          <span className="source-summary">
+            {list.state === 'needs_full_disk_access'
+              ? 'Yello needs Full Disk Access to read iPhone backups.'
+              : list.state === 'error' ? list.error : 'No iPhone backups on this Mac yet.'}
+          </span>
+          <Button size="sm" variant="ghost" icon="rotate" loading={looking} onClick={() => void find()}>Look again</Button>
+        </div>
+      ) : progress ? (
+        <p className="settings-description"><Icon name="arrows-rotate" className="spinning" /> {progress}</p>
+      ) : (
+        <div className="source-backup-form">
+          {list.backups.length > 1 ? (
+            <select className="edit-input" value={backup?.id ?? ''} onChange={(e) => { setSelected(e.target.value); setError(null); }}
+              aria-label="iPhone backup">
+              {list.backups.map(b => <option key={b.id} value={b.id}>{backupLabel(b)}</option>)}
+            </select>
+          ) : (
+            <span className="source-summary">{backup && backupLabel(backup)}</span>
+          )}
+          {backup?.encrypted && (
+            <input
+              type="password" className="edit-input" autoComplete="off" value={password}
+              placeholder="Backup password" aria-label="Backup password"
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && password) void read(); }}
+            />
+          )}
+          <Button icon="clock-rotate-left" disabled={!!backup?.encrypted && !password} onClick={() => void read()}>
+            Read WhatsApp from backup
+          </Button>
+          {backup?.encrypted && (
+            <span className="source-summary muted">
+              The password you set for encrypted backups in Finder. It’s only used on this Mac to unlock the backup and isn’t saved.
+            </span>
+          )}
+        </div>
+      )}
+      {error && <p className="import-error-text">{error}</p>}
+    </div>
   );
 }
 
@@ -189,6 +341,7 @@ function DesktopSource({ source, status, onStatusChange }: {
           </span>
         </label>
       )}
+      {channel === 'whatsapp' && <WhatsAppBackupImport coveredFrom={source.coveredFrom} />}
     </>
   );
 }
