@@ -5,7 +5,7 @@ import { execFile } from 'child_process';
 // on an account chosen by type: the form that still works on macOS 15 Sequoia and 26 Tahoe
 // (Tahoe changed chat IDs, so they're never built or used). Ported from TextBlast.
 
-const SEND_SCRIPT = [
+export const SEND_SCRIPT = [
   'on run argv',
   'set theHandle to item 1 of argv',
   'set theText to item 2 of argv',
@@ -25,27 +25,28 @@ const SEND_SCRIPT = [
   'end run',
 ];
 
-const ACCOUNTS_SCRIPT = [
+// Variable names: `st` doesn't compile on newer macOS (read as the ordinal in "1st"), so use plain words.
+export const ACCOUNTS_SCRIPT = [
   'tell application "Messages"',
   'set out to ""',
   'repeat with a in (every account)',
   'try',
-  'set st to (service type of a) as text',
+  'set svc to (service type of a) as text',
   'on error',
-  'set st to "unknown"',
+  'set svc to "unknown"',
   'end try',
   'try',
-  'set en to (enabled of a) as text',
+  'set isOn to (enabled of a) as text',
   'on error',
-  'set en to "unknown"',
+  'set isOn to "unknown"',
   'end try',
-  'set out to out & st & "=" & en & linefeed',
+  'set out to out & svc & "=" & isOn & linefeed',
   'end repeat',
   'return out',
   'end tell',
 ];
 
-const LAUNCH_SCRIPT = ['tell application "Messages"', 'if not running then launch', 'end tell'];
+export const LAUNCH_SCRIPT = ['tell application "Messages"', 'if not running then launch', 'end tell'];
 
 const ERROR_HINTS: Record<string, string> = {
   '-1743': 'macOS blocked Yello from controlling Messages. Allow it in System Settings › Privacy & Security › '

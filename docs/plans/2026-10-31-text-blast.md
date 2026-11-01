@@ -337,3 +337,11 @@ interface Blast { id: number; createdAt: string; template: string; country: stri
   person's rendered text.
 - 2026-11-01: the counts above the preview ("N will get a text", "N held back", "N unticked") are filter chips.
   Clicking one shows only those rows (again shows everyone). The held-back view adds a count of reasons.
+- 2026-11-01: time estimates. Before a run: "Takes about N min". While sending: a ticking time left and finish time,
+  from the runner's pacing plus send times measured on the page, capped by today's limit. The pause between texts
+  now shows "Next text to <name> in m:ss" (it showed "Now: <name>" before, hiding the countdown). Frontend only.
+- 2026-11-01: prominent "m:ss until the next text, to <name> · <number>" block while sending. The runner now re-reads
+  the person after the pause, so unticking them during their countdown skips them (needs a desktop app rebuild).
+- 2026-11-01: fix: `ACCOUNTS_SCRIPT` (copied from TextBlast) used the variable `st`, which doesn't compile on macOS 27.
+  Renamed. Added `messages.test.ts`, which compiles every script with `osacompile`. The standalone
+  `textblast/textblast.py` has the same bug (left alone; outside this repo).

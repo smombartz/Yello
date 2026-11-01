@@ -721,7 +721,7 @@ Personal 1:1 texts to a list through Apple Messages, from the user's own number,
 4. If iMessage failed, fall back to SMS through the iPhone (not for emails, -1743, or when there's no SMS account).
 5. Write the result, then wait a random 25–45 s (1–2 s when simulating).
 
-The person is re-read before each send, so unticking someone mid-run skips them.
+The person is re-read before the pause and again right before the send, so unticking someone mid-run, even during their countdown, skips them. The page shows the countdown to the next text and who gets it.
 
 **Safety rails:**
 - 80 real attempts a day across all blasts (`GET /sent-today?since=<local midnight>`; simulated blasts don't count).
@@ -745,6 +745,7 @@ The person is re-read before each send, so unticking someone mid-run skips them.
 - **Send test:** sends the first selected person's text to the user's own number. It doesn't touch the blast or the daily count.
 - **Simulate:** runs the whole flow without calling Messages.
 - **Run again:** a new draft for the same people with a new message, re-rendered from the stored `values_json`.
+- **Time estimates** (`components/textBlast/estimate.ts`): before a run, "Takes about N min" (35 s average pause + ~8 s per send, capped at what today's limit allows). While sending, a ticking "About m:ss left · done around 3:42 PM", using send times measured on the page, plus a countdown to the next text. The pacing constants mirror `runner.ts`, so change both together.
 
 ### Top contacts (`/dashboard/top`)
 

@@ -1,5 +1,73 @@
 # Change Log
 
+## 2026-11-01 — Fix: Text Blast setup check failed with "syntax error … found "st" (-2741)"
+
+**Session:** `18a2e642-baa3-46d4-87b7-6e6d15b27c0c`
+
+**What Changed:**
+- The Messages account check (AppleScript) used a variable named `st`, which doesn't compile on macOS 27 (it reads as
+  the ordinal in "1st"). Renamed to `svc`/`isOn`. The setup bar showed the error under "Control Messages", with
+  iMessage and SMS fallback both "Unknown"
+- New test compiles every AppleScript with `osacompile` (macOS only, nothing is run), so a script that won't
+  compile fails the tests instead of failing on the user's Mac
+- The send script compiled fine, so sending itself wasn't affected
+
+**Why:**
+- Bug report from the user's first real run
+
+**Files Modified:**
+- `electron/src/textBlast/messages.ts` — `ACCOUNTS_SCRIPT` variable names; scripts exported for the test
+- `electron/src/textBlast/messages.test.ts` (new) — "AppleScripts compile"
+- `docs/plans/2026-10-31-text-blast.md` — Changes
+
+---
+
+## 2026-11-01 — Text Blast: countdown to the next text and who gets it; unticking during the pause skips
+
+**Session:** `18a2e642-baa3-46d4-87b7-6e6d15b27c0c`
+
+**What Changed:**
+- While a blast sends, a highlighted line above the counts shows a large m:ss countdown to the next text, with
+  the person's name and number. While a text goes out, it shows "Sending now to <name> · <number>"
+- The desktop app re-reads the person after the 25–45 s pause, so unticking them during their countdown skips
+  them. Before, it only checked before the pause, and they were still texted
+
+**Why:**
+- User request: a countdown until the next message and to whom. Showing who's next invites unticking them,
+  which has to work
+
+**Files Modified:**
+- `frontend/src/components/textBlast/BlastDetail.tsx` — `.text-blast-next` block in the progress section
+- `frontend/src/styles/pages/text-blast.css` — `.text-blast-next`, `.text-blast-next-clock`
+- `electron/src/textBlast/runner.ts` — `runQueue` re-checks the recipient after `wait`
+- `electron/src/textBlast/runner.test.ts` — "skips someone unticked during the pause before their text"
+- `docs/reference.md`, `docs/plans/2026-10-31-text-blast.md`
+
+---
+
+## 2026-11-01 — Text Blast: time estimate and countdown while sending
+
+**Session:** `18a2e642-baa3-46d4-87b7-6e6d15b27c0c`
+
+**What Changed:**
+- The progress block on a running blast shows "About m:ss left · done around <time>", ticking every second.
+  It uses the desktop app's pacing (35 s average pause) and send times measured on the page (8 s until measured)
+- When today's limit will stop the run early, it says after how many texts, and the estimate covers only those
+- The status line shows "Next text to <name> in 0:23" during the pause between texts. Before, it said
+  "Now: <name>" for the whole pause, so the existing countdown never appeared
+- Before a run starts (draft or stopped blast), a line under the buttons says "Takes about N min", noting the daily limit
+
+**Why:**
+- User request: a time estimate and countdown in the send progress section
+
+**Files Modified:**
+- `frontend/src/components/textBlast/estimate.ts` (new) — `useLiveEstimate`, `estimateRunSeconds`, `formatDuration`, `formatClock`
+- `frontend/src/components/textBlast/BlastDetail.tsx` — progress line, ETA line, `startEstimate`; removed `useSecondsUntil`
+- `frontend/src/styles/pages/text-blast.css` — `.text-blast-eta`, `.text-blast-clock`
+- `docs/reference.md`, `docs/plans/2026-10-31-text-blast.md` — time estimates
+
+---
+
 ## 2026-11-01 — Text Blast: filter the preview to held-back numbers
 
 **Session:** `18a2e642-baa3-46d4-87b7-6e6d15b27c0c`

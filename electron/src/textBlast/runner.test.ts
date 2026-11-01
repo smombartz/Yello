@@ -154,6 +154,19 @@ describe('TextBlastRunner', () => {
     expect(h.blastStatuses.at(-1)).toBe('stopped');
   });
 
+  it('skips someone unticked during the pause before their text', async () => {
+    const h = harness({ recipients: [{}, {}, {}] });
+    const sleep = h.deps.sleep;
+    h.deps.sleep = async (ms) => {
+      await sleep(ms);
+      if (h.sends.length === 1) h.recipients[1].status = 'skipped';
+    };
+    await new TextBlastRunner(h.deps).start(7);
+    expect(h.sends.map((s) => s.handle)).toEqual([h.recipients[0].phone, h.recipients[2].phone]);
+    expect(h.writes.some((w) => w.id === 2)).toBe(false);
+    expect(h.blastStatuses.at(-1)).toBe('finished');
+  });
+
   it("doesn't resend an interrupted text that Messages shows went out", async () => {
     const sentAt = new Date(1_800_000_000_000 - 60_000).toISOString();
     const h = harness({

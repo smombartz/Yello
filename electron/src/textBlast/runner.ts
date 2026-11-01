@@ -180,6 +180,14 @@ export class TextBlastRunner {
           this.log('info', 'Stopped. Progress is saved.');
           return false;
         }
+        // The page shows who's next during the pause, so they may have been unticked meanwhile.
+        const again = (await this.deps.api.getBlast(blastId)).recipients?.find((x) => x.id === recipientId);
+        if (!again || !TO_SEND.includes(again.status)) {
+          p.processed++;
+          p.current = null;
+          this.log('info', `${label}: skipped (${again?.status || 'removed'})`);
+          continue;
+        }
       }
       first = false;
 

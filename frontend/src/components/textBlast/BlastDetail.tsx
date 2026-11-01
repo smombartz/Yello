@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  TO_SEND, useBlast, useDeleteBlast, useRequeueRecipient, useRerunBlast, useSkipRecipients,
+  TO_SEND, useBlast, useDeleteBlast, useRequeueRecipient, useRerunBlast, useSentToday, useSkipRecipients,
   type BlastRecipient, type DesktopProgress,
 } from '../../api/textBlastHooks';
 import { Badge } from '../ui/Badge';
@@ -9,6 +9,7 @@ import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useToast } from '../ui/Toast';
 import { Icon } from '../Icon';
+import { estimateRunSeconds, formatClock, formatDuration, useLiveEstimate } from './estimate';
 import { BLAST_STATUS, RECIPIENT_STATUS, summarizeCounts } from './statusLabels';
 
 interface BlastDetailProps {
@@ -19,21 +20,19 @@ interface BlastDetailProps {
 
 const CHECK: BlastRecipient['status'][] = ['pending', 'not_found', 'needs_review'];
 
-function useSecondsUntil(at: number | null): number | null {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!at) return;
-    const t = setInterval(() => setNow(Date.now()), 500);
-    return () => clearInterval(t);
-  }, [at]);
-  return at ? Math.max(0, Math.ceil((at - now) / 1000)) : null;
-}
-
 function formatTime(iso: string | null): string {
   if (!iso) return '';
   // created_at comes from SQLite as "YYYY-MM-DD HH:MM:SS" in UTC
   const d = new Date(iso.includes('T') ? iso : `${iso.replace(' ', 'T')}Z`);
   return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+/** "Takes about 25 min", noting when today's limit cuts the run short. */
+function startEstimate(toSend: number, simulate: boolean, limitLeft: number | null): string {
+  const today = simulate || limitLeft === null ? toSend : Math.min(toSend, limitLeft);
+  if (today === 0) return "Today's limit is reached. Resume tomorrow.";
+  const takes = `Takes about ${formatDuration(estimateRunSeconds(today, simulate))}`;
+  return today < toSend ? `${takes} for ${today} today (the daily limit); the rest waits until tomorrow.` : `${takes}.`;
 }
 
 /** One blast: live progress while sending, every person's status, resume, run again. */
@@ -51,7 +50,9 @@ export function BlastDetail({ blastId, desktop, progress }: BlastDetailProps) {
   const [rerunText, setRerunText] = useState('');
   const [rerunSimulate, setRerunSimulate] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const countdown = useSecondsUntil(thisRunning ? progress!.nextAt : null);
+  const { data: sentToday } = useSentToday();
+  const limitLeft = sentToday ? Math.max(0, sentToday.cap - sentToday.count) : null;
+  const estimate = useLiveEstimate(thisRunning ? progress : null, limitLeft);
 
   if (isLoading) return <p className="text-blast-muted">Loading…</p>;
   if (isError || !blast) return <p className="text-blast-warning">This blast couldn't be loaded. <Link to="/tools/text-blast">Back</Link></p>;
@@ -101,12 +102,42 @@ export function BlastDetail({ blastId, desktop, progress }: BlastDetailProps) {
           {thisRunning && progress && (
             <div className="text-blast-progress">
               <progress max={progress.total || 1} value={progress.processed} />
+              {progress.current && (
+                <div className="text-blast-next">
+                  {estimate?.phase === 'waiting' ? (
+                    <>
+                      <span className="text-blast-next-clock text-blast-clock">{formatClock(estimate.nextIn ?? 0)}</span>
+                      <span>
+                        until the next text, to <strong>{progress.current.name || progress.current.phone}</strong>
+                        {progress.current.name && <span className="text-blast-phone"> · {progress.current.phone}</span>}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Icon name="spinner" className="fa-spin" />
+                      <span>
+                        Sending now to <strong>{progress.current.name || progress.current.phone}</strong>
+                        {progress.current.name && <span className="text-blast-phone"> · {progress.current.phone}</span>}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
               <div>
-                {progress.current
-                  ? <>Now: <strong>{progress.current.name || progress.current.phone}</strong></>
-                  : countdown !== null ? <>Next text in <strong>{countdown}s</strong></> : 'Working…'}
-                {' · '}{progress.sent} sent · {progress.failed} failed · {progress.total - progress.processed} to go
+                {progress.sent} sent · {progress.failed} failed · {progress.total - progress.processed} to go
               </div>
+              {estimate && estimate.coveredTexts > 0 && (
+                <div className="text-blast-eta">
+                  <Icon name="clock" />
+                  <span>
+                    About <strong className="text-blast-clock">{formatClock(estimate.secondsLeft)}</strong> left
+                    {' · '}done around {estimate.finishAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                    {estimate.limitedByCap && (
+                      <> · today's limit stops it after {estimate.coveredTexts} more; resume tomorrow for the rest</>
+                    )}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
@@ -117,8 +148,9 @@ export function BlastDetail({ blastId, desktop, progress }: BlastDetailProps) {
               <Button icon="paper-plane" disabled={!toSend || otherRunning} onClick={start}>
                 {blast.status === 'draft' ? `Send ${toSend}` : `Resume (${toSend} left)`}
               </Button>
-            ) : (
-              toSend > 0 && <span className="text-blast-muted">Open the Yello desktop app on your Mac to send this blast.</span>
+            ) : null}
+            {!thisRunning && !desktop && toSend > 0 && (
+              <span className="text-blast-muted">Open the Yello desktop app on your Mac to send this blast.</span>
             )}
             {!thisRunning && (
               <Button variant="secondary" icon="rotate-right" onClick={() => { setRerunText(blast.template); setRerunSimulate(blast.simulate); setRerunOpen(true); }}>
@@ -130,6 +162,11 @@ export function BlastDetail({ blastId, desktop, progress }: BlastDetailProps) {
             )}
             {otherRunning && <span className="text-blast-muted">Another blast is sending.</span>}
           </div>
+          {!thisRunning && desktop && toSend > 0 && (
+            <p className="text-blast-muted">
+              <Icon name="clock" /> {startEstimate(toSend, blast.simulate, limitLeft)}
+            </p>
+          )}
           {interrupted && desktop && (
             <p className="text-blast-warning">
               <Icon name="triangle-exclamation" /> This blast was interrupted. Resume to continue. Anyone marked "Sending" is
