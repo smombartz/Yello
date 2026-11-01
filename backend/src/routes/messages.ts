@@ -59,6 +59,8 @@ const HandlesQuerySchema = Type.Object({
   channel: Type.Optional(ChannelSchema),
   limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 200 })),
   offset: Type.Optional(Type.Integer({ minimum: 0 })),
+  /** messages: busiest first; suggestions: people with a name match first, then busiest */
+  sort: Type.Optional(Type.Union([Type.Literal('messages'), Type.Literal('suggestions')])),
 });
 type HandlesQuery = Static<typeof HandlesQuerySchema>;
 
@@ -149,8 +151,8 @@ export default async function messagesRoutes(fastify: FastifyInstance, _opts: Fa
   fastify.get<{ Querystring: HandlesQuery }>('/handles', {
     schema: { querystring: HandlesQuerySchema },
   }, async (request) => {
-    const { status = 'unmatched', channel, limit = 50, offset = 0 } = request.query;
-    return listHandles(getUserDatabase(request.user!.id), { status, channel, limit, offset });
+    const { status = 'unmatched', channel, limit = 50, offset = 0, sort = 'messages' } = request.query;
+    return listHandles(getUserDatabase(request.user!.id), { status, channel, limit, offset, sort });
   });
 
   // POST /api/messages/handles/link { handles, contactId, addToContact }

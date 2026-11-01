@@ -5,6 +5,7 @@
     "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
     "build:all": "cd frontend && npm run build && cd ../backend && npm run build",
     "electron:dev": "cd electron && npm run dev",
+    "electron:local": "bash scripts/desktop-local.sh",
     "electron:build": "cd electron && npm run dist"
   },
   "devDependencies": {

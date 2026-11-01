@@ -125,13 +125,19 @@ export function useTopContacts(mode: RankMode, window: RankWindow, channel: Mess
   });
 }
 
-export function useMessageHandles(status: HandleStatus, channel: MessageChannel | null, limit = 50, offset = 0) {
+/** messages: busiest first; suggestions: people with a name match first */
+export type HandleSort = 'messages' | 'suggestions';
+
+export function useMessageHandles(
+  status: HandleStatus, channel: MessageChannel | null, limit = 50, offset = 0, sort: HandleSort = 'messages',
+) {
   return useQuery({
-    queryKey: [...KEYS.handles, status, channel, limit, offset],
+    queryKey: [...KEYS.handles, status, channel, limit, offset, sort],
     queryFn: () => {
-      const params = new URLSearchParams({ status, limit: String(limit), offset: String(offset) });
+      const params = new URLSearchParams({ status, limit: String(limit), offset: String(offset), sort });
       if (channel) params.set('channel', channel);
-      return fetchApi<{ handles: HandleItem[]; total: number }>(`/api/messages/handles?${params}`);
+      // suggestions: how many in the whole list have a name match, not just this page
+      return fetchApi<{ handles: HandleItem[]; total: number; suggestions: number }>(`/api/messages/handles?${params}`);
     },
   });
 }

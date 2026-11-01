@@ -419,8 +419,8 @@ export function displayHandle(handle: string): string {
  */
 export function listHandles(
   db: DatabaseType,
-  options: { status: HandleListStatus; channel?: MessageChannel; limit: number; offset: number }
-): { handles: HandleListItem[]; total: number } {
+  options: { status: HandleListStatus; channel?: MessageChannel; limit: number; offset: number; sort?: 'messages' | 'suggestions' }
+): { handles: HandleListItem[]; total: number; suggestions: number } {
   const where: string[] = [];
   const params: unknown[] = [];
   if (options.status === 'unmatched') {
@@ -442,14 +442,21 @@ export function listHandles(
     LEFT JOIN contacts s ON s.id = h.suggested_contact_id AND s.archived_at IS NULL
     WHERE ${where.join(' AND ')}
   `;
-  const total = (db.prepare(`SELECT COUNT(*) AS n ${base}`).get(...params) as { n: number }).n;
+  // Name suggestions only show for people who aren't linked yet
+  const counts = db.prepare(`
+    SELECT COUNT(*) AS n, COUNT(CASE WHEN s.id IS NOT NULL AND h.contact_id IS NULL THEN 1 END) AS suggested ${base}
+  `).get(...params) as { n: number; suggested: number };
+  const busiest = '(stats.sent + stats.received + stats.grp) DESC, stats.last_day DESC';
+  const order = options.sort === 'suggestions'
+    ? `CASE WHEN s.id IS NOT NULL AND h.contact_id IS NULL THEN 0 ELSE 1 END, ${busiest}`
+    : busiest;
   const rows = db.prepare(`
     SELECT h.channel, h.handle, h.handle_kind, h.display_name, h.match_source,
       stats.sent, stats.received, stats.grp, stats.last_day,
       c.id AS contact_id, c.display_name AS contact_name, c.photo_hash AS contact_photo,
       s.id AS suggestion_id, s.display_name AS suggestion_name, s.photo_hash AS suggestion_photo
     ${base}
-    ORDER BY (stats.sent + stats.received + stats.grp) DESC, stats.last_day DESC
+    ORDER BY ${order}
     LIMIT ? OFFSET ?
   `).all(...params, options.limit, options.offset) as Array<{
     channel: MessageChannel; handle: string; handle_kind: HandleKind; display_name: string | null; match_source: string | null;
@@ -459,7 +466,8 @@ export function listHandles(
   }>;
 
   return {
-    total,
+    total: counts.n,
+    suggestions: counts.suggested,
     handles: rows.map(r => ({
       channel: r.channel,
       handle: r.handle,

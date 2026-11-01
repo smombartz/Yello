@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
 import type { OutletContext } from './Layout';
 import { Icon } from './Icon';
@@ -11,7 +11,7 @@ import { MessageMatchQueue } from './MessageMatchQueue';
 import { MessageSourcesPanel } from './MessageSourcesPanel';
 import { formatDayAgo } from '../utils/relativeTime';
 import {
-  CHANNEL_ICONS, CHANNEL_LABELS, MESSAGE_CHANNELS, useMessageHandles, useMessageSources, useTopContacts,
+  CHANNEL_ICONS, CHANNEL_LABELS, useMessageHandles, useMessageSources, useTopContacts,
   type MessageChannel, type RankMode, type RankWindow, type TopContact,
 } from '../api/messageHooks';
 
@@ -37,30 +37,20 @@ function Sparkline({ months }: { months: number[] }) {
   );
 }
 
-function ChannelCounts({ contact }: { contact: TopContact }) {
-  return (
-    <div className="top-contact-channels">
-      {MESSAGE_CHANNELS.filter(c => contact.channels[c]).map(c => {
-        const counts = contact.channels[c]!;
-        const total = counts.sent + counts.received + counts.group;
-        return (
-          <span
-            key={c}
-            className={`channel-count channel-${c}`}
-            title={`${CHANNEL_LABELS[c]}: ${counts.sent.toLocaleString()} sent, ${counts.received.toLocaleString()} received`
-              + (counts.group ? `, ${counts.group.toLocaleString()} in groups` : '')}
-          >
-            <Icon name={CHANNEL_ICONS[c].name} style={CHANNEL_ICONS[c].style} />
-            {total.toLocaleString()}
-          </span>
-        );
-      })}
-    </div>
-  );
+/** One cell per channel column: that channel's message count, or a dash */
+function ChannelCount({ contact, channel }: { contact: TopContact; channel: MessageChannel }) {
+  const counts = contact.channels[channel];
+  if (!counts) return <span className="top-contact-num muted" aria-label={`${CHANNEL_LABELS[channel]}: none`}>–</span>;
+  const total = counts.sent + counts.received + counts.group;
+  const detail = `${CHANNEL_LABELS[channel]}: ${counts.sent.toLocaleString()} sent, ${counts.received.toLocaleString()} received`
+    + (counts.group ? `, ${counts.group.toLocaleString()} in groups` : '');
+  return <span className="top-contact-num" title={detail} aria-label={detail}>{total.toLocaleString()}</span>;
 }
 
-function RankingList({ mode, period, channel, search }: {
+function RankingList({ mode, period, channel, search, channels }: {
   mode: RankMode; period: RankWindow; channel: MessageChannel | null; search: string;
+  /** Channels with data, one column each */
+  channels: MessageChannel[];
 }) {
   const { data, isLoading, error } = useTopContacts(mode, period, channel, 200);
   const contacts = useMemo(() => {
@@ -76,29 +66,49 @@ function RankingList({ mode, period, channel, search }: {
   }
   if (!contacts.length) return <EmptyState icon="magnifying-glass" title="No matches" description={`No top contacts match “${search.trim()}”.`} />;
 
+  const columns = channel ? [channel] : channels;
+  // Rank, avatar, name, one track per channel, sparkline, value (narrow screens override this in CSS)
+  const channelTracks = columns.map(() => '4rem').join(' ');
+  const gridStyle = { '--rank-columns': `2rem 36px minmax(0, 1fr) ${channelTracks} 48px 4.5rem` } as CSSProperties;
+
   return (
-    <ol className="top-contacts-list">
-      {contacts.map(c => (
-        <li key={c.contactId}>
-          <Link to={`/contacts/${c.contactId}`} className="top-contact-row">
-            <span className="top-contact-rank">{c.rank}</span>
-            <Avatar photoUrl={c.photoUrl} name={c.displayName} size={36} />
-            <span className="top-contact-main">
-              <span className="top-contact-name">{c.displayName}</span>
-              <span className="top-contact-detail">
-                {c.sent.toLocaleString()} sent · {c.received.toLocaleString()} received
-                {c.group ? ` · ${c.group.toLocaleString()} in groups` : ''} · last {formatDayAgo(c.lastDay)}
+    <div className="top-contacts-table" style={gridStyle}>
+      <div className="top-contact-row top-contacts-head" aria-hidden="true">
+        <span className="top-contact-rank">#</span>
+        <span className="top-contacts-head-name">Contact</span>
+        {columns.map(ch => (
+          <span key={ch} className={`top-contact-num channel-${ch}`} title={CHANNEL_LABELS[ch]}>
+            <Icon name={CHANNEL_ICONS[ch].name} style={CHANNEL_ICONS[ch].style} />
+          </span>
+        ))}
+        <span className="top-contact-spark-head" title="Messages per month, last 12 months">12 months</span>
+        <span className="top-contact-value" title={mode === 'score' ? 'Recent, two-way conversations count most' : 'Messages in this period'}>
+          {mode === 'score' ? 'Score' : 'Messages'}
+        </span>
+      </div>
+      <ol className="top-contacts-list">
+        {contacts.map(c => (
+          <li key={c.contactId}>
+            <Link to={`/contacts/${c.contactId}`} className="top-contact-row">
+              <span className="top-contact-rank">{c.rank}</span>
+              <Avatar photoUrl={c.photoUrl} name={c.displayName} size={36} />
+              <span className="top-contact-main">
+                <span className="top-contact-name">{c.displayName}</span>
+                <span className="top-contact-detail">
+                  {c.sent.toLocaleString()} sent · {c.received.toLocaleString()} received
+                  {c.group ? ` · ${c.group.toLocaleString()} in groups` : ''} · last {formatDayAgo(c.lastDay)}
+                </span>
               </span>
-            </span>
-            <ChannelCounts contact={c} />
-            <Sparkline months={c.months} />
-            <span className="top-contact-value" title={mode === 'score' ? 'Score: recent, two-way conversations count most' : 'Messages'}>
-              {mode === 'score' ? Math.round(c.score).toLocaleString() : c.total.toLocaleString()}
-            </span>
-          </Link>
-        </li>
-      ))}
-    </ol>
+              {columns.map(ch => <ChannelCount key={ch} contact={c} channel={ch} />)}
+              <Sparkline months={c.months} />
+              <span className="top-contact-value" title={mode === 'score' ? 'Score: recent, two-way conversations count most' : 'Messages'}>
+                {mode === 'score' ? Math.round(c.score).toLocaleString() : c.total.toLocaleString()}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -195,7 +205,7 @@ export function TopContactsView() {
                   </div>
                 )}
               </div>
-              <RankingList mode={mode} period={period} channel={channel} search={search} />
+              <RankingList mode={mode} period={period} channel={channel} search={search} channels={activeChannels} />
               {!!unmatched.data?.total && (
                 <button type="button" className="dashboard-card-footer" onClick={() => setView('match')}>
                   {unmatched.data.total.toLocaleString()} {unmatched.data.total === 1 ? 'person isn’t' : 'people aren’t'} matched to a contact yet

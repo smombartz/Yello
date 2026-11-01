@@ -1,5 +1,47 @@
 # Change Log
 
+## 2026-11-01 — Top contacts: ranking table with channel columns, name matches first
+
+**Session:** `99d5fac3-6203-4cfe-981a-cd9de1f9f5e8`
+
+**What Changed:**
+- Ranking is now a table with a heading row (#, Contact, one column per channel, 12 months, Score/Messages). Channel icons sit in the heading; rows show only the count per channel (a dash for none, sent/received in the tooltip)
+- "Needs a match" has a sort switch: *Most messages* (as before, busiest first) or *Name matches first*. The switch and the *Accept all* button show how many name matches the whole list has, not just the current page
+- `GET /api/messages/handles` takes `sort=messages|suggestions` and returns `suggestions`
+
+**Why:**
+- User request: column labels for the ranking, and a quick way to work through the people Yello already has a name match for
+
+**Files Modified:**
+- `backend/src/services/messageActivityService.ts` — `listHandles`: `sort` option, `suggestions` count
+- `backend/src/routes/messages.ts` — `sort` query parameter
+- `backend/src/services/__tests__/messageActivity.test.ts`, `backend/src/routes/__tests__/messages.test.ts`
+- `frontend/src/api/messageHooks.ts` — `useMessageHandles` sort, `HandleSort`
+- `frontend/src/components/MessageMatchQueue.tsx` — sort switch with count, Accept all count
+- `frontend/src/components/TopContactsView.tsx` — table heading row, `ChannelCount` columns
+- `frontend/src/styles/pages/top-contacts.css` — `--rank-columns` grid, heading row, `.segment-count`
+- `docs/reference.md`, `docs/plans/2026-10-31-top-contacts-messages.md`
+
+---
+
+## 2026-11-01 — One command to test the desktop app against a local server
+
+**Session:** `99d5fac3-6203-4cfe-981a-cd9de1f9f5e8`
+
+**What Changed:**
+- New `scripts/desktop-local.sh` (`npm run electron:local`): builds the frontend (skip with `--skip-build`), starts the backend on port 3456 or reuses one already running, waits for `/health`, then opens the desktop app with `YELLO_URL` pointed at it. Quitting the app stops the backend it started (own process group, so `tsx watch` stops too)
+- README: "Test Electron App Locally" under Testing, with the script and the same steps by hand
+
+**Why:**
+- The desktop app loads the hosted site, so new pages only appear there after a deploy; this is how to try them first
+
+**Files Modified:**
+- `scripts/desktop-local.sh` — new
+- `package.json` — `electron:local` script
+- `README.md` — Testing › Test Electron App Locally
+
+---
+
 ## 2026-11-01 — Top contacts: iMessage/WhatsApp auto-refresh is a switch, off by default
 
 **Session:** `99d5fac3-6203-4cfe-981a-cd9de1f9f5e8`

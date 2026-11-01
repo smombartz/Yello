@@ -51,6 +51,9 @@ describe('messages routes', () => {
 
     const queue = (await app.inject('/api/messages/handles')).json();
     expect(queue.handles.map((h: { handle: string }) => h.handle)).toEqual(['+4915112345678']);
+    expect(queue.suggestions).toBe(0);
+    expect((await app.inject('/api/messages/handles?sort=suggestions')).statusCode).toBe(200);
+    expect((await app.inject('/api/messages/handles?sort=name')).statusCode).toBe(400);
 
     const link = await app.inject({
       method: 'POST', url: '/api/messages/handles/link',

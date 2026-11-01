@@ -650,6 +650,33 @@ Create test files with:
 - Missing optional fields
 - Malformed entries (missing END:VCARD, etc.)
 
+### Test Electron App Locally
+
+The desktop app loads the hosted site, so new pages only show up there after a deploy. To try it before deploying, run the desktop app against a local server instead. One command does it all, from the repo root:
+
+```bash
+npm run electron:local                   # or: scripts/desktop-local.sh
+npm run electron:local -- --skip-build   # frontend unchanged since the last build
+```
+
+`scripts/desktop-local.sh`:
+
+1. builds the frontend (the local backend serves `frontend/dist`)
+2. starts the backend on port 3456, or reuses a server that's already running there (e.g. from `npm run dev`). If that server was started before `frontend/dist` existed, restart it so it serves the app.
+3. opens the desktop app with `YELLO_URL=http://localhost:3456`
+
+Quitting the desktop app (or Ctrl-C) stops the backend, but only if the script started it. Set `PORT=4000` to use another port.
+
+The same steps by hand, each in its own terminal:
+
+```bash
+cd frontend && npm run build
+cd backend && npm run dev
+cd electron && YELLO_URL=http://localhost:3456 npm run dev
+```
+
+More on the desktop app (permissions, building, signing) is in `electron/README.md`.
+
 ---
 
 ## Common Issues

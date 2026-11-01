@@ -176,6 +176,27 @@ describe('message activity', () => {
     expect(getContactMessageStats(db, ids.ada, '2026-10-31')).toMatchObject({ total: 11, last30Days: 11, lastDay: '2026-10-10' });
   });
 
+  it('can list name matches first and counts them', () => {
+    ingestActivity(db, {
+      channel: 'whatsapp', from: '2026-10-01', to: '2026-10-31', final: true,
+      handles: [
+        { handle: '111@lid', kind: 'opaque', displayName: 'Ada Lovelace' },
+        { handle: '222@lid', kind: 'opaque', displayName: 'Sam Smith' },
+      ],
+      activity: [
+        { handle: '111@lid', day: '2026-10-10', sent: 1, received: 1 },
+        { handle: '222@lid', day: '2026-10-10', sent: 5, received: 20 },
+      ],
+    });
+    const busiest = listHandles(db, { status: 'unmatched', limit: 10, offset: 0 });
+    expect(busiest.handles.map(h => h.label)).toEqual(['222@lid', '111@lid']);
+    expect(busiest.suggestions).toBe(1);
+
+    const matchesFirst = listHandles(db, { status: 'unmatched', limit: 10, offset: 0, sort: 'suggestions' });
+    expect(matchesFirst.handles.map(h => h.label)).toEqual(['111@lid', '222@lid']);
+    expect(matchesFirst.total).toBe(2);
+  });
+
   it('links by hand (adding the detail), ignores, and keeps undone auto links undone', () => {
     imessage('2026-10-01', '2026-10-31', [['+1 555 000 2222', '2026-10-10', 4, 4], ['(415) 555-2671', '2026-10-10', 1, 1]]);
     const ref = { channel: 'imessage' as const, handle: '+15550002222' };

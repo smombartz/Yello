@@ -12,7 +12,7 @@ import type { ContactSearchResult } from '../api/types';
 import { formatDayAgo } from '../utils/relativeTime';
 import {
   CHANNEL_ICONS, CHANNEL_LABELS, useAcceptAllSuggestions, useIgnoreHandles, useLinkHandles, useMessageHandles,
-  useUnlinkHandles, type HandleItem, type HandleStatus,
+  useUnlinkHandles, type HandleItem, type HandleSort, type HandleStatus,
 } from '../api/messageHooks';
 
 const PAGE_SIZE = 50;
@@ -161,11 +161,12 @@ function HandleRow({ item, status, addToContact }: { item: HandleItem; status: H
 export function MessageMatchQueue() {
   const [status, setStatus] = useState<HandleStatus>('unmatched');
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<HandleSort>('messages');
   const [addToContact, setAddToContact] = useState(true);
-  const { data, isLoading, error } = useMessageHandles(status, null, PAGE_SIZE, (page - 1) * PAGE_SIZE);
+  const { data, isLoading, error } = useMessageHandles(status, null, PAGE_SIZE, (page - 1) * PAGE_SIZE, status === 'unmatched' ? sort : 'messages');
   const acceptAll = useAcceptAllSuggestions();
   const { showToast } = useToast();
-  const suggestions = (data?.handles ?? []).filter(h => h.suggestion).length;
+  const suggestions = data?.suggestions ?? 0;
 
   return (
     <section className="card dashboard-card match-queue">
@@ -183,6 +184,19 @@ export function MessageMatchQueue() {
         </div>
         {status === 'unmatched' && (
           <>
+            <div className="segmented" role="radiogroup" aria-label="Sort">
+              {([['messages', 'Most messages'], ['suggestions', 'Name matches first']] as const).map(([id, label]) => (
+                <button
+                  key={id} type="button" role="radio" aria-checked={sort === id}
+                  className={`segment${sort === id ? ' selected' : ''}`}
+                  onClick={() => { setSort(id); setPage(1); }}
+                  title={id === 'messages' ? 'Busiest first' : 'People whose name matches one contact come first'}
+                >
+                  {label}
+                  {id === 'suggestions' && data && <span className="segment-count">{suggestions.toLocaleString()}</span>}
+                </button>
+              ))}
+            </div>
             <label className="match-add-toggle" title="Linking also saves the number, email or profile on the contact (and syncs it)">
               <input type="checkbox" checked={addToContact} onChange={(e) => setAddToContact(e.target.checked)} />
               Add the number or email to the contact
@@ -195,7 +209,7 @@ export function MessageMatchQueue() {
                 })}
                 title="Link everyone whose name matches exactly one contact"
               >
-                Accept all name matches
+                Accept all {suggestions.toLocaleString()} name {suggestions === 1 ? 'match' : 'matches'}
               </Button>
             )}
           </>
