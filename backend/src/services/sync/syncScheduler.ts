@@ -152,7 +152,7 @@ export function scheduleSyncAfterEdit(userId: number, log: SchedulerLog = consol
 }
 
 /** Routes whose successful writes change contacts. */
-const EDITING_PREFIXES = ['/api/contacts', '/api/archive', '/api/duplicates', '/api/cleanup', '/api/import', '/api/profile'];
+const EDITING_PREFIXES = ['/api/contacts', '/api/archive', '/api/duplicates', '/api/cleanup', '/api/import', '/api/profile', '/api/messages/handles'];
 
 /** POSTs under an editing prefix that only read (a POST because the body can be large). */
 const READ_ONLY_PATHS = new Set(['/api/contacts/export']);

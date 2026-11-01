@@ -713,6 +713,48 @@ export function getUserDatabase(userId: number): DatabaseType {
   // become archived details; idempotent, as converted rows lose the label.
   archiveObsoleteLabels(db);
 
+  // Message activity (Top contacts): per-person daily message counts from
+  // Gmail, iMessage, WhatsApp, Instagram and LinkedIn. Counts only, never
+  // message text. See services/messageActivityService.ts.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS message_activity (
+      channel TEXT NOT NULL CHECK (channel IN ('gmail', 'imessage', 'whatsapp', 'instagram', 'linkedin')),
+      handle TEXT NOT NULL,
+      day TEXT NOT NULL,
+      sent INTEGER NOT NULL DEFAULT 0,
+      received INTEGER NOT NULL DEFAULT 0,
+      group_messages INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (channel, handle, day)
+    ) WITHOUT ROWID;
+
+    CREATE INDEX IF NOT EXISTS idx_message_activity_day ON message_activity(day);
+
+    CREATE TABLE IF NOT EXISTS message_handles (
+      channel TEXT NOT NULL CHECK (channel IN ('gmail', 'imessage', 'whatsapp', 'instagram', 'linkedin')),
+      handle TEXT NOT NULL,
+      handle_kind TEXT NOT NULL CHECK (handle_kind IN ('phone', 'email', 'username', 'url', 'opaque')),
+      display_name TEXT,
+      contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
+      match_source TEXT CHECK (match_source IN ('auto_phone', 'auto_email', 'auto_profile', 'manual', 'ignored', 'unlinked')),
+      suggested_contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
+      updated_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (channel, handle)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_message_handles_contact ON message_handles(contact_id) WHERE contact_id IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS message_sources (
+      channel TEXT PRIMARY KEY CHECK (channel IN ('gmail', 'imessage', 'whatsapp', 'instagram', 'linkedin')),
+      status TEXT NOT NULL DEFAULT 'idle' CHECK (status IN ('idle', 'running', 'failed')),
+      covered_from TEXT,
+      covered_through TEXT,
+      last_imported_at TEXT,
+      progress_done INTEGER,
+      progress_total INTEGER,
+      error TEXT
+    );
+  `);
+
   cache.set(userId, db);
   return db;
 }
