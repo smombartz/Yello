@@ -160,8 +160,13 @@ export function readIMessage(dbPath: string, sinceDay: string | null): ScanResul
     const filters = [`m.date > 0`];
     if (messageCols.has('associated_message_type')) filters.push('COALESCE(m.associated_message_type, 0) = 0');
     if (messageCols.has('item_type')) filters.push('COALESCE(m.item_type, 0) = 0');
-    const since = sinceDay ? dayStartUnix(sinceDay) : null;
-    if (since !== null) filters.push(`${unixExpr} >= ${since}`);
+    if (sinceDay) {
+      // Compared on the raw column (no conversion) so SQLite can use its date
+      // index and a "scan new messages" doesn't read the whole history.
+      const sinceSeconds = dayStartUnix(sinceDay) - APPLE_EPOCH;
+      const sinceNanos = (BigInt(sinceSeconds) * 1_000_000_000n).toString();
+      filters[0] = `(m.date >= ${sinceNanos} OR (m.date <= 100000000000 AND m.date >= ${sinceSeconds}))`;
+    }
 
     const tally = new Tally();
     const statement = db.prepare(`

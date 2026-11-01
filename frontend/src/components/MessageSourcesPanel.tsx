@@ -9,7 +9,10 @@ import {
   CHANNEL_ICONS, CHANNEL_LABELS, MESSAGE_CHANNELS, uploadActivity, useClearChannel, useInvalidateMessageQueries,
   useMessageSources, useStartGmailScan, type MessageChannel, type MessageSource,
 } from '../api/messageHooks';
-import { getDesktopMessages, syncDesktopChannel, type DesktopChannel, type DesktopReaderStatus } from '../lib/desktopMessages';
+import {
+  getDesktopMessages, incrementalScanStart, syncDesktopChannel, type DesktopChannel, type DesktopReaderStatus,
+} from '../lib/desktopMessages';
+import { useDesktopAutoRefresh } from '../hooks/useDesktopMessageSync';
 
 function formatDay(day: string): string {
   const [y, m, d] = day.split('-').map(Number);
@@ -104,7 +107,9 @@ function DesktopSource({ source, status, onStatusChange }: {
   const { showToast } = useToast();
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [autoRefresh, setAutoRefresh] = useDesktopAutoRefresh(channel);
   const appName = channel === 'imessage' ? 'Messages' : 'WhatsApp';
+  const newSince = source.coveredThrough ? formatDay(incrementalScanStart(source.coveredThrough)) : null;
 
   if (!desktop) {
     return (
@@ -152,18 +157,37 @@ function DesktopSource({ source, status, onStatusChange }: {
     <>
       <p className="settings-description">
         Reads your {appName} history on this Mac and uploads how many messages you exchanged with each person per day.
-        Message text never leaves your Mac. After the first scan it refreshes on its own while Yello is open.
+        Message text never leaves your Mac.
+        {newSince && <> “Scan new messages” only reads what came in since {newSince}, so it’s quick; “Rescan everything” reads
+        the whole history again.</>}
       </p>
       {(error || (status?.state === 'error' && status.error)) && <p className="import-error-text">{error || status?.error}</p>}
       {progress ? (
         <p className="settings-description"><Icon name="arrows-rotate" className="spinning" /> {progress}</p>
       ) : (
         <div className="message-source-actions">
-          <Button icon="laptop" onClick={() => void scan(false)} disabled={!status}>
-            {source.messages ? 'Scan new messages' : 'Scan this Mac'}
+          <Button icon="laptop" onClick={() => void scan(false)} disabled={!status}
+            title={newSince ? `Reads only messages since ${newSince}` : undefined}>
+            {source.coveredThrough ? 'Scan new messages' : 'Scan this Mac'}
           </Button>
-          {source.messages > 0 && <Button variant="ghost" onClick={() => void scan(true)}>Rescan everything</Button>}
+          {source.coveredThrough && (
+            <Button variant="ghost" icon="rotate" onClick={() => void scan(true)} disabled={!status} title="Reads the whole history again">
+              Rescan everything
+            </Button>
+          )}
         </div>
+      )}
+      {source.coveredThrough && (
+        <label className="source-auto-refresh">
+          <span className="toggle-switch">
+            <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
+            <span className="toggle-slider" />
+          </span>
+          <span>
+            Refresh automatically
+            <span className="source-summary">Scans new messages every 6 hours while Yello is open on this Mac</span>
+          </span>
+        </label>
       )}
     </>
   );

@@ -392,3 +392,23 @@
 .message-activity-channel-counts {
   color: var(--ds-text-secondary);
 }
+
+/* Sources: per-Mac "Refresh automatically" switch */
+.source-auto-refresh {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  margin-top: var(--ds-space-4);
+  font-size: var(--ds-font-sm);
+  font-weight: var(--ds-weight-medium);
+  cursor: pointer;
+}
+
+.source-auto-refresh > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.source-auto-refresh .source-summary {
+  font-weight: var(--ds-weight-normal);
+}

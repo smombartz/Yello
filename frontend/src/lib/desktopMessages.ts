@@ -43,23 +43,78 @@ function shiftDay(day: string, days: number): string {
   return new Date(Date.parse(`${day}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 }
 
+/** First day a "scan new messages" re-reads, given the last day already imported */
+export function incrementalScanStart(coveredThrough: string): string {
+  return shiftDay(coveredThrough, -OVERLAP_DAYS);
+}
+
+/*
+ * Per-Mac settings, kept in localStorage because the reading happens on this
+ * Mac: whether to refresh each channel automatically (off until the user
+ * turns it on) and when it was last read here.
+ */
+const AUTO_REFRESH_KEY = 'yello.messages.autoRefresh';
+const LAST_SCAN_KEY = 'yello.messages.lastScan';
+export const AUTO_REFRESH_EVENT = 'yello:messages-auto-refresh';
+
+function readJson<T extends object>(key: string): Partial<T> {
+  try {
+    return JSON.parse(localStorage.getItem(key) ?? '{}') as Partial<T>;
+  } catch {
+    return {};
+  }
+}
+
+export function getAutoRefresh(channel: DesktopChannel): boolean {
+  return readJson<Record<DesktopChannel, boolean>>(AUTO_REFRESH_KEY)[channel] === true;
+}
+
+export function setAutoRefresh(channel: DesktopChannel, on: boolean): void {
+  localStorage.setItem(AUTO_REFRESH_KEY, JSON.stringify({ ...readJson(AUTO_REFRESH_KEY), [channel]: on }));
+  window.dispatchEvent(new Event(AUTO_REFRESH_EVENT));
+}
+
+/** When this Mac last read the channel (ms), or null */
+export function getLastScan(channel: DesktopChannel): number | null {
+  return readJson<Record<DesktopChannel, number>>(LAST_SCAN_KEY)[channel] ?? null;
+}
+
+function setLastScan(channel: DesktopChannel, at: number): void {
+  localStorage.setItem(LAST_SCAN_KEY, JSON.stringify({ ...readJson(LAST_SCAN_KEY), [channel]: at }));
+}
+
+/** One read per channel at a time: a click during an automatic refresh joins it */
+const inFlight = new Map<DesktopChannel, Promise<{ messages: number } | null>>();
+
 /**
  * Read one channel on this Mac and upload its counts. With coveredThrough
- * (from the server's sources), only re-reads from a little before it.
+ * (from the server's sources), only re-reads from a little before it, which
+ * replaces those days' counts; null reads the whole history.
  */
-export async function syncDesktopChannel(
+export function syncDesktopChannel(
   channel: DesktopChannel,
   coveredThrough: string | null,
   onProgress?: (label: string) => void,
 ): Promise<{ messages: number } | null> {
-  const desktop = getDesktopMessages();
-  if (!desktop) return null;
-  onProgress?.('Reading on this Mac…');
-  const since = coveredThrough ? shiftDay(coveredThrough, -OVERLAP_DAYS) : null;
-  const result = await desktop.scan(channel, since);
-  if (!result.activity.length) return { messages: 0 };
-  const from = since && since < result.from ? since : result.from;
-  await uploadActivity(channel, from, result.to, result.handles, result.activity,
-    (done, total) => onProgress?.(`Uploading ${done} of ${total}…`));
-  return { messages: result.messages };
+  const running = inFlight.get(channel);
+  if (running) {
+    onProgress?.('Already reading on this Mac…');
+    return running;
+  }
+  const job = (async () => {
+    const desktop = getDesktopMessages();
+    if (!desktop) return null;
+    onProgress?.('Reading on this Mac…');
+    const since = coveredThrough ? incrementalScanStart(coveredThrough) : null;
+    const result = await desktop.scan(channel, since);
+    if (result.activity.length) {
+      const from = since && since < result.from ? since : result.from;
+      await uploadActivity(channel, from, result.to, result.handles, result.activity,
+        (done, total) => onProgress?.(`Uploading ${done} of ${total}…`));
+    }
+    setLastScan(channel, Date.now());
+    return { messages: result.messages };
+  })();
+  inFlight.set(channel, job);
+  return job.finally(() => inFlight.delete(channel));
 }

@@ -76,6 +76,12 @@ describe('iMessage reader', () => {
     expect(result.from).toBe('2026-10-02');
     expect(byHandle(result)['+14155552671']).toEqual({ sent: 0, received: 1, group: 0 });
   });
+
+  it('still finds old seconds-based dates when reading from an early day', () => {
+    const result = readIMessage(dbPath, '2009-01-01');
+    expect(result.from).toBe('2009-05-01');
+    expect(result.messages).toBe(6);
+  });
 });
 
 describe('WhatsApp reader', () => {

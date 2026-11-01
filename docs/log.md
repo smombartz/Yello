@@ -1,5 +1,28 @@
 # Change Log
 
+## 2026-11-01 — Top contacts: iMessage/WhatsApp auto-refresh is a switch, off by default
+
+**Session:** `99d5fac3-6203-4cfe-981a-cd9de1f9f5e8`
+
+**What Changed:**
+- Each desktop card (iMessage, WhatsApp) on Top contacts › Sources has a *Refresh automatically* switch, off by default and stored per Mac. When on, the channel is re-read once its last read on this Mac is 6+ hours old (checked 20 s after launch, every 15 min and when the switch flips)
+- *Scan new messages* explains that it reads only since two days before the last imported day; *Rescan everything* re-reads the whole history
+- A click while an automatic read is running joins it instead of starting a second read
+- The iMessage reader's "since" filter compares the raw `message.date` column, so SQLite uses the date index and an incremental scan doesn't walk all of chat.db
+
+**Why:**
+- The user wants background reading of Messages and WhatsApp only when they turn it on, and a fast rescan of new messages
+
+**Files Modified:**
+- `frontend/src/lib/desktopMessages.ts` — `getAutoRefresh`, `setAutoRefresh`, `getLastScan`, `incrementalScanStart`, in-flight guard in `syncDesktopChannel`
+- `frontend/src/hooks/useDesktopMessageSync.ts` — opt-in, due-based refresh; `useDesktopAutoRefresh`
+- `frontend/src/components/MessageSourcesPanel.tsx` — switch, scan button labels and hint
+- `frontend/src/styles/pages/top-contacts.css` — `.source-auto-refresh`
+- `electron/src/messageActivity/readers.ts` — index-friendly iMessage date filter; `readers.test.ts` — old seconds-based dates
+- `docs/reference.md`, `electron/README.md`, `docs/plans/2026-10-31-top-contacts-messages.md`
+
+---
+
 ## 2026-11-01 — Top contacts: rank contacts by messages across Gmail, iMessage, WhatsApp, Instagram and LinkedIn
 
 **Session:** `99d5fac3-6203-4cfe-981a-cd9de1f9f5e8`
