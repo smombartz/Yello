@@ -675,6 +675,24 @@ cd backend && npm run dev
 cd electron && YELLO_URL=http://localhost:3456 npm run dev
 ```
 
+**Testing Mac features (Text Blast, Top contacts' iMessage/WhatsApp):** these need macOS permissions (Full Disk
+Access, Automation › Messages). An app started from a terminal (`npm run dev`) is checked against the terminal's
+permissions, not its own, so use a real Yello.app instead:
+
+```bash
+cd electron && npm run app   # ~5 s: only release/mac-arm64/Yello.app, no DMGs, no Intel build, no signing
+```
+
+1. Quit any running Yello or dev Electron.
+2. First time only: add `electron/release/mac-arm64/Yello.app` under System Settings › Privacy & Security ›
+   Full Disk Access, and allow "control Messages" when it asks on the first send.
+3. Open `release/mac-arm64/Yello.app` from Finder (not from a terminal).
+4. After a code change: quit Yello, run `npm run app` again, reopen it from Finder.
+
+The grants should survive rebuilds until Electron is upgraded, since the unsigned app's code hash is the Electron
+binary's. The app opens Railway; switch to your local server with the **Server** menu (admin), or start it with
+`open --env YELLO_URL=http://localhost:3456 electron/release/mac-arm64/Yello.app`.
+
 More on the desktop app (permissions, building, signing) is in `electron/README.md`.
 
 ---

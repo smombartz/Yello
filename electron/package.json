@@ -10,6 +10,7 @@
     "build": "tsc",
     "dev": "npm run build && electron .",
     "dist": "npm run build && electron-builder --config electron-builder.yml",
+    "app": "npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config electron-builder.yml --dir --arm64",
     "test": "vitest run"
   },
   "devDependencies": {

@@ -104,6 +104,12 @@ npm run electron:build      # from the repo root; same as: cd electron && npm ru
 
 This produces `electron/release/Yello-<version>-arm64.dmg` (Apple Silicon) and `Yello-<version>.dmg` (Intel).
 
+**Quick local build** (about 5 s): `cd electron && npm run app` builds only `release/mac-arm64/Yello.app`, with no
+DMGs, no Intel build and no signing. Open it from Finder. Unsigned, the app keeps the Electron binary's own ad-hoc
+signature, and its code hash doesn't change when the app code does (`app.asar` isn't sealed). So macOS should keep
+its Full Disk Access and Automation grants across rebuilds, until Electron is upgraded. Grants follow the app
+you open: one started from a terminal (`npm run dev`) is checked against the terminal app instead.
+
 - **Icon:** `build-resources/icon.icns`, generated from `icon.svg` (the favicon mark on the macOS icon grid) by `build-resources/make-icon.sh`. See `build-resources/ICON_README.md`.
 - **Signing:** electron-builder signs with the Developer ID certificate in the keychain, if there is one, with hardened runtime.
 - **Notarization:** not set up. A locally built app opens fine. A dmg downloaded on another Mac is blocked by Gatekeeper until it is notarized: add `notarize` to the `mac` config and set `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID`.

@@ -1,5 +1,66 @@
 # Change Log
 
+## 2026-11-01 — Fix: Cleanup page opened with its tab bar half hidden under the header
+
+**Session:** `76f43bef-beee-440d-9027-a26e89d08484`
+
+**What Changed:**
+- `Layout` resets the window scroll to the top on each new page (`useLayoutEffect` on `location.pathname`;
+  Back/Forward, i.e. `POP`, keeps the browser's behavior)
+- `.cleanup-view`, `.dedup-view` and `.archived-view` are `calc(100vh - var(--ds-header-height))` tall instead of
+  `100vh`, so the page itself can no longer scroll by the header's 64px
+- `.invalid-links-cleanup` and `.kind-cleanup` scroll inside the tab (`height: 100%; overflow-y: auto`); before,
+  `.cleanup-content` clipped their lists after the first screen
+
+**Why:**
+- In-app navigation kept the previous page's window scroll. Opening Cleanup from a scrolled Tools or Contacts page
+  started it scrolled down by up to 64px, which hid the top of the Cleanup tab bar under the fixed header. A reload
+  starts at the top, which is why it came back then
+
+**Files Modified:**
+- `frontend/src/components/Layout.tsx` — scroll reset on navigation
+- `frontend/src/index.css` — `.cleanup-view`, `.dedup-view`, `.archived-view` height; `.invalid-links-cleanup`,
+  `.kind-cleanup` scrolling
+
+---
+
+## 2026-11-01 — README: testing Mac features with `npm run app`
+
+**Session:** `18a2e642-baa3-46d4-87b7-6e6d15b27c0c`
+
+**What Changed:**
+- Root README › Testing › Test Electron App Locally: a "Testing Mac features" part. Why `npm run dev` doesn't get
+  Full Disk Access, the `npm run app` quick build, the one-time permission steps, the rebuild loop, and how to
+  point the built app at the local server
+
+**Why:**
+- User request, for future reference
+
+**Files Modified:**
+- `README.md` — Testing › Test Electron App Locally
+
+---
+
+## 2026-11-01 — Desktop app: `npm run app` for a 5-second local build
+
+**Session:** `18a2e642-baa3-46d4-87b7-6e6d15b27c0c`
+
+**What Changed:**
+- New `electron` script `app`: compiles, then `electron-builder --dir --arm64` with signing skipped
+  (`CSC_IDENTITY_AUTO_DISCOVERY=false`). It builds only `release/mac-arm64/Yello.app`, in about 5 s
+- README: the quick build, and why its macOS permissions should survive rebuilds (the code hash is the Electron
+  binary's, the same every build)
+
+**Why:**
+- User request: faster turnaround when testing the desktop app. Full Disk Access didn't take with `npm run dev`
+  because macOS checks the terminal app that launched it
+
+**Files Modified:**
+- `electron/package.json` — `app` script
+- `electron/README.md` — Building › Quick local build
+
+---
+
 ## 2026-11-01 — Text Blast: daily limit is a setting again, plus an hourly limit
 
 **Session:** `18a2e642-baa3-46d4-87b7-6e6d15b27c0c`

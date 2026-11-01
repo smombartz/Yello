@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react';
+import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { NavRail } from './NavRail';
 import { PageHeader, type Breadcrumb } from './PageHeader';
 import { BottomTabBar } from './BottomTabBar';
@@ -36,6 +36,7 @@ const DESKTOP_ONLY_ROUTES = ['/merge', '/cleanup', '/archived'];
 export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const navigationType = useNavigationType();
   const isMobile = useIsMobile();
   const [modalOpen, setModalOpen] = useState(false);
   const [headerConfig, setHeaderConfig] = useState<PageHeaderConfig>({ title: '' });
@@ -51,6 +52,14 @@ export function Layout() {
   useEffect(() => {
     if (userIsAdmin) void getDesktopServer()?.markAdmin().catch(() => {});
   }, [userIsAdmin]);
+
+  // A new page starts at the top. The browser keeps the window's scroll
+  // position across in-app navigation, so without this a page opened from a
+  // scrolled list (Contacts, Tools) starts scrolled down, its top hidden under
+  // the fixed header. Back/Forward (POP) keeps the browser's own behavior.
+  useLayoutEffect(() => {
+    if (navigationType !== 'POP') window.scrollTo(0, 0);
+  }, [location.pathname, navigationType]);
 
   // Redirect mobile users away from desktop-only routes
   useEffect(() => {
