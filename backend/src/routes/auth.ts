@@ -172,7 +172,7 @@ function cleanupExpiredSessions(): void {
   db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')").run();
 }
 
-function setSessionCookie(reply: FastifyReply, sessionId: string, maxAgeMs = SESSION_DURATION_MS): void {
+export function setSessionCookie(reply: FastifyReply, sessionId: string, maxAgeMs = SESSION_DURATION_MS): void {
   reply.setCookie('session_id', sessionId, {
     path: '/',
     httpOnly: true,

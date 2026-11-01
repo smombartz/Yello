@@ -49,6 +49,13 @@ Codes are deleted on first use, even when the verifier is wrong. A server restar
 
 **Local features (`window.yelloDesktop`).** `electron/src/preload.ts` exposes one object per feature to pages on the app origin (`textBlast`, and `messageActivity` from the Top contacts work). Every IPC handler in the main process also checks `isAppUrl(event.senderFrame.url)`. Features that need the Mac (Messages, `chat.db`) run in the main process and call the backend through `session.defaultSession.fetch`, which sends the app's session cookie. See Text Blast below.
 
+**Server switcher and local data sets (admin, for testing).** The app can open Railway or a local backend (`http://localhost:3456`). The choice is saved in `server.json` in the app's data folder (`electron/src/serverChoice.ts`), and `YELLO_URL` still forces a server for one run and disables the switch. Ways to switch:
+- the **Server** menu in the menu bar, shown once the admin has signed in (the page calls `yelloDesktop.server.markAdmin()` from `Layout.tsx`), whenever the app is on Local, or when `YELLO_URL` is set
+- the **Server & data** card at the top of `/admin` (`components/admin/ServerDataCard.tsx`)
+- **Back to Railway** on the offline page when the local server isn't running (`yello://server/railway`, intercepted in `will-navigate` and in deep links)
+
+`electron/src/serverSwitch.ts` refuses to switch while a text blast is sending (the runner writes statuses to the current server), drops any pending desktop sign-in, and adds " — Local" to the window title. On a local server the card also lists **data sets** (`backend/src/services/datasets.ts`, routes under `/api/admin/datasets`): the built-in `dev` set, empty sets, and production copies. **Pull production copy** has the main process download `GET /api/admin/backup` from Railway with the app's Railway cookie, then POST it to the local `/api/admin/datasets/import?name=…`. The card's *Import backup file…* does the same from a downloaded file (*Download backup* on Railway's Admin page). Imports wipe every stored credential, so a copy can't reach the real Gmail, Google, iCloud or Apify accounts. The data-set routes are off on Railway (`datasetsEnabled()`), and `GET` answers `enabled: false` there. `npm run local` at the repo root builds the frontend and starts the backend the Local target needs. On-disk layout: `docs/database.md` › Local data sets.
+
 Up to 1.x the app spawned its own backend with local SQLite in `~/Library/Application Support/Yello/`. That mode is gone, and its files are left in place. See the migration note in `electron/README.md`.
 
 ## Design system

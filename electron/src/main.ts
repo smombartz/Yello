@@ -1,14 +1,17 @@
 import { app, BrowserWindow, dialog, session, shell } from 'electron';
 import { execFile } from 'child_process';
 import * as path from 'path';
-import { APP_URL, PROTOCOL, isAppUrl } from './config';
+import { PROTOCOL, appUrl, isAppUrl, serverTarget, urlOverride } from './config';
 import { exchangeUrlFor, flowForUrl, startSystemSignIn } from './desktopAuth';
 import { registerTextBlastIpc, textBlastRunning } from './textBlast/ipc';
 import { registerMessageActivityIpc } from './messageActivity/ipc';
+import { loadServerChoice } from './serverChoice';
+import { decorateTitle, handleServerLink, registerServerSwitch } from './serverSwitch';
 
 // A window onto the hosted Yello deployment. There is no local backend: all
 // data lives on the server, and the session cookie lives in this app's
-// cookie jar (~/Library/Application Support/Yello).
+// cookie jar (~/Library/Application Support/Yello). The admin can point the
+// app at a local backend instead (serverSwitch.ts).
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -62,10 +65,11 @@ function createMainWindow(): BrowserWindow {
   // instead of a blank window. -3 is ERR_ABORTED, i.e. a cancelled navigation.
   win.webContents.on('did-fail-load', (_event, errorCode, _description, url, isMainFrame) => {
     if (!isMainFrame || errorCode === -3 || !isAppUrl(url)) return;
-    void win.loadFile(offlinePage, { query: { url: APP_URL } });
+    const local = serverTarget() === 'local' && !urlOverride();
+    void win.loadFile(offlinePage, { query: { url: appUrl(), local: local ? '1' : '0' } });
   });
 
-  void win.loadURL(APP_URL);
+  void win.loadURL(appUrl());
   return win;
 }
 
@@ -80,17 +84,30 @@ function showMainWindow(): BrowserWindow {
 }
 
 function handleDeepLink(url: string): void {
+  if (handleServerLink(url)) return;
   const win = showMainWindow();
   const exchange = exchangeUrlFor(url);
   if (exchange) void win.loadURL(exchange);
 }
+
+// Mark windows on the local server in the title bar
+app.on('browser-window-created', (_event, win) => {
+  win.on('page-title-updated', (event, title) => {
+    event.preventDefault();
+    win.setTitle(decorateTitle(title));
+  });
+});
 
 // Every window, including same-origin popups: keep the app origin in-app,
 // send Google sign-in to the system browser, and everything else outside.
 app.on('web-contents-created', (_event, contents) => {
   contents.on('will-navigate', (event) => {
     const flow = flowForUrl(event.url);
-    if (flow) {
+    if (event.url.startsWith(`${PROTOCOL}://server/`)) {
+      // "Back to Railway" on the offline page
+      event.preventDefault();
+      handleServerLink(event.url);
+    } else if (flow) {
       event.preventDefault();
       void startSystemSignIn(flow);
     } else if (!isAppUrl(event.url)) {
@@ -137,6 +154,8 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   void app.whenReady().then(() => {
+    loadServerChoice(app.getPath('userData'));
+
     session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback, details) => {
       callback(isAppUrl(details.requestingUrl));
     });
@@ -151,6 +170,7 @@ if (!app.requestSingleInstanceLock()) {
 
     registerTextBlastIpc();
     registerMessageActivityIpc();
+    registerServerSwitch({ getMainWindow: () => mainWindow, openMainWindow: showMainWindow });
     showMainWindow();
   });
 

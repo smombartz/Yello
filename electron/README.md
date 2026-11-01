@@ -76,6 +76,16 @@ Top contacts (`/dashboard/top` › Sources) counts how much the user messages ea
 - **IPC:** `messages:status`, `messages:scan` (channel, sinceDay), `messages:backups`, `messages:scan-backup` (backupId, password), `messages:open-settings`, `messages:relaunch`, exposed as `window.yelloDesktop.messageActivity`. All of them check that the caller is on the app origin.
 - **Schema drift:** the readers check the tables and columns they use and fail with a clear message if Messages or WhatsApp change their layout. Tests (`readers.test.ts`) build small fake databases in both layouts.
 
+## Server switcher (admin, for testing)
+
+The app normally opens Railway. The admin can point it at a local backend instead (`http://localhost:3456`), and the choice is remembered in `server.json` in `~/Library/Application Support/Yello/`:
+
+- **Server menu** in the menu bar: *Railway* / *Local*. It appears once the admin has signed in (the page calls `yelloDesktop.server.markAdmin()`), and always while the app is on Local.
+- **Admin page › Server & data:** the same switch, plus the local server's **data sets**: the normal dev data, empty sets, and copies of production. *Pull production copy* downloads `/api/admin/backup` from Railway with this app's Railway session and imports it into the local server; stored passwords and tokens are removed on import.
+- **Offline page:** when Local isn't answering, *Back to Railway* (`yello://server/railway`) switches back.
+
+Start the local server with `npm run local` from the repo root (builds the frontend, then runs the backend). Cookies are per server, so you stay signed in to both. Switching is refused while a text blast is sending, and the window title says "— Local" while you're on the local server. `YELLO_URL` overrides the saved choice for one run and greys out the switch. Code: `src/config.ts` (current server), `src/serverChoice.ts` (saved choice), `src/serverSwitch.ts` (menu, IPC `server:*`, pull).
+
 ## Development
 
 ```bash

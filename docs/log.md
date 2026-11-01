@@ -1,5 +1,58 @@
 # Change Log
 
+## 2026-11-01 — Text Blast: filter the preview to held-back numbers
+
+**Session:** `18a2e642-baa3-46d4-87b7-6e6d15b27c0c`
+
+**What Changed:**
+- The counts above the preview table ("N will get a text", "N held back", "N unticked") are now chips that filter
+  the table. Clicking one shows only those rows; clicking it again, or "Show all", shows everyone
+- With "held back" picked, a line counts the reasons (e.g. "2 × no phone number · 1 × {first_name} is empty")
+- A filter whose rows are gone (e.g. after fixing the template) falls back to everyone
+
+**Why:**
+- Held-back people were mixed into the full list, so they were hard to find. Requested by the user
+
+**Files Modified:**
+- `frontend/src/components/textBlast/Composer.tsx` — `RowFilter`, `FilterChip`, `summarizeReasons`, filtered `PreviewTable` rows
+- `frontend/src/styles/pages/text-blast.css` — `.text-blast-filters`, `.is-filter`, `.is-warning`, `.text-blast-filter-clear`; removed `.text-blast-summary`
+- `docs/plans/2026-10-31-text-blast.md` — Changes
+
+---
+
+## 2026-11-01 — Desktop app: switch between Railway and Local, and between local data sets
+
+**Session:** `f6bc3b55-7848-4c67-95a4-bfdfbdd782be`
+
+**What Changed:**
+- The desktop app can open Railway or a local backend (`localhost:3456`) and remembers the choice. Switch from the new **Server** menu (shown once the admin has signed in), the Admin page's **Server & data** card, or **Back to Railway** on the offline page. The title bar says "— Local" on the local server; switching is refused while a text blast is sending
+- A local server can swap between **data sets**: the normal dev data, empty sets, and copies of production. Switching keeps the admin signed in by copying their user row into the set and creating a session there
+- **Pull production copy** (desktop app): downloads a full backup from Railway with the app's Railway session and imports it locally. Imports wipe every stored Google token, iCloud app password, Apify token and session
+- New admin route `GET /api/admin/backup` (works on Railway: `.tar.gz` of `db.backup()` snapshots plus photos), with a Download backup link on Railway's Admin page
+- `npm run local` at the repo root builds the frontend and starts the backend the Local target needs
+
+**Why:**
+- Testing against a local server meant launching the app from a terminal, and the local server only had one fixed database. The admin wanted to switch servers from the app and test against empty data or a copy of production without touching the live data
+
+**Files Modified:**
+- `backend/src/services/datasets.ts` (new) — `applyActiveDataset`, `switchDataset`, `createEmptyDataset`, `deleteDataset`, `importDataset`, `listDatasets`, `datasetsEnabled`, `isSafeArchivePath`
+- `backend/src/services/backupService.ts` (new) — `createBackupSnapshot`, `tarSnapshot`
+- `backend/src/bootDataset.ts` (new), `backend/src/server.ts` — apply the remembered set before any database opens
+- `backend/src/routes/admin.ts` — `GET /backup`, `/datasets` routes (list, create, switch, import, delete)
+- `backend/src/routes/auth.ts` — export `setSessionCookie`
+- `backend/src/routes/__tests__/adminDatasets.test.ts` (new)
+- `electron/src/config.ts` — `appUrl()`, `serverTarget()`, `urlOverride()` replace the `APP_URL` constant
+- `electron/src/serverChoice.ts` (new), `serverChoice.test.ts` (new) — saved choice in `server.json`
+- `electron/src/serverSwitch.ts` (new) — `switchServer`, `buildAppMenu`, `server:*` IPC, `pullProductionCopy`, `decorateTitle`
+- `electron/src/main.ts`, `preload.ts` (`yelloDesktop.server`), `desktopAuth.ts` (`clearPendingSignIn`), `textBlast/api.ts`, `pages/offline.html`
+- `frontend/src/components/admin/ServerDataCard.tsx` (new), `AdminView.tsx`, `Layout.tsx` (`markAdmin`)
+- `frontend/src/api/adminHooks.ts` — `useDatasets`, `useCreateDataset`, `useDeleteDataset`, `switchDataset`, `importDatasetFile`
+- `frontend/src/lib/desktopServer.ts` (new), `frontend/src/styles/pages/admin.css`
+- `package.json` — `local` script
+- `docs/database.md`, `docs/reference.md`, `electron/README.md`, `docs/plans/2026-11-01-desktop-server-and-dataset-switcher.md`
+
+---
+
 ## 2026-11-01 — WhatsApp iPhone backup: show which backup is read
 
 **Session:** `99d5fac3-6203-4cfe-981a-cd9de1f9f5e8`

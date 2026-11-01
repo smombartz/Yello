@@ -59,6 +59,25 @@ Consequences worth internalising:
 
 In production (`Dockerfile`) these are `/data/auth.db` and `/data/users`, on a Railway volume mounted at `/data`.
 
+### Local data sets (local server only)
+
+The admin can swap a **local** server between named data folders (`services/datasets.ts`, Admin page › Server & data). It's off on Railway: any `RAILWAY_ENVIRONMENT`, `RAILWAY_ENVIRONMENT_ID` or `RAILWAY_PROJECT_ID` variable disables it.
+
+```
+./data                              ← the folder holding AUTH_DATABASE_PATH
+├── auth.db, users/, photos/        ← the built-in "dev" set: whatever the server booted with
+├── active-dataset.json             ← { "name": "<set>" }, read at boot by src/bootDataset.ts
+└── datasets/<name>/
+    ├── meta.json                   ← { kind: "empty" | "production-copy", createdAt }
+    ├── auth.db
+    ├── users/<id>/contacts.db, users/<id>/photos/
+    └── photos/                     ← profile images
+```
+
+Switching closes every cached connection and points `AUTH_DATABASE_PATH`, `USER_DATA_PATH` and `PHOTOS_PATH` at the set's folder. All three are read at call time, so nothing else changes. The admin's user row (`google_id`, `email`, `name`, `avatar_url`) is copied into a set that lacks it, with `has_onboarded = 1`, and a fresh session is created there.
+
+A **production copy** comes from `GET /api/admin/backup`: a `.tar.gz` of `db.backup()` snapshots (`auth.db`, every `users/<id>/contacts.db`) plus `users/<id>/photos/` and `photos/`, in the layout above (`imports/`, `archive/` and `backups/` are left out). On import every stored credential is cleared: `users.access_token`, `refresh_token` and `token_expires_at`, all `sessions`, and `user_settings.apify_api_token` and `icloud_app_password` in each tenant. No schema changes.
+
 ---
 
 ## Migration model

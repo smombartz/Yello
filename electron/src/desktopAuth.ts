@@ -1,6 +1,6 @@
 import { shell } from 'electron';
 import { createHash, randomBytes } from 'crypto';
-import { APP_URL, PROTOCOL, isAppUrl } from './config';
+import { PROTOCOL, appUrl, isAppUrl } from './config';
 
 /**
  * Google sign-in for the desktop app. Google blocks embedded browsers, so the
@@ -21,6 +21,11 @@ const VERIFIER_TTL_MS = 10 * 60 * 1000;
 // Only the most recent attempt can complete; starting over replaces it.
 let pending: { verifier: string; expiresAt: number } | null = null;
 
+/** Forget a sign-in in progress: its verifier belongs to the server it started on. */
+export function clearPendingSignIn(): void {
+  pending = null;
+}
+
 /** The sign-in flow a navigation starts, or null if it isn't one. */
 export function flowForUrl(url: string): string | null {
   if (!isAppUrl(url)) return null;
@@ -32,7 +37,7 @@ export async function startSystemSignIn(flow: string): Promise<void> {
   const challenge = createHash('sha256').update(verifier).digest('base64url');
   pending = { verifier, expiresAt: Date.now() + VERIFIER_TTL_MS };
 
-  const start = new URL('/api/auth/desktop/start', APP_URL);
+  const start = new URL('/api/auth/desktop/start', appUrl());
   start.searchParams.set('flow', flow);
   start.searchParams.set('challenge', challenge);
   await shell.openExternal(start.toString());
@@ -57,7 +62,7 @@ export function exchangeUrlFor(deepLink: string): string | null {
   pending = null;
   if (!attempt || attempt.expiresAt < Date.now()) return null;
 
-  const exchange = new URL('/api/auth/desktop/exchange', APP_URL);
+  const exchange = new URL('/api/auth/desktop/exchange', appUrl());
   exchange.searchParams.set('code', code);
   exchange.searchParams.set('verifier', attempt.verifier);
   return exchange.toString();

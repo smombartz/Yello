@@ -1,5 +1,5 @@
 import { session } from 'electron';
-import { APP_URL } from '../config';
+import { appUrl } from '../config';
 import type { RunnerApi } from './runner';
 import type { Blast } from './types';
 
@@ -7,7 +7,7 @@ import type { Blast } from './types';
 // the app's session cookie, the same one the window uses.
 
 async function call<T>(path: string, init?: { method?: string; body?: unknown }): Promise<T> {
-  const res = await session.defaultSession.fetch(`${APP_URL}/api/text-blasts${path}`, {
+  const res = await session.defaultSession.fetch(`${appUrl()}/api/text-blasts${path}`, {
     method: init?.method ?? 'GET',
     credentials: 'include',
     headers: init?.body !== undefined ? { 'Content-Type': 'application/json' } : undefined,

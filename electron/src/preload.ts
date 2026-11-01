@@ -27,4 +27,16 @@ contextBridge.exposeInMainWorld('yelloDesktop', {
     backups: () => ipcRenderer.invoke('messages:backups'),
     scanBackup: (backupId: string, password: string | null) => ipcRenderer.invoke('messages:scan-backup', backupId, password),
   },
+  // Admin: switch between Railway and a local backend, pull production into it (src/serverSwitch.ts)
+  server: {
+    get: () => ipcRenderer.invoke('server:get'),
+    switch: (target: 'railway' | 'local', landing?: '/' | '/admin') => ipcRenderer.invoke('server:switch', target, landing),
+    markAdmin: () => ipcRenderer.invoke('server:mark-admin'),
+    pullProduction: (name: string) => ipcRenderer.invoke('server:pull-production', name),
+    onPullProgress: (callback: (progress: unknown) => void) => {
+      const listener = (_event: IpcRendererEvent, progress: unknown) => callback(progress);
+      ipcRenderer.on('server:pull-progress', listener);
+      return () => { ipcRenderer.removeListener('server:pull-progress', listener); };
+    },
+  },
 });

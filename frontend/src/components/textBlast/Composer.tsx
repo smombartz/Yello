@@ -71,6 +71,21 @@ export function Composer({ desktop, busy }: ComposerProps) {
   const sendable = recipients.filter((r) => !r.problems.length && r.phone);
   const selected = sendable.filter((r) => !excluded.has(r.key));
   const heldBack = recipients.length - sendable.length;
+  const unticked = sendable.length - selected.length;
+
+  // Preview filter, set by clicking a count above the table. Falls back to everyone when its rows are gone.
+  const [filter, setFilter] = useState<RowFilter>('all');
+  const counts: Record<RowFilter, number> = { all: recipients.length, sending: selected.length, held: heldBack, unticked };
+  const activeFilter = counts[filter] > 0 ? filter : 'all';
+  const shownRecipients = useMemo(() => recipients.filter((r) => {
+    const blocked = r.problems.length > 0 || !r.phone;
+    if (activeFilter === 'held') return blocked;
+    if (activeFilter === 'unticked') return !blocked && excluded.has(r.key);
+    if (activeFilter === 'sending') return !blocked && !excluded.has(r.key);
+    return true;
+  }), [recipients, excluded, activeFilter]);
+  const heldReasons = useMemo(() => (activeFilter === 'held' ? summarizeReasons(recipients) : []), [recipients, activeFilter]);
+  const pickFilter = (f: RowFilter) => setFilter((cur) => (cur === f ? 'all' : f));
   const firstText = selected[0]?.text ?? '';
 
   // Why "Send test" is disabled, shown next to it (null = ready).
@@ -247,13 +262,27 @@ export function Composer({ desktop, busy }: ComposerProps) {
             <p className="text-blast-warning"><Icon name="triangle-exclamation" /> {(preview.error as Error).message}</p>
           ) : (
             <>
-              <div className="text-blast-summary">
-                <strong>{selected.length}</strong> will get a text
-                {heldBack > 0 && <> · <span className="text-blast-warning-text">{heldBack} held back</span></>}
-                {excluded.size > 0 && <> · {sendable.length - selected.length} unticked</>}
+              <div className="text-blast-chips text-blast-filters" role="group" aria-label="Show">
+                <FilterChip active={activeFilter === 'sending'} count={selected.length} label="will get a text" onClick={() => pickFilter('sending')} />
+                {heldBack > 0 && (
+                  <FilterChip active={activeFilter === 'held'} count={heldBack} label="held back" warning onClick={() => pickFilter('held')} />
+                )}
+                {unticked > 0 && (
+                  <FilterChip active={activeFilter === 'unticked'} count={unticked} label="unticked" onClick={() => pickFilter('unticked')} />
+                )}
+                {activeFilter !== 'all' && (
+                  <button type="button" className="text-blast-filter-clear" onClick={() => setFilter('all')}>
+                    Show all {recipients.length}
+                  </button>
+                )}
               </div>
+              {heldReasons.length > 0 && (
+                <p className="text-blast-muted">
+                  Held back because: {heldReasons.map(([reason, n]) => `${n} × ${reason}`).join(' · ')}
+                </p>
+              )}
               <PreviewTable
-                recipients={recipients}
+                recipients={shownRecipients}
                 excluded={excluded}
                 onToggle={toggleRow}
                 onToggleAll={toggleAll}
@@ -328,6 +357,40 @@ export function Composer({ desktop, busy }: ComposerProps) {
       </section>
     </>
   );
+}
+
+type RowFilter = 'all' | 'sending' | 'held' | 'unticked';
+
+function FilterChip({ active, count, label, warning, onClick }: {
+  active: boolean;
+  count: number;
+  label: string;
+  warning?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`text-blast-chip is-filter${active ? ' is-selected' : ''}${warning ? ' is-warning' : ''}`}
+      aria-pressed={active}
+      title={active ? 'Show everyone' : `Show only these`}
+      onClick={onClick}
+    >
+      <strong>{count}</strong> {label}
+    </button>
+  );
+}
+
+/** Held-back reasons with counts, most common first. Row-specific details are folded together. */
+function summarizeReasons(recipients: PreviewRecipient[]): [string, number][] {
+  const tally = new Map<string, number>();
+  for (const r of recipients) {
+    const reasons = r.problems.length ? r.problems : r.phone ? [] : ['no phone number'];
+    for (const p of new Set(reasons.map((x) => x.replace(/^same number as .*/, 'same number as someone above')))) {
+      tally.set(p, (tally.get(p) ?? 0) + 1);
+    }
+  }
+  return [...tally].sort((a, b) => b[1] - a[1]);
 }
 
 function PreviewTable({ recipients, excluded, onToggle, onToggleAll, allChecked, onPickNumber }: {

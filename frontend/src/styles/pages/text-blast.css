@@ -237,8 +237,37 @@
 }
 
 /* Preview and people tables */
-.text-blast-summary {
-  font-size: var(--ds-font-md);
+
+/* Counts above the preview table double as filters */
+.text-blast-filters {
+  align-items: center;
+}
+
+.text-blast-chip.is-filter strong {
+  font-weight: var(--ds-weight-semibold);
+}
+
+.text-blast-chip.is-warning {
+  color: var(--ds-color-warning-dark);
+}
+
+.text-blast-chip.is-warning.is-selected {
+  border-color: var(--ds-color-warning);
+  background: var(--ds-color-warning-light);
+}
+
+.text-blast-filter-clear {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ds-text-link);
+  font: inherit;
+  font-size: var(--ds-font-sm);
+  cursor: pointer;
+}
+
+.text-blast-filter-clear:hover {
+  color: var(--ds-text-link-hover);
 }
 
 .text-blast-table-wrap {

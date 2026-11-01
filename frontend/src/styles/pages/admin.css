@@ -101,3 +101,104 @@
     color: var(--ds-text-secondary);
     font-size: var(--ds-font-xs);
   }
+
+/* Server & data card (components/admin/ServerDataCard.tsx) */
+
+  .admin-server-card {
+    margin-bottom: var(--ds-space-6);
+    padding: var(--ds-space-5);
+    background-color: var(--ds-bg-primary);
+    border: 1px solid var(--ds-border-color);
+    border-radius: var(--ds-radius-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-4);
+  }
+  .admin-server-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--ds-space-4);
+    flex-wrap: wrap;
+  }
+  .admin-server-title {
+    margin: 0 0 var(--ds-space-1);
+    font-size: var(--ds-font-md);
+    font-weight: var(--ds-weight-semibold);
+    color: var(--ds-text-primary);
+  }
+  .admin-server-subtitle,
+  .admin-server-note {
+    margin: 0;
+    font-size: var(--ds-font-sm);
+    color: var(--ds-text-secondary);
+    line-height: 1.5;
+  }
+  .admin-server-switch {
+    display: inline-flex;
+    padding: 2px;
+    border-radius: var(--ds-radius-md);
+    background: var(--ds-bg-secondary);
+    border: 1px solid var(--ds-border-color);
+  }
+  .admin-server-option {
+    min-width: 88px;
+    padding: 6px 14px;
+    border: 0;
+    border-radius: var(--ds-radius-sm);
+    background: transparent;
+    color: var(--ds-text-secondary);
+    font: inherit;
+    font-size: var(--ds-font-sm);
+    font-weight: var(--ds-weight-semibold);
+    cursor: pointer;
+  }
+  .admin-server-option.is-active {
+    background: var(--ds-bg-primary);
+    color: var(--ds-text-primary);
+    box-shadow: var(--ds-shadow-xs);
+  }
+  .admin-server-option:disabled {
+    cursor: default;
+  }
+  .admin-server-option:not(.is-active):not(:disabled):hover {
+    color: var(--ds-text-primary);
+  }
+  .admin-server-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--ds-space-2);
+  }
+  .admin-dataset-table tr.is-active td {
+    background: var(--ds-bg-secondary);
+  }
+  .admin-dataset-name {
+    font-weight: var(--ds-weight-semibold);
+    margin-right: var(--ds-space-2);
+  }
+  .admin-dataset-actions {
+    text-align: right;
+  }
+  .admin-dataset-actions .btn + .btn {
+    margin-left: var(--ds-space-2);
+  }
+  .admin-dataset-new {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    flex-wrap: wrap;
+  }
+  .admin-dataset-label {
+    font-size: var(--ds-font-sm);
+    font-weight: var(--ds-weight-semibold);
+    color: var(--ds-text-primary);
+  }
+  .admin-dataset-input {
+    width: 200px;
+    height: var(--ds-control-height);
+    font-family: var(--ds-font-mono, ui-monospace, monospace);
+  }
+  .admin-dataset-input[aria-invalid='true'] {
+    border-color: var(--ds-color-error);
+  }

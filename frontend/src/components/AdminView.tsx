@@ -4,6 +4,7 @@ import type { OutletContext } from './Layout';
 import { useAdminUsers } from '../api/adminHooks';
 import { Icon } from './Icon';
 import { LoadingSpinner } from './ui/LoadingSpinner';
+import { ServerDataCard } from './admin/ServerDataCard';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -61,6 +62,8 @@ export function AdminView() {
   return (
     <div className="admin-view">
       <div className="admin-content">
+        <ServerDataCard />
+
         <div className="admin-summary">
           <span className="admin-summary-count">{data.totalUsers}</span> registered user{data.totalUsers !== 1 ? 's' : ''}
         </div>

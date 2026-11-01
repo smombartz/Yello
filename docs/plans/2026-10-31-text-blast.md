@@ -335,3 +335,5 @@ interface Blast { id: number; createdAt: string; template: string; country: stri
 - 2026-11-01: after the first real use, "Send test" says why it's disabled (no desktop app, no group/CSV picked,
   nobody ticked, no test number, or a blast already sending). The test still needs a list, since it sends the first
   person's rendered text.
+- 2026-11-01: the counts above the preview ("N will get a text", "N held back", "N unticked") are filter chips.
+  Clicking one shows only those rows (again shows everyone). The held-back view adds a count of reasons.
