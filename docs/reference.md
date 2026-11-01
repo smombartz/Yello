@@ -683,6 +683,28 @@ A phone, email, address, social profile, IM or web link can be **archived**: an 
 - **Merging contacts** carries the flag over; a value archived on one contact but active on another comes out active (`unarchiveDetailsActiveElsewhere`).
 - **Gotcha:** Fastify's request coercion turns a JSON `null` into `""` for a nullable string, so `PUT /api/contacts/:id` writes `archivedAt || null`.
 
+### Top contacts (`/dashboard/top`)
+
+Ranks contacts by how much the user messages them across Gmail, iMessage, WhatsApp, Instagram and LinkedIn.
+Plan: `docs/plans/2026-10-31-top-contacts-messages.md`; tables: `docs/database.md` › *Message activity*.
+
+- **One format for every channel.** Each source boils down to daily counts per person: `{ channel, handle, day, sent, received, group }`. Everything goes through `POST /api/messages/activity`, in batches that each cover a day range; a batch replaces the channel's counts in its range, so re-imports never double-count. **No message text, subject or body is ever stored or uploaded.**
+- **Where each channel comes from:**
+  - **Gmail:** a server-side scan (`services/gmailActivityService.ts`, `POST /api/messages/gmail/scan`). It reads only the From/To/Cc headers, 2 years on the first run, then incrementally. Sent mail counts for each recipient, received mail for the sender. It skips promotions, social, updates and forums, `List-Unsubscribe`/`Precedence: bulk` mail and no-reply senders. Progress lives in `message_sources`, polled through `GET /api/messages/sources`. It needs the `gmail.readonly` scope (`/api/auth/google/gmail`).
+  - **iMessage and WhatsApp:** read by the desktop app on the Mac (`electron/src/messageActivity/`), see `electron/README.md`. The page uploads the counts. After the first scan, `useDesktopMessageSync` (mounted in `Layout`) refreshes both on launch and every 6 h.
+  - **Instagram and LinkedIn:** the user uploads the platform's data export. It's parsed in the browser (`frontend/src/lib/messageExports.ts`, zip.js loaded on demand), so multi-GB Instagram zips never upload. Instagram: `messages/inbox/*/message_*.json`, with Meta's Latin-1 mojibake fixed; people are `opaque` `ig:<folder>` handles matched by name. LinkedIn: `messages.csv`, where people are profile URLs and the user is the profile in the most conversations.
+- **Matching** (`services/messageMatching.ts`): handles are normalized per channel (E.164 phones via libphonenumber with `US` as default region, lowercase emails, `linkedin.com/in/<slug>`; WhatsApp `…@s.whatsapp.net` → `+number`, `…@lid` → `opaque:`). They're then matched to active contacts by phone (exact, else a unique match on the last 9 digits), email, or Instagram/LinkedIn profile. Automatic links are recomputed on every import and every `/top` load, so a removed number unlinks. Manual links, ignores and unlinks stick. Unmatched handles with a unique exact name match get a suggestion.
+- **"Needs a match" queue** (`GET /api/messages/handles`): unmatched people the user **wrote to at least once**, which keeps out newsletters and spam. Actions are accept the suggestion (or all of them), pick a contact, ignore, and unlink. Linking can add the phone, email or profile to the contact (on by default), so `/api/messages/handles` is in `EDITING_PREFIXES` and triggers a sync.
+- **Ranking** (`GET /api/messages/top?mode=score|count&window=30|90|365|all&channel=`):
+  - Score: each day's messages weigh `0.5^(age/180 days)`, and direct messages are multiplied by the reciprocity factor `0.5 + 0.5·min(sent, received)/max(sent, received)`. Group messages add at 0.25 weight.
+  - Count: plain totals in the window.
+  - Rows carry per-channel counts and a 12-month series for the sparkline.
+- **UI:**
+  - `TopContactsView` has three tabs: Ranking, Needs a match and Sources (`MessageSourcesPanel`, one card per channel).
+  - The Dashboard has a Top Contacts card (last 90 days).
+  - Contact pages show a Messages section (`MessageActivitySection`, `GET /api/messages/contacts/:id`).
+  - The contact list's *Last contacted* sort uses the latest day on any channel plus Gmail history.
+
 ### Public profile card (`/p/:slug`)
 
 Users can publish their contact card at a server-generated slug. Behavior notes:

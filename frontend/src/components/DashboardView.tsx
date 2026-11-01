@@ -9,12 +9,15 @@ import { LaunchBanner } from './LaunchBanner';
 import { ContactTileGrid } from './ContactTileGrid';
 import { birthdayTile } from '../utils/birthdays';
 import { recentTile } from '../utils/recentChanges';
+import { useTopContacts } from '../api/messageHooks';
+import { formatDayAgo } from '../utils/relativeTime';
 
 export function DashboardView() {
   const { setHeaderConfig, isMobile } = useOutletContext<OutletContext>();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const { data, isLoading, error } = useDashboardStats();
+  const top = useTopContacts('score', '90', null, 12);
 
   useEffect(() => {
     const goToContacts = () => {
@@ -167,6 +170,37 @@ export function DashboardView() {
               </div>
               <Link to="/dashboard/recent" className="dashboard-card-footer">
                 See all recent changes
+                <Icon name="chevron-right" />
+              </Link>
+            </div>
+
+            {/* Top contacts: who the user messaged most in the last 90 days */}
+            <div className="card dashboard-card">
+              <div className="card-header">
+                <Icon name="ranking-star" />
+                <h2>Top Contacts</h2>
+              </div>
+              <div className="card-content">
+                {top.data?.contacts.length ? (
+                  <ContactTileGrid
+                    tiles={top.data.contacts.map((c, i) => ({
+                      key: c.contactId,
+                      contactId: c.contactId,
+                      displayName: c.displayName,
+                      photoHash: c.photoHash,
+                      tipTitle: `#${i + 1} · ${c.total.toLocaleString()} message${c.total === 1 ? '' : 's'}`,
+                      tipText: `Last ${formatDayAgo(c.lastDay)}`,
+                    }))}
+                  />
+                ) : (
+                  <div className="empty-state">
+                    <Icon name="comments" />
+                    <p>{top.isLoading ? 'Loading…' : 'See who you message most across Gmail, iMessage, WhatsApp, Instagram and LinkedIn'}</p>
+                  </div>
+                )}
+              </div>
+              <Link to="/dashboard/top" className="dashboard-card-footer">
+                {top.data?.contacts.length ? 'See all top contacts' : 'Connect your messages'}
                 <Icon name="chevron-right" />
               </Link>
             </div>

@@ -221,6 +221,7 @@ export interface TopContact {
   contactId: number;
   displayName: string;
   photoUrl: string | null;
+  photoHash: string | null;
   score: number;
   total: number;
   sent: number;
@@ -301,7 +302,7 @@ export function getTopContacts(db: DatabaseType, options: TopOptions): { contact
     let acc = byContact.get(row.contact_id);
     if (!acc) {
       acc = {
-        contactId: row.contact_id, displayName: row.display_name, photoUrl: getPhotoUrl(row.photo_hash, 'small'),
+        contactId: row.contact_id, displayName: row.display_name, photoUrl: getPhotoUrl(row.photo_hash, 'small'), photoHash: row.photo_hash,
         score: 0, total: 0, sent: 0, received: 0, group: 0, lastDay: row.day, channels: {},
         months: new Array(MONTHS_IN_SERIES).fill(0), wSent: 0, wReceived: 0, wGroup: 0,
       };

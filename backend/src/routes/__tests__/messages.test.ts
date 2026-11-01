@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { getUserDatabase, closeAllUserDatabases } from '../../services/userDatabase.js';
 import messagesRoutes from '../messages.js';
+import contactRoutes from '../contacts.js';
 import { isContactEdit } from '../../services/sync/syncScheduler.js';
 
 /** /api/messages (routes/messages.ts): upload, rank, review queue. */
@@ -24,6 +25,7 @@ describe('messages routes', () => {
       };
     });
     await app.register(messagesRoutes, { prefix: '/api/messages' });
+    await app.register(contactRoutes, { prefix: '/api/contacts' });
     await app.ready();
     const db = getUserDatabase(1);
     adaId = db.prepare(`INSERT INTO contacts (display_name) VALUES ('Ada Lovelace')`).run().lastInsertRowid as number;
@@ -64,6 +66,15 @@ describe('messages routes', () => {
 
     const sources = (await app.inject('/api/messages/sources')).json();
     expect(sources.sources).toHaveLength(5);
+  });
+
+  it('sorts the contact list by the latest message on any channel', async () => {
+    const db = getUserDatabase(1);
+    db.prepare(`INSERT INTO contacts (display_name) VALUES ('Zed Quiet')`).run();
+    const res = await app.inject('/api/contacts?sort=last-contacted&limit=10');
+    expect(res.statusCode).toBe(200);
+    const names = res.json().contacts.map((c: { displayName: string }) => c.displayName);
+    expect(names[0]).toBe('Ada Lovelace');
   });
 
   it('validates uploads', async () => {

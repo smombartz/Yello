@@ -22,22 +22,22 @@
         {
           "id": "1bzn",
           "title": "Top contacts view and 'Needs a match' review queue",
-          "done": false
+          "done": true
         },
         {
           "id": "rarr",
           "title": "Desktop app: iMessage + WhatsApp readers (Full Disk Access)",
-          "done": false
+          "done": true
         },
         {
           "id": "cq5u",
           "title": "Instagram + LinkedIn export parsers",
-          "done": false
+          "done": true
         },
         {
           "id": "d1s7",
           "title": "Contact detail summary, last-contacted sort, docs and log",
-          "done": false
+          "done": true
         }
       ],
       "createdAt": "2026-11-01T04:05:25Z",

@@ -46,6 +46,21 @@ The code is useless without the verifier, which never leaves the app. The backen
 
 If the app quits mid-sign-in, the pending verifier is lost and the link does nothing; click Sign in again. "Try demo" works in the app window directly, since it doesn't involve Google.
 
+## Top contacts (reading iMessage and WhatsApp)
+
+Top contacts (`/dashboard/top` › Sources) counts how much the user messages each person. iMessage and WhatsApp live on the Mac, so the desktop app reads them (`src/messageActivity/`):
+
+- **Data read:** `~/Library/Messages/chat.db` and `~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared/ChatStorage.sqlite`, opened read-only with `node:sqlite` in a worker thread (`worker.ts`), so a large history doesn't freeze the window.
+- **What comes out:** only daily counts per person (sent, received, group) and handles (phone numbers, emails, WhatsApp IDs, names). Message text is never selected. The page uploads the counts to `POST /api/messages/activity` with the user's session.
+- **Rules:**
+  - Chats with one other person count sent and received.
+  - In groups, a received message counts as a group message for its sender, and a sent one for every member.
+  - Tapbacks, renames, WhatsApp system notices, broadcasts and status updates are skipped.
+  - iMessage dates are nanoseconds since 2001, divided in SQL because they don't fit a JavaScript number.
+- **Permission:** both files need **Full Disk Access** for Yello. No entitlement is involved; the user grants it. `messages:status` tries a plain file open (it returns `EPERM` without access) and reports `needs_full_disk_access`. The page then offers *Open System Settings* and *Restart Yello* (relaunch through `app.quit()` so Text Blast's before-quit check still runs). In dev, grant it to the Electron binary or the terminal running `npm run dev`. The grant follows the app's signature, so an unsigned or ad-hoc rebuild may need it again.
+- **IPC:** `messages:status`, `messages:scan` (channel, sinceDay), `messages:open-settings`, `messages:relaunch`, exposed as `window.yelloDesktop.messageActivity`. All of them check that the caller is on the app origin.
+- **Schema drift:** the readers check the tables and columns they use and fail with a clear message if Messages or WhatsApp change their layout. Tests (`readers.test.ts`) build small fake databases in both layouts.
+
 ## Development
 
 ```bash

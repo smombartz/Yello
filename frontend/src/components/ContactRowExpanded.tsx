@@ -11,6 +11,7 @@ import { useToast } from './ui/Toast';
 import { EditableField, LinkedInSection, ReachOutBar, SaveErrors } from './ContactFormSections';
 import { ContactCardView } from './ContactCardView';
 import { EmailHistorySection } from './EmailHistorySection';
+import { MessageActivitySection } from './MessageActivitySection';
 import { ContactPhotoGallery } from './ContactPhotoGallery';
 import { useCopyLink } from '../hooks/useCopyLink';
 import { buildContactLists } from '../utils/contactPayload';
@@ -307,6 +308,7 @@ export function ContactRowExpanded({ contact, editRequest = 0, onDeleted }: Cont
         {contact.linkedinEnrichment && (
           <LinkedInSection enrichment={contact.linkedinEnrichment} contactPhotoUrl={contact.photoUrl} />
         )}
+        <MessageActivitySection contactId={contact.id} />
         <EmailHistorySection contactId={contact.id} hasEmails={contact.emails.length > 0} />
       </ContactCardView>
 

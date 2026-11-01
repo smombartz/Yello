@@ -474,7 +474,16 @@ export default async function contactsRoutes(
     // Last-contacted sort needs a join
     let lastContactedSelect = '';
     if (sort === 'last-contacted') {
-      joins.push('LEFT JOIN (SELECT contact_id, MAX(date) as last_contact_date FROM contact_emails_history GROUP BY contact_id) lc ON lc.contact_id = c.id');
+      // Latest day of any contact: Gmail history plus every Top contacts channel
+      joins.push(`LEFT JOIN (
+        SELECT contact_id, MAX(day) AS last_contact_date FROM (
+          SELECT contact_id, substr(date, 1, 10) AS day FROM contact_emails_history
+          UNION ALL
+          SELECT h.contact_id, a.day FROM message_activity a
+          JOIN message_handles h ON h.channel = a.channel AND h.handle = a.handle
+          WHERE h.contact_id IS NOT NULL
+        ) GROUP BY contact_id
+      ) lc ON lc.contact_id = c.id`);
       lastContactedSelect = ', lc.last_contact_date';
     }
 

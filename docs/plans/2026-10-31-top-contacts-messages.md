@@ -82,13 +82,13 @@ New `backend/src/services/gmailActivityService.ts`, reusing `gmailFetch`, `fetch
 ## Build order
 Work on a new branch `feature/top-contacts` (off `master`), commit per step.
 
-0. Copy this plan to `docs/plans/2026-10-31-top-contacts-messages.md` and add a roadmap item with these steps to `.dashcode/roadmap.json`.
-1. Schema, ingest route, matching and the ranking endpoint, with Vitest tests for matching (E.164 variants, email case, LinkedIn URL forms), ingest idempotency and score math.
-2. Gmail activity job, so there's real data to see.
-3. Top contacts view and the review queue.
-4. Electron preload and readers: (6a) inspect the real chat.db and WhatsApp schemas once Full Disk Access is granted, then iMessage, then WhatsApp.
-5. Instagram and LinkedIn export parsers.
-6. Contact detail summary, last-contacted sort, docs (`docs/reference.md`, `docs/database.md`, `electron/README.md`) and log entries.
+0. ✅ Copy this plan to `docs/plans/2026-10-31-top-contacts-messages.md` and add a roadmap item with these steps to `.dashcode/roadmap.json`.
+1. ✅ Schema, ingest route, matching and the ranking endpoint, with Vitest tests for matching (E.164 variants, email case, LinkedIn URL forms), ingest idempotency and score math.
+2. ✅ Gmail activity job, so there's real data to see.
+3. ✅ Top contacts view and the review queue.
+4. ✅ Electron preload and readers: iMessage, then WhatsApp. (6a, checking the schemas against the real files, is still open: it needs Full Disk Access, which this dev shell doesn't have. The readers check for the tables and columns they use and fail with a clear message if WhatsApp changed its layout.)
+5. ✅ Instagram and LinkedIn export parsers.
+6. ✅ Contact detail summary, last-contacted sort, docs (`docs/reference.md`, `docs/database.md`, `electron/README.md`) and log entries.
 
 ## Verification
 - `cd backend && npx vitest run` (new tests for matching, ingest and ranking), plus `npm run build` in `frontend`.
@@ -102,3 +102,16 @@ Work on a new branch `feature/top-contacts` (off `master`), commit per step.
 - WhatsApp desktop only holds the history that synced to the Mac. Some contacts appear as `@lid` IDs with no phone number and need a name match or a manual one.
 - Instagram and LinkedIn are snapshots. Refreshing them means requesting a new export.
 - Gmail's restricted scope is fine for the user's own account. Offering it to other users would need Google's security review.
+
+## Changes
+
+Changes made during implementation (2026-11-01):
+
+- **Gmail scan doesn't reuse `import_jobs`.** `importRecovery` would try to resume any interrupted job as a VCF import. The scan keeps its own status and progress in `message_sources` (`status`, `progress_done`, `progress_total`); a scan cut off by a restart shows as failed on the next `GET /sources`.
+- **`group_received` became `group_messages`.** Sent group messages count too: a message you send to a group counts as a group message for every member, and an email to 3+ people counts as a group email for each recipient.
+- **Sources live on the Top contacts page (a "Sources" tab), not in Tools.** Everything for the feature is in one place, and it stays clear of `SettingsView`, which the Text Blast session was editing at the same time.
+- **The per-contact summary route is `GET /api/messages/contacts/:id`,** not `/api/contacts/:id/message-stats`. It sits with the other message routes in `routes/messages.ts`.
+- **Instagram people are `opaque` handles (`ig:<thread folder>`) matched by name.** Export folder names come from display names, not reliably from usernames, so auto-matching them to Instagram usernames could link the wrong person.
+- **iMessage tells 1:1 chats from groups by participant count** (`chat_handle_join`) rather than `chat.style`, whose values aren't documented.
+- **Detecting Full Disk Access:** macOS lets apps see these files but not open them, and SQLite only reports "unable to open database file". The status check tries a plain file open first, which returns `EPERM`.
+- **Shared working tree:** a Text Blast session works in the same checkout at the same time. Its preload exposes `window.yelloDesktop.textBlast`; Top contacts adds the sibling key `messageActivity` and `messages:` IPC channels.

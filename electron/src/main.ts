@@ -3,6 +3,7 @@ import { execFile } from 'child_process';
 import * as path from 'path';
 import { APP_URL, PROTOCOL, isAppUrl } from './config';
 import { exchangeUrlFor, flowForUrl, startSystemSignIn } from './desktopAuth';
+import { registerMessageActivityIpc } from './messageActivity/ipc';
 
 // A window onto the hosted Yello deployment. There is no local backend: all
 // data lives on the server, and the session cookie lives in this app's
@@ -46,6 +47,7 @@ function createMainWindow(): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 
@@ -145,6 +147,7 @@ if (!app.requestSingleInstanceLock()) {
       app.dock?.setIcon(path.join(__dirname, '..', '..', 'build-resources', 'icon.png'));
     }
 
+    registerMessageActivityIpc();
     showMainWindow();
   });
 
