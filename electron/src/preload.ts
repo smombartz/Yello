@@ -18,4 +18,11 @@ contextBridge.exposeInMainWorld('yelloDesktop', {
       return () => { ipcRenderer.removeListener('textblast:progress', listener); };
     },
   },
+  // Top contacts: iMessage and WhatsApp counts read on this Mac (src/messageActivity/)
+  messageActivity: {
+    status: () => ipcRenderer.invoke('messages:status'),
+    scan: (channel: 'imessage' | 'whatsapp', sinceDay: string | null) => ipcRenderer.invoke('messages:scan', channel, sinceDay),
+    openFullDiskAccessSettings: () => ipcRenderer.invoke('messages:open-settings'),
+    relaunch: () => ipcRenderer.invoke('messages:relaunch'),
+  },
 });

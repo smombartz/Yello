@@ -4,6 +4,7 @@ import * as path from 'path';
 import { APP_URL, PROTOCOL, isAppUrl } from './config';
 import { exchangeUrlFor, flowForUrl, startSystemSignIn } from './desktopAuth';
 import { registerTextBlastIpc, textBlastRunning } from './textBlast/ipc';
+import { registerMessageActivityIpc } from './messageActivity/ipc';
 
 // A window onto the hosted Yello deployment. There is no local backend: all
 // data lives on the server, and the session cookie lives in this app's
@@ -149,6 +150,7 @@ if (!app.requestSingleInstanceLock()) {
     }
 
     registerTextBlastIpc();
+    registerMessageActivityIpc();
     showMainWindow();
   });
 

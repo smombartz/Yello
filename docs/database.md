@@ -439,6 +439,53 @@ Indexes: `(blast_id, position)`, `sent_at`.
 is looked up in Messages before anything is resent. The daily limit (80) counts real attempts with
 `sent_at` since local midnight, across all non-simulated blasts.
 
+### Message activity (Top contacts)
+
+Per-person daily message counts from Gmail, iMessage, WhatsApp, Instagram and LinkedIn, for ranking
+contacts by who the user talks to most (`docs/plans/2026-10-31-top-contacts-messages.md`). **Counts only:
+no message text, subjects or bodies are ever stored.** Created on every open in `userDatabase.ts`; logic in
+`services/messageActivityService.ts` (storage, ranking, review queue) and `services/messageMatching.ts`
+(handle normalization, matching).
+
+**`message_activity`** (`WITHOUT ROWID`): one row per channel, person and day.
+
+| Column | Notes |
+| --- | --- |
+| `channel` | TEXT NOT NULL, CHECK IN (`gmail`, `imessage`, `whatsapp`, `instagram`, `linkedin`) |
+| `handle` | TEXT NOT NULL. The normalized handle, see `message_handles` |
+| `day` | TEXT NOT NULL, `YYYY-MM-DD` in the user's time zone |
+| `sent`, `received` | INTEGER NOT NULL DEFAULT 0. Direct (1:1) messages |
+| `group_messages` | INTEGER NOT NULL DEFAULT 0. Group-chat messages (received from them, or sent to a group they're in; emails with 3+ recipients) |
+
+PK `(channel, handle, day)`; index on `day`. Uploads replace a channel's rows inside the uploaded day range, so
+re-importing never double-counts.
+
+**`message_handles`**: one row per person per channel, and its link to a contact.
+
+| Column | Notes |
+| --- | --- |
+| `channel` | TEXT NOT NULL, same CHECK as above |
+| `handle` | TEXT NOT NULL. E.164 phone (`+4915112345678`), lowercase email, Instagram username, `linkedin.com/in/<slug>`, or `opaque:<raw>` for IDs that identify nobody (WhatsApp `…@lid`, Instagram thread folders) |
+| `handle_kind` | TEXT NOT NULL, CHECK IN (`phone`, `email`, `username`, `url`, `opaque`) |
+| `display_name` | TEXT. Name the source shows (WhatsApp, Instagram, LinkedIn, Gmail From) |
+| `contact_id` | INTEGER FK → `contacts(id)` ON DELETE SET NULL. NULL until matched |
+| `match_source` | TEXT, CHECK IN (`auto_phone`, `auto_email`, `auto_profile`, `manual`, `ignored`, `unlinked`) or NULL. `auto_*` links are recomputed on every match run; `manual`, `ignored` and `unlinked` are the user's and stay |
+| `suggested_contact_id` | INTEGER FK → `contacts(id)` ON DELETE SET NULL. A unique exact name match, offered in the "Needs a match" queue |
+| `updated_at` | TEXT DEFAULT `(datetime('now'))` |
+
+PK `(channel, handle)`; partial index on `contact_id`.
+
+**`message_sources`**: one row per imported channel.
+
+| Column | Notes |
+| --- | --- |
+| `channel` | TEXT PK, same CHECK as above |
+| `status` | TEXT NOT NULL DEFAULT `'idle'`, CHECK IN (`idle`, `running`, `failed`). `running` only for the server-side Gmail scan |
+| `covered_from`, `covered_through` | TEXT days. The range imported so far; incremental scans restart a couple of days before `covered_through` |
+| `last_imported_at` | TEXT, UTC |
+| `progress_done`, `progress_total` | INTEGER. Gmail scan progress |
+| `error` | TEXT. Last failure |
+
 ### `user_profiles`
 
 Created lazily by `ensureProfileTables()` in `routes/profile.ts`, not in `userDatabase.ts`.
@@ -480,6 +527,10 @@ This table has a **destructive migration**: legacy columns (`first_name`, `last_
 | `sync_cutover_items.kind` | `link`, `merged_duplicate`, `update`, `conflict`, `possible_match`, `import`, `delete_remote`, `restore_review`, `create_remote`, `group_card` |
 | `text_blasts.status` | `draft`, `running`, `stopped`, `finished` |
 | `text_blast_recipients.source` | `group`, `csv`, `both` |
+| `message_activity.channel`, `message_handles.channel`, `message_sources.channel` | `gmail`, `imessage`, `whatsapp`, `instagram`, `linkedin` |
+| `message_handles.handle_kind` | `phone`, `email`, `username`, `url`, `opaque` |
+| `message_handles.match_source` | `auto_phone`, `auto_email`, `auto_profile`, `manual`, `ignored`, `unlinked` (or `NULL`) |
+| `message_sources.status` | `idle`, `running`, `failed` |
 | `user_settings.id` | `1` (single-row table) |
 
 ---

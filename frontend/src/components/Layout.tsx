@@ -5,6 +5,7 @@ import { PageHeader, type Breadcrumb } from './PageHeader';
 import { BottomTabBar } from './BottomTabBar';
 import { ImportStatusIndicator } from './ImportStatusIndicator';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { useDesktopMessageSync } from '../hooks/useDesktopMessageSync';
 import type { ReactNode } from 'react';
 
 export interface PageHeaderConfig {
@@ -37,6 +38,9 @@ export function Layout() {
   const [headerConfig, setHeaderConfig] = useState<PageHeaderConfig>({ title: '' });
   const headerConfigRef = useRef(headerConfig);
   headerConfigRef.current = headerConfig;
+
+  // Desktop app: keep iMessage/WhatsApp counts for Top contacts fresh
+  useDesktopMessageSync(true);
 
   // Redirect mobile users away from desktop-only routes
   useEffect(() => {

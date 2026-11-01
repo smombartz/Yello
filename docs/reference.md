@@ -43,7 +43,7 @@ The macOS app opens the hosted deployment (`https://yello.up.railway.app`, overr
 
 Codes are deleted on first use, even when the verifier is wrong. A server restart only drops codes that are seconds old.
 
-**Local features (`window.yelloDesktop`).** `electron/src/preload.ts` exposes one object per feature to pages on the app origin (`textBlast` so far). Every IPC handler in the main process also checks `isAppUrl(event.senderFrame.url)`. Features that need the Mac (Messages, `chat.db`) run in the main process and call the backend through `session.defaultSession.fetch`, which sends the app's session cookie. See Text Blast below.
+**Local features (`window.yelloDesktop`).** `electron/src/preload.ts` exposes one object per feature to pages on the app origin (`textBlast`, and `messageActivity` from the Top contacts work). Every IPC handler in the main process also checks `isAppUrl(event.senderFrame.url)`. Features that need the Mac (Messages, `chat.db`) run in the main process and call the backend through `session.defaultSession.fetch`, which sends the app's session cookie. See Text Blast below.
 
 Up to 1.x the app spawned its own backend with local SQLite in `~/Library/Application Support/Yello/`. That mode is gone, and its files are left in place. See the migration note in `electron/README.md`.
 
@@ -734,6 +734,28 @@ The person is re-read before each send, so unticking someone mid-run skips them.
 - **Send test:** sends the first selected person's text to the user's own number. It doesn't touch the blast or the daily count.
 - **Simulate:** runs the whole flow without calling Messages.
 - **Run again:** a new draft for the same people with a new message, re-rendered from the stored `values_json`.
+
+### Top contacts (`/dashboard/top`)
+
+Ranks contacts by how much the user messages them across Gmail, iMessage, WhatsApp, Instagram and LinkedIn.
+Plan: `docs/plans/2026-10-31-top-contacts-messages.md`; tables: `docs/database.md` › *Message activity*.
+
+- **One format for every channel.** Each source boils down to daily counts per person: `{ channel, handle, day, sent, received, group }`. Everything goes through `POST /api/messages/activity`, in batches that each cover a day range; a batch replaces the channel's counts in its range, so re-imports never double-count. **No message text, subject or body is ever stored or uploaded.**
+- **Where each channel comes from:**
+  - **Gmail:** a server-side scan (`services/gmailActivityService.ts`, `POST /api/messages/gmail/scan`). It reads only the From/To/Cc headers, 2 years on the first run, then incrementally. Sent mail counts for each recipient, received mail for the sender. It skips promotions, social, updates and forums, `List-Unsubscribe`/`Precedence: bulk` mail and no-reply senders. Progress lives in `message_sources`, polled through `GET /api/messages/sources`. It needs the `gmail.readonly` scope (`/api/auth/google/gmail`).
+  - **iMessage and WhatsApp:** read by the desktop app on the Mac (`electron/src/messageActivity/`), see `electron/README.md`. The page uploads the counts. *Scan new messages* re-reads only from two days before the last imported day (`incrementalScanStart`) and replaces those days; *Rescan everything* reads the whole history. Automatic refresh is opt-in per channel and per Mac (*Refresh automatically* switch, off by default, kept in `localStorage`): `useDesktopMessageSync` (mounted in `Layout`) checks 20 s after launch, every 15 min and when a switch changes, and scans a channel once its last read on this Mac is 6+ hours old. A scan already running for a channel is joined, not started twice.
+  - **Instagram and LinkedIn:** the user uploads the platform's data export. It's parsed in the browser (`frontend/src/lib/messageExports.ts`, zip.js loaded on demand), so multi-GB Instagram zips never upload. Instagram: `messages/inbox/*/message_*.json`, with Meta's Latin-1 mojibake fixed; people are `opaque` `ig:<folder>` handles matched by name. LinkedIn: `messages.csv`, where people are profile URLs and the user is the profile in the most conversations.
+- **Matching** (`services/messageMatching.ts`): handles are normalized per channel (E.164 phones via libphonenumber with `US` as default region, lowercase emails, `linkedin.com/in/<slug>`; WhatsApp `…@s.whatsapp.net` → `+number`, `…@lid` → `opaque:`). They're then matched to active contacts by phone (exact, else a unique match on the last 9 digits), email, or Instagram/LinkedIn profile. Automatic links are recomputed on every import and every `/top` load, so a removed number unlinks. Manual links, ignores and unlinks stick. Unmatched handles with a unique exact name match get a suggestion.
+- **"Needs a match" queue** (`GET /api/messages/handles`): unmatched people the user **wrote to at least once**, which keeps out newsletters and spam. Actions are accept the suggestion (or all of them), pick a contact, ignore, and unlink. Linking can add the phone, email or profile to the contact (on by default), so `/api/messages/handles` is in `EDITING_PREFIXES` and triggers a sync.
+- **Ranking** (`GET /api/messages/top?mode=score|count&window=30|90|365|all&channel=`):
+  - Score: each day's messages weigh `0.5^(age/180 days)`, and direct messages are multiplied by the reciprocity factor `0.5 + 0.5·min(sent, received)/max(sent, received)`. Group messages add at 0.25 weight.
+  - Count: plain totals in the window.
+  - Rows carry per-channel counts and a 12-month series for the sparkline.
+- **UI:**
+  - `TopContactsView` has three tabs: Ranking, Needs a match and Sources (`MessageSourcesPanel`, one card per channel).
+  - The Dashboard has a Top Contacts card (last 90 days).
+  - Contact pages show a Messages section (`MessageActivitySection`, `GET /api/messages/contacts/:id`).
+  - The contact list's *Last contacted* sort uses the latest day on any channel plus Gmail history.
 
 ### Public profile card (`/p/:slug`)
 

@@ -33,3 +33,17 @@ export function formatRelativeDay(value: string, now = new Date()): string {
     ...(date.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }),
   });
 }
+
+/** "today", "yesterday", "5 days ago", "Mar 4" (from a YYYY-MM-DD local day) */
+export function formatDayAgo(day: string): string {
+  const [y, m, d] = day.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const now = new Date();
+  const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - date.getTime()) / 86_400_000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 30) return `${days} days ago`;
+  return date.toLocaleDateString(undefined, {
+    month: 'short', day: 'numeric', ...(y === now.getFullYear() ? {} : { year: 'numeric' }),
+  });
+}

@@ -1,5 +1,67 @@
 # Change Log
 
+## 2026-11-01 — Top contacts: iMessage/WhatsApp auto-refresh is a switch, off by default
+
+**Session:** `99d5fac3-6203-4cfe-981a-cd9de1f9f5e8`
+
+**What Changed:**
+- Each desktop card (iMessage, WhatsApp) on Top contacts › Sources has a *Refresh automatically* switch, off by default and stored per Mac. When on, the channel is re-read once its last read on this Mac is 6+ hours old (checked 20 s after launch, every 15 min and when the switch flips)
+- *Scan new messages* explains that it reads only since two days before the last imported day; *Rescan everything* re-reads the whole history
+- A click while an automatic read is running joins it instead of starting a second read
+- The iMessage reader's "since" filter compares the raw `message.date` column, so SQLite uses the date index and an incremental scan doesn't walk all of chat.db
+
+**Why:**
+- The user wants background reading of Messages and WhatsApp only when they turn it on, and a fast rescan of new messages
+
+**Files Modified:**
+- `frontend/src/lib/desktopMessages.ts` — `getAutoRefresh`, `setAutoRefresh`, `getLastScan`, `incrementalScanStart`, in-flight guard in `syncDesktopChannel`
+- `frontend/src/hooks/useDesktopMessageSync.ts` — opt-in, due-based refresh; `useDesktopAutoRefresh`
+- `frontend/src/components/MessageSourcesPanel.tsx` — switch, scan button labels and hint
+- `frontend/src/styles/pages/top-contacts.css` — `.source-auto-refresh`
+- `electron/src/messageActivity/readers.ts` — index-friendly iMessage date filter; `readers.test.ts` — old seconds-based dates
+- `docs/reference.md`, `electron/README.md`, `docs/plans/2026-10-31-top-contacts-messages.md`
+
+---
+
+## 2026-11-01 — Top contacts: rank contacts by messages across Gmail, iMessage, WhatsApp, Instagram and LinkedIn
+
+**Session:** `99d5fac3-6203-4cfe-981a-cd9de1f9f5e8`
+
+**What Changed:**
+- New Top contacts page (`/dashboard/top`) with three tabs:
+  - Ranking: a recency-weighted score or plain message counts over 30 days, 90 days, 1 year or all time, filterable by channel.
+  - Needs a match: a review queue for people not linked to a contact yet.
+  - Sources: one card per channel.
+- The Dashboard gets a Top Contacts card, contact pages a Messages section, and the *Last contacted* sort now uses every channel.
+- New per-user tables `message_activity` (daily sent/received/group counts per person), `message_handles` (each person's normalized handle and its contact link) and `message_sources` (import status per channel). They store counts only, never message text.
+- People are matched to contacts automatically by phone (E.164, else a unique last-9-digits match), email, or Instagram/LinkedIn profile. Unique exact name matches become one-click suggestions. Linking can add the number, email or profile to the contact.
+- Gmail: a background scan of From/To/Cc headers (2 years, then incremental) that skips bulk mail and no-reply senders.
+- iMessage and WhatsApp: the desktop app reads `chat.db` and WhatsApp's `ChatStorage.sqlite` read-only in a worker thread once Yello has Full Disk Access. It uploads daily counts and refreshes every 6 h.
+- Instagram and LinkedIn: their data exports are parsed in the browser, and only the counts are uploaded.
+
+**Why:**
+- To see who the user actually talks to most, and how often, across every channel they use. Requested by the user.
+
+**Files Modified:**
+- `backend/src/services/userDatabase.ts` — `message_activity`, `message_handles`, `message_sources` tables
+- `backend/src/services/messageMatching.ts` (new) — `normalizeHandle`, `toE164`, `normalizeLinkedInUrl`, `buildContactIndex`, `autoMatchHandles`
+- `backend/src/services/messageActivityService.ts` (new) — `ingestActivity`, `getTopContacts`, `scoreOf`, `listHandles`, `linkHandles`, `ignoreHandles`, `unlinkHandles`, `acceptAllSuggestions`, `getContactMessageStats`
+- `backend/src/services/gmailActivityService.ts` (new) — `startGmailScan`, `tallyMessage`, `parseAddressList`
+- `backend/src/routes/messages.ts` (new) — `/api/messages/*`
+- `backend/src/server.ts` — registers `/api/messages`
+- `backend/src/services/sync/syncScheduler.ts` — `/api/messages/handles` in `EDITING_PREFIXES`
+- `backend/src/routes/contacts.ts` — `sort=last-contacted` uses `message_activity` too
+- `backend/src/services/__tests__/messageActivity.test.ts`, `backend/src/routes/__tests__/messages.test.ts` (new)
+- `electron/src/messageActivity/readers.ts`, `worker.ts`, `ipc.ts`, `readers.test.ts` (new) — `readIMessage`, `readWhatsApp`, `checkReadable`, `registerMessageActivityIpc`
+- `electron/src/preload.ts` — `yelloDesktop.messageActivity`; `electron/src/main.ts` — registers the IPC
+- `frontend/src/components/TopContactsView.tsx`, `MessageMatchQueue.tsx`, `MessageSourcesPanel.tsx`, `MessageActivitySection.tsx` (new)
+- `frontend/src/api/messageHooks.ts`, `frontend/src/lib/desktopMessages.ts`, `frontend/src/lib/messageExports.ts`, `frontend/src/hooks/useDesktopMessageSync.ts` (new)
+- `frontend/src/App.tsx`, `Layout.tsx`, `DashboardView.tsx`, `ContactRowExpanded.tsx`, `utils/relativeTime.ts` (`formatDayAgo`)
+- `frontend/src/styles/pages/top-contacts.css` (new), `frontend/src/styles/pages.css`; `frontend/package.json` — `@zip.js/zip.js`
+- `docs/database.md`, `docs/reference.md`, `electron/README.md`, `docs/plans/2026-10-31-top-contacts-messages.md`
+
+---
+
 ## 2026-11-01 — Text Blast: personal 1:1 texts through Messages from Tools
 
 **Session:** `18a2e642-baa3-46d4-87b7-6e6d15b27c0c`
