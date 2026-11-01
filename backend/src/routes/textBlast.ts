@@ -3,8 +3,8 @@ import { getUserDatabase } from '../services/userDatabase.js';
 import { buildRecipients, BuildInput } from '../services/textBlast/recipients.js';
 import { normalizePhone } from '../services/textBlast/phone.js';
 import {
-  BLAST_STATUSES, BlastStatus, DAILY_CAP, RECIPIENT_STATUSES, RecipientStatus,
-  createBlast, deleteBlast, getBlast, listBlasts, rerunBlast, sentSince, setBlastStatus, setRecipientStatus, setSkipped,
+  BLAST_STATUSES, BlastStatus, LIMIT_RANGE, RECIPIENT_STATUSES, RecipientStatus,
+  createBlast, deleteBlast, getBlast, getLimits, listBlasts, rerunBlast, sendCounts, setBlastStatus, setLimits, setRecipientStatus, setSkipped,
 } from '../services/textBlast/store.js';
 
 /**
@@ -111,12 +111,31 @@ export default async function textBlastRoutes(fastify: FastifyInstance, _opts: F
   // GET /api/text-blasts: history, newest first (no recipients).
   fastify.get('/', async (request) => ({ blasts: listBlasts(getUserDatabase(request.user!.id)) }));
 
-  // GET /api/text-blasts/sent-today?since=<ISO local midnight>: attempts toward the daily limit.
+  // GET /api/text-blasts/sent-today?since=<ISO local midnight>: attempts toward the daily and hourly limits.
+  // { count, cap } is the day; { hourCount, hourCap, hourResetAt } the last 60 minutes.
   fastify.get<{ Querystring: { since?: string } }>('/sent-today', async (request) => {
     const parsed = request.query.since ? new Date(request.query.since) : null;
     const since = parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date(Date.now() - 24 * 3600 * 1000);
-    return { count: sentSince(getUserDatabase(request.user!.id), since.toISOString()), cap: DAILY_CAP };
+    return sendCounts(getUserDatabase(request.user!.id), since.toISOString());
   });
+
+  // GET /api/text-blasts/settings: the send limits.
+  fastify.get('/settings', async (request) => ({ limits: getLimits(getUserDatabase(request.user!.id)) }));
+
+  // PUT /api/text-blasts/settings { daily, hourly }: change the send limits.
+  fastify.put<{ Body: { daily: number; hourly: number } }>('/settings', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['daily', 'hourly'],
+        additionalProperties: false,
+        properties: {
+          daily: { type: 'integer', minimum: LIMIT_RANGE.daily[0], maximum: LIMIT_RANGE.daily[1] },
+          hourly: { type: 'integer', minimum: LIMIT_RANGE.hourly[0], maximum: LIMIT_RANGE.hourly[1] },
+        },
+      },
+    },
+  }, async (request) => ({ limits: setLimits(getUserDatabase(request.user!.id), request.body) }));
 
   // GET /api/text-blasts/:id: one blast with every recipient.
   fastify.get<{ Params: IdParams }>('/:id', async (request, reply) => {

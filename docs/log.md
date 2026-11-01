@@ -1,5 +1,37 @@
 # Change Log
 
+## 2026-11-01 — Text Blast: daily limit is a setting again, plus an hourly limit
+
+**Session:** `18a2e642-baa3-46d4-87b7-6e6d15b27c0c`
+
+**What Changed:**
+- Text Blast page, "Test and send": a Limits row with **texts a day** (default 80, as in TextBlast) and **texts an
+  hour** (default 60), saved per user when a field loses focus. Shows how many went out today and in the last hour
+- Daily limit: unchanged behaviour, the run stops and resumes tomorrow, but the number now comes from the setting
+- Hourly limit (new): a rolling 60 minutes. At the limit the desktop app **waits** until the oldest text in the
+  hour drops out, then carries on. The countdown says "Hourly limit reached", and Stop works during the wait.
+  The person is re-checked after any wait, so unticking them during it still skips them
+- `GET /sent-today` also returns `hourCount`, `hourCap`, `hourResetAt`. Older desktop builds ignore them and keep
+  the daily limit only
+- "Takes about …" before a run (compose page and blast page) and the live estimate account for both limits
+
+**Why:**
+- User request. The fixed 80 came from TextBlast, where it was a setting; the port had dropped that
+
+**Files Modified:**
+- `backend/src/services/userDatabase.ts` — `user_settings.text_blast_daily_limit`, `text_blast_hourly_limit` + migrations
+- `backend/src/services/textBlast/store.ts` — `getLimits`, `setLimits`, `sendCounts`, `DEFAULT_LIMITS`, `LIMIT_RANGE`; removed `DAILY_CAP`
+- `backend/src/routes/textBlast.ts` — `GET`/`PUT /settings`; `/sent-today` returns hourly counts
+- Backend tests: `recipients.test.ts` (rolling hour, reset time), `routes/__tests__/textBlast.test.ts` (settings, validation)
+- `electron/src/textBlast/runner.ts` — `waitForLimits`, `wait(ms, reason)`, re-check after any wait; `types.ts` — `SendCounts`, `waitReason`; `api.ts`
+- `electron/src/textBlast/runner.test.ts` — hourly pause and Stop during it
+- `frontend/src/components/textBlast/SendLimits.tsx` (new); `Composer.tsx`, `BlastDetail.tsx`, `estimate.ts` (`runSummary`, `hourlyBoundSeconds`, `textsToday`)
+- `frontend/src/api/textBlastHooks.ts` — `SendCounts`, `useSendLimits`, `useSaveSendLimits`
+- `frontend/src/styles/pages/text-blast.css` — `.text-blast-limits`, `.text-blast-limit`
+- `docs/database.md`, `docs/reference.md`, `docs/plans/2026-10-31-text-blast.md`
+
+---
+
 ## 2026-11-01 — Fix: Text Blast setup check failed with "syntax error … found "st" (-2741)"
 
 **Session:** `18a2e642-baa3-46d4-87b7-6e6d15b27c0c`

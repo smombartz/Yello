@@ -345,3 +345,6 @@ interface Blast { id: number; createdAt: string; template: string; country: stri
 - 2026-11-01: fix: `ACCOUNTS_SCRIPT` (copied from TextBlast) used the variable `st`, which doesn't compile on macOS 27.
   Renamed. Added `messages.test.ts`, which compiles every script with `osacompile`. The standalone
   `textblast/textblast.py` has the same bug (left alone; outside this repo).
+- 2026-11-01: limits are settings again (user request): daily (default 80, stops the run) and a new hourly limit
+  (default 60, rolling hour, pauses the run until the hour has room). Stored in `user_settings`, edited on the
+  compose page. Estimates account for both. Needs a desktop app rebuild for the hourly pause.

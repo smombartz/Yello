@@ -7,6 +7,7 @@ import { getUserDatabase, closeAllUserDatabases } from '../../userDatabase.js';
 import { buildRecipients } from '../recipients.js';
 import {
   createBlast, getBlast, listBlasts, rerunBlast, sentSince, setBlastStatus, setRecipientStatus, setSkipped, deleteBlast,
+  DEFAULT_LIMITS, getLimits, sendCounts, setLimits,
 } from '../store.js';
 
 let tmpDir: string;
@@ -134,6 +135,30 @@ describe('blast store', () => {
     setRecipientStatus(db, id, r.id, { status: 'in_flight' });
     setRecipientStatus(db, id, r.id, { status: 'simulated' });
     expect(sentSince(db, since)).toBe(before);
+  });
+
+  it('stores the send limits and counts the rolling hour', () => {
+    expect(getLimits(db)).toEqual(DEFAULT_LIMITS);
+    const preview = buildRecipients(db, { groups: ['Friends'], template: 'Hey', country: 'US' });
+    const id = createBlast(db, { template: 'Hey', country: 'US', simulate: false, sources: { groups: [], csvName: null }, recipients: preview.recipients });
+    const [ana, ben] = getBlast(db, id)!.recipients!;
+    setRecipientStatus(db, id, ana.id, { status: 'in_flight' });
+    setRecipientStatus(db, id, ben.id, { status: 'in_flight' });
+    // A clock 10 days ahead, so attempts from other tests fall outside its hour.
+    const now = new Date(Date.now() + 10 * 86400_000);
+    const minutesAgo = (m: number) => new Date(now.getTime() - m * 60_000).toISOString();
+    db.prepare('UPDATE text_blast_recipients SET sent_at = ? WHERE id = ?').run(minutesAgo(50), ana.id);
+    db.prepare('UPDATE text_blast_recipients SET sent_at = ? WHERE id = ?').run(minutesAgo(10), ben.id);
+    const today = minutesAgo(120);
+
+    expect(sendCounts(db, today, now)).toEqual({ count: 2, cap: 80, hourCount: 2, hourCap: 60, hourResetAt: null });
+    setLimits(db, { daily: 100, hourly: 2 });
+    // Full hour: the oldest attempt (50 min ago) drops out in 10 minutes.
+    expect(sendCounts(db, today, now)).toMatchObject({ cap: 100, hourCap: 2, hourResetAt: minutesAgo(-10) });
+    setLimits(db, { daily: 100, hourly: 1 });
+    // Over by one: back under the limit only once the newer one (10 min ago) drops out too.
+    expect(sendCounts(db, today, now).hourResetAt).toBe(minutesAgo(-50));
+    setLimits(db, DEFAULT_LIMITS);
   });
 
   it('reruns a blast with a new message, holding back people it cannot fill in for', () => {

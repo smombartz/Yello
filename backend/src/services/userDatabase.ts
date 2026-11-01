@@ -302,6 +302,8 @@ export function getUserDatabase(userId: number): DatabaseType {
       vcard_model_backfilled_at TEXT,
       vcard_model_v2_backfilled_at TEXT,
       raw_vcards_archived_at TEXT,
+      text_blast_daily_limit INTEGER NOT NULL DEFAULT 80,
+      text_blast_hourly_limit INTEGER NOT NULL DEFAULT 60,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -714,6 +716,9 @@ export function getUserDatabase(userId: number): DatabaseType {
       .map(table => `ALTER TABLE ${table} ADD COLUMN params TEXT`),
     `ALTER TABLE user_settings ADD COLUMN vcard_model_v2_backfilled_at TEXT`,
     `ALTER TABLE user_settings ADD COLUMN raw_vcards_archived_at TEXT`,
+    // Text Blast send limits (Tools › Text Blast)
+    `ALTER TABLE user_settings ADD COLUMN text_blast_daily_limit INTEGER NOT NULL DEFAULT 80`,
+    `ALTER TABLE user_settings ADD COLUMN text_blast_hourly_limit INTEGER NOT NULL DEFAULT 60`,
     // Archived details (an old number or address): kept, but not synced
     ...ARCHIVABLE_TABLES.map(table => `ALTER TABLE ${table} ADD COLUMN detail_archived_at TEXT`)
   ]) {

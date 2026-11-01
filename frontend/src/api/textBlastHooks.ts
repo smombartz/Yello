@@ -103,11 +103,43 @@ function localMidnightIso(): string {
   return d.toISOString();
 }
 
+/** Attempts today and in the last 60 minutes, against the user's limits. */
+export interface SendCounts {
+  count: number;
+  cap: number;
+  hourCount: number;
+  hourCap: number;
+  /** ISO time the oldest attempt in a full hour drops out. */
+  hourResetAt: string | null;
+}
+
 export function useSentToday() {
   return useQuery({
     queryKey: ['textBlastSentToday'],
-    queryFn: () => fetchApi<{ count: number; cap: number }>(`/api/text-blasts/sent-today?since=${encodeURIComponent(localMidnightIso())}`),
+    queryFn: () => fetchApi<SendCounts>(`/api/text-blasts/sent-today?since=${encodeURIComponent(localMidnightIso())}`),
     refetchInterval: 30_000,
+  });
+}
+
+export interface SendLimits { daily: number; hourly: number }
+export const LIMIT_RANGE = { daily: [1, 1000], hourly: [1, 200] } as const;
+
+export function useSendLimits() {
+  return useQuery({
+    queryKey: ['textBlastLimits'],
+    queryFn: () => fetchApi<{ limits: SendLimits }>('/api/text-blasts/settings').then((r) => r.limits),
+  });
+}
+
+export function useSaveSendLimits() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (limits: SendLimits) =>
+      fetchApi<{ limits: SendLimits }>('/api/text-blasts/settings', { method: 'PUT', body: JSON.stringify(limits) }).then((r) => r.limits),
+    onSuccess: (limits) => {
+      queryClient.setQueryData(['textBlastLimits'], limits);
+      queryClient.invalidateQueries({ queryKey: ['textBlastSentToday'] });
+    },
   });
 }
 
@@ -196,6 +228,8 @@ export interface DesktopProgress {
   failed: number;
   current: { recipientId: number; name: string; phone: string } | null;
   nextAt: number | null;
+  /** Missing from desktop app builds older than the hourly limit. */
+  waitReason?: 'pace' | 'hourly' | null;
   log: { at: number; level: 'info' | 'ok' | 'warn' | 'error'; text: string }[];
 }
 

@@ -1,6 +1,6 @@
 import { classify } from './classify';
 import type {
-  Blast, BlastRecipient, BlastStatus, LogLine, OutgoingMessage, RecipientStatus, RunnerProgress, SendResult,
+  Blast, BlastRecipient, BlastStatus, LogLine, OutgoingMessage, RecipientStatus, RunnerProgress, SendCounts, SendResult,
 } from './types';
 import type { MessagesSendOutcome } from './messages';
 
@@ -12,7 +12,7 @@ export interface RunnerApi {
   setRecipientStatus(blastId: number, recipientId: number, update: { status: RecipientStatus; service?: string | null; note?: string | null }): Promise<void>;
   setBlastStatus(blastId: number, status: BlastStatus): Promise<void>;
   /** Real send attempts since local midnight, and the daily cap. */
-  sentToday(): Promise<{ count: number; cap: number }>;
+  sentToday(): Promise<SendCounts>;
 }
 
 export interface RunnerDeps {
@@ -69,7 +69,7 @@ export class TextBlastRunner {
   ) {}
 
   private static idle(): RunnerProgress {
-    return { running: false, blastId: null, simulate: false, total: 0, processed: 0, sent: 0, failed: 0, current: null, nextAt: null, log: [] };
+    return { running: false, blastId: null, simulate: false, total: 0, processed: 0, sent: 0, failed: 0, current: null, nextAt: null, waitReason: null, log: [] };
   }
 
   snapshot(): RunnerProgress {
@@ -136,6 +136,7 @@ export class TextBlastRunner {
       this.progress.running = false;
       this.progress.current = null;
       this.progress.nextAt = null;
+      this.progress.waitReason = null;
       this.emit();
     }
   }
@@ -167,20 +168,22 @@ export class TextBlastRunner {
         p.processed++;
         continue;
       }
+      let waited = false;
       if (!simulate) {
-        const { count, cap } = await this.deps.api.sentToday();
-        if (count >= cap) {
-          this.log('warn', `Reached today's limit of ${cap} texts, so Yello stopped. Resume tomorrow; people already sent to are skipped.`);
-          return false;
-        }
+        const limit = await this.waitForLimits();
+        if (limit === 'stop') return false;
+        waited = limit === 'waited';
       }
       if (!first) {
         const [lo, hi] = simulate ? this.options.simulateDelaySeconds : this.options.delaySeconds;
-        if (!(await this.wait((lo + this.deps.random() * (hi - lo)) * 1000))) {
+        if (!(await this.wait((lo + this.deps.random() * (hi - lo)) * 1000, 'pace'))) {
           this.log('info', 'Stopped. Progress is saved.');
           return false;
         }
-        // The page shows who's next during the pause, so they may have been unticked meanwhile.
+        waited = true;
+      }
+      if (waited) {
+        // The page shows who's next during a wait, so they may have been unticked meanwhile.
         const again = (await this.deps.api.getBlast(blastId)).recipients?.find((x) => x.id === recipientId);
         if (!again || !TO_SEND.includes(again.status)) {
           p.processed++;
@@ -230,10 +233,37 @@ export class TextBlastRunner {
     }
   }
 
+  /**
+   * Daily limit: stop (resume tomorrow). Hourly limit: wait until the oldest text in the last
+   * 60 minutes drops out, then check again. 'waited' when it paused, 'stop' when the run should end.
+   */
+  private async waitForLimits(): Promise<'ok' | 'waited' | 'stop'> {
+    let waited = false;
+    for (;;) {
+      const c: SendCounts = await this.deps.api.sentToday();
+      if (c.count >= c.cap) {
+        this.log('warn', `Reached today's limit of ${c.cap} texts, so Yello stopped. Resume tomorrow; people already sent to are skipped.`);
+        return 'stop';
+      }
+      if (c.hourCap === undefined || c.hourCount === undefined || c.hourCount < c.hourCap) return waited ? 'waited' : 'ok';
+      const resetAt = c.hourResetAt ? Date.parse(c.hourResetAt) : this.deps.now() + 60_000;
+      // A couple of seconds past the reset, so the server agrees the hour has room again.
+      const ms = Math.max(5_000, resetAt - this.deps.now() + 2_000);
+      const until = new Date(this.deps.now() + ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      this.log('info', `Hourly limit of ${c.hourCap} texts reached. Waiting until about ${until}.`);
+      if (!(await this.wait(ms, 'hourly'))) {
+        this.log('info', 'Stopped. Progress is saved.');
+        return 'stop';
+      }
+      waited = true;
+    }
+  }
+
   /** Wait between texts; false when Stop was pressed meanwhile. */
-  private async wait(ms: number): Promise<boolean> {
+  private async wait(ms: number, reason: 'pace' | 'hourly'): Promise<boolean> {
     const end = this.deps.now() + ms;
     this.progress.nextAt = end;
+    this.progress.waitReason = reason;
     this.emit();
     try {
       while (this.deps.now() < end) {
@@ -243,6 +273,7 @@ export class TextBlastRunner {
       return !this.stopRequested;
     } finally {
       this.progress.nextAt = null;
+      this.progress.waitReason = null;
     }
   }
 

@@ -10,10 +10,14 @@ export type BlastStatus = typeof BLAST_STATUSES[number];
 
 /** Handed to Messages; never sent again. */
 export const DONE_STATUSES: RecipientStatus[] = ['delivered', 'sent', 'sent_sms', 'dispatched'];
-/** Statuses that count as an attempt toward the daily limit. */
+/** Statuses that count as an attempt toward the daily and hourly limits. */
 const ATTEMPT_STATUSES: RecipientStatus[] = ['in_flight', 'delivered', 'sent', 'sent_sms', 'dispatched', 'failed',
   'error', 'pending', 'not_found', 'needs_review'];
-export const DAILY_CAP = 80;
+
+/** Send limits, set on the Text Blast page. Defaults match the `user_settings` columns. */
+export interface SendLimits { daily: number; hourly: number }
+export const DEFAULT_LIMITS: SendLimits = { daily: 80, hourly: 60 };
+export const LIMIT_RANGE = { daily: [1, 1000], hourly: [1, 200] } as const;
 
 export interface BlastSources { groups: string[]; csvName: string | null }
 
@@ -149,6 +153,46 @@ export function setSkipped(db: Database, blastId: number, ids: number[], skipped
 }
 
 /** Real (not simulated) send attempts since `sinceIso`, across all blasts. */
+export function getLimits(db: Database): SendLimits {
+  const row = db.prepare('SELECT text_blast_daily_limit AS daily, text_blast_hourly_limit AS hourly FROM user_settings WHERE id = 1')
+    .get() as SendLimits | undefined;
+  return row ?? { ...DEFAULT_LIMITS };
+}
+
+export function setLimits(db: Database, limits: SendLimits): SendLimits {
+  db.prepare(`UPDATE user_settings SET text_blast_daily_limit = ?, text_blast_hourly_limit = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = 1`).run(limits.daily, limits.hourly);
+  return getLimits(db);
+}
+
+/**
+ * Where the user stands against both limits. The hour is a rolling 60 minutes; `hourResetAt` is when
+ * the oldest attempt in it drops out (null when the hour isn't full).
+ */
+export function sendCounts(db: Database, todaySinceIso: string, now = new Date()) {
+  const limits = getLimits(db);
+  const hourAgo = new Date(now.getTime() - 3600_000).toISOString();
+  const hourCount = sentSince(db, hourAgo);
+  let hourResetAt: string | null = null;
+  if (hourCount >= limits.hourly) {
+    const ph = ATTEMPT_STATUSES.map(() => '?').join(',');
+    // The attempt whose expiry brings the count back under the limit.
+    const row = db.prepare(`
+      SELECT r.sent_at AS at FROM text_blast_recipients r JOIN text_blasts b ON b.id = r.blast_id
+      WHERE b.simulate = 0 AND r.sent_at >= ? AND r.status IN (${ph})
+      ORDER BY r.sent_at LIMIT 1 OFFSET ?
+    `).get(hourAgo, ...ATTEMPT_STATUSES, hourCount - limits.hourly) as { at: string } | undefined;
+    if (row) hourResetAt = new Date(new Date(row.at).getTime() + 3600_000).toISOString();
+  }
+  return {
+    count: sentSince(db, todaySinceIso),
+    cap: limits.daily,
+    hourCount,
+    hourCap: limits.hourly,
+    hourResetAt,
+  };
+}
+
 export function sentSince(db: Database, sinceIso: string): number {
   const ph = ATTEMPT_STATUSES.map(() => '?').join(',');
   return (db.prepare(`

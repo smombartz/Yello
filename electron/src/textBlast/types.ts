@@ -64,5 +64,18 @@ export interface RunnerProgress {
   current: { recipientId: number; name: string; phone: string } | null;
   /** Epoch ms when the next text goes out, while waiting between texts. */
   nextAt: number | null;
+  /** Why it's waiting: the normal pause between texts, or the hourly limit. */
+  waitReason: 'pace' | 'hourly' | null;
   log: LogLine[];
+}
+
+/** GET /api/text-blasts/sent-today: attempts today and in the last 60 minutes, against the user's limits. */
+export interface SendCounts {
+  count: number;
+  cap: number;
+  /** Missing from servers older than the hourly limit. */
+  hourCount?: number;
+  hourCap?: number;
+  /** ISO time the oldest attempt in a full hour drops out. */
+  hourResetAt?: string | null;
 }

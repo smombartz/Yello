@@ -81,7 +81,16 @@ describe('/api/text-blasts', () => {
     expect((await app.inject({ method: 'POST', url: `/api/text-blasts/${blast.id + 50}/recipients/${rid}/status`, payload: { status: 'sent' } })).statusCode).toBe(404);
 
     const today = await app.inject({ method: 'GET', url: `/api/text-blasts/sent-today?since=${encodeURIComponent(since)}` });
-    expect(today.json()).toEqual({ count: 1, cap: 80 });
+    expect(today.json()).toEqual({ count: 1, cap: 80, hourCount: 1, hourCap: 60, hourResetAt: null });
+
+    expect((await app.inject({ method: 'GET', url: '/api/text-blasts/settings' })).json()).toEqual({ limits: { daily: 80, hourly: 60 } });
+    const saved = await app.inject({ method: 'PUT', url: '/api/text-blasts/settings', payload: { daily: 120, hourly: 40 } });
+    expect(saved.json()).toEqual({ limits: { daily: 120, hourly: 40 } });
+    expect((await app.inject({ method: 'PUT', url: '/api/text-blasts/settings', payload: { daily: 0, hourly: 40 } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'PUT', url: '/api/text-blasts/settings', payload: { daily: 80, hourly: 500 } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'GET', url: `/api/text-blasts/sent-today?since=${encodeURIComponent(since)}` })).json())
+      .toMatchObject({ cap: 120, hourCap: 40 });
+    await app.inject({ method: 'PUT', url: '/api/text-blasts/settings', payload: { daily: 80, hourly: 60 } });
 
     expect((await app.inject({ method: 'DELETE', url: `/api/text-blasts/${blast.id}` })).statusCode).toBe(409);
     const list = (await app.inject({ method: 'GET', url: '/api/text-blasts' })).json();

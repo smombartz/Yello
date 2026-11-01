@@ -16,6 +16,8 @@ function harness(opts: {
   /** Messages database rows found for interrupted sends, by phone. */
   existing?: Record<string, Partial<OutgoingMessage>>;
   failWriteOn?: RecipientStatus;
+  /** Hourly limit; omitted = a server without one. */
+  hourCap?: number;
 }) {
   let clock = 1_800_000_000_000;
   const blastStatuses: BlastStatus[] = [];
@@ -25,6 +27,7 @@ function harness(opts: {
     id: i + 1, name: `P${i + 1}`, phone: `+1917555010${i}`, text: `Hi P${i + 1}`, status: '', service: null, sentAt: null, note: null, ...r,
   }));
   let sentToday = opts.sentToday ?? 0;
+  const attemptTimes: number[] = [];
   let pendingRow: Partial<OutgoingMessage> | null = null;
   let pendingHandle = '';
   const outcomes = [...(opts.outcomes ?? [])];
@@ -39,10 +42,17 @@ function harness(opts: {
         writes.push({ id, ...u });
         const r = recipients.find((x) => x.id === id)!;
         r.status = u.status;
-        if (u.status === 'in_flight' && !opts.simulate) sentToday++;
+        if (u.status === 'in_flight' && !opts.simulate) { sentToday++; attemptTimes.push(clock); }
       },
       async setBlastStatus(_b, s) { blastStatuses.push(s); },
-      async sentToday() { return { count: sentToday, cap: 80 }; },
+      async sentToday() {
+        if (opts.hourCap === undefined) return { count: sentToday, cap: 80 };
+        // Same rule as the backend's sendCounts: a rolling hour, reset when enough old attempts drop out.
+        const inHour = attemptTimes.filter((t) => t > clock - 3600_000);
+        const full = inHour.length >= opts.hourCap;
+        const resetAt = full ? new Date(inHour[inHour.length - opts.hourCap] + 3600_000).toISOString() : null;
+        return { count: sentToday, cap: 80, hourCount: inHour.length, hourCap: opts.hourCap, hourResetAt: resetAt };
+      },
     },
     async send(handle, _text, service) {
       sends.push({ handle, service });
@@ -63,7 +73,7 @@ function harness(opts: {
     random: () => 0.5,
     keepAwake: () => () => {},
   };
-  return { deps, writes, sends, blastStatuses, recipients };
+  return { deps, writes, sends, blastStatuses, recipients, attemptTimes, now: () => clock };
 }
 
 describe('classify', () => {
@@ -149,6 +159,29 @@ describe('TextBlastRunner', () => {
       if (waited > 30_000) runner.stop();
     };
     runner = new TextBlastRunner(h.deps);
+    await runner.start(7);
+    expect(h.sends).toHaveLength(1);
+    expect(h.blastStatuses.at(-1)).toBe('stopped');
+  });
+
+  it('pauses at the hourly limit until the oldest text is an hour old, then goes on', async () => {
+    const h = harness({ recipients: [{}, {}, {}], hourCap: 2 });
+    const reasons = new Set<string | null>();
+    const runner = new TextBlastRunner(h.deps, (p) => reasons.add(p.waitReason));
+    await runner.start(7);
+    expect(h.sends).toHaveLength(3);
+    expect(reasons).toContain('hourly');
+    expect(h.attemptTimes[2] - h.attemptTimes[0]).toBeGreaterThanOrEqual(3600_000);
+    expect(h.attemptTimes[1] - h.attemptTimes[0]).toBeLessThan(120_000);
+    expect(runner.snapshot().log.some((l) => l.text.startsWith('Hourly limit of 2 texts reached'))).toBe(true);
+    expect(h.blastStatuses.at(-1)).toBe('finished');
+  });
+
+  it('can be stopped while waiting for the hourly limit', async () => {
+    const h = harness({ recipients: [{}, {}], hourCap: 1 });
+    let runner!: TextBlastRunner;
+    let stopped = false;
+    runner = new TextBlastRunner(h.deps, (p) => { if (p.waitReason === 'hourly' && !stopped) { stopped = true; runner.stop(); } });
     await runner.start(7);
     expect(h.sends).toHaveLength(1);
     expect(h.blastStatuses.at(-1)).toBe('stopped');

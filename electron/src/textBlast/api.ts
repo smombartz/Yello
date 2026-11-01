@@ -1,7 +1,7 @@
 import { session } from 'electron';
 import { appUrl } from '../config';
 import type { RunnerApi } from './runner';
-import type { Blast } from './types';
+import type { Blast, SendCounts } from './types';
 
 // Backend calls made by the sending engine, as the signed-in user: session.fetch sends
 // the app's session cookie, the same one the window uses.
@@ -41,6 +41,6 @@ export const textBlastApi: RunnerApi = {
     await call(`/${blastId}/status`, { method: 'POST', body: { status } });
   },
   async sentToday() {
-    return call<{ count: number; cap: number }>(`/sent-today?since=${encodeURIComponent(localMidnightIso())}`);
+    return call<SendCounts>(`/sent-today?since=${encodeURIComponent(localMidnightIso())}`);
   },
 };

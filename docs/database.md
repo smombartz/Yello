@@ -288,6 +288,8 @@ Single row, enforced by `CHECK (id = 1)` and seeded with `INSERT OR IGNORE INTO 
 | `vcard_model_backfilled_at` | *(migration)* TEXT. Marker for the one-time vCard-model backfill. See below |
 | `vcard_model_v2_backfilled_at` | *(migration)* TEXT. Marker for the second vCard-model backfill |
 | `raw_vcards_archived_at` | *(migration)* TEXT. Marker for the `raw_vcard` retirement; set only after the archive is verified and the column dropped |
+| `text_blast_daily_limit` | *(migration)* INTEGER NOT NULL DEFAULT 80. Text Blast: real send attempts per local day, all blasts together (1–1000, checked by the route). At the limit the run stops |
+| `text_blast_hourly_limit` | *(migration)* INTEGER NOT NULL DEFAULT 60. Text Blast: attempts per rolling 60 minutes (1–200). At the limit the run waits until the hour has room |
 | `contact_uids_backfilled_at` | *(migration)* TEXT. Marker for the one-time UID backfill (every contact without `icloud_uid` gets a random one) |
 | `created_at` / `updated_at` | |
 

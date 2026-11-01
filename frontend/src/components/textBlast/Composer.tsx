@@ -10,6 +10,8 @@ import { Button } from '../ui/Button';
 import { FilePicker } from '../ui/FilePicker';
 import { useToast } from '../ui/Toast';
 import { Icon } from '../Icon';
+import { runSummary } from './estimate';
+import { SendLimits } from './SendLimits';
 import { COUNTRIES, RECIPIENT_STATUS } from './statusLabels';
 
 interface ComposerProps {
@@ -174,7 +176,6 @@ export function Composer({ desktop, busy }: ComposerProps) {
     }
   };
 
-  const remainingToday = sentToday ? Math.max(0, sentToday.cap - sentToday.count) : null;
 
   return (
     <>
@@ -341,11 +342,8 @@ export function Composer({ desktop, busy }: ComposerProps) {
             >
               Save without sending
             </Button>
-            {remainingToday !== null && !simulate && (
-              <span className="text-blast-muted">
-                {sentToday!.count} of {sentToday!.cap} sent today.
-                {selected.length > remainingToday && ` The rest wait until tomorrow (resume the blast then).`}
-              </span>
+            {selected.length > 0 && (
+              <span className="text-blast-muted">{runSummary(selected.length, simulate, sentToday ?? null)}</span>
             )}
             {busy && <span className="text-blast-muted">Another blast is sending.</span>}
           </div>
@@ -353,6 +351,7 @@ export function Composer({ desktop, busy }: ComposerProps) {
             Texts go out one at a time, 25–45 seconds apart, from your own number. Each person gets their own conversation.
             Yello stops on its own after 3 failures in a row, and you can stop any time.
           </p>
+          <SendLimits />
         </div>
       </section>
     </>

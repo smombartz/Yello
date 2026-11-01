@@ -724,7 +724,7 @@ Personal 1:1 texts to a list through Apple Messages, from the user's own number,
 The person is re-read before the pause and again right before the send, so unticking someone mid-run, even during their countdown, skips them. The page shows the countdown to the next text and who gets it.
 
 **Safety rails:**
-- 80 real attempts a day across all blasts (`GET /sent-today?since=<local midnight>`; simulated blasts don't count).
+- **Limits**, set on the page (`SendLimits`, `GET`/`PUT /api/text-blasts/settings`, stored in `user_settings`): **daily** (default 80, since local midnight) stops the run until tomorrow; **hourly** (default 60, rolling 60 minutes) pauses it until the oldest attempt in the hour drops out (`hourResetAt` + 2 s), shown as "Hourly limit reached" with the countdown. Both count real attempts across all blasts; simulated blasts and test sends don't count. `GET /sent-today?since=<local midnight>` returns `{ count, cap, hourCount, hourCap, hourResetAt }`. The 80 default comes from TextBlast; Apple publishes no limits.
 - Auto-stop after 3 failures in a row, after ≥10 attempts with >20% failed, or on -1743.
 - `powerSaveBlocker` keeps the Mac awake during a run.
 - One blast at a time.
@@ -745,7 +745,7 @@ The person is re-read before the pause and again right before the send, so untic
 - **Send test:** sends the first selected person's text to the user's own number. It doesn't touch the blast or the daily count.
 - **Simulate:** runs the whole flow without calling Messages.
 - **Run again:** a new draft for the same people with a new message, re-rendered from the stored `values_json`.
-- **Time estimates** (`components/textBlast/estimate.ts`): before a run, "Takes about N min" (35 s average pause + ~8 s per send, capped at what today's limit allows). While sending, a ticking "About m:ss left · done around 3:42 PM", using send times measured on the page, plus a countdown to the next text. The pacing constants mirror `runner.ts`, so change both together.
+- **Time estimates** (`components/textBlast/estimate.ts`): before a run, "Takes about N min" (35 s average pause + ~8 s per send, capped at what today's limit allows, and stretched by the hourly limit's waits: `hourlyBoundSeconds`). While sending, a ticking "About m:ss left · done around 3:42 PM", using send times measured on the page, plus a countdown to the next text. The pacing constants mirror `runner.ts`, so change both together.
 
 ### Top contacts (`/dashboard/top`)
 
