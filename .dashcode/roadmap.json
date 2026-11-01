@@ -2,6 +2,49 @@
   "version": 1,
   "items": [
     {
+      "id": "d1b2o1",
+      "title": "Text Blast: personal 1:1 texts through Messages (Tools)",
+      "status": "todo",
+      "priority": 1,
+      "due": null,
+      "notes": "Plan: docs/plans/2026-10-31-text-blast.md. Groups and/or CSV → preview → test → send from the desktop app.",
+      "steps": [
+        {
+          "id": "2xup",
+          "title": "Backend: recipients (groups + CSV), blasts, statuses",
+          "done": true
+        },
+        {
+          "id": "pe24",
+          "title": "Desktop app: Messages sender, chat.db checks, send loop, IPC",
+          "done": true
+        },
+        {
+          "id": "0l2p",
+          "title": "Page: compose, preview, test, progress, resume, history",
+          "done": true
+        },
+        {
+          "id": "hth3",
+          "title": "Docs: database.md, reference.md, electron README, log",
+          "done": true
+        },
+        {
+          "id": "zivp",
+          "title": "Deploy backend/frontend and rebuild the desktop app",
+          "done": false
+        },
+        {
+          "id": "iows",
+          "title": "Manual check: simulate, test send to yourself, then 2–3 real people",
+          "done": false
+        }
+      ],
+      "createdAt": "2026-11-01T04:21:40Z",
+      "updatedAt": "2026-11-01T04:21:40Z",
+      "doneAt": null
+    },
+    {
       "id": "ccyvry",
       "title": "Recently Added",
       "status": "todo",

@@ -396,6 +396,49 @@ Tables for making Yello the source of truth and syncing it with the user's iClou
 
 Applying a plan writes, in one transaction: the accepted remote changes into the contacts, new contacts for cards being kept, a `contact_sync_links` row per remaining card (the backup's version as `remote_snapshot`; `local_hash` set only when Yello already describes the contact exactly like the card, else `NULL` so the first push updates it), a `sync_tombstones` row (`reason = 'cutover'`) per card to remove, and `sync_providers.enabled = 1` / `cutover_completed_at`; then `sync_cutovers.status` moves `applying → pushing → done` and `summary_json.apply` records each provider's first sync run.
 
+### Text Blast
+
+Personal 1:1 texts sent through Messages by the desktop app (`docs/plans/2026-10-31-text-blast.md`).
+Created on every open in `userDatabase.ts`. Logic in `services/textBlast/store.ts`.
+
+**`text_blasts`**: one row per blast.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | INTEGER PK | |
+| `created_at` | DATETIME DEFAULT `CURRENT_TIMESTAMP` | |
+| `template` | TEXT NOT NULL | The message as written, with `{placeholders}` |
+| `country` | TEXT NOT NULL DEFAULT `'US'` | Region for numbers without a +country code. The composer defaults to the last blast's value |
+| `simulate` | INTEGER NOT NULL DEFAULT 0 | 1 = nothing is sent. Simulated blasts don't count toward the daily limit |
+| `status` | TEXT NOT NULL DEFAULT `'draft'` | CHECK `draft`, `running`, `stopped`, `finished` |
+| `sources` | TEXT NOT NULL DEFAULT `'{}'` | JSON `{ groups: string[], csvName: string \| null }`, for display |
+
+**`text_blast_recipients`**: one row per person in a blast. Only people who could be sent to are stored.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | INTEGER PK | |
+| `blast_id` | INTEGER NOT NULL | FK → `text_blasts(id)` ON DELETE CASCADE |
+| `contact_id` | INTEGER | FK → `contacts(id)` ON DELETE SET NULL. NULL for CSV rows matching no contact |
+| `position` | INTEGER NOT NULL | Send order |
+| `name` | TEXT NOT NULL DEFAULT `''` | |
+| `phone` | TEXT NOT NULL | E.164 number or iMessage email |
+| `text` | TEXT NOT NULL | The exact text sent (rendered when the blast was created) |
+| `is_custom` | INTEGER NOT NULL DEFAULT 0 | Text came from the CSV's `message` column |
+| `source` | TEXT NOT NULL DEFAULT `'group'` | CHECK `group`, `csv`, `both` |
+| `values_json` | TEXT NOT NULL DEFAULT `'{}'` | Placeholder values, so "Run again" can re-render a new message |
+| `status` | TEXT NOT NULL DEFAULT `''` | `''` (queued), `in_flight`, `delivered`, `sent`, `sent_sms`, `dispatched`, `failed`, `error`, `pending`, `not_found`, `needs_review`, `skipped`, `simulated`. Validated by the route, not by a CHECK |
+| `service` | TEXT | `iMessage` / `SMS` / `RCS` as reported by Messages |
+| `sent_at` | DATETIME | ISO time the attempt **started** (stamped on `in_flight`). Used to find the text in `chat.db` after an interruption, and for the daily limit |
+| `status_note` | TEXT | Plain-language explanation |
+| `updated_at` | DATETIME | ISO |
+
+Indexes: `(blast_id, position)`, `sent_at`.
+
+**`in_flight` is written before every send**, and the result right after. A row left `in_flight` by a crash
+is looked up in Messages before anything is resent. The daily limit (80) counts real attempts with
+`sent_at` since local midnight, across all non-simulated blasts.
+
 ### `user_profiles`
 
 Created lazily by `ensureProfileTables()` in `routes/profile.ts`, not in `userDatabase.ts`.
@@ -435,6 +478,8 @@ This table has a **destructive migration**: legacy columns (`first_name`, `last_
 | `sync_remote_versions.reason` | `conflict_yello_won`, `remote_delete`, `pre_update`, `cutover_conflict`, `cutover_delete` |
 | `sync_cutovers.status` | `planning`, `planned`, `applying`, `pushing`, `done`, `failed`, `aborted` |
 | `sync_cutover_items.kind` | `link`, `merged_duplicate`, `update`, `conflict`, `possible_match`, `import`, `delete_remote`, `restore_review`, `create_remote`, `group_card` |
+| `text_blasts.status` | `draft`, `running`, `stopped`, `finished` |
+| `text_blast_recipients.source` | `group`, `csv`, `both` |
 | `user_settings.id` | `1` (single-row table) |
 
 ---

@@ -10,6 +10,7 @@ import { GroupsView } from './components/GroupsView';
 import { MapView } from './components/MapView';
 import { SettingsView } from './components/SettingsView';
 import { MigrationView } from './components/MigrationView';
+import { TextBlastView } from './components/textBlast/TextBlastView';
 import { UserProfilePage } from './components/UserProfilePage';
 import { DashboardView } from './components/DashboardView';
 import { BirthdaysView } from './components/BirthdaysView';
@@ -151,6 +152,8 @@ function AppRoutes() {
         <Route path="groups/:category" element={<GroupsView />} />
         <Route path="map" element={<MapView />} />
         <Route path="tools" element={<SettingsView />} />
+        <Route path="tools/text-blast" element={<TextBlastView />} />
+        <Route path="tools/text-blast/:id" element={<TextBlastView />} />
         <Route path="migration" element={<MigrationView />} />
         <Route path="profile" element={<UserProfilePage />} />
         <Route path="admin" element={<AdminRoute><AdminView /></AdminRoute>} />

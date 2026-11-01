@@ -595,6 +595,41 @@ export function getUserDatabase(userId: number): DatabaseType {
     CREATE INDEX IF NOT EXISTS idx_sync_cutover_items_kind ON sync_cutover_items(cutover_id, kind);
   `);
 
+  // Text Blast (docs/plans/2026-10-31-text-blast.md): personal 1:1 texts sent through
+  // Messages by the desktop app. Each recipient's status is written before and after
+  // every send, so an interrupted blast resumes without texting anyone twice.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS text_blasts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      template TEXT NOT NULL,
+      country TEXT NOT NULL DEFAULT 'US',
+      simulate INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'running', 'stopped', 'finished')),
+      sources TEXT NOT NULL DEFAULT '{}'
+    );
+
+    CREATE TABLE IF NOT EXISTS text_blast_recipients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      blast_id INTEGER NOT NULL REFERENCES text_blasts(id) ON DELETE CASCADE,
+      contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
+      position INTEGER NOT NULL,
+      name TEXT NOT NULL DEFAULT '',
+      phone TEXT NOT NULL,
+      text TEXT NOT NULL,
+      is_custom INTEGER NOT NULL DEFAULT 0,
+      source TEXT NOT NULL DEFAULT 'group' CHECK (source IN ('group', 'csv', 'both')),
+      values_json TEXT NOT NULL DEFAULT '{}',
+      status TEXT NOT NULL DEFAULT '',
+      service TEXT,
+      sent_at DATETIME,
+      status_note TEXT,
+      updated_at DATETIME
+    );
+    CREATE INDEX IF NOT EXISTS idx_text_blast_recipients_blast ON text_blast_recipients(blast_id, position);
+    CREATE INDEX IF NOT EXISTS idx_text_blast_recipients_sent_at ON text_blast_recipients(sent_at);
+  `);
+
   // contacts_fts holds only display_name and company, so its update trigger is
   // limited to those columns. Older databases have it on every UPDATE, which
   // also fired for the UID trigger below before contacts_ai had indexed the

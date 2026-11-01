@@ -1,8 +1,9 @@
-import { app, BrowserWindow, session, shell } from 'electron';
+import { app, BrowserWindow, dialog, session, shell } from 'electron';
 import { execFile } from 'child_process';
 import * as path from 'path';
 import { APP_URL, PROTOCOL, isAppUrl } from './config';
 import { exchangeUrlFor, flowForUrl, startSystemSignIn } from './desktopAuth';
+import { registerTextBlastIpc, textBlastRunning } from './textBlast/ipc';
 
 // A window onto the hosted Yello deployment. There is no local backend: all
 // data lives on the server, and the session cookie lives in this app's
@@ -46,6 +47,8 @@ function createMainWindow(): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // window.yelloDesktop: local features (Text Blast) for the Yello page
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 
@@ -145,7 +148,23 @@ if (!app.requestSingleInstanceLock()) {
       app.dock?.setIcon(path.join(__dirname, '..', '..', 'build-resources', 'icon.png'));
     }
 
+    registerTextBlastIpc();
     showMainWindow();
+  });
+
+  // Quitting mid-blast is safe (each person's status is saved before and after every
+  // text), but say so, since the rest of the list won't go out until it's resumed.
+  app.on('before-quit', (event) => {
+    if (!textBlastRunning()) return;
+    const choice = dialog.showMessageBoxSync({
+      type: 'warning',
+      buttons: ['Keep sending', 'Quit'],
+      defaultId: 0,
+      cancelId: 0,
+      message: 'A text blast is still sending',
+      detail: 'If you quit, the rest of the list waits until you resume it in Tools › Text Blast. Nobody gets the same text twice.',
+    });
+    if (choice === 0) event.preventDefault();
   });
 
   app.on('activate', () => {

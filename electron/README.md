@@ -9,6 +9,8 @@ electron/
 ├── src/config.ts        APP_URL (overridable with YELLO_URL) and the yello:// scheme
 ├── src/desktopAuth.ts   Google sign-in through the system browser (PKCE handoff)
 ├── src/main.ts          Window, navigation rules, deep links, offline fallback
+├── src/preload.ts       window.yelloDesktop: local features for the Yello page
+├── src/textBlast/       Text Blast sender: Messages (AppleScript), chat.db checks, send loop, IPC
 ├── pages/offline.html   "Can't reach Yello" page with a retry link
 └── electron-builder.yml Packaging (dmg, arm64 + x64, registers yello://)
 ```
@@ -45,6 +47,17 @@ App receives yello://auth?code=…
 The code is useless without the verifier, which never leaves the app. The backend half lives in `backend/src/services/desktopHandoff.ts` and the `/desktop/*` routes in `backend/src/routes/auth.ts`.
 
 If the app quits mid-sign-in, the pending verifier is lost and the link does nothing; click Sign in again. "Try demo" works in the app window directly, since it doesn't involve Google.
+
+## Text Blast (sending texts through Messages)
+
+Tools › Text Blast in the Yello page builds a list and hands it to the app, which sends each text through Messages on this Mac (`src/textBlast/`). The page reaches it through `window.yelloDesktop.textBlast` (`src/preload.ts`). The IPC channels are `textblast:*`, and each one answers only pages on the app origin. Statuses are written to the backend before and after every text with the app's own session cookie, so a quit or crash mid-blast resumes without double-sending.
+
+One-time permissions on the Mac:
+- **Automation › Messages**: macOS asks the first time. Packaged builds declare `NSAppleEventsUsageDescription` (`electron-builder.yml`) and `com.apple.security.automation.apple-events` (`build-resources/entitlements.mac.plist`).
+- **Full Disk Access**: needed to read `~/Library/Messages/chat.db` (read-only, `node:sqlite`) and confirm delivery. Without it, texts show "Sent (not checked)".
+- In `npm run dev`, macOS ties both grants to the Electron binary in `node_modules` (or the terminal that started it), not to Yello.app.
+
+`npm test` runs the send loop against a fake Messages (`src/textBlast/runner.test.ts`). Nothing is sent.
 
 ## Development
 

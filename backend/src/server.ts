@@ -35,6 +35,7 @@ import adminRoutes from './routes/admin.js';
 import icloudRoutes from './routes/icloud.js';
 import googleContactsRoutes from './routes/googleContacts.js';
 import syncRoutes from './routes/sync.js';
+import textBlastRoutes from './routes/textBlast.js';
 import { resumeInterruptedCutovers } from './services/sync/cutoverApply.js';
 import { isContactEdit, scheduleSyncAfterEdit, startSyncScheduler } from './services/sync/syncScheduler.js';
 import { resumeInterruptedImports } from './services/importRecovery.js';
@@ -227,6 +228,7 @@ await app.register(adminRoutes, { prefix: '/api/admin' });
 await app.register(icloudRoutes, { prefix: '/api/icloud' });
 await app.register(googleContactsRoutes, { prefix: '/api/google-contacts' });
 await app.register(syncRoutes, { prefix: '/api/sync' });
+await app.register(textBlastRoutes, { prefix: '/api/text-blasts' });
 
 // Move stored credentials onto TOKEN_ENCRYPTION_KEY while a rotation is in
 // progress, before any request can read them.

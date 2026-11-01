@@ -20,4 +20,7 @@ mac:
   hardenedRuntime: true
   entitlements: ../build-resources/entitlements.mac.plist
   entitlementsInherit: ../build-resources/entitlements.mac.plist
+  extendInfo:
+    # Shown in macOS's prompt the first time Text Blast controls Messages
+    NSAppleEventsUsageDescription: Yello uses Messages to send the texts you write in Text Blast, one person at a time.
 publish: null

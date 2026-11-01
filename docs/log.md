@@ -1,5 +1,38 @@
 # Change Log
 
+## 2026-11-01 — Text Blast: personal 1:1 texts through Messages from Tools
+
+**Session:** `18a2e642-baa3-46d4-87b7-6e6d15b27c0c`
+
+**What Changed:**
+- New Tools › Text Blast (`/tools/text-blast`, `/tools/text-blast/:id`). It brings the standalone TextBlast app into Yello: pick one or more groups and/or a CSV (Google Sheet download, Google Contacts export…), write a `{placeholder}` message, check every text, send a test to yourself, then send or simulate
+- Backend builds the list: CSV parsing, E.164 normalisation, matching CSV numbers to contacts, merging group + CSV people into one row, picking each contact's mobile number, rendering, and holding back people with problems. It stores blasts and every person's status. CSV people are never added to contacts
+- The desktop app sends: AppleScript to Messages (iMessage, SMS fallback through the iPhone), delivery checks in `chat.db` via `node:sqlite`, 25–45 s pacing, 80/day cap, auto-stop rules, keep-awake. It writes `in_flight` before and the result after every text, so a quit or crash resumes without texting anyone twice
+- First preload/IPC layer in the desktop app (`window.yelloDesktop`, origin-checked). Apple Events usage text and entitlement for packaged builds. Quitting mid-blast asks first
+- Blast page: live progress, Stop/Resume, per-person status with untick and "Queue again", Run again with a new message, history
+
+**Why:**
+- User request: bring the TextBlast mini app into Yello › Tools, with recipients from a group, a Google CSV, or both. The hosted backend can't drive Messages, so sending lives in the desktop app (decided with the user)
+
+**Files Modified:**
+- `backend/src/services/textBlast/phone.ts`, `template.ts`, `csv.ts` — new: `normalizePhone`, `renderTemplate`/`cleanText`/`normKey`, `parseCsv` (ports of textblast.py)
+- `backend/src/services/textBlast/recipients.ts` — new: `buildRecipients`
+- `backend/src/services/textBlast/store.ts` — new: `createBlast`, `getBlast`, `listBlasts`, `setRecipientStatus`, `setSkipped`, `sentSince`, `rerunBlast`, `deleteBlast`
+- `backend/src/routes/textBlast.ts` — new: `/api/text-blasts` (preview, create, list, get, delete, status, recipient status, skip, rerun, sent-today, normalize). Registered in `server.ts`
+- `backend/src/services/userDatabase.ts` — `text_blasts`, `text_blast_recipients` tables + indexes
+- Tests: `services/textBlast/__tests__/helpers.test.ts`, `recipients.test.ts`, `routes/__tests__/textBlast.test.ts` (new)
+- `electron/src/textBlast/` — new: `messages.ts` (`sendViaMessages`, `checkAccounts`, `explainError`), `chatDb.ts`, `classify.ts`, `runner.ts` (`TextBlastRunner`), `api.ts`, `ipc.ts` (`registerTextBlastIpc`), `types.ts`, `runner.test.ts`
+- `electron/src/preload.ts` — new: `window.yelloDesktop.textBlast`
+- `electron/src/main.ts` — preload, `registerTextBlastIpc()`, quit warning
+- `electron/package.json`, `tsconfig.json` — vitest + `test` script, tests excluded from the build
+- `electron/electron-builder.yml`, `build-resources/entitlements.mac.plist` — `NSAppleEventsUsageDescription`, `com.apple.security.automation.apple-events`
+- `frontend/src/api/textBlastHooks.ts` — new: queries/mutations, `useDesktopTextBlast`
+- `frontend/src/components/textBlast/` — new: `TextBlastView`, `Composer`, `BlastDetail`, `BlastHistory`, `SetupBar`, `statusLabels`
+- `frontend/src/App.tsx` (routes), `components/SettingsView.tsx` (Messaging card), `styles/pages/text-blast.css` + `styles/pages.css`
+- `docs/database.md`, `docs/reference.md`, `electron/README.md`, `docs/plans/2026-10-31-text-blast.md`
+
+---
+
 ## 2026-10-31 — Export selected contacts or a whole group as .vcf or Google CSV
 
 **Session:** `a9e0738a-0f54-452c-8630-d3295513c1fa`

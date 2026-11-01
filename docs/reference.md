@@ -43,6 +43,8 @@ The macOS app opens the hosted deployment (`https://yello.up.railway.app`, overr
 
 Codes are deleted on first use, even when the verifier is wrong. A server restart only drops codes that are seconds old.
 
+**Local features (`window.yelloDesktop`).** `electron/src/preload.ts` exposes one object per feature to pages on the app origin (`textBlast` so far). Every IPC handler in the main process also checks `isAppUrl(event.senderFrame.url)`. Features that need the Mac (Messages, `chat.db`) run in the main process and call the backend through `session.defaultSession.fetch`, which sends the app's session cookie. See Text Blast below.
+
 Up to 1.x the app spawned its own backend with local SQLite in `~/Library/Application Support/Yello/`. That mode is gone, and its files are left in place. See the migration note in `electron/README.md`.
 
 ## Design system
@@ -682,6 +684,56 @@ A phone, email, address, social profile, IM or web link can be **archived**: an 
 - **Who still sees archived entries:** search (FTS), Gmail history/discovery, Gravatar lookup, duplicate detection and import matching (an old email is still evidence of who someone is). **Who doesn't:** list primary email/phone and has-email/phone/address filters, map, geocoding and address cleanup (never geocoded or billed), stats, the public profile and the profile editor (whose save leaves archived rows alone).
 - **Merging contacts** carries the flag over; a value archived on one contact but active on another comes out active (`unarchiveDetailsActiveElsewhere`).
 - **Gotcha:** Fastify's request coercion turns a JSON `null` into `""` for a nullable string, so `PUT /api/contacts/:id` writes `archivedAt || null`.
+
+### Text Blast (Tools › Text Blast, `/tools/text-blast`)
+
+Personal 1:1 texts to a list through Apple Messages, from the user's own number, one conversation per person (never a group text). This is a port of the standalone TextBlast app (`../textblast/`, Python). Plan: `docs/plans/2026-10-31-text-blast.md`.
+
+**Who does what.** Messages can only be driven on the user's Mac, and the backend runs on Railway, so:
+- **Backend** (`routes/textBlast.ts`, `services/textBlast/`) builds the recipient list and stores every blast and each person's status (`text_blasts`, `text_blast_recipients`, see `docs/database.md`).
+- **Desktop app** (`electron/src/textBlast/`) sends: AppleScript to Messages, then `~/Library/Messages/chat.db` read-only (`node:sqlite`) to confirm delivery.
+- **Page** (`frontend/src/components/textBlast/`) composes, previews, tests and starts. It talks to the desktop app through `window.yelloDesktop.textBlast`. In a regular browser it can build and save a blast but not send it.
+
+**Recipients** (`buildRecipients`). One or more groups (archived contacts left out), and/or a CSV such as a Google Sheet download or a Google Contacts export:
+- **CSV parsing:** comma, semicolon or tab, BOM-safe, quote-aware. The phone column is found by name (`phone`, `mobile`, `cell`, `Phone 1 - Value`, …) or by content.
+- **Numbers:** normalised to E.164 with `libphonenumber-js` (`00` prefix → `+`; national numbers use the page's country, which defaults to the last blast's). An iMessage email works too.
+- **Matching:** a CSV number belonging to a contact links the row to that contact. If the contact is also in a chosen group, the two become one row (`source: both`), and CSV cells override contact fields when non-empty. CSV people are never added to contacts.
+- **Number choice:** a contact's number is `cell`/`mobile`/`iphone` first, then primary, then the first stored. The preview offers the others in a dropdown (`phoneOverrides`).
+- **Duplicates:** a repeated number is held back with "same number as row N".
+
+**Message.** `{field}`, `{field|fallback}`, `{{`/`}}`, loose key matching (`{First Name}` = `{first_name}`). Fields: `first_name`, `last_name`, `nickname`, `company`, `full_name` and every CSV column. An empty field without a fallback holds that person back. A CSV `message` column replaces the template for that row (**custom**). Texts are rendered when the blast is created, and the stored text is exactly what's sent.
+
+**Sending** (`TextBlastRunner`), for each queued person:
+1. Write `in_flight` to the backend.
+2. `osascript` sends through `1st account whose service type = iMessage` (data passed as argv).
+3. Poll `chat.db` every 3 s for up to 60 s.
+4. If iMessage failed, fall back to SMS through the iPhone (not for emails, -1743, or when there's no SMS account).
+5. Write the result, then wait a random 25–45 s (1–2 s when simulating).
+
+The person is re-read before each send, so unticking someone mid-run skips them.
+
+**Safety rails:**
+- 80 real attempts a day across all blasts (`GET /sent-today?since=<local midnight>`; simulated blasts don't count).
+- Auto-stop after 3 failures in a row, after ≥10 attempts with >20% failed, or on -1743.
+- `powerSaveBlocker` keeps the Mac awake during a run.
+- One blast at a time.
+- If the backend can't record `in_flight`, nothing is sent.
+- Quitting mid-blast asks first.
+
+**Resume.**
+- `failed`/`error` are retried.
+- An `in_flight` row is looked up in `chat.db` from its `sent_at` and only resent if nothing went out. If it can't be checked, it becomes `needs_review`.
+- `pending`/`not_found`/`needs_review` show "Check Messages", with a "Queue again" button.
+
+**macOS permissions** (shown in the page's setup bar, which links to the right System Settings pane):
+- **Automation › Messages** for Yello. Asked on first use; packaged builds carry `NSAppleEventsUsageDescription` and the `com.apple.security.automation.apple-events` entitlement.
+- **Full Disk Access** for delivery checks. Without it, texts are marked `dispatched` ("Sent (not checked)").
+- In dev, both grants belong to the Electron binary (or the terminal that launched it).
+
+**Other features.**
+- **Send test:** sends the first selected person's text to the user's own number. It doesn't touch the blast or the daily count.
+- **Simulate:** runs the whole flow without calling Messages.
+- **Run again:** a new draft for the same people with a new message, re-rendered from the stored `values_json`.
 
 ### Public profile card (`/p/:slug`)
 

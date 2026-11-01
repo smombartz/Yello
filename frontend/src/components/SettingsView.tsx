@@ -138,6 +138,18 @@ export function SettingsView() {
           </Link>
         </section>
 
+        {/* ===== Messaging ===== */}
+        <section className="settings-group">
+          <h2 className="settings-group-title">Messaging</h2>
+          <Link to="/tools/text-blast" className="collapsible-card settings-nav-link">
+            <div className="settings-section-header">
+              <Icon name="comment-sms" />
+              <h2>Text Blast: personal texts to a group or CSV through Messages</h2>
+            </div>
+            <Icon name="chevron-right" className="nav-link-arrow" />
+          </Link>
+        </section>
+
         {/* ===== Import ===== */}
         <section className="settings-group">
           <h2 className="settings-group-title">Import</h2>
