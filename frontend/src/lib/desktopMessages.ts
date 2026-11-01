@@ -30,6 +30,22 @@ export interface IPhoneBackup {
   /** ISO time the backup was made */
   date: string | null;
   encrypted: boolean;
+  /** Whether it holds WhatsApp's data; null when encrypted (or an older desktop app) */
+  hasWhatsApp?: boolean | null;
+  /** Folder on this Mac, with ~ for home (newer desktop apps) */
+  location?: string;
+}
+
+/** What the last backup import on this Mac read */
+export interface BackupImportRecord {
+  deviceName: string;
+  /** When that backup was made (ISO) */
+  backupDate: string | null;
+  /** Last day it covered */
+  untilDay: string | null;
+  messages: number;
+  /** When it was imported (ISO) */
+  importedAt: string;
 }
 
 export interface IPhoneBackupList {
@@ -149,6 +165,16 @@ export function syncDesktopChannel(
 /* --- WhatsApp's older history from an iPhone backup --- */
 
 const BACKUP_THROUGH_KEY = 'yello.messages.whatsappBackupThrough';
+const LAST_BACKUP_IMPORT_KEY = 'yello.messages.whatsappBackupImport';
+
+/** The last iPhone backup imported on this Mac, or null */
+export function getLastBackupImport(): BackupImportRecord | null {
+  try {
+    return JSON.parse(localStorage.getItem(LAST_BACKUP_IMPORT_KEY) ?? 'null') as BackupImportRecord | null;
+  } catch {
+    return null;
+  }
+}
 
 /** Last day an imported iPhone backup covers (this Mac), or null */
 export function getBackupThrough(): string | null {
@@ -170,19 +196,24 @@ export function backupErrorText(error: unknown): string {
  * the backup's counts, which are complete; the Mac's own scans cover the rest.
  */
 export async function importWhatsAppBackup(
-  backupId: string,
+  backup: IPhoneBackup,
   password: string | null,
   onProgress?: (label: string) => void,
-): Promise<{ messages: number; untilDay: string | null }> {
+): Promise<BackupImportRecord> {
   const desktop = getDesktopMessages();
   if (!desktop?.scanBackup) throw new Error('Update the Yello desktop app to read iPhone backups.');
   onProgress?.(password ? 'Unlocking the backup (this takes a few seconds)…' : 'Reading the backup…');
-  const result = await desktop.scanBackup(backupId, password);
+  const result = await desktop.scanBackup(backup.id, password);
   if (result.activity.length) {
     const to = result.untilDay && result.untilDay > result.to ? result.untilDay : result.to;
     await uploadActivity('whatsapp', result.from, to, result.handles, result.activity,
       (done, total) => onProgress?.(`Uploading ${done} of ${total}…`));
   }
   if (result.untilDay) localStorage.setItem(BACKUP_THROUGH_KEY, result.untilDay);
-  return { messages: result.messages, untilDay: result.untilDay };
+  const record: BackupImportRecord = {
+    deviceName: backup.deviceName, backupDate: backup.date, untilDay: result.untilDay,
+    messages: result.messages, importedAt: new Date().toISOString(),
+  };
+  localStorage.setItem(LAST_BACKUP_IMPORT_KEY, JSON.stringify(record));
+  return record;
 }

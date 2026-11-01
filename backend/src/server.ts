@@ -102,9 +102,11 @@ await app.register(fastifyHelmet, {
   crossOriginEmbedderPolicy: false,
 });
 
-// Rate limiting
+// Rate limiting, per client IP. The app makes many small API calls (several
+// per screen, plus progress polling), so the default is per-minute generous;
+// photos have their own, higher limit (see /photos/*).
 await app.register(fastifyRateLimit, {
-  max: 100,
+  max: 300,
   timeWindow: '1 minute',
   allowList: (request) => request.url === '/health',
 });
@@ -169,8 +171,10 @@ if (frontendExists) {
   });
 }
 
-// Authenticated photo serving (per-user photo directories)
-app.get('/photos/*', async (request, reply) => {
+// Authenticated photo serving (per-user photo directories). Its own rate-limit
+// counter: a list of 200 contacts loads 200 avatars at once, which must not
+// use up the API's allowance.
+app.get('/photos/*', { config: { rateLimit: { max: 3000, timeWindow: '1 minute' } } }, async (request, reply) => {
   // request.user is set by the global auth hook
   const userId = request.user?.id;
   if (!userId) {

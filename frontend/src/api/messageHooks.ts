@@ -108,8 +108,8 @@ export function useMessageSources() {
   return useQuery({
     queryKey: KEYS.sources,
     queryFn: () => fetchApi<{ sources: MessageSource[] }>('/api/messages/sources'),
-    // Poll while a Gmail scan runs
-    refetchInterval: (query) => query.state.data?.sources.some(s => s.status === 'running') ? 2000 : false,
+    // Progress while a Gmail scan runs; every screen showing sources polls, so keep it slow
+    refetchInterval: (query) => query.state.data?.sources.some(s => s.status === 'running') ? 5000 : false,
   });
 }
 

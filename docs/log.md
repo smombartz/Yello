@@ -1,5 +1,46 @@
 # Change Log
 
+## 2026-11-01 — WhatsApp iPhone backup: show which backup is read
+
+**Session:** `99d5fac3-6203-4cfe-981a-cd9de1f9f5e8`
+
+**What Changed:**
+- The WhatsApp card looks for iPhone backups as soon as it shows (no "Find iPhone backups" click) and says how many it found and which one it reads: device, backup date, folder, and whether it has WhatsApp data. Encrypted backups say that's known once unlocked
+- Defaults to the newest backup that has WhatsApp; a backup without WhatsApp data can't be read
+- After an import the card shows "Last read: <device>'s backup from <date>, N messages through <day>", remembered per Mac
+- Desktop app: `listBackups` returns `hasWhatsApp` (unencrypted backups: checks `Manifest.db`) and `location`
+
+**Why:**
+- The user couldn't tell whether a backup was found or which one Yello was reading
+
+**Files Modified:**
+- `electron/src/messageActivity/iphoneBackup.ts` — `BackupInfo.hasWhatsApp`, `location`, `backupHasWhatsApp`; `iphoneBackup.test.ts`
+- `frontend/src/lib/desktopMessages.ts` — `BackupImportRecord`, `getLastBackupImport`, `importWhatsAppBackup` takes the backup
+- `frontend/src/components/MessageSourcesPanel.tsx` — `WhatsAppBackupImport`, `BackupDetails`
+- `frontend/src/styles/pages/top-contacts.css`
+- `docs/reference.md`, `electron/README.md`
+
+---
+
+## 2026-11-01 — Fix: "Too Many Requests" on Top contacts (avatars used up the rate limit)
+
+**Session:** `99d5fac3-6203-4cfe-981a-cd9de1f9f5e8`
+
+**What Changed:**
+- `/photos/*` has its own rate-limit counter (3000 a minute) instead of sharing the API's
+- The API's default limit goes from 100 to 300 requests a minute per IP
+- Top contacts polls Gmail scan progress every 5 s instead of every 2 s (each screen showing sources polls on its own)
+
+**Why:**
+- Railway's logs showed 429s on `/photos/small/*`, `/api/messages/sources` and `/api/messages/top` from one IP: filtering the ranking loads up to 200 new avatars at once, and with the Gmail scan's progress polling on top, the shared 100-a-minute allowance ran out, so the list itself failed to load
+
+**Files Modified:**
+- `backend/src/server.ts` — global `max`, `/photos/*` route `rateLimit` config
+- `frontend/src/api/messageHooks.ts` — `useMessageSources` `refetchInterval`
+- `docs/reference.md` — Rate limits
+
+---
+
 ## 2026-11-01 — Top contacts: Gmail older than 2 years, WhatsApp history from an iPhone backup
 
 **Session:** `99d5fac3-6203-4cfe-981a-cd9de1f9f5e8`

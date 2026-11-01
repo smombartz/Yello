@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Icon } from './Icon';
 import { Button } from './ui/Button';
 import { FilePicker } from './ui/FilePicker';
@@ -10,8 +10,8 @@ import {
   useMessageSources, useStartGmailScan, type GmailOlderRange, type MessageChannel, type MessageSource,
 } from '../api/messageHooks';
 import {
-  backupErrorText, getDesktopMessages, importWhatsAppBackup, incrementalScanStart, syncDesktopChannel,
-  type DesktopChannel, type DesktopReaderStatus, type IPhoneBackupList,
+  backupErrorText, getDesktopMessages, getLastBackupImport, importWhatsAppBackup, incrementalScanStart, syncDesktopChannel,
+  type BackupImportRecord, type DesktopChannel, type DesktopReaderStatus, type IPhoneBackup, type IPhoneBackupList,
 } from '../lib/desktopMessages';
 import { useDesktopAutoRefresh } from '../hooks/useDesktopMessageSync';
 
@@ -137,14 +137,30 @@ function GmailSource({ source }: { source: MessageSource }) {
   );
 }
 
-function backupLabel(b: { deviceName: string; date: string | null; encrypted: boolean }): string {
-  const date = b.date ? new Date(b.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'unknown date';
-  return `${b.deviceName}, backed up ${date}${b.encrypted ? ' (encrypted)' : ''}`;
+function formatIsoDay(iso: string | null): string {
+  return iso ? new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'unknown date';
+}
+
+function backupLabel(b: IPhoneBackup): string {
+  return `${b.deviceName}, backed up ${formatIsoDay(b.date)}${b.encrypted ? ' (encrypted)' : ''}`;
+}
+
+/** What a backup holds, in words */
+function BackupDetails({ backup }: { backup: IPhoneBackup }) {
+  return (
+    <span className="source-summary">
+      {backup.hasWhatsApp === true && <><Icon name="circle-check" /> Has WhatsApp data</>}
+      {backup.hasWhatsApp === false && <><Icon name="circle-xmark" /> No WhatsApp data in this backup</>}
+      {backup.hasWhatsApp == null && backup.encrypted && <><Icon name="lock" /> Encrypted: WhatsApp data shows once it’s unlocked</>}
+      {backup.location && <span className="source-backup-location" title={backup.location}> · {backup.location}</span>}
+    </span>
+  );
 }
 
 /**
  * WhatsApp's older history from an iPhone backup Finder made on this Mac.
  * WhatsApp on the Mac only has what the phone sent over when it was linked.
+ * Looks for backups as soon as it shows and says which one it reads.
  */
 function WhatsAppBackupImport({ coveredFrom }: { coveredFrom: string | null }) {
   const desktop = getDesktopMessages();
@@ -156,32 +172,40 @@ function WhatsAppBackupImport({ coveredFrom }: { coveredFrom: string | null }) {
   const [password, setPassword] = useState('');
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastImport, setLastImport] = useState<BackupImportRecord | null>(() => getLastBackupImport());
 
   const backup = list?.backups.find(b => b.id === selected) ?? list?.backups[0] ?? null;
+  const canList = !!desktop?.backups;
 
-  const find = async () => {
-    if (!desktop?.backups) return;
+  const find = useCallback(async () => {
+    const bridge = getDesktopMessages();
+    if (!bridge?.backups) return;
     setLooking(true);
     setError(null);
     try {
-      const found = await desktop.backups();
+      const found = await bridge.backups();
       setList(found);
-      setSelected(found.backups[0]?.id ?? '');
+      // Default to the newest backup that has (or may have) WhatsApp
+      setSelected((found.backups.find(b => b.hasWhatsApp !== false) ?? found.backups[0])?.id ?? '');
     } catch (e) {
       setError(backupErrorText(e));
     } finally {
       setLooking(false);
     }
-  };
+  }, []);
+
+  // Look for backups as soon as the card shows
+  useEffect(() => { void find(); }, [find]);
 
   const read = async () => {
     if (!backup) return;
     setError(null);
     try {
-      const result = await importWhatsAppBackup(backup.id, backup.encrypted ? password : null, setProgress);
+      const record = await importWhatsAppBackup(backup, backup.encrypted ? password : null, setProgress);
       setPassword('');
-      showToast(result.messages
-        ? `Counted ${result.messages.toLocaleString()} WhatsApp messages from the backup`
+      setLastImport(record);
+      showToast(record.messages
+        ? `Counted ${record.messages.toLocaleString()} WhatsApp messages from ${backup.deviceName}’s backup`
         : 'No WhatsApp messages in this backup');
     } catch (e) {
       setError(backupErrorText(e));
@@ -200,42 +224,68 @@ function WhatsAppBackupImport({ coveredFrom }: { coveredFrom: string | null }) {
         Mac in Finder (select your iPhone › General › <em>Back up all of the data on your iPhone to this Mac</em> › Back Up
         Now), then read the backup here. Only counts per person are uploaded.
       </p>
-      {!desktop?.backups ? (
+
+      {lastImport && (
+        <p className="source-backup-last">
+          <Icon name="circle-check" />
+          Last read: {lastImport.deviceName}’s backup from {formatIsoDay(lastImport.backupDate)},{' '}
+          {lastImport.messages.toLocaleString()} messages
+          {lastImport.untilDay && <> through {formatDay(lastImport.untilDay)}</>} (read {formatRelativeDay(lastImport.importedAt)})
+        </p>
+      )}
+
+      {!canList ? (
         <p className="source-summary muted">Update the Yello desktop app to read iPhone backups.</p>
       ) : !list ? (
-        <Button icon="mobile-screen" loading={looking} onClick={() => void find()}>Find iPhone backups</Button>
+        <p className="settings-description"><Icon name="arrows-rotate" className="spinning" /> Looking for iPhone backups on this Mac…</p>
       ) : !list.backups.length ? (
         <div className="message-source-actions">
           <span className="source-summary">
             {list.state === 'needs_full_disk_access'
               ? 'Yello needs Full Disk Access to read iPhone backups.'
-              : list.state === 'error' ? list.error : 'No iPhone backups on this Mac yet.'}
+              : list.state === 'error' ? list.error : 'No iPhone backups found on this Mac.'}
           </span>
           <Button size="sm" variant="ghost" icon="rotate" loading={looking} onClick={() => void find()}>Look again</Button>
         </div>
       ) : progress ? (
         <p className="settings-description"><Icon name="arrows-rotate" className="spinning" /> {progress}</p>
       ) : (
-        <div className="source-backup-form">
-          {list.backups.length > 1 ? (
-            <select className="edit-input" value={backup?.id ?? ''} onChange={(e) => { setSelected(e.target.value); setError(null); }}
-              aria-label="iPhone backup">
-              {list.backups.map(b => <option key={b.id} value={b.id}>{backupLabel(b)}</option>)}
-            </select>
-          ) : (
-            <span className="source-summary">{backup && backupLabel(backup)}</span>
-          )}
-          {backup?.encrypted && (
-            <input
-              type="password" className="edit-input" autoComplete="off" value={password}
-              placeholder="Backup password" aria-label="Backup password"
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && password) void read(); }}
-            />
-          )}
-          <Button icon="clock-rotate-left" disabled={!!backup?.encrypted && !password} onClick={() => void read()}>
-            Read WhatsApp from backup
-          </Button>
+        <div className="source-backup-pick">
+          <span className="source-backup-found">
+            Found {list.backups.length === 1 ? 'one backup' : `${list.backups.length} backups`} on this Mac.
+            {list.backups.length > 1 ? ' Read from:' : ' Reads from:'}
+          </span>
+          <div className="source-backup-form">
+            {list.backups.length > 1 ? (
+              <select className="edit-input" value={backup?.id ?? ''} onChange={(e) => { setSelected(e.target.value); setError(null); }}
+                aria-label="iPhone backup to read">
+                {list.backups.map(b => <option key={b.id} value={b.id}>{backupLabel(b)}</option>)}
+              </select>
+            ) : (
+              <strong className="source-backup-name">{backup && backupLabel(backup)}</strong>
+            )}
+            <Button size="sm" variant="ghost" icon="rotate" loading={looking} onClick={() => void find()} title="Look for backups again">
+              Refresh
+            </Button>
+          </div>
+          {backup && <BackupDetails backup={backup} />}
+          <div className="source-backup-form">
+            {backup?.encrypted && (
+              <input
+                type="password" className="edit-input" autoComplete="off" value={password}
+                placeholder="Backup password" aria-label="Backup password"
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && password) void read(); }}
+              />
+            )}
+            <Button
+              icon="clock-rotate-left"
+              disabled={(!!backup?.encrypted && !password) || backup?.hasWhatsApp === false}
+              onClick={() => void read()}
+            >
+              Read WhatsApp from this backup
+            </Button>
+          </div>
           {backup?.encrypted && (
             <span className="source-summary muted">
               The password you set for encrypted backups in Finder. It’s only used on this Mac to unlock the backup and isn’t saved.

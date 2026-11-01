@@ -30,6 +30,24 @@ export interface BackupInfo {
   /** When the backup was made (ISO) */
   date: string | null;
   encrypted: boolean;
+  /** Whether it holds WhatsApp's database; null when encrypted (known only once unlocked) */
+  hasWhatsApp: boolean | null;
+  /** Where it is, with ~ for the home folder */
+  location: string;
+}
+
+/** Whether an unencrypted backup's file list includes WhatsApp's database */
+function backupHasWhatsApp(dir: string): boolean | null {
+  try {
+    const db = new DatabaseSync(path.join(dir, 'Manifest.db'), { readOnly: true });
+    try {
+      return !!db.prepare('SELECT 1 FROM Files WHERE domain = ? AND relativePath = ? LIMIT 1').get(WHATSAPP_DOMAIN, 'ChatStorage.sqlite');
+    } finally {
+      db.close();
+    }
+  } catch {
+    return null;
+  }
 }
 
 function readPlistFile(file: string): { [key: string]: PlistValue } {
@@ -61,11 +79,14 @@ export function listBackups(root = BACKUP_ROOT): BackupInfo[] {
       try { info = readPlistFile(path.join(dir, 'Info.plist')); } catch { /* optional */ }
       const lockdown = (manifest.Lockdown ?? {}) as { [key: string]: PlistValue };
       const date = asDate(info['Last Backup Date']) ?? asDate(manifest.Date);
+      const encrypted = manifest.IsEncrypted === true;
       out.push({
         id: entry.name,
         deviceName: String(info['Device Name'] ?? lockdown.DeviceName ?? 'iPhone'),
         date: date ? date.toISOString() : null,
-        encrypted: manifest.IsEncrypted === true,
+        encrypted,
+        hasWhatsApp: encrypted ? null : backupHasWhatsApp(dir),
+        location: dir.startsWith(os.homedir()) ? `~${dir.slice(os.homedir().length)}` : dir,
       });
     } catch {
       // Not a backup, or one still being written

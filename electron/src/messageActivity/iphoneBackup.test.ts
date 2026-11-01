@@ -187,10 +187,11 @@ describe('iPhone backups', () => {
 
   it('lists backups with their device, date and encryption, newest first', () => {
     const list = listBackups(root);
-    expect(list.map(b => [b.id, b.deviceName, b.encrypted])).toEqual(expect.arrayContaining([
-      ['PLAINBACKUP-0001', 'Test iPhone', false],
-      ['SECRETBACKUP-0002', 'Locked iPhone', true],
+    expect(list.map(b => [b.id, b.deviceName, b.encrypted, b.hasWhatsApp])).toEqual(expect.arrayContaining([
+      ['PLAINBACKUP-0001', 'Test iPhone', false, true],
+      ['SECRETBACKUP-0002', 'Locked iPhone', true, null],
     ]));
+    expect(list.find(b => b.id === 'PLAINBACKUP-0001')?.location).toBe(path.join(root, 'PLAINBACKUP-0001'));
     expect(list[0].date).toBe(new Date(noon('2026-10-31') * 1000).toISOString());
     expect(listBackups(path.join(root, 'missing'))).toEqual([]);
   });
