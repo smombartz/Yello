@@ -31,7 +31,16 @@ const FILTER_GROUPS: { title: string; filters: FilterDefinition[] }[] = [
   },
 ];
 
-const FILTER_LABELS: Record<string, string> = {};
+/** Person, company or generic: one choice, so a segmented control rather than an Any/Yes/No row. */
+const KIND_OPTIONS = [
+  { key: null, icon: 'users', label: 'All' },
+  { key: 'is-person', icon: 'user', label: 'People' },
+  { key: 'is-company', icon: 'building', label: 'Companies' },
+  { key: 'is-generic', icon: 'address-card', label: 'Generic' },
+] as const;
+const KIND_KEYS: string[] = ['is-person', 'is-company', 'is-generic'];
+
+const FILTER_LABELS: Record<string, string> = { 'is-person': 'People', 'is-company': 'Companies', 'is-generic': 'Generic' };
 FILTER_GROUPS.forEach(g => g.filters.forEach(f => {
   FILTER_LABELS[f.hasKey] = `Has ${f.label}`;
   FILTER_LABELS[f.noKey] = `No ${f.label}`;
@@ -112,6 +121,15 @@ export function ContactFilters({
     if (current === 'any') next.add(def.hasKey);
     else if (current === 'has') next.add(def.noKey);
     // 'no' → 'any' (remove both, already done)
+    onFiltersChange(next);
+  }
+
+  const kind = KIND_KEYS.find(key => filters.has(key)) ?? null;
+
+  function setKind(key: string | null) {
+    const next = new Set(filters);
+    KIND_KEYS.forEach(k => next.delete(k));
+    if (key) next.add(key);
     onFiltersChange(next);
   }
 
@@ -206,6 +224,23 @@ export function ContactFilters({
             ))}
           </div>
         )}
+        <div className="filter-group">
+          <div className="filter-group-title" id="filter-kind-title">Type</div>
+          <div className="filter-segmented filter-segmented-4" role="radiogroup" aria-labelledby="filter-kind-title">
+            {KIND_OPTIONS.map(option => (
+              <button
+                key={option.label}
+                role="radio"
+                aria-checked={kind === option.key}
+                className={`filter-segment${kind === option.key ? ' selected' : ''}`}
+                onClick={() => setKind(option.key)}
+              >
+                <Icon name={option.icon} />
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
         {FILTER_GROUPS.map(group => (
           <div key={group.title} className="filter-group">
             <div className="filter-group-title">{group.title}</div>

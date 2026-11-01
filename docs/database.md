@@ -164,7 +164,8 @@ The root record. Everything else in this database hangs off it via `ON DELETE CA
 | `nickname` | TEXT | *(migration)* vCard `NICKNAME` |
 | `gender` | TEXT | *(migration)* Apple `X-GENDER`, as written (`Male`, `Female`, …) |
 | `department` | TEXT | *(migration)* `ORG` components after the company, `;`-joined |
-| `is_company` | INTEGER DEFAULT 0 | *(migration)* Apple `X-ABShowAs:COMPANY` — the card is an organisation |
+| `is_company` | INTEGER DEFAULT 0 | *(migration)* Apple `X-ABShowAs:COMPANY` — the card is an organisation. Synced with iCloud only. What Yello shows and filters on is the *effective kind* (`EFFECTIVE_KIND_SQL` in `services/contactKind.ts`): `company` when `is_company = 1`; else `kind` when it is `person` or `generic`; else `company` when `kind IS NULL` with no first or last name and a non-empty `company`; else `person` |
+| `kind` | TEXT, CHECK `person` / `company` / `generic` | *(migration)* What the user picked (edit form, Add Contact, Cleanup → Company or Generic); `NULL` until then, which leaves company auto-detection on. Written with `is_company` by `setContactKind` (Company sets `is_company = 1`, Person and Generic set `0`); an iCloud pull that flips Show as Company sets it to `company` / `person`. Generic is Yello-only and syncs as a normal card |
 | `placeholder_name` | TEXT | *(migration)* Stand-in name of a card imported or synced with no name at all (no `FN`, empty `N`): its company, else primary email, else primary phone, else `No Name`. `display_name` is set to the same value. Cleanup's **No Name** list is the contacts whose `display_name` still equals it (with no first/last name); renaming the contact takes it off the list |
 | `vcard_params` | TEXT | *(migration)* JSON leftover parameters of the single-valued properties, keyed by property: `{"BDAY": {"X-APPLE-OMIT-YEAR": ["1604"]}}`. See *Leftover parameters* |
 | ~~`raw_vcard`~~ | — | **Retired 2026-09-27.** Held each card as imported. Dropped once every property was modeled; the originals are in `archive/original-cards-<date>.vcf.gz`. See *raw_vcard retirement* below |
@@ -425,6 +426,7 @@ This table has a **destructive migration**: legacy columns (`first_name`, `last_
 | `contact_photos.source` | `vcard`, `google`, `gravatar`, `linkedin` |
 | `contact_emails_history.direction` | `inbound`, `outbound` |
 | `import_jobs.status` | `pending`, `running`, `completed`, `failed` |
+| `contacts.kind` | `person`, `company`, `generic` (or `NULL`) |
 | `contact_merged_identities.kind` | `uid`, `google_resource_name` |
 | `contact_sync_links.provider`, `sync_tombstones.provider`, `sync_providers.provider`, `sync_runs.provider`, `sync_remote_versions.provider`, `sync_cutover_items.provider` | `icloud`, `google` |
 | `contact_sync_links.status` | `active`, `pending_create`, `deleted`, `error` |

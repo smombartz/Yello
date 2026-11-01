@@ -258,6 +258,37 @@ List rows show the whole primary email and phone, and every row's email and phon
 
 The list's sticky toolbar shows how many contacts the view lists, pinned right ahead of Select Page: "1,284 contacts", or "12 results" while searching. It is `total` from `GET /api/contacts`, counted with the same WHERE clause as the page (search, filters, group), so it is the full match count, not the 100 loaded rows; when more match than are loaded, its tooltip says "Showing the first 100". It lives in `ContactList`, so a group's list (`/groups/:category`) shows it too. It replaced the Contacts page's header count. On phones it shows only when the toolbar does (filter chips active); an empty result shows the "No matches" state instead.
 
+### Person, company or generic (filter, toggle, avatar)
+
+Every contact is a person, a company, or generic: neither a person nor a company (Front Desk, Support line, Taxi, Mom's office, noreply@). The contacts filter has a **Type** control (All · People · Companies · Generic) that writes `is-person` / `is-company` / `is-generic` into `?filter=`; its chips read "People" / "Companies" / "Generic". `/contacts?filter=is-company` links straight to companies.
+
+- **Two columns:** `contacts.is_company` is Apple's "Show as Company" (`X-ABShowAs:COMPANY`), synced with iCloud. `contacts.kind` is what the user picked in Yello (`person` / `company` / `generic`, `NULL` until picked).
+- **Effective kind:** one SQL snippet, `EFFECTIVE_KIND_SQL` in `backend/src/services/contactKind.ts`, used by the list filter, the list rows' `kind` and the detail's `kind` (`withVcardFields`). Flagged → company; else a picked person/generic; else unpicked with a company name and no first or last name → company (auto-detected); else person.
+- **Picking:** the Person | Company | Generic toggle (`ContactKindToggle`, under the name fields in edit and Add Contact) sends `kind` only when the user picks one; `PUT` still takes the older `isCompany` boolean. All writes go through `setContactKind` / `kindColumns`: Company sets `is_company = 1`, Person and Generic set `0`.
+- **Sync:** auto-detection never writes `is_company`, so only a picked Company reaches iCloud as Show as Company. Generic is Yello-only and syncs as a normal card. Turning Show as Company on or off in Apple sets `kind` to `company` / `person` on the next pull (`replaceContactFields`, the `isCompany` family). Google has no such flag and neither reads nor writes it.
+- **Name:** saving a contact with no first or last name names it after its company (`PUT /api/contacts/:id`), as import and Add Contact already did.
+- **Avatar:** with no photo (or a broken one), companies show a building and generic contacts a card (`address-card`) instead of initials (`Avatar` `kind`).
+
+### Cleanup: Company or Generic
+
+Tools → Cleanup → **Company or Generic** suggests contacts to mark as a company or generic (`ContactKindCleanup.tsx`, `routes/contactKindCleanup.ts` at `/api/cleanup/contact-kind`).
+
+- **Candidates:** active contacts with no picked `kind` that aren't already flagged (`is_company = 0`). Suggestions are computed on each request in memory: no table, nothing cached.
+- **Rules** (`services/contactKindSuggestions.ts`, `suggestKind`): keyword rules, first match wins. Each suggestion carries a confidence (strong / likely) and up to 3 readable reasons.
+  - **Text searched:** only the name (first + last, or the display name when there is no person name), never the company field. "Ada Lovelace" at "Acme Inc" is a person.
+  - **Rules, in order:**
+    1. legal forms (Inc, LLC, GmbH, …; short ones such as AG and SA only as the last word, in capitals) → company
+    2. role words (Front Desk, Support, Hotline, Taxi, …) and possessive places ("Mom's work") → generic
+    3. business words (Restaurant, Studio, Clinic, …) → likely company
+    4. trades (Plumber, Locksmith, …) → likely generic
+    5. on nameless contacts, role emails: `noreply@`/`support@` → generic, `info@`/`hello@` → likely company
+    6. a company name with no person name → company. These count as companies already through auto-detection; accepting confirms it and sends Show as Company to iCloud.
+- **Sub-tabs:** All · Company · Generic, with counts from `GET /summary`. The list is `GET /suggestions?kind=&limit=&offset=`, strong suggestions first, then by name.
+- **Row actions:** the suggested kind (primary), the other kind, Person, and Skip. Applying calls `POST /apply` with `{items: [{id, kind}]}`.
+- **Skip** hides the row until the page reloads; it isn't saved, so the contact is suggested again later. Marking it Person removes it for good.
+- **Mark all as suggested** calls `POST /apply-all` with `{kind?, excludeIds}`. The server recomputes the suggestions and applies each one's suggested kind, leaving out the skipped rows.
+- **Sync:** everything is under `/api/cleanup`, which is in `EDITING_PREFIXES`, so applying triggers a sync.
+
 ### Contact row menu (⋮)
 
 The three-dot button at the end of each list row opens a menu that works without expanding the card first:
@@ -400,6 +431,29 @@ Rules worth knowing:
 **Geocode data:** addresses geocoded by the address-cleanup feature (`contact_addresses.latitude/longitude`) export as per-address `GEO` properties tied to their `ADR` via Apple-style item groups (`item1.ADR` + `item1.GEO:lat;lon`) — vCard 3.0's plain `GEO` is card-level, so grouping is what keeps it per-address. `injectGeoIntoVcard()` remains in `vcardGenerator.ts` from the raw-replay export but has no caller now.
 
 **Verified lossless on real data (2026-09-27):** importing the 12,116-card `docs/contacts.vcf`, exporting, and re-parsing gives the same value for every modeled field and every generic property on every card. The only difference is intentional: a social profile imported without a username gets one derived from its URL.
+
+### Export selected contacts or a group (`POST /api/contacts/export`)
+
+Body `{ format: 'vcf' | 'csv', ids?: number[], group?: string }`, exactly one of `ids` / `group`
+(400 otherwise, 404 when nothing matches). `group` exports the group's **active** contacts, the same
+set its card counts; `ids` exports those contacts as given. Rows come sorted by display name.
+
+- **Why POST:** a selection can be thousands of IDs, too long for a URL. Every non-GET under
+  `/api/contacts` normally counts as an edit and schedules a sync, so `isContactEdit` exempts this
+  path (`READ_ONLY_PATHS` in `syncScheduler.ts`).
+- **VCF** is the same card as the full export (`exportContactsAsVcf(db, photos, { ids })`), photos included.
+- **CSV** is Google Contacts' layout, written by `generateGoogleCsv()` (`csvExportService.ts`) from the
+  same `loadContactsForVcard` data. Column names follow Google's own export (`E-mail 1 - Label`,
+  `Labels` = `* myContacts ::: <groups>`), so Google imports it as its own; numbered groups get as many
+  slots as the contact with the most entries. The primary email/phone label starts with `* `. Social
+  profiles go into Website columns, IMs into Custom Field, dates are `YYYY-MM-DD` or `--MM-DD` (Apple's
+  1604 placeholder year counts as no year). Archived details, photos and LinkedIn enrichment are left
+  out. UTF-8 with a BOM (for Excel), CRLF rows.
+- **Filename:** the group's name, the contact's name for a single contact, else `yello-<n>-contacts`.
+  `Content-Disposition` carries an ASCII `filename` plus a UTF-8 `filename*`; dev CORS exposes the header.
+- **UI:** `ActionMenu` (with `triggerLabel`) in `ContactList`: *Export (n)* among the selection actions,
+  and *Export* beside Select Page inside a group when nothing is selected. `useExportContacts`
+  (`frontend/src/api/exportHooks.ts`) posts, then downloads the response blob via `<a download>`.
 
 ### VCF parsing notes (`vcardParser.ts`)
 

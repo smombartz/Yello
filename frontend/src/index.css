@@ -1045,6 +1045,10 @@ a.nav-rail-item.active {
   overflow: hidden;
 }
 
+.avatar-icon i {
+  font-size: 0.85em;
+}
+
 .avatar img {
   display: block;
   width: 100%;
@@ -3552,6 +3556,10 @@ a.nav-rail-item.active {
   padding: var(--ds-space-1) 0.75rem var(--ds-space-2);
 }
 
+.filter-segmented-4 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .filter-segment {
   display: inline-flex;
   align-items: center;
@@ -3970,6 +3978,40 @@ a.nav-rail-item.active {
 .edit-name-fields .edit-input {
   flex: 1;
   min-width: 120px;
+}
+
+/* Person | Company | Generic, under the name fields (ContactKindToggle) */
+.contact-kind-toggle {
+  display: inline-flex;
+  gap: var(--ds-space-1);
+  margin-bottom: var(--ds-space-3);
+}
+
+.add-contact-content .contact-kind-toggle {
+  margin: var(--ds-space-3) 0 0;
+}
+
+.contact-kind-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  height: var(--ds-control-height);
+  padding: 0 0.75rem;
+  border: 1px solid var(--ds-border-color);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-bg-primary);
+  color: var(--ds-text-secondary);
+  font-family: inherit;
+  font-size: var(--ds-font-sm);
+  font-weight: var(--ds-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--ds-duration-normal) var(--ds-easing-default), border-color var(--ds-duration-normal) var(--ds-easing-default), color var(--ds-duration-normal) var(--ds-easing-default);
+}
+
+.contact-kind-option.selected {
+  background: var(--ds-color-primary-light);
+  border-color: var(--ds-color-primary);
+  color: var(--ds-color-primary);
 }
 
 /* Edit input styling */
@@ -6015,6 +6057,66 @@ a.nav-rail-item.active {
   flex-direction: column;
   gap: var(--ds-space-4);
   padding: var(--ds-space-6);
+}
+
+/* Cleanup: Company or Generic (ContactKindCleanup) */
+.kind-cleanup .address-subtabs {
+  padding-top: var(--ds-space-4);
+}
+
+.kind-suggestion-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-4) var(--ds-space-6) var(--ds-space-6);
+}
+
+.kind-suggestion-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+}
+
+.kind-suggestion-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kind-suggestion-name {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  font-weight: var(--ds-weight-medium);
+  color: var(--ds-text-primary);
+}
+
+.kind-suggestion-subtitle,
+.kind-suggestion-reasons {
+  font-size: var(--ds-font-sm);
+  color: var(--ds-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kind-suggestion-reasons {
+  color: var(--ds-text-tertiary, var(--ds-text-secondary));
+}
+
+.kind-suggestion-actions {
+  display: flex;
+  gap: var(--ds-space-2);
+  flex-shrink: 0;
+}
+
+.kind-suggestion-skipped {
+  margin: 0;
+  color: var(--ds-text-secondary);
+  font-size: var(--ds-font-sm);
 }
 
 /* Normalize Card */

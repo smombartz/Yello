@@ -117,6 +117,7 @@ export function ContactRow({
           <Avatar
             photoUrl={contact.photoUrl}
             name={contact.displayName}
+            kind={contact.kind}
             size={48}
             selectable={selectionEnabled}
             isSelected={isSelected}

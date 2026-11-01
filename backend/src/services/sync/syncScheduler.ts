@@ -154,10 +154,14 @@ export function scheduleSyncAfterEdit(userId: number, log: SchedulerLog = consol
 /** Routes whose successful writes change contacts. */
 const EDITING_PREFIXES = ['/api/contacts', '/api/archive', '/api/duplicates', '/api/cleanup', '/api/import', '/api/profile'];
 
+/** POSTs under an editing prefix that only read (a POST because the body can be large). */
+const READ_ONLY_PATHS = new Set(['/api/contacts/export']);
+
 /** Whether a finished request may have changed contacts (and so should trigger a sync). */
 export function isContactEdit(method: string, url: string, statusCode: number): boolean {
   if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return false;
   if (statusCode < 200 || statusCode >= 300) return false;
   const path = url.split('?')[0];
+  if (READ_ONLY_PATHS.has(path)) return false;
   return EDITING_PREFIXES.some(prefix => path === prefix || path.startsWith(`${prefix}/`));
 }

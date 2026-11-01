@@ -1,5 +1,105 @@
 # Change Log
 
+## 2026-10-31 — Export selected contacts or a whole group as .vcf or Google CSV
+
+**Session:** `a9e0738a-0f54-452c-8630-d3295513c1fa`
+
+**What Changed:**
+- New `POST /api/contacts/export` (`{ format: 'vcf' | 'csv', ids | group }`): selected contacts, or every active contact in a group, sorted by name. File named after the group or contact (`filename` + UTF-8 `filename*`)
+- New Google Contacts CSV writer: Google's own export columns, numbered E-mail / Phone / Address / Relation / Website / Event / Custom Field groups sized to the contact with the most entries, groups in `Labels`, `* ` on primary labels, UTF-8 BOM. Archived details, photos and enrichment left out
+- `isContactEdit` exempts the export path, so an export never schedules a sync
+- Contact list: *Export (n)* menu among the selection actions; inside a group, an *Export* menu beside Select Page when nothing is selected. Both offer vCard and CSV
+- `ActionMenu` gains `triggerLabel` and `disabled`
+- Dev CORS exposes `Content-Disposition` so the frontend can read the filename
+
+**Why:**
+- User request: export selected contacts and entire groups as .csv and .vcf
+
+**Files Modified:**
+- `backend/src/services/csvExportService.ts` — new: `generateGoogleCsv`, `csvField`, `googleDate`
+- `backend/src/services/vcardExportService.ts` — `exportContactsAsVcf` takes `ids`
+- `backend/src/routes/contacts.ts` — `POST /export`, `attachmentDisposition`, `ExportBody`
+- `backend/src/services/sync/syncScheduler.ts` — `READ_ONLY_PATHS` in `isContactEdit`
+- `backend/src/server.ts` — CORS `exposedHeaders`
+- Tests: `services/__tests__/csvExportService.test.ts`, `routes/__tests__/contactExport.test.ts` (new), `services/sync/__tests__/syncScheduler.test.ts`
+- `frontend/src/api/exportHooks.ts` — new: `useExportContacts`, `EXPORT_FORMATS`
+- `frontend/src/api/client.ts` — exports `API_BASE`
+- `frontend/src/components/ui/ActionMenu.tsx` — `triggerLabel`, `disabled`
+- `frontend/src/components/ContactList.tsx` — export menus, `handleExport`
+- `frontend/src/components/DocsView.tsx`, `docs/reference.md` — export docs
+
+---
+
+## 2026-10-31 — Generic contacts and the Cleanup "Company or Generic" tab
+
+**Session:** `76f43bef-beee-440d-9027-a26e89d08484`
+
+**What Changed:**
+- Contacts can be a person, a company, or generic (neither: Front Desk, Support line, Taxi, noreply@). `contacts.kind` (`person` / `company` / `generic`, NULL until picked) replaces the unreleased `kind_confirmed`; `EFFECTIVE_KIND_SQL` replaces `EFFECTIVE_COMPANY_SQL`
+- Generic is Yello-only and syncs as a normal card; only Company sets `is_company` (Show as Company). An iCloud pull that flips Show as Company sets `kind` to match
+- New Cleanup tab **Company or Generic**: keyword rules (`suggestKind`) suggest contacts to mark, each with a reason. Sub-tabs All · Company · Generic. Per row: the suggested kind, the other kind, Person or Skip. Plus "Mark all as suggested"
+- Skip only hides a row until reload (the user's choice); it isn't saved
+- The Type filter gains Generic (`is-generic`), the edit/Add Contact toggle is Person | Company | Generic, and generic contacts get an `address-card` avatar
+- API: list items and the detail return `kind` instead of `isCompany`. `POST`/`PUT /api/contacts` take `kind`; `PUT` still accepts `isCompany`
+
+**Why:**
+- User request: a Cleanup tool that goes through contacts and suggests which to mark as companies, and a generic kind for contacts that are neither a person nor a company
+
+**Files Modified:**
+- `backend/src/services/contactKind.ts` — `ContactKind`, `EFFECTIVE_KIND_SQL`, `kindColumns`, `setContactKind`
+- `backend/src/services/contactKindSuggestions.ts` — new, `suggestKind` and its keyword lists
+- `backend/src/routes/contactKindCleanup.ts` — new: `GET /summary`, `GET /suggestions`, `POST /apply`, `POST /apply-all`; registered in `server.ts`
+- `backend/src/services/userDatabase.ts` — `kind` column + migration (replaces `kind_confirmed`)
+- `backend/src/services/contactPersistence.ts` — `isCompany` sync family sets `kind`
+- `backend/src/services/vcardModelStore.ts` — `withVcardFields` returns `kind`
+- `backend/src/routes/contacts.ts` — `is-generic` filter, `kind` on list/create/update
+- `backend/src/schemas/contact.ts` — `ContactKindSchema`, `kind` fields
+- Tests: `services/__tests__/contactKindSuggestions.test.ts`, `services/__tests__/contactKindSync.test.ts`, `routes/__tests__/contactKindCleanup.test.ts` (new), `routes/__tests__/contactKind.test.ts`
+- `frontend/src/components/ContactKindCleanup.tsx`, `frontend/src/api/contactKindCleanupHooks.ts` — new
+- `frontend/src/components/CleanupView.tsx` — `OWN_LIST_MODES`, the new tab; `CleanupModeSelector.tsx` — tab + count
+- `frontend/src/components/ContactKindToggle.tsx`, `ContactRowExpanded.tsx`, `AddContactPage.tsx` — three kinds, `kindChoice: ContactKind | null`
+- `frontend/src/components/ContactFilters.tsx` — Generic option, 2×2 Type control
+- `frontend/src/components/Avatar.tsx` — `kind` prop replaces `isCompany`; `ContactRow`, `ContactGridCard`, `ContactDetailPage`, `StyleGuideView` pass it
+- `frontend/src/api/types.ts` — `ContactKind`, `CleanupMode` `contact-kind`, suggestion types
+- `frontend/src/index.css` — `.filter-segmented-4`, `.avatar-icon`, `.kind-suggestion-*`
+- `docs/database.md`, `docs/reference.md` — "Person, company or generic", "Cleanup: Company or Generic"
+
+---
+
+## 2026-10-30 — Contacts can be filtered and marked as person or company
+
+**Session:** `76f43bef-beee-440d-9027-a26e89d08484`
+
+**What Changed:**
+- The contacts filter has a Type control (All · People · Companies), sent as `is-person` / `is-company` in `?filter=`, with "People" / "Companies" chips
+- A contact counts as a company when `is_company` is set (Apple's Show as Company) or it has a company name but no first or last name; one shared SQL rule, `EFFECTIVE_COMPANY_SQL`
+- New `contacts.kind_confirmed` column: set when the user picks Person or Company, which turns auto-detection off for that contact
+- Person | Company toggle under the name fields in the edit form and Add Contact; it sends `isCompany` only when picked
+- List rows and the detail return the effective `isCompany`; `POST /api/contacts` accepts `isCompany`
+- Saving a contact with no first or last name names it after its company
+- Companies without a photo show a building icon instead of initials
+
+**Why:**
+- User request: tag and filter person contacts and company contacts. The flag already round-tripped with iCloud but wasn't shown, editable or filterable, and Google contacts never carry it, hence auto-detection
+
+**Files Modified:**
+- `backend/src/services/contactKind.ts` — new, `EFFECTIVE_COMPANY_SQL`
+- `backend/src/services/userDatabase.ts` — `kind_confirmed` column + migration
+- `backend/src/routes/contacts.ts` — `is-company` / `is-person` filters, list `isCompany`, create inserts `is_company` / `kind_confirmed`, update sets `kind_confirmed` and the company name fallback
+- `backend/src/schemas/contact.ts` — `isCompany` on list items and the create body
+- `backend/src/services/vcardModelStore.ts` — `withVcardFields` returns the effective `isCompany`
+- `backend/src/routes/__tests__/contactKind.test.ts` — new
+- `frontend/src/components/ContactKindToggle.tsx` — new
+- `frontend/src/components/ContactFilters.tsx` — Type control, `KIND_OPTIONS`, chip labels
+- `frontend/src/components/ContactRowExpanded.tsx`, `AddContactPage.tsx` — `kindChoice` and the toggle
+- `frontend/src/components/Avatar.tsx` — `isCompany` prop, building placeholder, photo failure handled in state
+- `frontend/src/components/ContactRow.tsx`, `ContactGridCard.tsx`, `ContactDetailPage.tsx`, `StyleGuideView.tsx` — pass `isCompany`, specimen
+- `frontend/src/api/types.ts` — `isCompany` on list item, detail and requests
+- `frontend/src/index.css` — `.filter-segmented-3`, `.contact-kind-toggle`, `.contact-kind-option`, `.avatar-company`
+- `docs/database.md`, `docs/reference.md` — "Person vs company"
+
+---
+
 ## 2026-10-30 — Contact list shows how many contacts it lists
 
 **Session:** `70a71902-a48c-4dbd-bb1f-7ed3cb436e1e`

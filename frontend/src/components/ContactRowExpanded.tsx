@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { ContactDetail, ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, UpdateContactRequest } from '../api/types';
+import type { ContactDetail, ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, ContactKind, UpdateContactRequest } from '../api/types';
 import { useUpdateContact } from '../api/hooks';
 import { useDeleteContacts } from '../api/cleanupHooks';
 import { useSyncStatus } from '../api/syncHooks';
 import { Button } from './ui/Button';
+import { ContactKindToggle } from './ContactKindToggle';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { useToast } from './ui/Toast';
 import { EditableField, LinkedInSection, ReachOutBar, SaveErrors } from './ContactFormSections';
@@ -24,6 +25,8 @@ interface ContactRowExpandedProps {
 
 // Edit form state interface
 interface EditFormState {
+  /** Person, Company or Generic, once picked; null keeps what the server says (it may be auto-detected) */
+  kindChoice: ContactKind | null;
   firstName: string | null;
   lastName: string | null;
   company: string | null;
@@ -97,6 +100,7 @@ export function ContactRowExpanded({ contact, editRequest = 0, onDeleted }: Cont
 
   const handleEnterEditMode = () => {
     setEditForm({
+      kindChoice: null,
       firstName: contact.firstName,
       lastName: contact.lastName,
       company: contact.company,
@@ -149,6 +153,10 @@ export function ContactRowExpanded({ contact, editRequest = 0, onDeleted }: Cont
       title: editForm.title,
       notes: editForm.notes,
       birthday: editForm.birthday,
+      // Sent only when picked, so saving other edits leaves auto-detection on
+      ...(editForm.kindChoice !== null && editForm.kindChoice !== (contact.kind ?? 'person')
+        ? { kind: editForm.kindChoice }
+        : {}),
       ...lists,
     };
 
@@ -220,6 +228,11 @@ export function ContactRowExpanded({ contact, editRequest = 0, onDeleted }: Cont
             </Button>
           </div>
         </div>
+
+        <ContactKindToggle
+          kind={editForm.kindChoice ?? contact.kind ?? 'person'}
+          onChange={(kindChoice) => setEditForm(f => f ? { ...f, kindChoice } : null)}
+        />
 
         <SaveErrors message={error} problems={problems} />
 

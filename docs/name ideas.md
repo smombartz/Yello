@@ -21,6 +21,9 @@ Name
 - parea (παρέα): your group of friends, the people you spend evenings with. A very warm word
 - corrillo (spanish: a small knot of people chatting)
 - kliek (dutch), klik
+- ekko, echo, ekko.party
+- Reso, Riso (resonance)
+
 
 **Domains**
 - yello.you
@@ -28,29 +31,53 @@ Name
 
 Brrring, Switchboard, Exchange, Operator, Dialtone, Party Line, Extension, Callback, Blackbook, Rolo, Almanac, Ledger, Roster, Folio, Directory, Kith, Rapport, Acquainted, Circle, Cohort, Salon, Liaison, Envoy, Host, Intro, Atlas, Ahoy, Hullo, Salut, Kithwire, Kithfile, Rolobook, Telekith, Kithline, Ringwell, Ringleaf, Kinwire, Callwire, Dialbook, Ringdown, Knitbook, Patchcord, Kindex, Kithly, Kithkin, Rolodeck, Knownly, Kenly, Dialwell, Introly, Acquaintly, Folkbook, Ahoyhoy, Rilato, Rillo, Konato, Konataro, Amikaro, Adresaro, Rilataro, Ligilo, Sonoro, Voko, Saluto, Rondo, Trillo, Rello, Riello, Rilla, Rilo, Relo, Rullo, Rotolo, Rota, Rolino, Rubrica, Carnet, Lazo, Enishi, Karo, Karamiko, Karulo, Karularo, Amikejo, Cara, Caro, Zap, Pling, Tilín, Drin, Rin, Zing, Blip, Tink, Plink, Trilla, Trilo, Trilli, Rotulo, Kaaro, Karro, Plinq
 
-Connection / connecting
+**Connection / connecting**
 link, bond, tie, bridge, junction, joint, nexus, network, contact, liaison, linkage, coupling, union, attachment, thread, knot, node, hub, splice, hookup, interface, rapport, affinity, kinship, acquaintance, reach, introduction, crossing, conduit, channel, circuit, wire, line, span, hinge, seam, weave, mesh, web
 
-Integrate
+**Integrate**
 unite, unify, merge, blend, fuse, combine, consolidate, incorporate, assimilate, synthesize, join, mesh, knit, weave, interlace, intertwine, harmonize, cohere, coalesce, amalgamate, gather, assemble, compose, complete, whole, entire, integral, integer
 
-Relate / relation
+**Relate / relation**
 connect, link, tie, pertain, correspond, refer, concern, apply, bear on, identify with, empathize, understand, relation, relationship, relative, kin, kindred, kith, rapport, affinity, alliance, accord, ratio, relay, relevance, regard
 
-Associate / association
+**Associate / association**
 companion, partner, ally, colleague, peer, comrade, fellow, confederate, collaborator, cohort, consort, affiliate, member, friend, mate, compeer, associate, society, guild, league, fellowship, circle, club, union, alliance, company, sodality, network, affiliation, coalition, collective
 
-Correlate (co-relate)
+**Correlate (co-relate)**
 correspond, parallel, match, mirror, map, align, pair, twin, counterpart, analogue, equivalent, reciprocate, interrelate, interconnect, interact, interplay, interdependence, covary, coincide, concur, co-occur, sync, tally, complement, mutual, reciprocal
 
-Related words from other languages (useful for naming)
+**Related words from other languages (useful for naming)**
 - Latin: nexus, socius, sodalis, ligare (to bind), religare, iungere / iunctio (to join), relatio, integer, textus (woven)
 - Italian: legame, legato, nodo, trama, ponte, giunto, rete, intreccio, socio
 - Esperanto: ligi, ligo, rilato, ponto, kun, kunligi, kunularo
 - Greek: synapse, syndesis (binding together), harmos (joint), desmos (bond)
 
-Synonyms: letters and messages
+**Synonyms: letters and messages**
 letters, mail, post, messages, notes, missives, epistles, dispatches, exchange, communication, writing, replies, keeping in touch, back-and-forth
 
-Synonyms: matching
+**Synonyms: matching**
 accord, concord, agreement, harmony, consonance, congruence, parallel, match, equivalence, symmetry, analogy, resemblance, kinship
+
+**Roots to build from**
+- Latin: sonare (to sound), resonare (to sound again), sonus (sound), tonus (tone)
+- Greek: ēchō (echo), syn- (together), tonos (tone, tension), harmonia (fitting together)
+- Sonar is an acronym: SOund NAvigation And Ranging. In practice, you send out a ping and listen for what comes back.
+
+**Echo**
+- Existing words: reverberation, refrain, ripple, rebound, callback, reply, answer, reflection, repeat
+- Coined: Ekkaro, Ekkolo, Ekkora, Ekhora, Ekkin, Echolo, Echowell, Ekkoa
+
+**Sonar**
+- Existing words: sounding, probe, sound out, depth, ping, signal, beacon, echolocation
+- Other languages: Spanish and Portuguese sonda (a probe or sounder). Sondear means "to sound someone out."
+- Coined: Sonara, Sonaro, Sonari, Sondo, Sonalo, Sonore
+
+**Resonance**
+- Existing words: resonate, attune, harmony, consonance, chord, accord, frequency, wavelength, overtone, unison, sympathy, "strike a chord," "same wavelength"
+- Other languages:
+  - Resonar: Spanish for "to resonate."
+  - Resono: Esperanto for resonance.
+  - Syntonie: French for being in tune together, from Greek syn + tonos.
+  - Accordo: Italian for both a musical chord and an agreement.
+  - Unisono: Italian for in unison.
+- Coined: Resona, Risona, Rezona, Reso, Rezo, Syntona, Syntonia, Accora

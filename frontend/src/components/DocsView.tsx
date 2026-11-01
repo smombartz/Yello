@@ -272,6 +272,19 @@ const TOOL_GROUPS: ToolGroup[] = [
           services: ['vcardExportService', 'vcardGenerator', 'addressFormatter'],
         },
       },
+      {
+        id: 'export-selection',
+        name: 'Export Selected Contacts or a Group',
+        icon: 'download',
+        location: 'Contacts → select contacts → Export (n) · Groups → a group → Export · POST /api/contacts/export',
+        how: 'Exports the selected contacts, or every active contact in the open group (not just the loaded page), as a vCard file or a Google Contacts CSV. The request is a POST because a selection can hold thousands of IDs; it is exempt from the sync trigger, so exporting never starts an iCloud or Google sync. The vCard is the same card as the full export, photos included. The CSV uses the column names Google Contacts writes in its own export (E-mail 1 - Label, Phone 1 - Value, Address 1 - Street, Labels and so on), so it imports cleanly into Google; groups go into Labels, social profiles into Website columns and instant messages into Custom Field columns. Archived details, photos and LinkedIn enrichment are left out of the CSV. The file is named after the group or contact.',
+        deps: {
+          packages: ['better-sqlite3'],
+          env: ['USER_DATA_PATH'],
+          tables: ['contacts', 'contact_categories', 'contact_emails', 'contact_phones', 'contact_addresses', 'contact_urls', 'contact_instant_messages', 'contact_social_profiles', 'contact_related_people', 'contact_dates'],
+          services: ['vcardExportService', 'csvExportService', 'vcardGenerator', 'addressFormatter'],
+        },
+      },
     ],
   },
   {

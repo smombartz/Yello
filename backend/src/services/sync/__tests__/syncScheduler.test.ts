@@ -58,6 +58,7 @@ describe('sync scheduling and remote versions', () => {
     expect(isContactEdit('PUT', '/api/contacts/12', 400)).toBe(false);
     expect(isContactEdit('POST', '/api/sync/run', 200)).toBe(false);
     expect(isContactEdit('POST', '/api/contactsfoo', 200)).toBe(false);
+    expect(isContactEdit('POST', '/api/contacts/export', 200)).toBe(false);
   });
 
   it('a scheduled round syncs iCloud then Google for every active user', async () => {

@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import type { ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, CreateContactRequest } from '../api/types';
+import type { ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, ContactKind, CreateContactRequest } from '../api/types';
 import { useCreateContact } from '../api/hooks';
 import { buildContactLists } from '../utils/contactPayload';
 import { Button } from './ui/Button';
+import { ContactKindToggle } from './ContactKindToggle';
 import type { OutletContext } from './Layout';
 import {
   EditableField,
@@ -21,6 +22,8 @@ import {
 } from './ContactFormSections';
 
 interface FormState {
+  /** Person, Company or Generic, once picked; until then a company name with no person name means Company */
+  kindChoice: ContactKind | null;
   firstName: string | null;
   lastName: string | null;
   company: string | null;
@@ -38,6 +41,7 @@ interface FormState {
 }
 
 const initialFormState: FormState = {
+  kindChoice: null,
   firstName: null,
   lastName: null,
   company: null,
@@ -53,6 +57,11 @@ const initialFormState: FormState = {
   urls: [],
   relatedPeople: [],
 };
+
+/** Matches the backend's auto-detection (services/contactKind.ts). */
+function looksLikeCompany(form: FormState) {
+  return !form.firstName?.trim() && !form.lastName?.trim() && !!form.company?.trim();
+}
 
 /** The payload, plus everything that stops it being saved. */
 function validate(form: FormState) {
@@ -104,6 +113,7 @@ export function AddContactPage() {
       title: form.title,
       notes: form.notes,
       birthday: form.birthday,
+      ...(form.kindChoice !== null ? { kind: form.kindChoice } : {}),
       ...lists,
     };
 
@@ -164,6 +174,10 @@ export function AddContactPage() {
                   placeholder="Title"
                 />
               </div>
+              <ContactKindToggle
+                kind={form.kindChoice ?? (looksLikeCompany(form) ? 'company' : 'person')}
+                onChange={(kindChoice) => setForm(f => ({ ...f, kindChoice }))}
+              />
             </div>
           </div>
 

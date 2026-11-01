@@ -22,6 +22,7 @@ export function ContactGridCard({
       <Avatar
         photoUrl={contact.photoUrl}
         name={contact.displayName}
+        kind={contact.kind}
         size={64}
         selectable={selectionEnabled}
         isSelected={isSelected}

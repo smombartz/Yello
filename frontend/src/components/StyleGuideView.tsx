@@ -821,6 +821,10 @@ function ContactRowSpecimen() {
 }
 
 const SAMPLE_PEOPLE = ['Maya Rosen', 'Tomás Okafor', 'Lena Varga', 'Idris Haddad', 'Noor Sato', 'Felix Brandt'];
+const SAMPLE_KINDS = [
+  { name: 'Harbor & Pine', kind: 'company' },
+  { name: 'Front Desk', kind: 'generic' },
+] as const;
 
 function AvatarsSpecimen() {
   return (
@@ -833,10 +837,16 @@ function AvatarsSpecimen() {
               <span className="sg-avatar-name">{name}</span>
             </span>
           ))}
+          {SAMPLE_KINDS.map(({ name, kind }) => (
+            <span key={name} className="sg-avatar">
+              <Avatar photoUrl={null} name={name} size={48} kind={kind} />
+              <span className="sg-avatar-name">{name}</span>
+            </span>
+          ))}
         </div>
-        <p className="sg-note">Sample names. Initials sit on a hue hashed from the name, so the same person is always the same color.</p>
+        <p className="sg-note">Sample names. Initials sit on a hue hashed from the name, so the same person is always the same color. Companies show a building and generic contacts a card instead of initials.</p>
       </div>
-      <CodeLine>{'<Avatar photoUrl={contact.photoUrl} name={contact.displayName} size={48} />'}</CodeLine>
+      <CodeLine>{'<Avatar photoUrl={contact.photoUrl} name={contact.displayName} kind={contact.kind} size={48} />'}</CodeLine>
     </>
   );
 }

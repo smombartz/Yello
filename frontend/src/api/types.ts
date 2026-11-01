@@ -1,3 +1,6 @@
+/** What the contact is. Generic (Front Desk, Support line) is Yello-only; it syncs as a normal card. */
+export type ContactKind = 'person' | 'company' | 'generic';
+
 export interface ContactListItem {
   id: number;
   displayName: string;
@@ -9,6 +12,8 @@ export interface ContactListItem {
   photoUrl: string | null;
   linkedinUrl: string | null;
   websiteUrl: string | null;
+  /** Picked, flagged as a company, or auto-detected (a company name with no person name) */
+  kind?: ContactKind;
 }
 
 export interface ContactEmail {
@@ -144,6 +149,8 @@ export interface ContactDetail {
   createdAt: string;
   updatedAt: string;
   linkedinEnrichment: LinkedInEnrichment | null;
+  /** Picked, flagged as a company, or auto-detected (a company name with no person name) */
+  kind?: ContactKind;
 }
 
 export interface ContactListResponse {
@@ -269,7 +276,33 @@ export interface MergeResponse {
 }
 
 // Cleanup types
-export type CleanupMode = 'empty' | 'problematic' | 'social-links' | 'invalid-links' | 'addresses';
+export type CleanupMode = 'empty' | 'problematic' | 'social-links' | 'invalid-links' | 'addresses' | 'contact-kind';
+
+// Cleanup: Company or Generic (suggested kinds)
+export type SuggestedKind = 'company' | 'generic';
+
+export interface ContactKindSummary {
+  company: number;
+  generic: number;
+  total: number;
+}
+
+export interface ContactKindSuggestion {
+  id: number;
+  displayName: string;
+  company: string | null;
+  title: string | null;
+  primaryEmail: string | null;
+  photoUrl: string | null;
+  suggestedKind: SuggestedKind;
+  confidence: 'strong' | 'likely';
+  reasons: string[];
+}
+
+export interface ContactKindSuggestionsResponse {
+  contacts: ContactKindSuggestion[];
+  total: number;
+}
 
 export type EmptyContactType = 'truly_empty' | 'no_name' | 'name_only';
 
@@ -414,6 +447,8 @@ export interface UpdateContactRequest {
   title?: string | null;
   notes?: string | null;
   birthday?: string | null;
+  /** Send only when the user picks a kind: it turns off auto-detection */
+  kind?: ContactKind;
   emails?: UpdateContactEmail[];
   phones?: UpdateContactPhone[];
   addresses?: UpdateContactAddress[];
@@ -432,6 +467,7 @@ export interface CreateContactRequest {
   title?: string | null;
   notes?: string | null;
   birthday?: string | null;
+  kind?: ContactKind;
   emails?: UpdateContactEmail[];
   phones?: UpdateContactPhone[];
   addresses?: UpdateContactAddress[];

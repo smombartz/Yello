@@ -59,7 +59,7 @@ export function ContactDetailPage() {
       <div className="page-content contact-detail-page">
         <div className="contact-detail-content">
           <div className="contact-detail-identity">
-            <Avatar photoUrl={contact.photoUrl || contact.linkedinEnrichment?.photoLinkedin || null} name={contact.displayName} size={96} />
+            <Avatar photoUrl={contact.photoUrl || contact.linkedinEnrichment?.photoLinkedin || null} name={contact.displayName} kind={contact.kind} size={96} />
             <div className="contact-detail-name-section">
               <h2 className="contact-detail-name">{contact.displayName}</h2>
               {contact.company && (

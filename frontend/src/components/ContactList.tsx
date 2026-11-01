@@ -5,11 +5,13 @@ import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { useContacts, useMergePreview, useMergeSelectedContacts } from '../api/hooks';
 import { useDeleteContacts } from '../api/cleanupHooks';
 import { useArchiveContacts, useUnarchiveContacts } from '../api/archiveHooks';
+import { EXPORT_FORMATS, useExportContacts, type ExportFormat, type ExportTarget } from '../api/exportHooks';
 import { ContactRow, ContactEmailDetail, ContactPhoneDetail } from './ContactRow';
 import { ContactGridCard } from './ContactGridCard';
 import { ContactFilters, getFilterLabel } from './ContactFilters';
 import { Icon } from './Icon';
 import { Button } from './ui/Button';
+import { ActionMenu, type ActionMenuItem } from './ui/ActionMenu';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { Modal } from './ui/Modal';
 import { EmptyState } from './ui/EmptyState';
@@ -158,6 +160,18 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
 
     setShowDeleteConfirm(false);
   }, [selectedIds, deleteMutation, showToast]);
+
+  // Selected contacts, or (inside a group, with nothing selected) the whole group.
+  // The selection stays, so the same contacts can be exported in the other format.
+  const exportMutation = useExportContacts();
+  const handleExport = useCallback((format: ExportFormat, target: ExportTarget) => {
+    exportMutation.mutate({ format, target }, {
+      onSuccess: () => showToast('Export ready - check your downloads'),
+      onError: (error) => showToast(error.message, { type: 'error' }),
+    });
+  }, [exportMutation, showToast]);
+  const exportItems = (target: ExportTarget): ActionMenuItem[] =>
+    EXPORT_FORMATS.map(({ format, label, icon }) => ({ label, icon, onSelect: () => handleExport(format, target) }));
 
   const handleArchive = useCallback(() => {
     if (selectedIds.size === 0) return;
@@ -427,6 +441,16 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
               >
                 {selectedIds.size > 0 ? 'Select None' : 'Select Page'}
               </button>
+              {categoryFilter && selectedIds.size === 0 && (
+                <ActionMenu
+                  items={exportItems({ group: categoryFilter })}
+                  label={`Export ${categoryFilter}`}
+                  triggerClassName="contact-action-button"
+                  triggerIcon="download"
+                  triggerLabel={exportMutation.isPending ? 'Exporting...' : 'Export'}
+                  disabled={exportMutation.isPending}
+                />
+              )}
             </div>
           )}
 
@@ -444,6 +468,14 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
                     : `Merge (${selectedIds.size})`}
                 </Button>
               )}
+              <ActionMenu
+                items={exportItems({ ids: Array.from(selectedIds) })}
+                label={`Export ${selectedIds.size} selected contact${selectedIds.size === 1 ? '' : 's'}`}
+                triggerClassName="btn btn--secondary"
+                triggerIcon="download"
+                triggerLabel={exportMutation.isPending ? 'Exporting...' : `Export (${selectedIds.size})`}
+                disabled={exportMutation.isPending}
+              />
               <Button
                 variant="secondary"
                 icon="box-archive"

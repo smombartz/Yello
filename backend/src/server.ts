@@ -26,6 +26,7 @@ import profileRoutes from './routes/profile.js';
 import socialLinksCleanupRoutes from './routes/socialLinksCleanup.js';
 import invalidLinksCleanupRoutes from './routes/invalidLinksCleanup.js';
 import addressCleanupRoutes from './routes/addressCleanup.js';
+import contactKindCleanupRoutes from './routes/contactKindCleanup.js';
 import statsRoutes from './routes/stats.js';
 import enrichRoutes from './routes/enrich.js';
 import emailSyncRoutes from './routes/emailSync.js';
@@ -77,6 +78,7 @@ await app.register(fastifyCors, {
   origin: process.env.NODE_ENV === 'production' ? false : true,
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
   credentials: true, // Allow cookies in cross-origin requests
+  exposedHeaders: ['Content-Disposition'], // So the dev frontend can read an export's filename
 });
 
 // Security headers
@@ -210,6 +212,7 @@ await app.register(cleanupRoutes, { prefix: '/api/cleanup' });
 await app.register(socialLinksCleanupRoutes, { prefix: '/api/cleanup/social-links' });
 await app.register(invalidLinksCleanupRoutes, { prefix: '/api/cleanup/invalid-links' });
 await app.register(addressCleanupRoutes, { prefix: '/api/cleanup/addresses' });
+await app.register(contactKindCleanupRoutes, { prefix: '/api/cleanup/contact-kind' });
 await app.register(archiveRoutes, { prefix: '/api/archive' });
 await app.register(settingsRoutes, { prefix: '/api/settings' });
 await app.register(mapRoutes, { prefix: '/api/map' });

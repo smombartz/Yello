@@ -20,6 +20,10 @@ interface ActionMenuProps {
   label: string;
   triggerClassName?: string;
   triggerIcon?: string;
+  /** Visible text after the icon, for a labelled trigger like "Export" */
+  triggerLabel?: string;
+  /** While set, the trigger can't be pressed (e.g. an action from the menu is running) */
+  disabled?: boolean;
 }
 
 const GAP = 4;   // px between trigger and menu
@@ -35,6 +39,8 @@ export function ActionMenu({
   label,
   triggerClassName = '',
   triggerIcon = 'ellipsis-vertical',
+  triggerLabel,
+  disabled = false,
 }: ActionMenuProps) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -123,6 +129,7 @@ export function ActionMenu({
         type="button"
         className={triggerClassName}
         aria-label={label}
+        disabled={disabled}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
@@ -132,6 +139,7 @@ export function ActionMenu({
         }}
       >
         <Icon name={triggerIcon} />
+        {triggerLabel}
       </button>
 
       {open && createPortal(

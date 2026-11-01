@@ -87,6 +87,7 @@ export function getUserDatabase(userId: number): DatabaseType {
       gender TEXT,
       department TEXT,
       is_company INTEGER DEFAULT 0,
+      kind TEXT CHECK (kind IN ('person', 'company', 'generic')),
       vcard_params TEXT,
       placeholder_name TEXT,
       archived_at DATETIME DEFAULT NULL,
@@ -653,6 +654,8 @@ export function getUserDatabase(userId: number): DatabaseType {
     `ALTER TABLE contacts ADD COLUMN gender TEXT`,
     `ALTER TABLE contacts ADD COLUMN department TEXT`,
     `ALTER TABLE contacts ADD COLUMN is_company INTEGER DEFAULT 0`,
+    // What the user picked (person, company, generic); NULL until then (services/contactKind.ts)
+    `ALTER TABLE contacts ADD COLUMN kind TEXT CHECK (kind IN ('person', 'company', 'generic'))`,
     // How the contact got here (manual, vcf_import, icloud_sync, ...), for the Recent page
     `ALTER TABLE contacts ADD COLUMN created_via TEXT`,
     `ALTER TABLE contact_emails ADD COLUMN extra_types TEXT`,

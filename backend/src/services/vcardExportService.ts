@@ -220,17 +220,18 @@ export function loadContactsForVcard(db: DatabaseType, options: LoadContactsOpti
 }
 
 /**
- * Exports every non-archived contact (or, with `archived`, every archived one)
- * as one VCF document, built from the database. `readPhotoBase64` returns the
+ * Exports every non-archived contact (or, with `archived`, every archived one;
+ * with `ids`, just those, in that order) as one VCF document, built from the
+ * database. `readPhotoBase64` returns the
  * JPEG for a photo hash, or null when the file is missing, in which case the
  * card is written without a photo.
  */
 export function exportContactsAsVcf(
   db: DatabaseType,
   readPhotoBase64: (photoHash: string) => string | null,
-  options: { archived?: boolean } = {}
+  options: { archived?: boolean; ids?: number[] } = {}
 ): string {
-  return loadContactsForVcard(db, { archived: options.archived ?? false, readPhotoBase64 })
+  return loadContactsForVcard(db, { archived: options.archived ?? false, ids: options.ids, readPhotoBase64 })
     .map(loaded => generateVcard(loaded.contact))
     .join('\r\n');
 }

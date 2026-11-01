@@ -1,5 +1,7 @@
 import { Type, Static } from '@sinclair/typebox';
 
+export const ContactKindSchema = Type.Union([Type.Literal('person'), Type.Literal('company'), Type.Literal('generic')]);
+
 export const ContactListQuerySchema = Type.Object({
   page: Type.Optional(Type.Number({ default: 1 })),
   limit: Type.Optional(Type.Number({ default: 50 })),
@@ -145,7 +147,9 @@ export const ContactListItemSchema = Type.Object({
   primaryPhoneCountryCode: Type.Union([Type.String(), Type.Null()]),
   photoUrl: Type.Union([Type.String(), Type.Null()]),
   linkedinUrl: Type.Union([Type.String(), Type.Null()]),
-  websiteUrl: Type.Union([Type.String(), Type.Null()])
+  websiteUrl: Type.Union([Type.String(), Type.Null()]),
+  /** Picked, flagged or auto-detected (see services/contactKind.ts) */
+  kind: ContactKindSchema
 });
 
 export const ContactListResponseSchema = Type.Object({
@@ -190,7 +194,7 @@ export const ContactDetailSchema = Type.Object({
   nickname: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   gender: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   department: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-  isCompany: Type.Optional(Type.Boolean()),
+  kind: Type.Optional(ContactKindSchema),
   dates: Type.Optional(Type.Array(Type.Object({
     id: Type.Number(),
     date: Type.String(),
@@ -313,7 +317,10 @@ export const UpdateContactBodySchema = Type.Object({
   nickname: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   gender: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   department: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  /** Older form of `kind`: true = company, false = person */
   isCompany: Type.Optional(Type.Boolean()),
+  /** Send only when the user picks: it turns off auto-detection */
+  kind: Type.Optional(ContactKindSchema),
   emails: Type.Optional(Type.Array(UpdateContactEmailSchema)),
   phones: Type.Optional(Type.Array(UpdateContactPhoneSchema)),
   addresses: Type.Optional(Type.Array(UpdateContactAddressSchema)),
@@ -334,6 +341,7 @@ export const CreateContactBodySchema = Type.Object({
   title: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   notes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   birthday: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  kind: Type.Optional(ContactKindSchema),
   emails: Type.Optional(Type.Array(UpdateContactEmailSchema)),
   phones: Type.Optional(Type.Array(UpdateContactPhoneSchema)),
   addresses: Type.Optional(Type.Array(UpdateContactAddressSchema)),

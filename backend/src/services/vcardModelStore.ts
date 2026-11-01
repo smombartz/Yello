@@ -1,5 +1,6 @@
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { ParsedContact, ParsedDate, ParsedVcardProperty, VcardParams } from './vcardParser.js';
+import { EFFECTIVE_KIND_SQL, type ContactKind } from './contactKind.js';
 
 /** Leftover vCard parameters as stored in a `params` column: JSON, or NULL when none. */
 export function paramsJson(params: VcardParams | Record<string, VcardParams> | null | undefined): string | null {
@@ -171,8 +172,9 @@ type EntryAnnotations = { label: string | null; extraTypes: string | null };
  */
 export function withVcardFields<T extends DetailWithEntries>(db: DatabaseType, detail: T) {
   const contact = db.prepare(`
-    SELECT middle_name, name_prefix, name_suffix, nickname, gender, department, is_company
-    FROM contacts WHERE id = ?
+    SELECT c.middle_name, c.name_prefix, c.name_suffix, c.nickname, c.gender, c.department,
+      ${EFFECTIVE_KIND_SQL} AS kind
+    FROM contacts c WHERE c.id = ?
   `).get(detail.id) as {
     middle_name: string | null;
     name_prefix: string | null;
@@ -180,7 +182,7 @@ export function withVcardFields<T extends DetailWithEntries>(db: DatabaseType, d
     nickname: string | null;
     gender: string | null;
     department: string | null;
-    is_company: number | null;
+    kind: ContactKind;
   } | undefined;
 
   const annotations = (table: string) => new Map(
@@ -230,7 +232,8 @@ export function withVcardFields<T extends DetailWithEntries>(db: DatabaseType, d
     nickname: contact?.nickname ?? null,
     gender: contact?.gender ?? null,
     department: contact?.department ?? null,
-    isCompany: contact?.is_company === 1,
+    // Picked, flagged or auto-detected; export and sync read the raw is_company flag elsewhere
+    kind: contact?.kind ?? 'person',
     emails: withArchived(annotate(detail.emails, annotations('contact_emails')), 'contact_emails')!,
     phones: withArchived(annotate(detail.phones, annotations('contact_phones')), 'contact_phones')!,
     addresses: withArchived(annotate(detail.addresses, annotations('contact_addresses'))

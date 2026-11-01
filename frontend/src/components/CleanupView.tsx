@@ -8,9 +8,11 @@ import { CleanupContactList } from './CleanupContactList';
 import { SocialLinksCleanup } from './SocialLinksCleanup';
 import { InvalidLinksCleanup } from './InvalidLinksCleanup';
 import { AddressCleanup } from './AddressCleanup';
+import { ContactKindCleanup } from './ContactKindCleanup';
 import { useCleanupSummary, useCleanupContacts, useDeleteContacts, fetchAllCleanupContactIds } from '../api/cleanupHooks';
 import { useSocialLinksSummary } from '../api/socialLinksHooks';
 import { useAddressCleanupSummary } from '../api/addressCleanupHooks';
+import { useContactKindSummary } from '../api/contactKindCleanupHooks';
 import { useArchiveContacts } from '../api/archiveHooks';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { LoadingSpinner } from './ui/LoadingSpinner';
@@ -23,6 +25,9 @@ import type {
 } from '../api/types';
 
 const PAGE_SIZE = 50;
+
+/** Tabs that render their own list; the rest share the Empty/Problematic contact list below. */
+const OWN_LIST_MODES: CleanupMode[] = ['social-links', 'invalid-links', 'addresses', 'contact-kind'];
 
 export function CleanupView() {
   const { setHeaderConfig } = useOutletContext<OutletContext>();
@@ -39,12 +44,13 @@ export function CleanupView() {
   const { data: summary, isLoading: isSummaryLoading } = useCleanupSummary(threshold);
   const { data: socialLinksSummary } = useSocialLinksSummary();
   const { data: addressCleanupSummary } = useAddressCleanupSummary();
+  const { data: contactKindSummary } = useContactKindSummary();
 
   // One list at a time: the selected tab's type
   const typesArray = [selectedType] as EmptyContactType[] | ProblematicContactType[];
 
-  // Only fetch cleanup contacts when not in social-links, invalid-links, or addresses mode
-  const shouldFetchContacts = selectedMode !== 'social-links' && selectedMode !== 'invalid-links' && selectedMode !== 'addresses';
+  // Only fetch cleanup contacts for the tabs that share the list below
+  const shouldFetchContacts = !OWN_LIST_MODES.includes(selectedMode);
   const {
     data: contactsData,
     isLoading: isContactsLoading,
@@ -191,10 +197,11 @@ export function CleanupView() {
           summary={summary}
           socialLinksSummary={socialLinksSummary}
           addressCleanupSummary={addressCleanupSummary}
+          contactKindSummary={contactKindSummary}
           isLoading={isSummaryLoading}
         />
 
-        {selectedMode !== 'social-links' && selectedMode !== 'invalid-links' && selectedMode !== 'addresses' && (
+        {shouldFetchContacts && (
           <>
             <CleanupFilters
               mode={selectedMode}
@@ -255,6 +262,8 @@ export function CleanupView() {
           <InvalidLinksCleanup />
         ) : selectedMode === 'addresses' ? (
           <AddressCleanup />
+        ) : selectedMode === 'contact-kind' ? (
+          <ContactKindCleanup />
         ) : isContactsLoading ? (
           <LoadingSpinner message="Finding contacts..." />
         ) : (

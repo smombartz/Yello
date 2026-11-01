@@ -5,6 +5,7 @@ import { LINKEDIN_ENRICHMENT_COLUMNS } from './linkedinEnrichmentColumns.js';
 import { archiveStateForStorage, normalizeArchivedPrimary } from './archivedDetails.js';
 import type { ParsedContact } from './vcardParser.js';
 import type { SyncField } from './sync/syncProjection.js';
+import { kindColumns } from './contactKind.js';
 
 /**
  * Writes a ParsedContact into the per-user database, either as a new contact
@@ -464,7 +465,8 @@ export function replaceContactFields(
       case 'notes': set({ notes: incoming.notes }); break;
       case 'birthday': set({ birthday: incoming.birthday }); break;
       case 'gender': set({ gender: incoming.gender }); break;
-      case 'isCompany': set({ is_company: incoming.isCompany ? 1 : 0 }); break;
+      // Flipping Show as Company in Apple is a pick, so it sets the Yello kind too
+      case 'isCompany': set(kindColumns(incoming.isCompany ? 'company' : 'person')); break;
       case 'emails':
         clearActive('contact_emails');
         for (const e of notArchived('contact_emails', 'LOWER(email)', incoming.emails, e => lower(e.email))) {

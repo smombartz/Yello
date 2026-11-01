@@ -5,7 +5,8 @@ import { rebuildContactSearch } from '../services/database.js';
 import { getPhotoUrl } from '../services/photoProcessor.js';
 import { detectMergeConflicts, mergeContactsWithResolutions } from '../services/mergeService.js';
 import { geocodeAddress, isValidCoordinate } from '../services/geocoding.js';
-import { contactPhotoReader, exportContactsAsVcf } from '../services/vcardExportService.js';
+import { contactPhotoReader, exportContactsAsVcf, loadContactsForVcard } from '../services/vcardExportService.js';
+import { generateGoogleCsv } from '../services/csvExportService.js';
 import { preserveEntryAnnotations, withVcardFields } from '../services/vcardModelStore.js';
 import { normalizeArchivedPrimary } from '../services/archivedDetails.js';
 
@@ -29,6 +30,7 @@ import {
 } from '../schemas/contact.js';
 import { ContactSearchResultSchema, type ContactSearchResult } from '../schemas/profile.js';
 import { isSyncEnabled } from '../services/sync/syncState.js';
+import { EFFECTIVE_KIND_SQL, kindColumns, type ContactKind } from '../services/contactKind.js';
 
 interface ContactRow {
   id: number;
@@ -55,6 +57,7 @@ interface ContactListRow {
   primary_phone_country_code: string | null;
   linkedin_url: string | null;
   website_url: string | null;
+  kind: ContactKind;
 }
 
 interface EmailRow {
@@ -201,6 +204,23 @@ interface CountRow {
 interface GroupRow {
   category: string;
   contactCount: number;
+}
+
+interface ExportBody {
+  format: 'vcf' | 'csv';
+  ids?: number[];
+  group?: string;
+}
+
+/**
+ * A Content-Disposition for a download named after a contact or group. The plain
+ * filename swaps out characters file systems reject (and non-ASCII); filename*
+ * carries the exact UTF-8 name for browsers that read it.
+ */
+function attachmentDisposition(filename: string): string {
+  const safe = filename.replace(/[\\/:*?"<>|\x00-\x1f]/g, '-').trim();
+  const ascii = safe.replace(/[^\x20-\x7e]/g, '_');
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(safe)}`;
 }
 
 export default async function contactsRoutes(
@@ -445,6 +465,9 @@ export default async function contactsRoutes(
         case 'no-instagram': conditions.push("NOT EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND detail_archived_at IS NULL AND platform = 'instagram')"); break;
         case 'has-linkedin': conditions.push("EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND detail_archived_at IS NULL AND platform = 'linkedin')"); break;
         case 'no-linkedin': conditions.push("NOT EXISTS (SELECT 1 FROM contact_social_profiles WHERE contact_id = c.id AND detail_archived_at IS NULL AND platform = 'linkedin')"); break;
+        case 'is-person': conditions.push(`${EFFECTIVE_KIND_SQL} = 'person'`); break;
+        case 'is-company': conditions.push(`${EFFECTIVE_KIND_SQL} = 'company'`); break;
+        case 'is-generic': conditions.push(`${EFFECTIVE_KIND_SQL} = 'generic'`); break;
       }
     }
 
@@ -491,7 +514,8 @@ export default async function contactsRoutes(
         (SELECT phone_display FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 AND detail_archived_at IS NULL LIMIT 1) as primary_phone,
         (SELECT country_code FROM contact_phones WHERE contact_id = c.id AND is_primary = 1 AND detail_archived_at IS NULL LIMIT 1) as primary_phone_country_code,
         (SELECT profile_url FROM contact_social_profiles WHERE contact_id = c.id AND platform = 'linkedin' AND detail_archived_at IS NULL LIMIT 1) as linkedin_url,
-        (SELECT url FROM contact_urls WHERE contact_id = c.id AND detail_archived_at IS NULL LIMIT 1) as website_url
+        (SELECT url FROM contact_urls WHERE contact_id = c.id AND detail_archived_at IS NULL LIMIT 1) as website_url,
+        ${EFFECTIVE_KIND_SQL} as kind
         ${lastContactedSelect}
       FROM contacts c
       ${joinClause}
@@ -513,7 +537,8 @@ export default async function contactsRoutes(
         primaryPhoneCountryCode: row.primary_phone_country_code,
         photoUrl: getPhotoUrl(row.photo_hash, 'small'),
         linkedinUrl: row.linkedin_url,
-        websiteUrl: row.website_url
+        websiteUrl: row.website_url,
+        kind: row.kind
       })),
       total,
       page,
@@ -536,8 +561,9 @@ export default async function contactsRoutes(
 
     // Insert main contact
     const insertContact = db.prepare(`
-      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday, created_via, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'manual', datetime('now'), datetime('now'))
+      INSERT INTO contacts (first_name, last_name, display_name, company, title, notes, birthday,
+        is_company, kind, created_via, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', datetime('now'), datetime('now'))
     `);
 
     const result = insertContact.run(
@@ -547,7 +573,10 @@ export default async function contactsRoutes(
       data.company || null,
       data.title || null,
       data.notes || null,
-      data.birthday || null
+      data.birthday || null,
+      // A picked kind turns off auto-detection (services/contactKind.ts)
+      data.kind ? kindColumns(data.kind).is_company : 0,
+      data.kind ?? null
     );
 
     const contactId = result.lastInsertRowid as number;
@@ -1032,14 +1061,19 @@ export default async function contactsRoutes(
     // Build the display name if first/last names are being updated
     let displayName = updates.displayName;
     if (!displayName && (updates.firstName !== undefined || updates.lastName !== undefined)) {
-      const currentContact = db.prepare('SELECT first_name, last_name, display_name FROM contacts WHERE id = ?').get(id) as {
+      const currentContact = db.prepare('SELECT first_name, last_name, company, display_name FROM contacts WHERE id = ?').get(id) as {
         first_name: string | null;
         last_name: string | null;
+        company: string | null;
         display_name: string;
       };
       const firstName = updates.firstName !== undefined ? updates.firstName : currentContact.first_name;
       const lastName = updates.lastName !== undefined ? updates.lastName : currentContact.last_name;
-      displayName = [firstName, lastName].filter(Boolean).join(' ') || currentContact.display_name;
+      const company = updates.company !== undefined ? updates.company : currentContact.company;
+      // With no name, a contact is known by its company, as on import and Add Contact
+      displayName = [firstName, lastName].filter(Boolean).join(' ')
+        || company?.trim()
+        || currentContact.display_name;
     }
 
     // Update main contact fields
@@ -1087,9 +1121,13 @@ export default async function contactsRoutes(
         contactValues.push(updates[field] ?? null);
       }
     }
-    if (updates.isCompany !== undefined) {
-      contactFields.push('is_company = ?');
-      contactValues.push(updates.isCompany ? '1' : '0');
+    // A picked kind turns off auto-detection (services/contactKind.ts)
+    const pickedKind: ContactKind | undefined = updates.kind
+      ?? (updates.isCompany !== undefined ? (updates.isCompany ? 'company' : 'person') : undefined);
+    if (pickedKind) {
+      const cols = kindColumns(pickedKind);
+      contactFields.push('is_company = ?', 'kind = ?');
+      contactValues.push(String(cols.is_company), cols.kind);
     }
 
     // Always update the updated_at timestamp
@@ -1627,6 +1665,58 @@ export default async function contactsRoutes(
     reply.header('Content-Type', 'text/vcard');
     reply.header('Content-Disposition', 'attachment; filename="contacts.vcf"');
     return exportContactsAsVcf(db, contactPhotoReader(request.user!.id));
+  });
+
+  // POST /api/contacts/export - Export selected contacts, or every active contact
+  // in a group, as VCF or Google Contacts CSV. A POST because a selection can hold
+  // thousands of IDs; isContactEdit exempts it so it doesn't trigger a sync.
+  fastify.post<{ Body: ExportBody }>('/export', {
+    schema: {
+      body: {
+        type: 'object',
+        properties: {
+          format: { type: 'string', enum: ['vcf', 'csv'] },
+          ids: { type: 'array', items: { type: 'integer' }, minItems: 1 },
+          group: { type: 'string', minLength: 1 }
+        },
+        required: ['format'],
+        additionalProperties: false
+      }
+    }
+  }, async (request, reply) => {
+    const { format, ids, group } = request.body;
+    if ((ids === undefined) === (group === undefined)) {
+      return reply.status(400).send({ error: 'Give either ids or group' });
+    }
+
+    const db = getUserDatabase(request.user!.id);
+    const rows = (ids
+      ? db.prepare(`
+          SELECT id, display_name FROM contacts
+          WHERE id IN (SELECT value FROM json_each(?))
+          ORDER BY display_name COLLATE NOCASE, id
+        `).all(JSON.stringify(ids))
+      : db.prepare(`
+          SELECT DISTINCT c.id, c.display_name FROM contacts c
+          JOIN contact_categories cc ON cc.contact_id = c.id
+          WHERE cc.category = ? AND c.archived_at IS NULL
+          ORDER BY c.display_name COLLATE NOCASE, c.id
+        `).all(group)) as Array<{ id: number; display_name: string }>;
+    if (rows.length === 0) {
+      return reply.status(404).send({ error: 'No contacts to export' });
+    }
+
+    const exportIds = rows.map(row => row.id);
+    const name = group ?? (rows.length === 1 ? rows[0].display_name : `yello-${rows.length}-contacts`);
+    reply.header('Content-Disposition', attachmentDisposition(`${name}.${format}`));
+
+    if (format === 'vcf') {
+      reply.header('Content-Type', 'text/vcard; charset=utf-8');
+      return exportContactsAsVcf(db, contactPhotoReader(request.user!.id), { ids: exportIds });
+    }
+    reply.header('Content-Type', 'text/csv; charset=utf-8');
+    const contacts = loadContactsForVcard(db, { ids: exportIds, withoutEnrichment: true });
+    return generateGoogleCsv(contacts.map(loaded => loaded.contact));
   });
 
   // DELETE /api/contacts/all - Delete all contacts (danger zone)

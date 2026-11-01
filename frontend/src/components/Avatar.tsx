@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { Icon } from './Icon';
+import type { ContactKind } from '../api/types';
 
 interface AvatarProps {
   photoUrl: string | null;
   name: string;
   size?: number;
   className?: string;
+  /** With no photo, companies show a building and generic contacts a card instead of initials */
+  kind?: ContactKind;
   selectable?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
@@ -32,6 +36,7 @@ export function Avatar({
   name,
   size = 48,
   className = '',
+  kind = 'person',
   selectable = false,
   isSelected = false,
   onToggleSelect,
@@ -43,20 +48,21 @@ export function Avatar({
     backgroundColor: stringToColor(name),
   };
 
-  const avatarEl = photoUrl ? (
-    <div className={`avatar ${className}`} style={style}>
-      <img
-        src={photoUrl}
-        alt={name}
-        onError={(e) => {
-          e.currentTarget.style.display = 'none';
-          e.currentTarget.parentElement!.textContent = getInitials(name);
-        }}
-      />
-    </div>
-  ) : (
-    <div className={`avatar ${className}`} style={style}>
-      {getInitials(name)}
+  // A photo that fails to load falls back to the placeholder, until the URL changes
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const showPhoto = !!photoUrl && photoUrl !== failedUrl;
+
+  const avatarEl = (
+    <div className={`avatar${kind !== 'person' && !showPhoto ? ' avatar-icon' : ''} ${className}`} style={style}>
+      {showPhoto ? (
+        <img src={photoUrl} alt={name} onError={() => setFailedUrl(photoUrl)} />
+      ) : kind === 'company' ? (
+        <Icon name="building" />
+      ) : kind === 'generic' ? (
+        <Icon name="address-card" />
+      ) : (
+        getInitials(name)
+      )}
     </div>
   );
 
