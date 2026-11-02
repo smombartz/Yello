@@ -18,6 +18,14 @@ import { ingestActivity, setSourceStatus, type IngestActivity, type IngestHandle
 export const FIRST_SCAN_DAYS = 730;
 const RESCAN_OVERLAP_DAYS = 2;
 const PARALLEL_FETCHES = 10;
+/**
+ * Gmail allows 15,000 quota units a minute per user, and every call here costs 5
+ * (about 50 calls a second). 25 a second uses half, leaving room for Email sync
+ * and discovery, which share the same allowance.
+ */
+const REQUESTS_PER_SECOND = 25;
+/** Waits before each retry: 2 s doubling to 64 s, about 2 minutes in all, so it outlasts a per-minute quota window. */
+const RETRY_DELAYS_MS = [2_000, 4_000, 8_000, 16_000, 32_000, 64_000];
 const PROGRESS_EVERY = 100;
 /** More recipients than this make an email a group message */
 const GROUP_RECIPIENTS = 2;
@@ -72,16 +80,59 @@ function shiftDay(day: string, days: number): string {
   return new Date(Date.parse(`${day}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 }
 
-/** Retries Gmail's rate-limit and transient errors with backoff. */
-async function fetchWithRetry<T>(accessToken: string, path: string): Promise<{ data: T | null; scopeError: boolean }> {
+export interface Pacer {
+  /** Resolves when the next request may start. */
+  wait(): Promise<void>;
+  /** Holds every request back for ms (Gmail said to slow down). */
+  pause(ms: number): void;
+}
+
+/** Spaces request starts evenly, perSecond at most, however many run in parallel. */
+export function createPacer(perSecond: number, now: () => number = Date.now): Pacer {
+  const gap = 1000 / perSecond;
+  let next = 0;
+  return {
+    async wait() {
+      const t = now();
+      const at = Math.max(t, next);
+      next = at + gap;
+      if (at > t) await new Promise(r => setTimeout(r, at - t));
+    },
+    pause(ms) {
+      next = Math.max(next, now() + ms);
+    },
+  };
+}
+
+/**
+ * Gmail's "slow down" answers: 429, and 403 with rateLimitExceeded /
+ * userRateLimitExceeded or a per-minute "Quota exceeded". A daily-limit 403
+ * isn't one: retrying within minutes can't help.
+ */
+export function isRateLimitError(message: string): boolean {
+  if (/Gmail API error: 429/.test(message)) return true;
+  if (!/Gmail API error: 403/.test(message) || /dailyLimitExceeded/.test(message)) return false;
+  return /rateLimitExceeded|userRateLimitExceeded|RESOURCE_EXHAUSTED|Quota exceeded[^"]*per minute/i.test(message);
+}
+
+/**
+ * Waits for the pacer, then fetches. Retries rate-limit and transient errors with
+ * growing waits plus up to 50% random jitter, so parallel requests don't retry in
+ * step. A rate-limit error also pauses the pacer, holding back the whole scan.
+ */
+async function fetchWithRetry<T>(pacer: Pacer, accessToken: string, path: string): Promise<{ data: T | null; scopeError: boolean }> {
   for (let attempt = 0; ; attempt++) {
+    await pacer.wait();
     try {
       return await gmailFetch<T>(accessToken, path);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      const retryable = /Gmail API error: (429|500|502|503)|rateLimitExceeded|userRateLimitExceeded/.test(message);
-      if (!retryable || attempt >= 5) throw err;
-      await new Promise(r => setTimeout(r, 1000 * 2 ** attempt));
+      const rateLimited = isRateLimitError(message);
+      const transient = /Gmail API error: (500|502|503|504)/.test(message);
+      if ((!rateLimited && !transient) || attempt >= RETRY_DELAYS_MS.length) throw err;
+      const delay = RETRY_DELAYS_MS[attempt] * (1 + Math.random() * 0.5);
+      if (rateLimited) pacer.pause(delay);
+      await new Promise(r => setTimeout(r, delay));
     }
   }
 }
@@ -253,6 +304,7 @@ async function runScan(
 ): Promise<void> {
   const windows = yearWindows(range.from, range.to);
   let token = await getValidAccessToken(userId);
+  const pacer = createPacer(REQUESTS_PER_SECOND);
 
   // 1. Every message id, per window, for an overall progress total
   const idsByWindow: string[][] = [];
@@ -261,7 +313,7 @@ async function runScan(
     const ids: string[] = [];
     let pageToken: string | undefined;
     do {
-      const page = await fetchWithRetry<GmailMessageListResponse>(token!,
+      const page = await fetchWithRetry<GmailMessageListResponse>(pacer, token!,
         `/messages?maxResults=500&q=${windowQuery(w)}${pageToken ? `&pageToken=${pageToken}` : ''}`);
       if (page.scopeError) throw new Error('gmail_scope_required');
       for (const m of page.data?.messages ?? []) ids.push(m.id);
@@ -285,7 +337,7 @@ async function runScan(
       if (done % 1000 < PARALLEL_FETCHES) token = await getValidAccessToken(userId); // refresh before the hour runs out
       const batch = ids.slice(i, i + PARALLEL_FETCHES);
       const messages = await Promise.all(batch.map(id =>
-        fetchWithRetry<GmailMetadata>(token!, `/messages/${id}?format=metadata&${headers}`).then(r => r.data)));
+        fetchWithRetry<GmailMetadata>(pacer, token!, `/messages/${id}?format=metadata&${headers}`).then(r => r.data)));
       for (const message of messages) {
         if (message && Number(message.internalDate) > 0) tallyMessage(tally, message, timeZone);
       }

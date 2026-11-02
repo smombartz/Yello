@@ -1,5 +1,28 @@
 # Change Log
 
+## 2026-11-01 — Fix: Top contacts Gmail scan failed with "Quota exceeded … Units per minute per user"
+
+**Session:** `3a21085e-9d0b-4c4c-8fad-7d5b28db0475`
+
+**What Changed:**
+- The Gmail scan paces its calls to 25 a second (`createPacer`, `REQUESTS_PER_SECOND`), still 10 in parallel
+- A 429 or a rate-limit 403 (per-minute "Quota exceeded", `rateLimitExceeded`, `userRateLimitExceeded`) is retried
+  (`isRateLimitError`) and pauses the whole scan. A daily-limit 403 isn't retried
+- Retries wait 2 s doubling to 64 s plus up to 50% jitter (`RETRY_DELAYS_MS`, about 2 minutes in all). Before, they
+  waited 1 to 16 s, about 31 s in all, with no jitter
+- Added tests for the error matching (with the real error text) and the pacer
+
+**Why:**
+- 10 parallel fetches with no pacing reached 50–100 calls a second, at or over Gmail's 15,000 units a minute per user.
+  The 31 s of retries ended inside the one-minute window, and the 10 requests retried in step, so the scan failed
+
+**Files Modified:**
+- `backend/src/services/gmailActivityService.ts` — `createPacer`, `isRateLimitError`, `fetchWithRetry`, `runScan`
+- `backend/src/services/__tests__/gmailRateLimit.test.ts` — new
+- `docs/reference.md` — Top contacts › Gmail rate limit
+
+---
+
 ## 2026-11-01 — Fix: Cleanup page opened with its tab bar half hidden under the header
 
 **Session:** `76f43bef-beee-440d-9027-a26e89d08484`
