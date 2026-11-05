@@ -1882,6 +1882,16 @@ a.nav-rail-item.active {
   color: var(--ds-color-primary);
 }
 
+/* Pagination wrapper (ui/Pagination): the bar under a list */
+.yello-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ds-space-6);
+  border-top: 1px solid var(--ds-border-color);
+  background-color: var(--ds-bg-primary);
+}
+
 /* ============================================================
    Cleanup View Styles
    ============================================================ */

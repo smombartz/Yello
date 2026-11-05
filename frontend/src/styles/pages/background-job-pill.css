@@ -11,7 +11,8 @@
   /* Clear of the nav rail: 40px items + 16px padding each side = 72px. */
   left: calc(72px + var(--ds-space-4));
   z-index: var(--ds-z-modal-backdrop);
-  width: min(360px, calc(100vw - 2rem));
+  min-width: 260px;
+  max-width: min(360px, calc(100vw - 2rem));
 }
 
 @media (max-width: 768px) {
@@ -19,7 +20,8 @@
     /* No nav rail on mobile, and the tab bar owns the bottom edge. */
     left: var(--ds-space-4);
     right: var(--ds-space-4);
-    width: auto;
+    max-width: none;
+    min-width: 0;
     bottom: calc(56px + env(safe-area-inset-bottom) + var(--ds-space-4));
   }
 }

@@ -23,6 +23,7 @@ export function Pagination({
   }
 
   return (
+    <div className="yello-pagination">
     <AntPagination
       align="center"
       current={currentPage}
@@ -34,5 +35,6 @@ export function Pagination({
       onChange={onPageChange}
       {...paginationIcons}
     />
+    </div>
   );
 }
