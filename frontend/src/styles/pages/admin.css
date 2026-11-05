@@ -14,7 +14,7 @@
     padding: 64px 0;
     color: var(--ds-text-secondary);
   }
-  .admin-error i {
+  .admin-error .yello-icon {
     font-size: var(--ds-font-2xl);
     color: var(--ds-color-error);
   }

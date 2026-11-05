@@ -38,7 +38,7 @@
     border-radius: 50%;
   }
 
-  .setup-icon i {
+  .setup-icon .yello-icon {
     font-size: 40px;
     color: var(--ds-color-primary);
   }
@@ -88,7 +88,7 @@
     flex-shrink: 0;
   }
 
-  .option-icon i {
+  .option-icon .yello-icon {
     font-size: var(--ds-font-2xl);
     color: var(--ds-color-primary);
   }
@@ -380,7 +380,7 @@
     gap: var(--ds-space-3);
   }
 
-  .public-toggle-label i {
+  .public-toggle-label .yello-icon {
     font-size: 28px;
     color: var(--ds-color-primary);
   }
@@ -400,7 +400,7 @@
     margin-top: var(--ds-space-4);
 }
 
-  .hide-all-btn i {
+  .hide-all-btn .yello-icon {
     font-size: var(--ds-font-lg);
   }
 
@@ -569,7 +569,7 @@
     color: var(--ds-text-secondary);
   }
 
-  .preview-disabled-message i {
+  .preview-disabled-message .yello-icon {
     font-size: 48px;
     margin-bottom: var(--ds-space-4);
     opacity: 0.5;
@@ -629,7 +629,7 @@
     font-size: var(--ds-font-sm);
   }
 
-  .preview-item i {
+  .preview-item .yello-icon {
     font-size: var(--ds-font-lg);
     color: var(--ds-text-secondary);
   }

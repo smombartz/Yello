@@ -10,7 +10,7 @@
   margin-bottom: var(--ds-space-5);
 }
 
-.config-warning i {
+.config-warning .yello-icon {
   color: #f59e0b;
   font-size: var(--ds-font-2xl);
 }
@@ -358,7 +358,7 @@
   font-size: 0.8125rem;
 }
 
-.progress-stats .stat i {
+.progress-stats .stat .yello-icon {
   font-size: var(--ds-font-md);
 }
 

@@ -63,12 +63,12 @@
   white-space: nowrap;
 }
 
-.launch-banner__cta i {
+.launch-banner__cta .yello-icon {
   font-size: 0.85em;
   transition: transform var(--ds-duration-fast) var(--ds-easing-default);
 }
 
-.launch-banner:hover .launch-banner__cta i {
+.launch-banner:hover .launch-banner__cta .yello-icon {
   transform: translateX(2px);
 }
 

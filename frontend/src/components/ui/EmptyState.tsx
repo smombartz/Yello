@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Icon, type IconName } from '../Icon';
 
 interface EmptyStateProps {
-  /** Font Awesome icon name shown above the title */
+  /** Icon (IconName) shown above the title */
   icon?: IconName;
   title: string;
   description?: ReactNode;

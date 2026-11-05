@@ -136,7 +136,7 @@ a.top-contact-row:hover {
   grid-column: span 2;
 }
 
-.top-contacts-head .top-contact-num i {
+.top-contacts-head .top-contact-num .yello-icon {
   color: var(--channel-color);
   font-size: var(--ds-font-md);
 }
@@ -512,8 +512,8 @@ a.top-contact-row:hover {
   font-weight: var(--ds-weight-medium);
 }
 
-.source-backup-pick .source-summary i,
-.source-backup-last i {
+.source-backup-pick .source-summary .yello-icon,
+.source-backup-last .yello-icon {
   margin-right: 4px;
 }
 
@@ -530,6 +530,6 @@ a.top-contact-row:hover {
   font-size: var(--ds-font-sm);
 }
 
-.source-backup-last i {
+.source-backup-last .yello-icon {
   color: var(--ds-color-success);
 }
