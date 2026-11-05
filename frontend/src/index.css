@@ -766,6 +766,7 @@ a.nav-rail-item.active {
 /* Avatar (Ant draws the rest) */
 .yello-avatar {
   flex-shrink: 0;
+  font-weight: var(--ds-weight-semibold);
 }
 
 /* Contact Detail Panel */
