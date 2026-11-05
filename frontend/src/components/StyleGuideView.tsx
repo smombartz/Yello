@@ -859,9 +859,9 @@ function FeedbackSpecimen() {
         <div className="sg-feedback-cell">
           <span className="sg-field-label">Loading</span>
           <div className="sg-inline">
-            <LoadingSpinner size={24} />
-            <LoadingSpinner size={32} />
-            <LoadingSpinner size={40} />
+            <LoadingSpinner compact size={24} />
+            <LoadingSpinner compact size={32} />
+            <LoadingSpinner compact size={40} />
           </div>
         </div>
         <div className="sg-feedback-cell">

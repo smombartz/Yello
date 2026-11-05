@@ -7,6 +7,8 @@ interface LoadingSpinnerProps {
   message?: string;
   /** Cover the full viewport with an overlay (e.g. auth/route loading) */
   fullscreen?: boolean;
+  /** Drop the block's vertical padding, for spinners sitting inline in a layout that pads itself */
+  compact?: boolean;
   /** Additional class name for the container */
   className?: string;
 }
@@ -16,11 +18,15 @@ interface LoadingSpinnerProps {
  * prefer this over per-view loading markup. Ant has three spinner sizes,
  * so the pixel `size` maps to the closest one.
  */
-export function LoadingSpinner({ size = 40, message, fullscreen = false, className }: LoadingSpinnerProps) {
+export function LoadingSpinner({ size = 40, message, fullscreen = false, compact = false, className }: LoadingSpinnerProps) {
   const spinSize = size >= 40 ? 'large' : size <= 20 ? 'small' : 'medium';
-  if (fullscreen) return <Spin fullscreen size={spinSize} description={message} />;
+  const label = message ?? 'Loading';
+  const classes = [
+    fullscreen ? 'loading-spinner-fullscreen' : compact ? '' : 'loading-spinner-block',
+    className,
+  ].filter(Boolean).join(' ');
   return (
-    <Flex vertical align="center" gap="small" className={className} role="status" aria-label={message ?? 'Loading'}>
+    <Flex vertical align="center" justify={fullscreen ? 'center' : undefined} gap="small" className={classes || undefined} role="status" aria-label={label}>
       <Spin size={spinSize} />
       {message && <Typography.Text type="secondary">{message}</Typography.Text>}
     </Flex>

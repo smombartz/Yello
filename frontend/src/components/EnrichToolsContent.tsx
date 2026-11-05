@@ -321,7 +321,7 @@ export function EnrichToolsContent() {
                       </button>
                     </div>
                     {categoryLoading ? (
-                      <div className="enrich-category-loading"><LoadingSpinner size={24} message="Loading..." /></div>
+                      <div className="enrich-category-loading"><LoadingSpinner compact size={24} message="Loading..." /></div>
                     ) : (
                       <div className="enrich-category-list">
                         {categoryContacts?.contacts.map(contact => (
