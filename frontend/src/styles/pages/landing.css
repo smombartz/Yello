@@ -557,7 +557,7 @@ button.lp-btn-reset:not(.card) {
   gap: var(--ds-space-2);
 }
 
-.lp-sample-tools .collapsible-content .btn {
+.lp-sample-tools .collapsible-content .ant-btn {
   margin-top: var(--ds-space-3);
 }
 
@@ -1553,7 +1553,7 @@ button.lp-btn-reset:not(.card) {
 }
 
 @media (max-width: 639px) {
-  .lp-nav__actions .btn--ghost {
+  .lp-nav__actions .ant-btn-text {
     display: none;
   }
 

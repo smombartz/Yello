@@ -1,27 +1,40 @@
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
-import { Icon, type IconName } from '../Icon';
+import { Button as AntButton } from 'antd';
+import type { ButtonProps as AntButtonProps } from 'antd';
+import { Icon } from '../Icon';
+import type { IconName } from '../Icon';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'icon';
 type ButtonSize = 'md' | 'sm' | 'lg';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'color' | 'type'> {
   /** Visual role. One `primary` per view; `secondary` is the default. */
   variant?: ButtonVariant;
-  /** `sm` is the compact density (13px label, 12px padding) for dense rows
-   *  and toolbars. Height stays at `--ds-control-height` either way. `lg`
-   *  (48px) is for front doors only; the landing page uses it today. */
   size?: ButtonSize;
   /** Optional leading icon (a Tabler icon, see IconName) */
   icon?: IconName;
-  /** Busy state: swaps the icon for a spinner, disables the button and sets aria-busy */
+  /** Busy state: Ant shows its spinner and blocks clicks */
   loading?: boolean;
-  /** React 19 passes ref as a plain prop; it lands on the <button> */
-  ref?: Ref<HTMLButtonElement>;
+  type?: 'button' | 'submit' | 'reset';
+  /** Renders an <a> (full page load or download). In-app routes use onClick + navigate. */
+  href?: string;
+  download?: boolean | string;
+  ref?: Ref<HTMLButtonElement | HTMLAnchorElement>;
   children?: ReactNode;
 }
 
+const VARIANTS: Record<ButtonVariant, Pick<AntButtonProps, 'type' | 'danger'>> = {
+  primary: { type: 'primary' },
+  secondary: { type: 'default' },
+  danger: { type: 'primary', danger: true },
+  ghost: { type: 'text' },
+  icon: { type: 'text' },
+};
+
+const SIZES: Record<ButtonSize, AntButtonProps['size']> = { sm: 'small', md: 'middle', lg: 'large' };
+
 /**
- * Canonical button. Renders `.btn .btn--{variant}` built on `--ds-btn-*` tokens.
+ * Canonical button: Ant's Button behind the app's variant/size vocabulary.
  * Prefer this over ad-hoc button classes.
  */
 export function Button({
@@ -30,25 +43,21 @@ export function Button({
   icon,
   loading = false,
   type = 'button',
-  className = '',
-  disabled,
+  ref,
   children,
   ...rest
 }: ButtonProps) {
-  const classes = ['btn', `btn--${variant}`, size === 'md' ? '' : `btn--${size}`, className]
-    .filter(Boolean)
-    .join(' ');
-  const iconName = loading ? 'arrows-rotate' : icon;
   return (
-    <button
-      type={type}
-      className={classes}
-      disabled={disabled || loading}
-      aria-busy={loading || undefined}
+    <AntButton
+      {...VARIANTS[variant]}
       {...rest}
+      ref={ref}
+      htmlType={type}
+      size={SIZES[size]}
+      icon={icon ? <Icon name={icon} /> : undefined}
+      loading={loading}
     >
-      {iconName && <Icon name={iconName} spin={loading} />}
       {children}
-    </button>
+    </AntButton>
   );
 }

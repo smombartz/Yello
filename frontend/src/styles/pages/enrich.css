@@ -511,8 +511,8 @@
   gap: var(--ds-space-3);
 }
 
-/* Count badge inside a primary button (buttons themselves use the canonical .btn system) */
-.btn .button-badge {
+/* Count badge inside a primary button (buttons themselves are Ant buttons via ui/Button) */
+.ant-btn .button-badge {
   background: rgba(255, 255, 255, 0.3);
   padding: 2px 8px;
   border-radius: var(--ds-radius-xl);
@@ -632,7 +632,7 @@
     flex-direction: column;
   }
 
-  .enrichment-actions .btn {
+  .enrichment-actions .ant-btn {
     width: 100%;
     justify-content: center;
   }

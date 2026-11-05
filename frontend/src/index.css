@@ -113,7 +113,6 @@ select:focus-visible:not([class*='ant-']) {
  * ============================================ */
 
 /* Buttons */
-.btn,
 .contact-action-button,
 .file-input-label,
 .address-subtab,
@@ -137,132 +136,8 @@ select:focus-visible:not([class*='ant-']) {
 /* Search container height handled by .search-bar itself */
 
 /* Square icon buttons: equal width */
-.btn--icon,
 .remove-item-btn {
   width: var(--ds-control-height);
-}
-
-/* ============================================
- * CANONICAL BUTTON SYSTEM (components/ui/Button.tsx)
- * `.btn` + variant + size modifiers. Every action button renders
- * through <Button>; a link styled as a button uses `btn btn--{variant}`.
- * ============================================ */
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--ds-space-2);
-  padding: 0 var(--ds-btn-padding-x);
-  border: 1px solid transparent;
-  border-radius: var(--ds-btn-radius);
-  font-size: var(--ds-btn-font-size);
-  font-weight: var(--ds-btn-font-weight);
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color var(--ds-duration-fast) var(--ds-easing-default),
-    border-color var(--ds-duration-fast) var(--ds-easing-default),
-    color var(--ds-duration-fast) var(--ds-easing-default),
-    opacity var(--ds-duration-fast) var(--ds-easing-default);
-}
-
-.btn .yello-icon {
-  font-size: var(--ds-font-lg);
-}
-
-.btn:disabled,
-.btn.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Primary — brand-filled */
-.btn--primary {
-  background-color: var(--ds-color-primary);
-  color: var(--ds-text-inverse);
-  border-color: transparent;
-}
-
-.btn--primary:hover:not(:disabled) {
-  background-color: var(--ds-color-primary-hover);
-}
-
-/* Secondary — bordered neutral */
-.btn--secondary {
-  background-color: var(--ds-bg-primary);
-  color: var(--ds-text-primary);
-  border-color: var(--ds-border-color);
-}
-
-.btn--secondary:hover:not(:disabled) {
-  background-color: var(--ds-bg-secondary);
-  border-color: var(--ds-border-dark);
-}
-
-/* Danger — solid red */
-.btn--danger {
-  background-color: var(--ds-color-error);
-  color: var(--ds-text-inverse);
-  border-color: transparent;
-}
-
-.btn--danger:hover:not(:disabled) {
-  background-color: var(--ds-color-error-hover);
-}
-
-/* Ghost — text-only */
-.btn--ghost {
-  background-color: transparent;
-  color: var(--ds-text-secondary);
-  border-color: transparent;
-}
-
-.btn--ghost:hover:not(:disabled) {
-  background-color: var(--ds-bg-hover);
-  color: var(--ds-text-primary);
-}
-
-/* Large — front doors only (landing page, sign-in). Never inside the app shell. */
-.btn.btn--lg {
-  height: 3rem;
-  padding: 0 var(--ds-space-6);
-  border-radius: var(--ds-radius-xl);
-  font-size: var(--ds-font-md);
-}
-
-/* Small — compact density for dense rows and toolbars (same 32px height) */
-.btn--sm {
-  padding: 0 var(--ds-space-3);
-  font-size: 0.8125rem;
-}
-
-.btn--sm .yello-icon {
-  font-size: var(--ds-font-md);
-}
-
-/* Icon — square, bordered */
-.btn--icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 1px solid var(--ds-border-color);
-  border-radius: var(--ds-radius-md);
-  background-color: var(--ds-bg-primary);
-  color: var(--ds-text-secondary);
-  cursor: pointer;
-  transition: background-color var(--ds-duration-fast) var(--ds-easing-default),
-    border-color var(--ds-duration-fast) var(--ds-easing-default);
-}
-
-.btn--icon:hover:not(:disabled) {
-  background-color: var(--ds-bg-secondary);
-  border-color: var(--ds-border-dark);
-}
-
-.btn--icon .yello-icon {
-  font-size: var(--ds-font-lg);
 }
 
 /* ============================================
@@ -7132,7 +7007,7 @@ a.nav-rail-item.active {
     justify-self: end;
   }
 
-  .page-header-search-accessory .btn--icon {
+  .page-header-search-accessory .ant-btn {
     width: 40px;
     height: 40px;
   }

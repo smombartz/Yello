@@ -471,7 +471,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
               <ActionMenu
                 items={exportItems({ ids: Array.from(selectedIds) })}
                 label={`Export ${selectedIds.size} selected contact${selectedIds.size === 1 ? '' : 's'}`}
-                triggerClassName="btn btn--secondary"
+                triggerVariant="secondary"
                 triggerIcon="download"
                 triggerLabel={exportMutation.isPending ? 'Exporting...' : `Export (${selectedIds.size})`}
                 disabled={exportMutation.isPending}

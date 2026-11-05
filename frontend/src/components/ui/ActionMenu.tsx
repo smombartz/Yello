@@ -1,8 +1,9 @@
 import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import type { ComponentProps, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { Icon, type IconName } from '../Icon';
+import { Button } from './Button';
 
 export interface ActionMenuItem {
   label: string;
@@ -19,6 +20,8 @@ interface ActionMenuProps {
   /** Accessible name for the trigger and the menu, e.g. "Actions for Jane Doe" */
   label: string;
   triggerClassName?: string;
+  /** Render the trigger as a canonical <Button> of this variant instead of a bare button */
+  triggerVariant?: ComponentProps<typeof Button>['variant'];
   triggerIcon?: IconName;
   /** Visible text after the icon, for a labelled trigger like "Export" */
   triggerLabel?: string;
@@ -38,6 +41,7 @@ export function ActionMenu({
   items,
   label,
   triggerClassName = '',
+  triggerVariant,
   triggerIcon = 'ellipsis-vertical',
   triggerLabel,
   disabled = false,
@@ -124,23 +128,42 @@ export function ActionMenu({
 
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        className={triggerClassName}
-        aria-label={label}
-        disabled={disabled}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen(o => !o);
-        }}
-      >
-        <Icon name={triggerIcon} />
-        {triggerLabel}
-      </button>
+      {triggerVariant ? (
+        <Button
+          ref={triggerRef}
+          variant={triggerVariant}
+          icon={triggerIcon}
+          aria-label={label}
+          disabled={disabled}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={open ? menuId : undefined}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(o => !o);
+          }}
+        >
+          {triggerLabel}
+        </Button>
+      ) : (
+        <button
+          ref={triggerRef}
+          type="button"
+          className={triggerClassName}
+          aria-label={label}
+          disabled={disabled}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={open ? menuId : undefined}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(o => !o);
+          }}
+        >
+          <Icon name={triggerIcon} />
+          {triggerLabel}
+        </button>
+      )}
 
       {open && createPortal(
         // React events bubble through portals to the trigger's ancestors (a clickable

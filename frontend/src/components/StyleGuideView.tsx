@@ -91,7 +91,7 @@ const GUIDANCE: Record<string, Guidance> = {
   },
   'component-tokens': {
     dos: [],
-    donts: ['Redefine a canonical class (`.btn`, `.tab`, `.card`) in a page stylesheet. Page CSS loads globally, so the override leaks app-wide.'],
+    donts: ['Redefine a canonical class (`.ant-btn`, `.card`) in a page stylesheet. Page CSS loads globally, so the override leaks app-wide.'],
   },
   buttons: {
     dos: [
@@ -630,11 +630,11 @@ function ButtonsSpecimen() {
         <Button variant="primary" icon="floppy-disk" loading={saving} onClick={demoSave}>
           {saving ? 'Saving…' : 'Try loading'}
         </Button>
-        <span className="sg-try-hint">Click: <code>loading</code> swaps the icon, disables the button and sets <code>aria-busy</code>.</span>
+        <span className="sg-try-hint">Click: <code>loading</code> shows a spinner and blocks clicks.</span>
       </div>
       <CodeLine>{'<Button variant="primary" size="sm" icon="check" loading={isSaving}>Save</Button>'}</CodeLine>
       <p className="sg-note">
-        A link that has to look like a button uses the same classes: <code>className="btn btn--secondary"</code>.
+        A link that has to look like a button is a <code>&lt;Button href="…"&gt;</code>.
       </p>
     </>
   );
