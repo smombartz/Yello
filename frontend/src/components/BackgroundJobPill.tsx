@@ -91,7 +91,7 @@ export function BackgroundJobPill({ job, onDismiss, onOpen }: BackgroundJobPillP
           />
         </Flex>
         {isRunning && (
-          <Progress percent={percent} size="small" showInfo={false} style={{ display: 'block', lineHeight: 0, margin: 0 }} />
+          <Progress aria-label={title} percent={percent} size="small" showInfo={false} style={{ display: 'block', lineHeight: 0, margin: 0 }} />
         )}
       </Card>
     </div>

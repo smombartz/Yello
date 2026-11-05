@@ -25,6 +25,8 @@ export function LaunchBanner() {
   return (
     <Alert
       banner
+      role="region"
+      aria-label="Announcement"
       type="info"
       className="launch-banner"
       icon={<Icon name="rocket" />}
