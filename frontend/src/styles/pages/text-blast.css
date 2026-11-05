@@ -202,11 +202,11 @@
   color: var(--ds-text-secondary);
 }
 
-.text-blast-setup-item.is-ok > i { color: var(--ds-color-success); }
-.text-blast-setup-item.is-off > i { color: var(--ds-color-error); }
-.text-blast-setup-item.is-unknown > i { color: var(--ds-text-tertiary); }
+.text-blast-setup-item.is-ok > .yello-icon { color: var(--ds-color-success); }
+.text-blast-setup-item.is-off > .yello-icon { color: var(--ds-color-error); }
+.text-blast-setup-item.is-unknown > .yello-icon { color: var(--ds-text-tertiary); }
 
-.text-blast-setup-item > i {
+.text-blast-setup-item > .yello-icon {
   margin-top: 0.2em;
 }
 
@@ -227,7 +227,7 @@
   gap: var(--ds-space-1);
 }
 
-.text-blast-notice > i {
+.text-blast-notice > .yello-icon {
   margin-top: 0.2em;
   color: var(--ds-color-info-dark);
 }

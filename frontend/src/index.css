@@ -1051,7 +1051,7 @@ a.nav-rail-item.active {
   overflow: hidden;
 }
 
-.avatar-icon i {
+.avatar-icon .yello-icon {
   font-size: 0.85em;
 }
 
@@ -7678,7 +7678,7 @@ a.nav-rail-item.active {
   gap: var(--ds-space-3);
 }
 
-.icloud-empty-state > i {
+.icloud-empty-state > .yello-icon {
   font-size: 2.5rem;
   color: var(--ds-text-secondary);
 }

@@ -11,7 +11,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
    *  and toolbars. Height stays at `--ds-control-height` either way. `lg`
    *  (48px) is for front doors only; the landing page uses it today. */
   size?: ButtonSize;
-  /** Optional leading Font Awesome (solid) icon name */
+  /** Optional leading icon (a Tabler icon, see IconName) */
   icon?: IconName;
   /** Busy state: swaps the icon for a spinner, disables the button and sets aria-busy */
   loading?: boolean;

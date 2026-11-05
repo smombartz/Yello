@@ -16,7 +16,7 @@ export const CHANNEL_LABELS: Record<MessageChannel, string> = {
   linkedin: 'LinkedIn',
 };
 
-/** Font Awesome icon and style for each channel */
+/** Icon (IconName) and legacy style for each channel */
 export const CHANNEL_ICONS: Record<MessageChannel, { name: IconName; style?: 'brands' }> = {
   gmail: { name: 'envelope' },
   imessage: { name: 'comment' },
