@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Icon, type IconName } from './Icon';
 import { Avatar } from './Avatar';
-import { Pagination } from './Pagination';
+import { Pagination } from './ui/Pagination';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { ConfirmDialog } from './ui/ConfirmDialog';

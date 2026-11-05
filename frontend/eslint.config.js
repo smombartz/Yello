@@ -25,8 +25,8 @@ export default defineConfig([
           { name: '@ant-design/icons', message: 'Use <Icon> from components/Icon (Tabler, stroke 1.5).' },
           {
             name: 'antd',
-            importNames: ['DatePicker', 'TimePicker', 'message', 'notification'],
-            message: 'These draw icons Ant cannot swap globally. Use components/ui/DatePicker, or useToast() from components/ui/Toast.',
+            importNames: ['DatePicker', 'TimePicker', 'message', 'notification', 'Pagination'],
+            message: 'These draw icons Ant cannot swap globally. Use components/ui/DatePicker, components/ui/Pagination, or useToast() from components/ui/Toast.',
           },
         ],
         patterns: [{ group: ['@ant-design/icons/*'], message: 'Use <Icon> from components/Icon (Tabler, stroke 1.5).' }],

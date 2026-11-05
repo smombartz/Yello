@@ -1,5 +1,5 @@
 import { DuplicateGroup } from './DuplicateGroup';
-import { Pagination } from './Pagination';
+import { Pagination } from './ui/Pagination';
 import { EmptyState } from './ui/EmptyState';
 import type { DuplicateGroup as DuplicateGroupType, DeduplicationMode } from '../api/types';
 

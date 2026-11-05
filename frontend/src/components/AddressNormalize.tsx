@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Icon } from './Icon';
-import { Pagination } from './Pagination';
+import { Pagination } from './ui/Pagination';
 import {
   useNormalizeContacts,
   useRemoveJunkAddresses,

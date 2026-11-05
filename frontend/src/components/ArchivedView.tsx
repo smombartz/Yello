@@ -6,7 +6,7 @@ import { LoadingSpinner } from './ui/LoadingSpinner';
 import { Button } from './ui/Button';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { EmptyState } from './ui/EmptyState';
-import { Pagination } from './Pagination';
+import { Pagination } from './ui/Pagination';
 import { useToast } from './ui/Toast';
 import {
   useArchivedContacts,

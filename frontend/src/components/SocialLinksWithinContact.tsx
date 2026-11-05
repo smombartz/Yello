@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Icon, type IconName } from './Icon';
-import { Pagination } from './Pagination';
+import { Pagination } from './ui/Pagination';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { EmptyState } from './ui/EmptyState';

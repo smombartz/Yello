@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Button } from './ui/Button';
-import { Pagination } from './Pagination';
+import { Pagination } from './ui/Pagination';
 import { AddressCleanupCard } from './AddressCleanupCard';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { ConfirmDialog } from './ui/ConfirmDialog';

@@ -5,7 +5,7 @@ import { Avatar } from './Avatar';
 import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
 import { LoadingSpinner } from './ui/LoadingSpinner';
-import { Pagination } from './Pagination';
+import { Pagination } from './ui/Pagination';
 import { useToast } from './ui/Toast';
 import { useSearchContacts } from '../api/hooks';
 import type { ContactSearchResult } from '../api/types';

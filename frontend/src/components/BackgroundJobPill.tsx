@@ -1,4 +1,6 @@
+import { Button, Card, Flex, Progress, Typography, theme } from 'antd';
 import { Icon } from './Icon';
+import { statusIcons } from '../theme/antIcons';
 
 export type BackgroundJobStatus = 'pending' | 'running' | 'completed' | 'failed';
 
@@ -33,6 +35,7 @@ interface BackgroundJobPillProps {
  * that landed while the user was elsewhere is never silently lost.
  */
 export function BackgroundJobPill({ job, onDismiss, onOpen }: BackgroundJobPillProps) {
+  const { token } = theme.useToken();
   const isRunning = job.status === 'pending' || job.status === 'running';
   const percent = job.total > 0
     ? Math.min(100, Math.round((job.current / job.total) * 100))
@@ -44,53 +47,53 @@ export function BackgroundJobPill({ job, onDismiss, onOpen }: BackgroundJobPillP
       ? (job.errorMessage || 'Import failed')
       : job.label;
 
+  const iconColor = job.status === 'completed'
+    ? token.colorSuccess
+    : job.status === 'failed'
+      ? token.colorError
+      : token.colorPrimary;
+
   return (
-    <div
-      className={`background-job-pill background-job-pill--${job.status}`}
-      role="status"
-      aria-live="polite"
-    >
-      <button
-        type="button"
-        className="background-job-pill__body"
-        onClick={onOpen}
-        disabled={!onOpen}
-      >
-        <span className="background-job-pill__icon">
-          {isRunning && <Icon name="arrows-rotate" spin />}
-          {job.status === 'completed' && <Icon name="circle-check" />}
-          {job.status === 'failed' && <Icon name="circle-exclamation" />}
-        </span>
-
-        <span className="background-job-pill__text">
-          <span className="background-job-pill__title">{title}</span>
-          {isRunning && (
-            <span className="background-job-pill__count">
-              {job.total > 0
-                ? `${job.current.toLocaleString()} of ${job.total.toLocaleString()}`
-                : 'Starting…'}
-            </span>
-          )}
-        </span>
-      </button>
-
-      <button
-        type="button"
-        className="background-job-pill__dismiss"
-        onClick={onDismiss}
-        aria-label="Dismiss"
-      >
-        <Icon name="xmark" />
-      </button>
-
-      {isRunning && (
-        <div className="background-job-pill__progress">
-          <div
-            className="background-job-pill__progress-fill"
-            style={{ width: `${percent}%` }}
+    <div className="background-job-pill" role="status" aria-live="polite">
+      <Card size="small" styles={{ body: { padding: 0 } }}>
+        <Flex align="stretch">
+          <Button
+            type="text"
+            block
+            onClick={onOpen}
+            disabled={!onOpen}
+            style={{ flex: 1, minWidth: 0, height: 'auto', justifyContent: 'flex-start', padding: token.paddingSM }}
+          >
+            <Flex align="center" gap={token.marginSM} style={{ minWidth: 0 }}>
+              <span style={{ color: iconColor, display: 'flex', fontSize: token.fontSizeLG }}>
+                {isRunning && <Icon name="arrows-rotate" spin />}
+                {job.status === 'completed' && statusIcons.success}
+                {job.status === 'failed' && statusIcons.error}
+              </span>
+              <Flex vertical style={{ minWidth: 0, textAlign: 'left' }}>
+                <Typography.Text strong ellipsis>{title}</Typography.Text>
+                {isRunning && (
+                  <Typography.Text type="secondary" style={{ fontSize: token.fontSizeSM, fontVariantNumeric: 'tabular-nums' }}>
+                    {job.total > 0
+                      ? `${job.current.toLocaleString()} of ${job.total.toLocaleString()}`
+                      : 'Starting…'}
+                  </Typography.Text>
+                )}
+              </Flex>
+            </Flex>
+          </Button>
+          <Button
+            type="text"
+            onClick={onDismiss}
+            aria-label="Dismiss"
+            icon={<Icon name="xmark" />}
+            style={{ height: 'auto' }}
           />
-        </div>
-      )}
+        </Flex>
+        {isRunning && (
+          <Progress percent={percent} size="small" showInfo={false} style={{ display: 'block', lineHeight: 0, margin: 0 }} />
+        )}
+      </Card>
     </div>
   );
 }

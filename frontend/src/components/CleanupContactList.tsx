@@ -1,7 +1,7 @@
 import { Icon } from './Icon';
 import { Button } from './ui/Button';
 import { CleanupContactCard } from './CleanupContactCard';
-import { Pagination } from './Pagination';
+import { Pagination } from './ui/Pagination';
 import type { CleanupContact, CleanupMode } from '../api/types';
 
 interface CleanupContactListProps {

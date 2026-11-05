@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from './Icon';
-import { Pagination } from './Pagination';
+import { Pagination } from './ui/Pagination';
 import {
   useGeocodingSummary,
   useGeocodingContacts,
