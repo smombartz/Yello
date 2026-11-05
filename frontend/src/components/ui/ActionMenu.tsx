@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { MouseEvent } from 'react';
+import type { ComponentProps, MouseEvent } from 'react';
 import { Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
 import { Link } from 'react-router-dom';
@@ -20,7 +20,10 @@ interface ActionMenuProps {
   items: ActionMenuItem[];
   /** Accessible name for the trigger and the menu, e.g. "Actions for Jane Doe" */
   label: string;
+  /** Extra class on the trigger button (layout/density hooks from the caller) */
   triggerClassName?: string;
+  /** Button variant of the trigger. Default: 'secondary' with a triggerLabel, else the icon-only 'icon'. */
+  triggerVariant?: ComponentProps<typeof Button>['variant'];
   triggerIcon?: IconName;
   /** Visible text after the icon, for a labelled trigger like "Export" */
   triggerLabel?: string;
@@ -40,12 +43,13 @@ export function ActionMenu({
   items,
   label,
   triggerClassName = '',
+  triggerVariant,
   triggerIcon = 'ellipsis-vertical',
   triggerLabel,
   disabled = false,
 }: ActionMenuProps) {
   const [open, setOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
 
   // Escape closes the menu only. Capture phase, so Layout's window-level Escape
   // handler doesn't also navigate away.
@@ -86,7 +90,7 @@ export function ActionMenu({
     >
       <Button
         ref={triggerRef}
-        variant={triggerLabel ? 'secondary' : 'icon'}
+        variant={triggerVariant ?? (triggerLabel ? 'secondary' : 'icon')}
         icon={triggerIcon}
         className={triggerClassName}
         aria-label={label}

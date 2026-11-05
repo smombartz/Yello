@@ -309,8 +309,7 @@ function BulkProgressModal({ progress, onCancel }: BulkProgressModalProps) {
   const percent = progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0;
 
   return (
-    <Modal label="Geocoding addresses" className="geocoding-progress-modal">
-      <h3>Geocoding Addresses...</h3>
+    <Modal label="Geocoding addresses" width={400}>
       <div className="geocoding-progress-bar">
         <div className="geocoding-progress-fill" style={{ width: `${percent}%` }} />
       </div>

@@ -16,8 +16,7 @@
 .sg-rule code,
 .sg-guidance code,
 .sg-note code,
-.sg-try-hint code,
-.sg-view .empty-state-description code {
+.sg-try-hint code {
   padding: 1px 4px;
   border-radius: var(--ds-radius-sm);
   background: var(--ds-bg-tertiary);
@@ -567,18 +566,9 @@
   gap: var(--ds-space-3);
 }
 
-/* Spinners sit inline in the specimen cell, not in their usual padded block */
-.sg-feedback .loading-spinner-container {
-  padding: 0;
-}
-
 .sg-feedback-empty {
   grid-column: 1 / -1;
   border-top: 1px solid var(--ds-border-light);
-}
-
-.sg-feedback-empty .empty-state {
-  padding: var(--ds-space-8) var(--ds-space-4) var(--ds-space-4);
 }
 
 .sg-guidance {
@@ -615,15 +605,6 @@
 .sg-guidance-item strong {
   color: var(--ds-text-primary);
   font-weight: var(--ds-weight-semibold);
-}
-
-.sg-modal {
-  width: 420px;
-}
-
-.sg-modal h3 {
-  margin: 0 0 var(--ds-space-2);
-  font-size: var(--ds-font-lg);
 }
 
 .sg-modal p {

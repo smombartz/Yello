@@ -445,7 +445,6 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
                 <ActionMenu
                   items={exportItems({ group: categoryFilter })}
                   label={`Export ${categoryFilter}`}
-                  triggerClassName="contact-action-button"
                   triggerIcon="download"
                   triggerLabel={exportMutation.isPending ? 'Exporting...' : 'Export'}
                   disabled={exportMutation.isPending}
@@ -471,7 +470,7 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
               <ActionMenu
                 items={exportItems({ ids: Array.from(selectedIds) })}
                 label={`Export ${selectedIds.size} selected contact${selectedIds.size === 1 ? '' : 's'}`}
-                triggerClassName="btn btn--secondary"
+                triggerVariant="secondary"
                 triggerIcon="download"
                 triggerLabel={exportMutation.isPending ? 'Exporting...' : `Export (${selectedIds.size})`}
                 disabled={exportMutation.isPending}
@@ -596,13 +595,21 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
         <Modal
           label={`Merge ${mergeContacts.length} contacts`}
           onClose={handleMergeCancel}
-          className="merge-conflict-modal"
+          width={700}
+          footer={[
+            <Button key="cancel" variant="secondary" onClick={handleMergeCancel}>
+              Cancel
+            </Button>,
+            <Button
+              key="merge"
+              variant="primary"
+              onClick={handleMergeConfirm}
+              disabled={mergeMutation.isPending || !mergePrimaryId}
+            >
+              {mergeMutation.isPending ? 'Merging...' : 'Merge Contacts'}
+            </Button>,
+          ]}
         >
-          <div className="merge-modal-header">
-            <h3>Merge {mergeContacts.length} Contacts</h3>
-            <Button variant="icon" icon="xmark" aria-label="Close" onClick={handleMergeCancel} />
-          </div>
-
           <div className="merge-modal-body">
             {/* Primary contact selector */}
             <div className="merge-primary-section">
@@ -684,19 +691,6 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
                 <p>No conflicts detected. Contacts can be merged directly.</p>
               </div>
             )}
-          </div>
-
-          <div className="merge-modal-footer">
-            <Button variant="secondary" onClick={handleMergeCancel}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleMergeConfirm}
-              disabled={mergeMutation.isPending || !mergePrimaryId}
-            >
-              {mergeMutation.isPending ? 'Merging...' : 'Merge Contacts'}
-            </Button>
           </div>
         </Modal>
       )}

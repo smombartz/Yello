@@ -168,11 +168,11 @@
   font-size: var(--ds-font-sm);
 }
 
-.onboarding-step__meta i {
+.onboarding-step__meta .yello-icon {
   transition: transform var(--ds-duration-fast) var(--ds-easing-default);
 }
 
-.onboarding-step--active .onboarding-step__meta i {
+.onboarding-step--active .onboarding-step__meta .yello-icon {
   transform: rotate(180deg);
 }
 
@@ -193,7 +193,7 @@
   color: var(--ds-text-secondary);
 }
 
-.onboarding-step__result i {
+.onboarding-step__result .yello-icon {
   color: var(--ds-color-success);
 }
 
@@ -241,7 +241,7 @@
   color: var(--ds-text-primary);
 }
 
-.onboarding-help__title i {
+.onboarding-help__title .yello-icon {
   color: var(--ds-color-primary);
 }
 
@@ -282,7 +282,7 @@
   color: var(--ds-color-success-dark);
 }
 
-.onboarding-success i {
+.onboarding-success .yello-icon {
   color: var(--ds-color-success);
 }
 
@@ -292,7 +292,7 @@
   padding-bottom: var(--ds-space-8);
 }
 
-.onboarding-footer .btn {
+.onboarding-footer .ant-btn {
   min-width: 200px;
   max-width: 100%;
 }
@@ -312,7 +312,7 @@
     padding-left: var(--ds-space-4);
     padding-right: var(--ds-space-4);
   }
-  .onboarding-footer .btn {
+  .onboarding-footer .ant-btn {
     width: 100%;
   }
 }

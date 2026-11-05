@@ -5,7 +5,7 @@ import { Icon, type IconName } from '../Icon';
 export interface TabItem<T extends string> {
   id: T;
   label: string;
-  /** Optional leading Font Awesome icon name */
+  /** Optional leading icon (a Tabler icon, see IconName) */
   icon?: IconName;
   /** Optional count pill; omit or pass null to hide it */
   count?: number | null;

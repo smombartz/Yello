@@ -428,7 +428,7 @@ function PreviewTable({ recipients, excluded, onToggle, onToggleAll, allChecked,
                 </td>
                 <td>
                   <div className="text-blast-name">{r.name || <span className="text-blast-muted">No name</span>}</div>
-                  <Badge variant="neutral">{SOURCE_LABEL[r.source]}{r.csvRow ? ` · row ${r.csvRow}` : ''}</Badge>
+                  <Badge variant="neutral" className="text-blast-badge">{SOURCE_LABEL[r.source]}{r.csvRow ? ` · row ${r.csvRow}` : ''}</Badge>
                 </td>
                 <td className="text-blast-phone">
                   {r.contactId !== null && r.phones.length > 1 && r.csvRow === null ? (
@@ -439,7 +439,7 @@ function PreviewTable({ recipients, excluded, onToggle, onToggleAll, allChecked,
                 </td>
                 <td>
                   {r.text && <div className="text-blast-text">{r.text}</div>}
-                  {r.isCustom && <Badge variant="brand">custom</Badge>}
+                  {r.isCustom && <Badge variant="brand" className="text-blast-badge">custom</Badge>}
                   {r.problems.map((p) => (
                     <div key={p} className="text-blast-warning"><Icon name="triangle-exclamation" /> {p}</div>
                   ))}

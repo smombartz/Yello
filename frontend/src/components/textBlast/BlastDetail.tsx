@@ -224,7 +224,7 @@ export function BlastDetail({ blastId, desktop, progress }: BlastDetailProps) {
                         <div className="text-blast-muted text-blast-phone">{r.phone}</div>
                       </td>
                       <td>
-                        <Badge variant={s.variant}>{s.label}</Badge>
+                        <Badge variant={s.variant} className="text-blast-badge">{s.label}</Badge>
                         <div className="text-blast-muted" title={s.hint}>
                           {r.note ?? ''}{r.sentAt && DONE_OR_TRIED(r) ? ` · ${formatTime(r.sentAt)}` : ''}
                         </div>

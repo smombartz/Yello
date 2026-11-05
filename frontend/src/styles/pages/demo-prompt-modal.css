@@ -1,18 +1,5 @@
 /* Demo prompt modal (extracted from DemoPromptModal.tsx) */
 
-.demo-prompt-modal {
-  background: var(--ds-bg-primary);
-  border-radius: var(--ds-radius-xl);
-  padding: var(--ds-space-8);
-  max-width: 400px;
-  width: 90%;
-  text-align: center;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-}
-.demo-prompt-modal h3 {
-  margin: 0 0 8px;
-  font-size: var(--ds-font-xl);
-}
 .demo-prompt-modal p {
   margin: 0 0 24px;
   color: var(--ds-text-secondary);

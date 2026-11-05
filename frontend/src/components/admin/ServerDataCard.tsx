@@ -171,9 +171,9 @@ export function ServerDataCard() {
 
       {data && !onLocalServer && (
         <div className="admin-server-actions">
-          <a className="btn btn--secondary btn--sm" href={BACKUP_URL} download>
+          <Button size="sm" href={BACKUP_URL} download>
             Download backup
-          </a>
+          </Button>
           <p className="admin-server-note">
             Data sets live on a local server. Switch to Local to test against an empty database or a copy of production.
           </p>
