@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { Icon } from '../Icon';
+import { Icon, type IconName } from '../Icon';
 import { SearchBar } from '../ui/SearchBar';
 import { SAMPLE_BOOK, SAMPLE_GROUPS, SAMPLE_TOP_CITIES, matchesQuery } from './sampleBook';
 import { SampleContactList, SampleDashboard, SampleGroups, SampleTools } from './SampleViews';
@@ -8,7 +8,7 @@ import { MapVignette } from './Vignettes';
 type View = 'dashboard' | 'contacts' | 'map' | 'groups' | 'tools';
 
 // Same icons, labels and order as the app's NavRail.
-const VIEWS: { id: View; icon: string; label: string }[] = [
+const VIEWS: { id: View; icon: IconName; label: string }[] = [
   { id: 'dashboard', icon: 'house', label: 'Dashboard' },
   { id: 'contacts', icon: 'address-book', label: 'Contacts' },
   { id: 'map', icon: 'map', label: 'Map' },

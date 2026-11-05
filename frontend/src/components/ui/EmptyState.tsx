@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import { Icon } from '../Icon';
+import { Icon, type IconName } from '../Icon';
 
 interface EmptyStateProps {
   /** Font Awesome icon name shown above the title */
-  icon?: string;
+  icon?: IconName;
   title: string;
   description?: ReactNode;
   /** Optional call-to-action, typically a button */

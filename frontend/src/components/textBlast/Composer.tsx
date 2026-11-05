@@ -254,7 +254,7 @@ export function Composer({ desktop, busy }: ComposerProps) {
         <div className="settings-section-header">
           <Icon name="list-check" />
           <h2>3 · Check every text</h2>
-          {preview.isFetching && <Icon name="spinner" className="fa-spin text-blast-muted" />}
+          {preview.isFetching && <Icon name="spinner" spin className="text-blast-muted" />}
         </div>
         <div className="settings-section-content text-blast-stack">
           {!hasSource ? (

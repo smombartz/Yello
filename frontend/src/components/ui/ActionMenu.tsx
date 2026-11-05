@@ -2,11 +2,11 @@ import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useRef, useSt
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { Icon } from '../Icon';
+import { Icon, type IconName } from '../Icon';
 
 export interface ActionMenuItem {
   label: string;
-  icon: string;
+  icon: IconName;
   /** In-app path. Renders a link, so Cmd/Ctrl-click opens it in a new tab. */
   to?: string;
   onSelect?: () => void;
@@ -19,7 +19,7 @@ interface ActionMenuProps {
   /** Accessible name for the trigger and the menu, e.g. "Actions for Jane Doe" */
   label: string;
   triggerClassName?: string;
-  triggerIcon?: string;
+  triggerIcon?: IconName;
   /** Visible text after the icon, for a labelled trigger like "Export" */
   triggerLabel?: string;
   /** While set, the trigger can't be pressed (e.g. an action from the menu is running) */

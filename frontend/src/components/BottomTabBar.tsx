@@ -1,9 +1,9 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 
 interface TabItemProps {
   to: string;
-  icon: string;
+  icon: IconName;
   label: string;
 }
 

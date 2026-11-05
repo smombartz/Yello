@@ -190,7 +190,7 @@ export function SettingsView() {
                   <div className="enrichment-progress">
                     <div className="progress-header">
                       <span className="progress-status">
-                        <Icon name="arrows-rotate" className="spinning" />
+                        <Icon name="arrows-rotate" spin />
                         Importing contacts…
                       </span>
                       <span className="progress-count">

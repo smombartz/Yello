@@ -79,7 +79,7 @@ function GmailSource({ source }: { source: MessageSource }) {
     return (
       <div className="enrichment-progress">
         <div className="progress-header">
-          <span className="progress-status"><Icon name="arrows-rotate" className="spinning" />Counting emails…</span>
+          <span className="progress-status"><Icon name="arrows-rotate" spin />Counting emails…</span>
           {source.progressTotal != null && (
             <span className="progress-count">{(source.progressDone ?? 0).toLocaleString()} of {source.progressTotal.toLocaleString()}</span>
           )}
@@ -237,7 +237,7 @@ function WhatsAppBackupImport({ coveredFrom }: { coveredFrom: string | null }) {
       {!canList ? (
         <p className="source-summary muted">Update the Yello desktop app to read iPhone backups.</p>
       ) : !list ? (
-        <p className="settings-description"><Icon name="arrows-rotate" className="spinning" /> Looking for iPhone backups on this Mac…</p>
+        <p className="settings-description"><Icon name="arrows-rotate" spin /> Looking for iPhone backups on this Mac…</p>
       ) : !list.backups.length ? (
         <div className="message-source-actions">
           <span className="source-summary">
@@ -248,7 +248,7 @@ function WhatsAppBackupImport({ coveredFrom }: { coveredFrom: string | null }) {
           <Button size="sm" variant="ghost" icon="rotate" loading={looking} onClick={() => void find()}>Look again</Button>
         </div>
       ) : progress ? (
-        <p className="settings-description"><Icon name="arrows-rotate" className="spinning" /> {progress}</p>
+        <p className="settings-description"><Icon name="arrows-rotate" spin /> {progress}</p>
       ) : (
         <div className="source-backup-pick">
           <span className="source-backup-found">
@@ -365,7 +365,7 @@ function DesktopSource({ source, status, onStatusChange }: {
       </p>
       {(error || (status?.state === 'error' && status.error)) && <p className="import-error-text">{error || status?.error}</p>}
       {progress ? (
-        <p className="settings-description"><Icon name="arrows-rotate" className="spinning" /> {progress}</p>
+        <p className="settings-description"><Icon name="arrows-rotate" spin /> {progress}</p>
       ) : (
         <div className="message-source-actions">
           <Button icon="laptop" onClick={() => void scan(false)} disabled={!status}
@@ -452,7 +452,7 @@ function ExportSource({ source }: { source: MessageSource }) {
       </p>
       {error && <p className="import-error-text">{error}</p>}
       {progress ? (
-        <p className="settings-description"><Icon name="arrows-rotate" className="spinning" /> {progress}</p>
+        <p className="settings-description"><Icon name="arrows-rotate" spin /> {progress}</p>
       ) : (
         <div className="import-controls">
           <FilePicker id={`${channel}-export`} accept={help.accept} file={file} onChange={setFile} prompt="Choose export file" />

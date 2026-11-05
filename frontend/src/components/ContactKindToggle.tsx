@@ -1,4 +1,4 @@
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import type { ContactKind } from '../api/types';
 
 interface ContactKindToggleProps {
@@ -6,7 +6,7 @@ interface ContactKindToggleProps {
   onChange: (kind: ContactKind) => void;
 }
 
-const OPTIONS: { value: ContactKind; icon: string; label: string }[] = [
+const OPTIONS: { value: ContactKind; icon: IconName; label: string }[] = [
   { value: 'person', icon: 'user', label: 'Person' },
   { value: 'company', icon: 'building', label: 'Company' },
   { value: 'generic', icon: 'address-card', label: 'Generic' },

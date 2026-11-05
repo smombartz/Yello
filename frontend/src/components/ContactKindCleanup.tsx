@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { Avatar } from './Avatar';
 import { Pagination } from './Pagination';
 import { Badge } from './ui/Badge';
@@ -20,7 +20,7 @@ const PAGE_SIZE = 50;
 
 const KIND_LABEL: Record<ContactKind, string> = { person: 'Person', company: 'Company', generic: 'Generic' };
 
-const FILTERS: { kind: SuggestedKind | null; label: string; icon: string }[] = [
+const FILTERS: { kind: SuggestedKind | null; label: string; icon: IconName }[] = [
   { kind: null, label: 'All', icon: 'list' },
   { kind: 'company', label: 'Company', icon: 'building' },
   { kind: 'generic', label: 'Generic', icon: 'address-card' },

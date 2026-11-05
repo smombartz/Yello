@@ -61,7 +61,7 @@ export function LinkedInImportContent() {
           onClick={isImportingLinkedIn ? cancelLinkedInImport : handleLinkedInImport}
           disabled={!linkedInFile && !isImportingLinkedIn}
         >
-          <Icon name={isImportingLinkedIn ? 'arrows-rotate' : 'upload'} className={isImportingLinkedIn ? 'spinning' : ''} />
+          <Icon name={isImportingLinkedIn ? 'arrows-rotate' : 'upload'} spin={isImportingLinkedIn} />
           {isImportingLinkedIn ? 'Cancel' : 'Import Contacts'}
         </Button>
       </div>

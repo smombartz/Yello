@@ -1,3 +1,5 @@
+import type { IconName } from '../components/Icon';
+
 function calculateAge(birthDate: Date): number {
   const today = new Date();
   let age = today.getFullYear() - birthDate.getFullYear();
@@ -103,7 +105,7 @@ export function getZodiacSign(dateString: string): string | null {
   return null;
 }
 
-export function getPlatformIcon(platform: string): string {
+export function getPlatformIcon(platform: string): IconName {
   const p = platform.toLowerCase();
   if (p.includes('linkedin')) return 'linkedin';
   if (p.includes('twitter') || p.includes('x')) return 'x-twitter';
@@ -196,7 +198,7 @@ function pathSegments(url: URL): string[] {
   });
 }
 
-export function getServiceIcon(service: string): string {
+export function getServiceIcon(service: string): IconName {
   const s = service.toLowerCase();
   if (s.includes('aim')) return 'comment';
   if (s.includes('facebook') || s.includes('messenger')) return 'comments';
@@ -206,7 +208,7 @@ export function getServiceIcon(service: string): string {
   return 'message';
 }
 
-export function getUrlIcon(url: string, label: string | null): string {
+export function getUrlIcon(url: string, label: string | null): IconName {
   const urlLower = url.toLowerCase();
   const labelLower = (label || '').toLowerCase();
 
@@ -231,7 +233,7 @@ export function getDisplayLabel(url: string, label: string | null): string {
   }
 }
 
-export function getRelationshipIcon(relationship: string | null): string {
+export function getRelationshipIcon(relationship: string | null): IconName {
   const r = (relationship || '').toLowerCase();
   if (r.includes('spouse') || r.includes('partner') || r.includes('husband') || r.includes('wife')) return 'heart';
   if (r.includes('child') || r.includes('son') || r.includes('daughter')) return 'child';

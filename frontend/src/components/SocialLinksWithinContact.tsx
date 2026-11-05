@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { Pagination } from './Pagination';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import { ConfirmDialog } from './ui/ConfirmDialog';
@@ -11,7 +11,7 @@ import { useSocialLinksWithinContact, useFixAllSocialLinks } from '../api/social
 const PAGE_SIZE = 50;
 
 // Platform icons - brands style for FA brand icons
-const PLATFORM_ICONS: Record<string, { name: string; style?: 'solid' | 'regular' | 'brands' }> = {
+const PLATFORM_ICONS: Record<string, { name: IconName; style?: 'solid' | 'regular' | 'brands' }> = {
   linkedin: { name: 'linkedin', style: 'brands' },
   facebook: { name: 'facebook', style: 'brands' },
   twitter: { name: 'x-twitter', style: 'brands' },

@@ -19,5 +19,11 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      'no-restricted-imports': ['error', {
+        paths: [{ name: '@ant-design/icons', message: 'Use <Icon> from components/Icon (Tabler, stroke 1.5).' }],
+        patterns: [{ group: ['@ant-design/icons/*'], message: 'Use <Icon> from components/Icon (Tabler, stroke 1.5).' }],
+      }],
+    },
   },
 ])

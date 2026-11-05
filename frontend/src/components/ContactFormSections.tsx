@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import type { ContactEmail, ContactPhone, ContactAddress, ContactSocialProfile, ContactCategory, ContactInstantMessage, ContactUrl, ContactRelatedPerson, LinkedFromEntry, ContactSearchResult, LinkedInEnrichment } from '../api/types';
 import { getCountryFlag, getCountryName } from '../lib/phoneUtils';
 import { formatAddressLines } from '../lib/addressUtils';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { useToast } from './ui/Toast';
 import { RelatedPersonNameField } from './RelatedPersonNameField';
 import {
@@ -21,7 +21,7 @@ import {
 // ─── Shared helpers ──────────────────────────────────────────────
 
 function SectionHeading({ icon, label, iconStyle, zodiacSign }: {
-  icon: string;
+  icon: IconName;
   label: string;
   iconStyle?: 'solid' | 'regular' | 'brands';
   zodiacSign?: string | null;
@@ -46,7 +46,7 @@ function SectionHeading({ icon, label, iconStyle, zodiacSign }: {
 }
 
 function InfoField({ icon, iconStyle, children, flagEmoji, actions, className }: {
-  icon?: string;
+  icon?: IconName;
   iconStyle?: 'solid' | 'regular' | 'brands';
   children: React.ReactNode;
   flagEmoji?: string;
@@ -92,7 +92,7 @@ function CopyableValue({ value, title }: { value: string; title?: string }) {
 
 function ContactActionLink({ href, icon, iconStyle, label, external, className }: {
   href: string;
-  icon: string;
+  icon: IconName;
   iconStyle?: 'solid' | 'regular' | 'brands';
   label: string;
   external?: boolean;
@@ -205,7 +205,7 @@ function ArchivedDetails<T>({ entries, children }: {
 
 /** An archived entry in view mode: muted plain text (no call/text/mail actions), and when it was archived. */
 function ArchivedField({ icon, iconStyle, value, archivedAt }: {
-  icon: string;
+  icon: IconName;
   iconStyle?: 'solid' | 'regular' | 'brands';
   value: string;
   archivedAt: string;
@@ -220,7 +220,7 @@ function ArchivedField({ icon, iconStyle, value, archivedAt }: {
 
 /** An archived entry in edit mode: read-only, with Restore and Remove. */
 function ArchivedEditRow({ icon, iconStyle, value, archivedAt, onRestore, onRemove }: {
-  icon: string;
+  icon: IconName;
   iconStyle?: 'solid' | 'regular' | 'brands';
   value: string;
   archivedAt: string;
@@ -288,7 +288,7 @@ export function ReachOutBar({ phones: allPhones, emails: allEmails }: { phones: 
   );
 }
 
-function getEmailIcon(email: string): { icon: string; style?: 'solid' | 'regular' | 'brands' } {
+function getEmailIcon(email: string): { icon: IconName; style?: 'solid' | 'regular' | 'brands' } {
   const lower = email.toLowerCase();
   if (lower.includes('@gmail') || lower.includes('@googlemail')) return { icon: 'google', style: 'brands' };
   if (lower.includes('@yahoo')) return { icon: 'yahoo', style: 'brands' };
@@ -859,7 +859,7 @@ export function LocationsSection({ addresses, isEditMode, onAddressesChange, ren
         const lines = formatAddressLines(addr);
         if (lines.length === 1 && lines[0] === '(Empty address)') return null;
 
-        const icon = addr.type?.toLowerCase() === 'home' ? 'house' :
+        const icon: IconName = addr.type?.toLowerCase() === 'home' ? 'house' :
                      addr.type?.toLowerCase() === 'work' ? 'building' : 'location-dot';
 
         const field = (

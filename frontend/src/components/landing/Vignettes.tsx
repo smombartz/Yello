@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar } from '../Avatar';
-import { Icon } from '../Icon';
+import { Icon, type IconName } from '../Icon';
 import { Button } from '../ui/Button';
 import logoMark from '../../assets/landing/mark.svg';
 import usMap from '../../assets/landing/us-map.webp';
@@ -111,7 +111,7 @@ export function MergeVignette() {
  * Sources: every import Yello has, flowing into one book.
  * ------------------------------------------------------------------------- */
 
-const SOURCES = [
+const SOURCES: { icon: IconName; brand: boolean; name: string; note: string }[] = [
   { icon: 'apple', brand: true, name: 'iCloud', note: 'Your iPhone and Mac contacts' },
   { icon: 'google', brand: true, name: 'Google Contacts', note: 'Everyone in your Google account' },
   { icon: 'linkedin', brand: true, name: 'LinkedIn', note: 'Your connections export' },
@@ -372,7 +372,7 @@ export function MapVignette({ variant = 'tile', onOpenContact }: MapVignetteProp
 
 type CardField = 'email' | 'phone' | 'linkedin' | 'city';
 
-const CARD_FIELDS: { key: CardField; label: string; icon: string; brand?: boolean; value: string }[] = [
+const CARD_FIELDS: { key: CardField; label: string; icon: IconName; brand?: boolean; value: string }[] = [
   { key: 'email', label: 'Email', icon: 'envelope', value: 'tom@pixelandink.studio' },
   { key: 'phone', label: 'Phone', icon: 'phone', value: '(503) 555-1008' },
   { key: 'linkedin', label: 'LinkedIn', icon: 'linkedin', brand: true, value: 'in/tomandersson' },

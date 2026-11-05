@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
-import { Icon } from '../Icon';
+import { Icon, type IconName } from '../Icon';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'icon';
 type ButtonSize = 'md' | 'sm' | 'lg';
@@ -12,7 +12,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
    *  (48px) is for front doors only; the landing page uses it today. */
   size?: ButtonSize;
   /** Optional leading Font Awesome (solid) icon name */
-  icon?: string;
+  icon?: IconName;
   /** Busy state: swaps the icon for a spinner, disables the button and sets aria-busy */
   loading?: boolean;
   /** React 19 passes ref as a plain prop; it lands on the <button> */
@@ -47,7 +47,7 @@ export function Button({
       aria-busy={loading || undefined}
       {...rest}
     >
-      {iconName && <Icon name={iconName} className={loading ? 'spinning' : undefined} />}
+      {iconName && <Icon name={iconName} spin={loading} />}
       {children}
     </button>
   );

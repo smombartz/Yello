@@ -1,3 +1,4 @@
+import type { IconName } from '../components/Icon';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchApi } from './client';
 import { localToday } from '../utils/birthdays';
@@ -16,7 +17,7 @@ export const CHANNEL_LABELS: Record<MessageChannel, string> = {
 };
 
 /** Font Awesome icon and style for each channel */
-export const CHANNEL_ICONS: Record<MessageChannel, { name: string; style?: 'brands' }> = {
+export const CHANNEL_ICONS: Record<MessageChannel, { name: IconName; style?: 'brands' }> = {
   gmail: { name: 'envelope' },
   imessage: { name: 'comment' },
   whatsapp: { name: 'whatsapp', style: 'brands' },

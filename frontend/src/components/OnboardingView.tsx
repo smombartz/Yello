@@ -8,7 +8,7 @@ import { useImportStatus } from '../hooks/useImportStatus';
 import type { ImportResult } from '../api/types';
 import { useImportLinkedInStream, parseLinkedInCsv } from '../api/settingsHooks';
 import { Avatar } from './Avatar';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { FilePicker } from './ui/FilePicker';
@@ -16,7 +16,7 @@ import { useToast } from './ui/Toast';
 
 type Section = 'profile' | 'vcf' | 'linkedin' | null;
 
-const STEPS: { id: Exclude<Section, null>; icon: string; iconStyle?: 'brands'; title: string; desc: string }[] = [
+const STEPS: { id: Exclude<Section, null>; icon: IconName; iconStyle?: 'brands'; title: string; desc: string }[] = [
   { id: 'profile', icon: 'user', title: 'Set up your profile', desc: 'Add a photo so people recognize you' },
   { id: 'vcf', icon: 'address-book', title: 'Import from Contacts', desc: 'Bring in contacts from your phone or email (VCF)' },
   { id: 'linkedin', icon: 'linkedin', iconStyle: 'brands', title: 'Import from LinkedIn', desc: 'Import your LinkedIn connections (CSV)' },

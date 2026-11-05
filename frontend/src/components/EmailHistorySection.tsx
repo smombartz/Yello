@@ -130,7 +130,7 @@ export function EmailHistorySection({ contactId, hasEmails }: EmailHistorySectio
           </div>
         </div>
         <div className="email-history-loading">
-          <Icon name="arrows-rotate" className="spinning" />
+          <Icon name="arrows-rotate" spin />
         </div>
       </div>
     );
@@ -169,7 +169,7 @@ export function EmailHistorySection({ contactId, hasEmails }: EmailHistorySectio
             disabled={isRefreshing}
             title="Refresh"
           >
-            <Icon name="arrows-rotate" className={isRefreshing ? 'spinning' : ''} />
+            <Icon name="arrows-rotate" spin={isRefreshing} />
           </button>
         </div>
       )}

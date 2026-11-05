@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 
 type DepKind = 'external' | 'env' | 'packages' | 'tables' | 'services';
 
@@ -12,7 +12,7 @@ type Deps = Partial<Record<DepKind, string[]>>;
 interface SubTool {
   id: string;
   name: string;
-  icon: string;
+  icon: IconName;
   iconStyle?: 'solid' | 'brands';
   tags?: ToolTag[];
   how: string;
@@ -22,7 +22,7 @@ interface SubTool {
 interface ToolDoc {
   id: string;
   name: string;
-  icon: string;
+  icon: IconName;
   iconStyle?: 'solid' | 'brands';
   location: string;
   tags?: ToolTag[];
@@ -47,7 +47,7 @@ const DEP_LABELS: Record<DepKind, string> = {
 
 const DEP_ORDER: DepKind[] = ['external', 'env', 'packages', 'tables', 'services'];
 
-const TAG_META: Record<ToolTag, { label: string; icon: string }> = {
+const TAG_META: Record<ToolTag, { label: string; icon: IconName }> = {
   desktop: { label: 'Desktop only', icon: 'desktop' },
   demo: { label: 'Blocked in demo', icon: 'lock' },
   danger: { label: 'Irreversible', icon: 'triangle-exclamation' },

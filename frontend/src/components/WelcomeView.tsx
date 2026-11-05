@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 
 interface Section {
   id: string;
-  icon: string;
+  icon: IconName;
   title: string;
   body: string;
 }

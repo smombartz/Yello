@@ -1,3 +1,4 @@
+import type { IconName } from './Icon';
 import { Tabs } from './ui/Tabs';
 import type { DeduplicationMode, DuplicateSummary } from '../api/types';
 
@@ -16,7 +17,7 @@ const MODE_LABELS: Record<DeduplicationMode, string> = {
   'social-links': 'Social Links',
 };
 
-const MODE_ICONS: Record<DeduplicationMode, string> = {
+const MODE_ICONS: Record<DeduplicationMode, IconName> = {
   recommended: 'wand-magic-sparkles',
   email: 'envelope',
   phone: 'phone',
