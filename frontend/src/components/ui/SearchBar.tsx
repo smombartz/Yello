@@ -1,5 +1,9 @@
+import { useImperativeHandle, useRef } from 'react';
 import type { Ref } from 'react';
+import { Input } from 'antd';
+import type { InputRef } from 'antd';
 import { Icon } from '../Icon';
+import { Button } from './Button';
 
 interface SearchBarProps {
   value: string;
@@ -23,7 +27,10 @@ interface SearchBarProps {
   className?: string;
 }
 
-/** Shared search input: magnifying-glass icon + text field + clear/cancel button. */
+const searchIcon = <Icon name="magnifying-glass" />;
+const clearConfig = { clearIcon: <Icon name="circle-xmark-solid" /> };
+
+/** Shared search input (Ant Input): magnifying-glass icon + text field + clear/cancel button. */
 export function SearchBar({
   value,
   onChange,
@@ -36,40 +43,29 @@ export function SearchBar({
   autoFocus = false,
   disabled = false,
   inputRef,
-  className = '',
+  className,
 }: SearchBarProps) {
-  const showTrailing = trailing === 'cancel' ? true : value.length > 0;
-  const classes = ['search-bar', variant === 'plain' ? 'search-bar--plain' : '', className]
-    .filter(Boolean)
-    .join(' ');
+  // Ant's ref is an InputRef wrapper; callers want the real <input> for .focus()/.select()
+  const antRef = useRef<InputRef>(null);
+  useImperativeHandle(inputRef, () => antRef.current?.input as HTMLInputElement, []);
 
   return (
-    <div className={classes}>
-      <Icon name="magnifying-glass" className="search-bar-icon" />
-      <input
-        ref={inputRef}
-        type="text"
-        className="search-bar-input"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') onSubmit?.();
-        }}
-        placeholder={placeholder}
-        aria-label={ariaLabel}
-        autoFocus={autoFocus}
-        disabled={disabled}
-      />
-      {showTrailing && (
-        <button
-          type="button"
-          className="search-bar-clear"
-          onClick={() => (trailing === 'cancel' ? onCancel?.() : onChange(''))}
-          aria-label={trailing === 'cancel' ? 'Cancel search' : 'Clear search'}
-        >
-          <Icon name="xmark" />
-        </button>
-      )}
-    </div>
+    <Input
+      ref={antRef}
+      className={className}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onPressEnter={onSubmit}
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      autoFocus={autoFocus}
+      disabled={disabled}
+      prefix={searchIcon}
+      variant={variant === 'plain' ? 'borderless' : 'outlined'}
+      allowClear={trailing === 'clear' ? clearConfig : false}
+      suffix={trailing === 'cancel'
+        ? <Button variant="icon" icon="xmark" aria-label="Cancel search" onClick={onCancel} />
+        : undefined}
+    />
   );
 }
