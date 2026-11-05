@@ -1,13 +1,17 @@
 import { useState } from 'react';
+import type { CSSProperties } from 'react';
+import { Avatar } from 'antd';
 import { useAuth } from '../hooks/useAuth';
 
 interface UserAvatarProps {
-  imgClassName: string;
-  initialsClassName: string;
+  /** Diameter in px (pass a token, e.g. token.controlHeight) */
+  size: number;
+  className?: string;
+  style?: CSSProperties;
 }
 
-/** The signed-in user's photo, or their initials when there is none (or it fails to load). */
-export function UserAvatar({ imgClassName, initialsClassName }: UserAvatarProps) {
+/** The signed-in user's photo (Ant Avatar), or their initials when there is none or it fails to load. */
+export function UserAvatar({ size, className, style }: UserAvatarProps) {
   const { user } = useAuth();
   const [avatarError, setAvatarError] = useState(false);
 
@@ -21,15 +25,14 @@ export function UserAvatar({ imgClassName, initialsClassName }: UserAvatarProps)
     .toUpperCase()
     .slice(0, 2) || 'U';
 
-  return avatarUrl && !avatarError ? (
-    <img
-      src={avatarUrl}
-      alt=""
-      className={imgClassName}
-      referrerPolicy="no-referrer"
-      onError={() => setAvatarError(true)}
-    />
-  ) : (
-    <div className={initialsClassName} aria-hidden="true">{initials}</div>
+  // Our own <img>: Ant's would drop referrerPolicy, and Google photos need no-referrer
+  const photo = avatarUrl && !avatarError ? (
+    <img src={avatarUrl} alt="" referrerPolicy="no-referrer" onError={() => setAvatarError(true)} />
+  ) : undefined;
+
+  return (
+    <Avatar size={size} src={photo} className={className} style={style} aria-hidden="true">
+      {initials}
+    </Avatar>
   );
 }

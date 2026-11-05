@@ -9,6 +9,13 @@
     max-width: 220px;
   }
 
+  /* Profile's header on phones: Logout stays, the email goes */
+  @media (max-width: 768px) {
+    .header-user-email {
+      display: none;
+    }
+  }
+
   .profile-loading {
     display: flex;
     flex-direction: column;

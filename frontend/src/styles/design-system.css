@@ -242,25 +242,27 @@
    * LAYOUT - Centered Content
    * ============================================ */
   --ds-content-width: 960px;
-  --ds-layout-gap: 8px;
 
-  /* Layout - Navigation */
-  --ds-nav-icon-size: 24px;
-  --ds-nav-item-padding: 8px;
-  --ds-nav-gap: 4px;
-  /* Collapsed rail footprint: 40px item (icon 24 + 2×8 padding) + 2×16px rail padding */
-  --ds-nav-rail-width: 72px;
+  /* Layout - Shell geometry. Layout.tsx sets the live values on <html> from
+     Ant's tokens (theme/shellMetrics.ts): phone values include the safe areas,
+     and the rail and tab bar are 0px where they aren't shown. These defaults
+     (desktop) only apply outside the shell. */
+  --ds-header-height: 64px;     /* Ant Layout.Header */
+  --ds-nav-rail-width: 80px;    /* Ant's collapsed Sider */
+  --ds-tab-bar-height: 0px;     /* phones only */
 
   /* Layout - Page Header */
-  --ds-header-height: 64px;
-  --ds-header-padding: 16px;
   --ds-header-logo-size: 24px;
+  --ds-header-mark-size: 28px;  /* phones: the mark that stands in for the wordmark */
   /* Floor for both header side columns. Must fit the logo: the wordmark SVG
      is 188x40, so at 24px tall it renders ~113px wide. Applied to left AND
      right so the center column stays centered on the viewport. */
   --ds-header-side-col-min: 120px;
-  --ds-header-title-size: 20px;
+  /* Fixed slot for one-word page titles so the search starts at the same x on
+     every page; long titles (contact names) ellipsize */
+  --ds-header-title-min: 120px;
   --ds-header-search-width: 300px;
+  --ds-header-search-min: 200px;
 
   /* ============================================
    * BREAKPOINTS - authoritative scale

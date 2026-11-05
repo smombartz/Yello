@@ -204,340 +204,6 @@ select:focus-visible:not([class*='ant-']) {
   to { transform: rotate(360deg); }
 }
 
-/* ===== App Layout — Centered 3-Column ===== */
-
-.app-layout {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  background: var(--ds-bg-primary);
-}
-
-.app-body {
-  display: flex;
-  flex: 1;
-  gap: var(--ds-layout-gap);
-  padding-top: var(--ds-header-height);
-}
-
-/* ===== Page Header ===== */
-
-.page-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: var(--ds-header-height);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--ds-header-padding);
-  flex-shrink: 0;
-  background: var(--ds-bg-primary);
-  z-index: var(--ds-z-fixed);
-}
-
-.page-header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  height: 100%;
-  /* Guaranteed separation between the columns so the title never abuts the
-     logo and the actions never abut the right edge when space is tight. */
-  column-gap: var(--ds-space-4);
-}
-
-.page-header-col-left {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  height: 100%;
-  min-width: var(--ds-header-side-col-min);
-}
-
-.page-header-logo-link {
-  display: flex;
-  align-items: center;
-}
-
-.page-header-logo {
-  height: var(--ds-header-logo-size);
-  width: auto;
-}
-
-/* Phone-only header pieces (shown in the ≤768px shell block) */
-.page-header-mark,
-.page-header-user {
-  display: none;
-}
-
-.page-header-col-center {
-  /* Target the content width but shrink below it on 769–1100px windows so
-     the header column stays aligned with the main content column. */
-  flex: 0 1 var(--ds-content-width);
-  min-width: 0;
-}
-
-.page-header-center-row {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-6);
-  width: 100%;
-  min-width: 0;
-}
-
-.page-header-title {
-  font-size: var(--ds-header-title-size);
-  font-weight: var(--ds-weight-bold);
-  color: var(--ds-text-primary);
-  margin: 0;
-  white-space: nowrap;
-  line-height: 20px;
-  /* Fixed slot for one-word page titles so the search bar starts at the
-     same x on every page; long titles (contact names) ellipsize. */
-  min-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Breadcrumb trail — parent section(s) + current page title in the title slot.
-   The container takes over the title's fixed 120px slot; the title inside
-   shrinks and ellipsizes while the crumbs keep their full width. */
-.page-header-breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-2);
-  min-width: 120px;
-  overflow: hidden;
-}
-
-.page-header-breadcrumbs .page-header-title {
-  min-width: 0;
-}
-
-.page-header-crumb-item {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-2);
-  flex-shrink: 0;
-}
-
-.page-header-crumb {
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: var(--ds-header-title-size);
-  font-weight: var(--ds-weight-bold);
-  line-height: 20px;
-  white-space: nowrap;
-  color: var(--ds-text-secondary);
-  text-decoration: none;
-}
-
-.page-header-crumb:hover {
-  color: var(--ds-text-primary);
-}
-
-.page-header-crumb-sep {
-  font-size: var(--ds-font-xs);
-  color: var(--ds-text-muted);
-}
-
-/* Header search (SearchBar className): pinned to the right edge of the center
-   column, ahead of any info/actions blocks. */
-.search-bar--header {
-  max-width: var(--ds-header-search-width);
-  flex: 1;
-  min-width: 200px;
-  margin-left: auto;
-}
-
-/* When a search bar is present it already carries the auto margin, so the
-   info block drops its own and sits right after the search instead of
-   splitting the free space with it. */
-.search-bar--header ~ .page-header-info {
-  margin-left: 0;
-}
-
-.page-header-info {
-  flex-shrink: 1;
-  font-size: var(--ds-font-sm);
-  color: var(--ds-text-secondary);
-  text-align: right;
-  white-space: nowrap;
-  line-height: 20px;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  /* Pin to the right edge of the center column so counts sit in the same
-     spot on every page instead of floating after the search bar. */
-  margin-left: auto;
-}
-
-/* Empty spacer that mirrors the left (logo) column so the center column
-   stays centered on the viewport, aligned with the main content column.
-   The min-width MUST match the left column's — without it this column
-   collapses to 0 on narrow windows while the left holds its floor, which
-   shifts the whole center column off-center to the right. */
-.page-header-col-right {
-  flex: 1;
-  min-width: var(--ds-header-side-col-min);
-}
-
-.page-header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-2);
-  min-width: 0;
-  flex-shrink: 0;
-  /* Pin to the right edge of the content column; when an info block is
-     present it already carries the auto margin, so drop it to keep the
-     info pinned right with the actions following. */
-  margin-left: auto;
-}
-
-.page-header-info + .page-header-actions,
-.search-bar--header ~ .page-header-actions {
-  margin-left: 0;
-}
-
-/* Buttons keep their size when space is tight; flexible items beside them
-   (e.g. the profile email) shrink and truncate instead. */
-.page-header-actions button {
-  flex-shrink: 0;
-}
-
-.page-header-sub {
-  padding: var(--ds-space-2) 0;
-}
-
-/* ===== Navigation Rail (Floating Icons) ===== */
-
-.nav-rail {
-  position: fixed;
-  left: 0;
-  top: var(--ds-header-height);
-  height: calc(100vh - var(--ds-header-height));
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: var(--ds-nav-gap);
-  padding-left: 16px;
-  padding-right: 16px;
-  min-width: 0;
-  z-index: var(--ds-z-fixed);
-}
-
-.nav-rail-item {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--ds-radius-lg);
-  color: var(--ds-text-muted);
-  text-decoration: none;
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: var(--ds-nav-item-padding);
-  transition: background-color var(--ds-duration-normal) var(--ds-easing-default), color var(--ds-duration-normal) var(--ds-easing-default), width var(--ds-duration-normal) var(--ds-easing-default);
-  position: relative;
-  gap: var(--ds-space-2);
-  overflow: hidden;
-}
-
-.nav-rail-item .yello-icon {
-  font-size: var(--ds-nav-icon-size);
-  flex-shrink: 0;
-}
-
-.nav-rail-label {
-  display: none;
-  font-size: var(--ds-font-sm);
-  font-weight: var(--ds-weight-medium);
-  white-space: nowrap;
-  color: var(--ds-color-primary);
-}
-
-.nav-rail-item:hover {
-  color: var(--ds-color-primary);
-  width: auto;
-}
-
-.nav-rail-item:hover .nav-rail-label {
-  display: inline;
-}
-
-.nav-rail-item.active,
-a.nav-rail-item.active {
-  background-color: var(--ds-color-primary-light);
-  color: var(--ds-color-primary);
-}
-
-.nav-rail-item:focus-visible {
-  outline: 2px solid var(--ds-color-primary);
-  outline-offset: -2px;
-}
-
-/* Nav Rail Avatar */
-
-.nav-rail-avatar-btn {
-  overflow: hidden;
-}
-
-.nav-rail-avatar-img {
-  width: var(--ds-nav-icon-size);
-  height: var(--ds-nav-icon-size);
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.nav-rail-avatar-initials {
-  width: var(--ds-nav-icon-size);
-  height: var(--ds-nav-icon-size);
-  border-radius: 50%;
-  background: var(--ds-bg-tertiary);
-  color: var(--ds-text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--ds-font-sm);
-  font-weight: var(--ds-weight-semibold);
-}
-
-/* ===== Header Action Button (shared) ===== */
-
-/* Main Content */
-.main-content {
-  /* Target the content width but shrink below it on narrow windows instead
-     of overflowing the viewport; the max-width keeps the column clear of
-     the fixed nav rail on both sides. */
-  flex: 0 1 var(--ds-content-width);
-  max-width: calc(100% - 2 * var(--ds-nav-rail-width));
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  margin: 0 auto;
-  padding: 0;
-}
-
-.main-content:has(.map-view) {
-  flex-basis: 100%;
-  max-width: 100%;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-2);
-}
-
 /* Page Content */
 .page-content {
   flex: 1;
@@ -881,7 +547,7 @@ a.nav-rail-item.active {
 .dedup-view {
   display: flex;
   flex-direction: column;
-  /* The window minus the fixed header (.app-body pads it), so the page
+  /* The window minus the fixed header (the shell pads the body below it), so the page
      itself never scrolls; its lists scroll inside */
   height: calc(100vh - var(--ds-header-height));
 }
@@ -1900,7 +1566,7 @@ a.nav-rail-item.active {
 .cleanup-view {
   display: flex;
   flex-direction: column;
-  /* The window minus the fixed header (.app-body pads it), so the page
+  /* The window minus the fixed header (the shell pads the body below it), so the page
      itself never scrolls; its lists scroll inside */
   height: calc(100vh - var(--ds-header-height));
 }
@@ -2581,7 +2247,7 @@ a.nav-rail-item.active {
 .archived-view {
   display: flex;
   flex-direction: column;
-  /* The window minus the fixed header (.app-body pads it), so the page
+  /* The window minus the fixed header (the shell pads the body below it), so the page
      itself never scrolls; its lists scroll inside */
   height: calc(100vh - var(--ds-header-height));
 }
@@ -6542,287 +6208,92 @@ a.nav-rail-item.active {
 
 /* Mobile layout adjustments */
 @media (max-width: 768px) {
-  .nav-rail {
-    display: none;
-  }
-
-  :root {
-    /* One value places the header, offsets the body below it and pins the
-       sticky list toolbar under it, so the three can't drift apart. */
-    --ds-header-height: calc(56px + env(safe-area-inset-top));
-  }
-
-  .main-content {
-    /* flex-basis (not width) — the desktop rule sets flex-basis, which
-       would win over a width override. */
-    flex: 1 1 100%;
-    max-width: 100%;
-    padding: 0 max(var(--ds-space-4), env(safe-area-inset-right)) calc(56px + env(safe-area-inset-bottom)) max(var(--ds-space-4), env(safe-area-inset-left));
-  }
-
-  /* Side padding matches .main-content, so search and avatar end on the
-     content column's edge. */
-  .page-header {
-    padding: env(safe-area-inset-top) max(var(--ds-space-4), env(safe-area-inset-right)) 0 max(var(--ds-space-4), env(safe-area-inset-left));
-  }
-
-  .page-header-row {
-    column-gap: var(--ds-space-3);
-  }
-
-  /* The logo column shrinks to the mark, a way back to the dashboard */
-  .page-header-col-left {
-    flex: 0 0 auto;
-    min-width: 0;
-  }
-
-  .page-header-logo {
-    display: none;
-  }
-
-  .page-header-mark {
-    display: block;
-    width: 28px;
-    height: 28px;
-  }
-
-  .page-header-col-center {
-    /* flex-basis (not width) — see .main-content note above. */
-    flex: 1 1 100%;
-  }
-
-  .page-header-center-row {
-    gap: var(--ds-space-3);
-  }
-
-  /* No fixed title slot: there is no column for the search to line up with */
-  .page-header-title,
-  .page-header-breadcrumbs {
-    min-width: 0;
-  }
-
-  .search-bar--header {
-    width: auto;
-    flex: 1;
-    flex-shrink: 1;
-    /* Override the 200px desktop min so the search can shrink on
-       narrow phones instead of overflowing the header. */
-    min-width: 0;
-  }
-
-  .page-header-info {
-    display: none;
-  }
-
-  /* The desktop spacer holds the Profile avatar instead, sized to it */
-  .page-header-col-right {
-    flex: 0 0 auto;
-    min-width: 0;
-  }
-
-  .page-header-user {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  /* 44px touch target around the 32px avatar */
-  .page-header-user::after {
-    content: '';
-    position: absolute;
-    inset: -6px;
-  }
-
-  .page-header-user.active {
-    box-shadow: 0 0 0 2px var(--ds-bg-primary), 0 0 0 4px var(--ds-color-primary);
-  }
-
-  .page-header-user:focus-visible {
-    outline: 2px solid var(--ds-color-primary);
-    outline-offset: 2px;
-  }
-
-  .page-header-user-img,
-  .page-header-user-initials {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-  }
-
-  .page-header-user-img {
-    object-fit: cover;
-  }
-
-  .page-header-user-initials {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--ds-bg-tertiary);
-    color: var(--ds-text-primary);
-    font-size: var(--ds-font-xs);
-    font-weight: var(--ds-weight-semibold);
-  }
-
-  /* With search, the phone header takes two rows: mark · title · actions · avatar,
-     then the search across the width, with its accessory (sort & filter) at
-     the end under the avatar. The center column's wrappers dissolve into
-     the grid so each piece can be placed. */
-  :root:has(.page-header--search) {
-    --ds-header-height: calc(56px + 40px + var(--ds-space-3) + env(safe-area-inset-top));
-  }
-
-  .page-header--search {
-    padding-bottom: var(--ds-space-3);
-  }
-
-  .page-header--search .page-header-row {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
-    grid-template-rows: 56px 40px;
-    align-items: center;
-    height: auto;
-  }
-
-  .page-header--search .page-header-col-center,
-  .page-header--search .page-header-center-row {
-    display: contents;
-  }
-
-  .page-header--search .page-header-col-left {
-    grid-area: 1 / 1;
-  }
-
-  .page-header--search .page-header-title,
-  .page-header--search .page-header-breadcrumbs {
-    grid-area: 1 / 2;
-  }
-
-  .page-header--search .page-header-actions {
-    grid-area: 1 / 3;
-  }
-
-  .page-header--search .page-header-col-right {
-    grid-area: 1 / 4;
-    justify-self: end;
-  }
-
-  .page-header--search .search-bar--header {
-    grid-row: 2;
-    grid-column: 1 / -1;
-    max-width: none;
-    height: 40px;
-    margin-left: 0;
-  }
-
-  .page-header--search .page-header-row:has(.page-header-search-accessory) .search-bar--header {
-    grid-column: 1 / -2;
-  }
-
-  .page-header-search-accessory {
-    grid-area: 2 / 4;
-    justify-self: end;
-  }
-
-  .page-header-search-accessory .ant-btn {
-    width: 40px;
-    height: 40px;
-  }
-
-  .page-header--search .page-header-sub {
-    grid-column: 1 / -1;
-  }
-
-  /* Profile's header: Logout stays, the email goes */
-  .page-header .header-user-email {
-    display: none;
-  }
-
   /* Adjust page content for mobile */
   .page-content {
     padding: 1rem 0;
   }
 }
 
-/* Bottom Tab Bar */
+/* ===== Bottom tab bar =====
+   Phones only (Layout renders it there). A custom element, since Ant has no tab
+   bar, styled with tokens only. Layout sets --ds-tab-bar-height to the row plus
+   the bottom safe area (theme/shellMetrics.ts); the row is what's left of it. */
 .bottom-tab-bar {
-  display: none;
+  --tab-bar-row: calc(var(--ds-tab-bar-height) - env(safe-area-inset-bottom));
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--ds-tab-bar-height);
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: var(--ds-bg-primary);
+  border-top: 1px solid var(--ds-border-color);
+  z-index: var(--ds-z-fixed);
 }
 
-@media (max-width: 768px) {
-  .bottom-tab-bar {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-around;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: calc(56px + env(safe-area-inset-bottom));
-    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    background: var(--ds-bg-primary);
-    border-top: 1px solid var(--ds-border-color);
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-    z-index: var(--ds-z-fixed);
-  }
+.tab-item,
+.tab-add-button {
+  -webkit-tap-highlight-color: transparent;
+  /* Prevent text selection on tap */
+  user-select: none;
+  -webkit-user-select: none;
+}
 
-  .tab-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    flex: 1;
-    height: 56px;
-    padding: 0.375rem 0;
-    text-decoration: none;
-    color: var(--ds-text-secondary);
-    -webkit-tap-highlight-color: transparent;
-    transition: color var(--ds-duration-normal) var(--ds-easing-default);
-  }
+/* Each tab is the full row tall: a target well over 40px */
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--ds-space-1) / 2);
+  flex: 1;
+  height: var(--tab-bar-row);
+  padding: var(--ds-space-1) 0;
+  text-decoration: none;
+  color: var(--ds-text-secondary);
+  transition: color var(--ds-duration-normal) var(--ds-easing-default);
+}
 
-  .tab-item .yello-icon {
-    font-size: var(--ds-font-2xl);
-  }
+.tab-item .yello-icon {
+  font-size: var(--ds-font-2xl);
+}
 
-  .tab-label {
-    font-size: var(--ds-font-2xs);
-    margin-top: 2px;
-    font-weight: var(--ds-weight-medium);
-  }
+.tab-label {
+  font-size: var(--ds-font-2xs);
+  font-weight: var(--ds-weight-medium);
+}
 
-  .tab-item.active {
-    color: var(--ds-color-primary);
-  }
+.tab-item.active {
+  color: var(--ds-color-primary);
+}
 
-  .tab-add-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 56px;
-    height: 56px;
-    margin-top: -0.75rem;
-    border: none;
-    border-radius: 50%;
-    background: var(--ds-color-primary);
-    color: var(--ds-text-inverse);
-    cursor: pointer;
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--ds-color-primary) 30%, transparent);
-    -webkit-tap-highlight-color: transparent;
-    transition: transform var(--ds-duration-normal) var(--ds-easing-default), box-shadow var(--ds-duration-normal) var(--ds-easing-default);
-  }
+/* The raised round + button, a row tall */
+.tab-add-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tab-bar-row);
+  height: var(--tab-bar-row);
+  margin-top: calc(-1 * var(--ds-space-3));
+  border: none;
+  border-radius: var(--ds-radius-full);
+  background: var(--ds-color-primary);
+  color: var(--ds-text-inverse);
+  cursor: pointer;
+  box-shadow: 0 var(--ds-space-1) var(--ds-space-3) color-mix(in srgb, var(--ds-color-primary) 30%, transparent);
+  transition: transform var(--ds-duration-normal) var(--ds-easing-default), box-shadow var(--ds-duration-normal) var(--ds-easing-default);
+}
 
-  .tab-add-button:active {
-    transform: scale(0.95);
-    box-shadow: 0 2px 8px color-mix(in srgb, var(--ds-color-primary) 30%, transparent);
-  }
+.tab-add-button:active {
+  transform: scale(0.95);
+  box-shadow: 0 calc(var(--ds-space-1) / 2) var(--ds-space-2) color-mix(in srgb, var(--ds-color-primary) 30%, transparent);
+}
 
-  .tab-add-button .yello-icon {
-    font-size: 1.75rem;
-  }
+.tab-add-button .yello-icon {
+  font-size: calc(var(--ds-font-2xl) + var(--ds-space-1));
 }
 
 /* Mobile touch optimizations */
@@ -6838,13 +6309,6 @@ a.nav-rail-item.active {
   .contact-row {
     min-height: 56px;
     padding: 0.75rem 1rem;
-  }
-
-  /* Prevent text selection on tap */
-  .tab-item,
-  .tab-add-button {
-    user-select: none;
-    -webkit-user-select: none;
   }
 
   /* Contain overscroll on mobile */

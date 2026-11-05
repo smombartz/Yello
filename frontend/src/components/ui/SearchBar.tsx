@@ -25,6 +25,8 @@ interface SearchBarProps {
   disabled?: boolean;
   inputRef?: Ref<HTMLInputElement>;
   className?: string;
+  /** 'middle' 32px (default); 'large' 40px, for phone touch rows */
+  size?: 'middle' | 'large';
 }
 
 const searchIcon = <Icon name="magnifying-glass" />;
@@ -44,6 +46,7 @@ export function SearchBar({
   disabled = false,
   inputRef,
   className,
+  size = 'middle',
 }: SearchBarProps) {
   // Ant's ref is an InputRef wrapper; callers want the real <input> for .focus()/.select()
   const antRef = useRef<InputRef>(null);
@@ -53,6 +56,7 @@ export function SearchBar({
     <Input
       ref={antRef}
       className={className}
+      size={size}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onPressEnter={onSubmit}

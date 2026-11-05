@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react';
 import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
+import { Layout as AntLayout, theme } from 'antd';
 import { NavRail } from './NavRail';
 import { PageHeader, type Breadcrumb } from './PageHeader';
 import { BottomTabBar } from './BottomTabBar';
@@ -9,7 +10,8 @@ import { useDesktopMessageSync } from '../hooks/useDesktopMessageSync';
 import { useAuth } from '../hooks/useAuth';
 import { isAdmin } from '../lib/admin';
 import { getDesktopServer } from '../lib/desktopServer';
-import type { ReactNode } from 'react';
+import { shellCssVars } from '../theme/shellMetrics';
+import type { CSSProperties, ReactNode } from 'react';
 
 export interface PageHeaderConfig {
   title: string;
@@ -42,6 +44,20 @@ export function Layout() {
   const [headerConfig, setHeaderConfig] = useState<PageHeaderConfig>({ title: '' });
   const headerConfigRef = useRef(headerConfig);
   headerConfigRef.current = headerConfig;
+  const { token } = theme.useToken();
+  const hasSearch = headerConfig.onSearchChange !== undefined;
+
+  // The shell's geometry as CSS variables on <html>: page CSS uses them for sticky
+  // offsets and viewport-height calculations (see theme/shellMetrics.ts). Removed when
+  // the shell unmounts, so pages outside it get design-system.css's defaults.
+  useLayoutEffect(() => {
+    const vars = shellCssVars(token, isMobile, hasSearch);
+    const root = document.documentElement.style;
+    for (const [name, value] of Object.entries(vars)) root.setProperty(name, value);
+    return () => {
+      for (const name of Object.keys(vars)) root.removeProperty(name);
+    };
+  }, [token, isMobile, hasSearch]);
 
   // Desktop app: keep iMessage/WhatsApp counts for Top contacts fresh
   useDesktopMessageSync(true);
@@ -96,17 +112,37 @@ export function Layout() {
     setHeaderConfig(config);
   }, []);
 
+  // The content column: the content width, centred on the window and clear of the fixed
+  // rail on both sides; the map takes the full width. Phones pad it to the safe areas and
+  // clear the bottom tab bar. No `position`: ContactList measures its offsetTop against <body>.
+  const fullBleed = location.pathname === '/map';
+  const contentStyle: CSSProperties = isMobile ? {
+    flex: '1 1 100%',
+    maxWidth: '100%',
+    paddingBlock: '0 var(--ds-tab-bar-height)',
+    paddingInline: `max(${token.padding}px, env(safe-area-inset-left)) max(${token.padding}px, env(safe-area-inset-right))`,
+  } : {
+    flex: fullBleed ? '0 1 100%' : '0 1 var(--ds-content-width)',
+    maxWidth: fullBleed ? '100%' : 'calc(100% - 2 * var(--ds-nav-rail-width))',
+  };
+
+  // The window scrolls (pages and virtual lists rely on it): the header and rail are fixed,
+  // and the body row is padded below the header.
   return (
-    <div className="app-layout">
+    <AntLayout style={{ minHeight: '100vh', background: token.colorBgContainer }}>
       <PageHeader {...headerConfig} />
-      <div className="app-body">
+      <AntLayout
+        style={{ flex: 1, flexDirection: 'row', paddingTop: 'var(--ds-header-height)', background: 'transparent' }}
+      >
         {!isMobile && <NavRail />}
-        <main className="main-content">
+        <AntLayout.Content
+          style={{ display: 'flex', flexDirection: 'column', minWidth: 0, marginInline: 'auto', ...contentStyle }}
+        >
           <Outlet context={{ setModalOpen: handleSetModalOpen, setHeaderConfig: handleSetHeaderConfig, isMobile } satisfies OutletContext} />
-        </main>
-      </div>
+        </AntLayout.Content>
+      </AntLayout>
       {isMobile && <BottomTabBar />}
       <ImportStatusIndicator />
-    </div>
+    </AntLayout>
   );
 }

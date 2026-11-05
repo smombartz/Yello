@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { theme } from 'antd';
 import { Icon } from './Icon';
 import { Button } from './ui/Button';
 import { SORT_OPTIONS, DEFAULT_SORT } from '../constants/contactListOptions';
@@ -74,6 +75,7 @@ export function ContactFilters({
   viewMode,
   onViewModeChange,
 }: ContactFiltersProps) {
+  const { token } = theme.useToken();
   const [open, setOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -144,6 +146,10 @@ export function ContactFilters({
       ref={buttonRef}
       variant="icon"
       icon="sliders"
+      // Only the phone header's search row uses it: a 40px square target beside the 40px
+      // field, with or without the count badge
+      size="lg"
+      style={{ width: token.controlHeightLG }}
       className={`filter-icon-trigger${activeCount > 0 ? ' is-active' : ''}`}
       onClick={() => setOpen(!open)}
       aria-label={activeCount > 0 ? `${title}, ${activeCount} active` : title}
