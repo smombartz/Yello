@@ -763,27 +763,9 @@ a.nav-rail-item.active {
 .yello-table-expand { all: unset; cursor: pointer; display: inline-flex; padding: 4px; border-radius: var(--ds-radius-sm); }
 .yello-table-expand:focus-visible { box-shadow: var(--ds-shadow-focus); }
 
-/* Avatar */
-.avatar {
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: var(--ds-weight-semibold);
-  color: var(--ds-text-inverse);
+/* Avatar (Ant draws the rest) */
+.yello-avatar {
   flex-shrink: 0;
-  overflow: hidden;
-}
-
-.avatar-icon .yello-icon {
-  font-size: 0.85em;
-}
-
-.avatar img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 /* Contact Detail Panel */
