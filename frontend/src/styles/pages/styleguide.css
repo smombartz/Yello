@@ -617,15 +617,6 @@
   font-weight: var(--ds-weight-semibold);
 }
 
-.sg-modal {
-  width: 420px;
-}
-
-.sg-modal h3 {
-  margin: 0 0 var(--ds-space-2);
-  font-size: var(--ds-font-lg);
-}
-
 .sg-modal p {
   margin: 0 0 var(--ds-space-5);
   line-height: var(--ds-leading-normal);
