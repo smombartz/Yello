@@ -1,5 +1,41 @@
 # Change Log
 
+## 2026-11-05 — Ant Design 6 + Tabler icons: foundation and app shell (plan Phases 0–1)
+
+**Session:** `2b652786-4339-4e9d-9904-bedd520ef776`
+
+**What Changed:**
+- Installed `antd@^6.7.0`, `@tabler/icons-react@^3.50.0` and `@ant-design/colors`. `theme/AntProvider.tsx` wraps the app (stock theme, no token overrides), and Ant ships as its own cached `antd-*.js` chunk (`vite.config.ts` `manualChunks`)
+- `theme/TokenBridge.tsx` points the old `--ds-*` colour, text, background, border, radius, shadow, motion, font and control-height variables at Ant's live theme, so unmigrated screens already use Ant blue and the system font. Geist is gone, and global focus rings skip Ant's elements. Phone guard: Ant fields render at 16px
+- Icons: `components/Icon.tsx` renders Tabler at stroke 1.5 behind the old names (`IconName` union, every icon prop typed with it, `spin` replaces `.spinning`). The Font Awesome kit is removed, and page CSS targets `.yello-icon` instead of `<i>`. `theme/antIcons.tsx` swaps the icons Ant draws inside its own components (`antIconConfig` on ConfigProvider), plus wrappers `ui/DatePicker` and `ui/PasswordInput`. ESLint bans `@ant-design/icons` and the unwrapped `DatePicker`/`TimePicker`/`message`/`notification`/`Pagination`
+- Every `components/ui/` primitive rebuilt on Ant with the same props: `Toast` (`message`/`notification`), `Button`, `Modal`/`ConfirmDialog` (Ant Escape, deferred "closed" signal, focus returns on unmount), `Tabs`, `Badge` (`Tag`), `LoadingSpinner` (`Spin`, `compact`, full-viewport `fullscreen`), `EmptyState` (`Empty`), `ActionMenu` (`Dropdown`, keyboard-navigable links, `triggerVariant`), `SearchBar` (`Input`, `size`), `FilePicker` (`Upload`), and the new `ui/Pagination`
+- App shell on Ant `Layout`: fixed `Header` (`PageHeader` with `Typography.Title`, `Breadcrumb`), a collapsed `Sider` + `Menu` rail (`NavRail`), `Content`. The phone tab bar stays custom on tokens. `theme/shellMetrics.ts` publishes `--ds-header-height`, `--ds-nav-rail-width` and `--ds-tab-bar-height`
+- `Avatar` and `UserAvatar` on Ant `Avatar`. The colour comes from a name hash over eight contrast-safe `presetPalettes` hues (`lib/avatarColor.ts`), and initials skip Ant's per-instance ResizeObserver. Job pill on `Progress`, launch banner on `Alert banner` (`role="region"`)
+- Deleted the CSS each migrated piece replaced (`.btn*`, `.modal-*`, `.confirm-*`, `.toast*`, `.tabs`/`.tab*`, `.badge*`, `.empty-state-*`, `.loading-spinner-*`, `.action-menu*`, `.search-bar*`, `.file-input*`, `.pagination*`, `.avatar*`, the shell rules, `.fa-*`). `index.css` went from 7,936 to 6,774 lines
+- Bundle: +226 KB gzipped (`antd` 271 KB + index 250 KB, was index 295 KB). The plan has the per-phase numbers
+
+**Why:**
+- The user chose stock Ant Design 6 and Tabler icons for the whole frontend (plan `docs/plans/2026-11-05-ant-design-migration.md`). Phases 0–1 make every screen Ant-coloured and Ant-controlled before the screen-by-screen phases
+
+**Files Modified:**
+- `frontend/package.json`, `package-lock.json` — antd, @tabler/icons-react, @ant-design/colors
+- `frontend/vite.config.ts` — `manualChunks` for the antd chunk
+- `frontend/index.html` — removed Geist and the Font Awesome kit
+- `frontend/eslint.config.js` — `no-restricted-imports` bans and wrapper exemptions
+- `frontend/src/main.tsx` — `AntProvider`
+- `frontend/src/theme/AntProvider.tsx`, `TokenBridge.tsx`, `antIcons.tsx`, `shellMetrics.ts` — new
+- `frontend/src/components/Icon.tsx` — Tabler map, `IconName`, `ICON_STROKE`, `spin`
+- `frontend/src/components/ui/*` — all primitives on Ant; new `DatePicker`, `PasswordInput`, `Pagination` (moved from `components/`)
+- `frontend/src/components/Layout.tsx`, `NavRail.tsx`, `PageHeader.tsx`, `UserAvatar.tsx`, `BottomTabBar.tsx`, `Avatar.tsx`, `BackgroundJobPill.tsx`, `LaunchBanner.tsx` — shell and Phase 1 components
+- `frontend/src/lib/avatarColor.ts` — new, shared avatar colour hash
+- About 45 other components — `IconName` typing, `spin`, Pagination import path, removed duplicate modal headings, `.btn` usages converted to `<Button>`
+- `frontend/src/index.css`, `styles/design-system.css`, `styles/pages/*.css` — old rules deleted; icon selectors moved from `i` to `.yello-icon`
+- `PROJECT.md` — Frontend stack line
+- `docs/reference.md` — Design system section rewritten for Ant
+- `docs/plans/2026-11-05-ant-design-migration.md` — Phase 1 tasks, ticks, Changes
+
+---
+
 ## 2026-11-05 — Plan: move the frontend to Ant Design, redesigning in phases
 
 **Session:** `cddc1b10-7aa9-448d-87cd-d2e6c4cac3ea`

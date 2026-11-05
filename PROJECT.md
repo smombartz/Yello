@@ -9,7 +9,7 @@ Read this first — it heads off the most common wrong assumptions. Nothing here
 
 - **Backend:** Fastify 5 + TypeScript (ESM). Entry point `backend/src/server.ts`; one plugin per file in `routes/`, business logic in `services/`, TypeBox schemas in `schemas/`.
 - **Database:** `better-sqlite3`, WAL. **Multi-tenancy is one SQLite file per user** — isolation comes from opening a different file, not from a `user_id` column, so there is no cross-tenant query surface. See `docs/database.md`.
-- **Frontend:** React 19 + Vite 7 + TanStack Query v5. Plain global CSS (`index.css` + `styles/`), no CSS modules or Tailwind. Design tokens are `--ds-*` custom properties.
+- **Frontend:** React 19 + Vite 7 + TanStack Query v5 + Ant Design 6 (stock theme) + Tabler icons (`@tabler/icons-react`, stroke 1.5, through `<Icon>`). Plain global CSS (`index.css` + `styles/`), no CSS modules or Tailwind. Design tokens are `--ds-*` custom properties.
 - **Auth:** Google OAuth + signed cookie sessions. A global `onRequest` hook guards `/api/*` and `/photos/*`; handlers scope data with `getUserDatabase(request.user!.id)`.
 - **Deployment:** single Docker container on Railway with a persistent volume at `/data`. The Electron desktop app is a thin client of that deployment (no local backend); its Google sign-in runs in the system browser and hands back over `yello://`. See `electron/README.md`.
 - **Tests:** Vitest (`cd backend && npx vitest run`). A few suites are slow enough to need `--testTimeout=20000`.

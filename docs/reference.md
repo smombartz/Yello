@@ -60,34 +60,43 @@ Up to 1.x the app spawned its own backend with local SQLite in `~/Library/Applic
 
 ## Design system
 
-`DESIGN.md` (repo root) documents the visual system for anyone building new UI, people and AI agents alike. Its YAML frontmatter holds the normative tokens, and the body covers colors, type, layout, depth, shapes, components and do's/don'ts. `.impeccable/design.json` is a machine-read sidecar with tonal ramps, shadows, motion and drop-in component snippets. `PRODUCT.md` holds the product context (users, positioning, principles) that the design serves. The implementation lives in `frontend/src/styles/design-system.css` (`--ds-*` tokens).
+**Ant Design 6, stock theme** (migration started 2026-11-05; plan: `docs/plans/2026-11-05-ant-design-migration.md`). `theme/AntProvider.tsx` wraps the app in `<ConfigProvider {...antIconConfig}>` and `<App component={false}>`, so every component can call `App.useApp()` and `theme.useToken()`. There are **no `token` overrides**: the primary is Ant blue `#1677ff` and the font is Ant's system stack. Ant ships as its own cached `antd-*.js` chunk (`manualChunks` in `vite.config.ts`). `DESIGN.md`, `.impeccable/design.json` and `PRODUCT.md` still describe the old violet system until Phase 2 of the plan rewrites them.
 
-**One violet.** The primary is **Signal Violet `#5F27E3`**, the violet of the logo, favicon and app icon (`--ds-color-primary`). Its hover is `#530bce` and its dark step `#4304ab`, both derived in OKLCH. The old UI violet `#7c3aed` survives only as the brand gradient's first stop.
+**Token bridge (`theme/TokenBridge.tsx`).** Screens not yet rebuilt on Ant still use the old `--ds-*` CSS variables. The bridge sets the colour, text, background, border, radius, shadow, motion, font and control-height variables on `<html>` from Ant's live theme, so those screens already take Ant's colours and font (and will follow dark mode later). Spacing, the type scale and z-index keep their `design-system.css` values for now, because changing them would break unmigrated layouts. The bridge shrinks as screens migrate and goes in Phase 9. In new code, read `theme.useToken()` in TSX or the bridged `--ds-*` variables in CSS. Never use literal colours or sizes.
 
-**Conventions the CSS now follows** (aligned on 2026-10-04):
+**Shell metrics (`theme/shellMetrics.ts`).** `Layout` derives the header height, the rail width (Ant's collapsed `Sider`, 80px) and the phone tab-bar height from Ant tokens, and publishes them as `--ds-header-height`, `--ds-nav-rail-width` and `--ds-tab-bar-height`, so page CSS can offset against the shell without hard-coding pixels.
 
-- Filled buttons are Signal Violet or Error only. Every in-app button has 6px corners and a medium-weight label.
-- Selection is a 2px Signal Violet ring plus a violet avatar check.
-- No text is smaller than 11px.
-- Readable text is never `--ds-text-muted`. That color is for icons and zero states only.
-- Every transition uses `--ds-duration-*` and `--ds-easing-*`. `--ds-duration-normal` (150ms) is the default.
-- Page stylesheets must not redefine canonical classes like `.btn`. `pages.css` loads globally, so an override leaks app-wide.
+**Icons: Tabler only, stroke 1.5, through `<Icon>`** (`components/Icon.tsx`). The `ICONS` map keeps the old Font Awesome names as keys (`envelope`, `pen`…), so call sites didn't change. `IconName` is the union of those keys, and every icon prop is typed with it, so an unmapped name fails the build. `<Icon>` renders `<span class="anticon yello-icon"><svg/></span>`: the `anticon` class makes Ant align and colour it like its own icons. `spin` replaces the old `spinning` class. ESLint bans `@ant-design/icons` in app code. The old `style` prop is accepted and ignored until Phase 9. Page CSS targets icons with `.yello-icon`, not `i`.
 
-**Style guide (`/styleguide`).** A live specimen book of the design system, linked in the nav rail for the admin account beside Admin and Docs.
-- **It can't drift.** `lib/designTokens.ts` reads every `--ds-*` token from the loaded stylesheets at runtime, so a new token in `design-system.css` appears automatically. Anything no section claims falls into an "Other tokens" list.
-- **Using it.** Click any specimen to copy its `var(--ds-…)`. The header search filters tokens by name or value. Text colors show their live WCAG contrast against `--ds-bg-primary`.
-- **What it covers.** The `components/ui` primitives render live in every variant and state, with DESIGN.md's named rules and do's/don'ts beside them. Those rules are quoted in `StyleGuideView.tsx`, so when DESIGN.md's rules change, update them there too.
-- **Access.** Admin-only. `AdminRoute` in `App.tsx` redirects anyone else to the dashboard, and `/admin` and `/admin/docs` use the same guard. Both the guard and the nav rail read `isAdmin()` from `lib/admin.ts`. It mirrors the backend's `ADMIN_EMAIL`, which is what actually protects the admin API.
+**Ant's built-in icons (`theme/antIcons.tsx`).** Ant draws its own icons inside components. They're swapped for Tabler in three ways:
+- **Globally** through `antIconConfig` on `ConfigProvider`: button/spin loading, select and cascader arrows and clear, the tree-select switcher, date/time picker suffix and clear, search, modal/alert/drawer/notification/tag/tour/image close and status icons, tabs, breadcrumb, transfer, float button, collapse/menu expanders and table row expand.
+- **Per use, through wrappers**, where Ant has no global setting (an `Input`/`TextArea` `allowClear` also needs `{ clearIcon }` at each use, as `ui/SearchBar` does; a global setting would turn clear buttons on everywhere): `ui/DatePicker` (`DatePicker`, `TimePicker`), `ui/PasswordInput`, `ui/Pagination` (`paginationIcons`), `ui/FilePicker` (`uploadListIcons`), and `useToast()` (`statusIcons`). ESLint bans importing `DatePicker`, `TimePicker`, `message`, `notification` and `Pagination` from `antd` outside those wrappers and `theme/`. `Input.Password` can't be banned by name, so always use `ui/PasswordInput` (ConfigProvider's `inputPassword.iconRender` could close this gap later). `Upload` isn't banned yet, so use `ui/FilePicker`.
+- **Accepted leftovers:** the `Steps` finish/error marks, `Rate` stars (pass `character`), and the CSS-drawn checkbox, radio and switch.
 
-**Primitives (`frontend/src/components/ui/`).** Build with these before writing new markup:
+Check a screen with `[...document.querySelectorAll('.anticon:not(.yello-icon)')].map(el => el.className)` in the console after opening its selects, pickers, dialogs and menus. It should print `[]`.
 
-| Primitive | Use for | Notes |
+**Primitives (`frontend/src/components/ui/`).** Build with these before writing new markup. All are Ant underneath, with the props they had before the migration:
+
+| Primitive | Ant component | Notes |
 | --- | --- | --- |
-| `Button` | Every action button | `variant` (primary/secondary/danger/ghost/icon), `size` (`md`/`sm`/`lg`), `icon`, `loading`. `lg` (48px, 12px corners, 16px label) is for front doors only (the landing page uses it today); never use it inside the app shell. Links styled as buttons use `btn btn--{variant}`. |
-| `Tabs` | Underline tab bars | Accessible tablist with Arrow/Home/End keys. Merge and Cleanup use it. |
-| `Modal` | Every overlay | Escape, overlay click, `aria-modal`, focus in and focus return, `useLayoutModal`. Omit `onClose` for a blocking progress dialog. |
-| `ConfirmDialog` | Yes/no confirmations | A `Modal` with secondary plus primary/danger actions. |
-| `LoadingSpinner`, `EmptyState`, `Badge`, `SearchBar`, `Toast`, `FilePicker` | Their namesakes | |
+| `Button` | `Button` | `variant` primary → `type="primary"`, secondary → default, danger → primary + `danger`, ghost/icon → `text`. `size` sm 24px / md 32px / lg 40px (lg for front doors only). `icon: IconName`, `loading` (sets `aria-busy`), `href`/`download` for link buttons. |
+| `Modal`, `ConfirmDialog` | `Modal` | `label` is the title. Omit `onClose` for a blocking dialog (no X, no Escape, no mask close). Escape is Ant's (topmost dialog only). While mounted it tells `Layout` a modal is open (`useLayoutModal`), and the "closed" signal is deferred a tick so the same Escape can't also navigate. On unmount, focus returns to the element that opened it. |
+| `Tabs` | `Tabs` | Counts render as a filled `Tag`. Callers render their own content. |
+| `Badge` | `Tag` | neutral/brand/success/warning/error/info/count. |
+| `LoadingSpinner` | `Spin` | Default block padding; `compact` drops it; `fullscreen` is a full-viewport block. |
+| `EmptyState` | `Empty` | Tabler icon as the image. |
+| `ActionMenu` | `Dropdown` + `Menu` | `to` items are router links (Enter navigates too). `triggerVariant` picks the trigger's Button variant. It keeps Escape from reaching Layout while open. |
+| `SearchBar` | `Input` | `inputRef` still gets the real `<input>`; `size` for the 40px phone field. |
+| `FilePicker` | `Upload` | Never uploads by itself; `id` works with `<label htmlFor>`. |
+| `Toast` (`useToast`) | `message` / `notification` | One toast at a time. A toast with an action (Undo) is a top `notification`, otherwise a `message`. Toasts now sit at the top. |
+| `Pagination` | `Pagination` | `simple` on phones, wrapped in `.yello-pagination`. |
+| `DatePicker`, `PasswordInput` | `DatePicker`/`TimePicker`, `Input.Password` | Exist only to set Tabler icons. |
+
+**Shell.** `Layout` is Ant `Layout` with a fixed `Header` (`PageHeader`: `Typography.Title`, Ant `Breadcrumb`, `SearchBar`, actions), a fixed collapsed `Sider` with an inline `Menu` on desktop (`NavRail`), and `Content`. The window still scrolls. Phones keep the custom bottom tab bar (`BottomTabBar`, tokens only). `Avatar` is Ant `Avatar`. Its colour is hashed from the name into eight `presetPalettes` hues chosen for at least 4.5:1 contrast with white, and initials render through Ant's `icon` branch so virtual-list rows don't each mount a ResizeObserver.
+
+**Rules for page CSS.** Don't restyle `.ant-*` classes from page stylesheets. `pages.css` loads globally, so an override leaks app-wide. Give the element your own class and target that. Known exceptions, all layout-only and removed with their screens: the phone 16px field guard on `.ant-input`/`.ant-select`/`.ant-picker` (`index.css`, ≤768px), and a few `.ant-btn` descendant selectors in `enrich.css`, `admin.css`, `landing.css`, `onboarding.css` and `top-contacts.css`. When a screen moves to Ant, its old rules are deleted in the same change.
+
+**Style guide (`/styleguide`).** An admin-only live specimen page (`AdminRoute` in `App.tsx`, `isAdmin()` from `lib/admin.ts`). `lib/designTokens.ts` reads every `--ds-*` token at runtime. Its copy still describes the violet system; Phase 2 rebuilds it as a page of Yello's own patterns on Ant.
 
 ## Features
 
