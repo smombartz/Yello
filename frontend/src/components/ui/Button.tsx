@@ -10,6 +10,7 @@ type ButtonSize = 'md' | 'sm' | 'lg';
 interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'color' | 'type'> {
   /** Visual role. One `primary` per view; `secondary` is the default. */
   variant?: ButtonVariant;
+  /** sm 24px, md 32px, lg 40px; lg is for front doors only (landing, sign-in) */
   size?: ButtonSize;
   /** Optional leading icon (a Tabler icon, see IconName) */
   icon?: IconName;
@@ -50,6 +51,7 @@ export function Button({
   return (
     <AntButton
       {...VARIANTS[variant]}
+      aria-busy={loading || undefined}
       {...rest}
       ref={ref}
       htmlType={type}

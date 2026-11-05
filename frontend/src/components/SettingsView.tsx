@@ -314,7 +314,15 @@ export function SettingsView() {
                     Connected as <strong>{icloudSettings.data.email}</strong>
                   </p>
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                    <Button icon="cloud-arrow-down" onClick={() => navigate('/icloud-import')}>
+                    <Button
+                      icon="cloud-arrow-down"
+                      href="/icloud-import"
+                      onClick={(e) => {
+                        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                        e.preventDefault();
+                        navigate('/icloud-import');
+                      }}
+                    >
                       Import from iCloud
                     </Button>
                     <Button
