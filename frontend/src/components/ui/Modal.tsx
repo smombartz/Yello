@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Modal as AntModal } from 'antd';
 import { useLayoutModal } from '../../hooks/useLayoutModal';
@@ -16,33 +16,35 @@ interface ModalProps {
   children: ReactNode;
 }
 
+// Mounted Modals, so stacked dialogs keep Layout's "modal open" flag until the last one goes.
+let mountedModals = 0;
+
 /**
  * Canonical modal shell on Ant's Modal. Render conditionally
  * (`{open && <Modal …/>}`); it is open for as long as it is mounted.
- * While mounted it tells Layout a modal is open (useLayoutModal), and it
- * handles Escape itself in the capture phase so Layout's global
- * "Escape goes to /contacts" never also fires.
+ *
+ * Escape: rc-dialog listens once on window (bubble phase), closes only the
+ * topmost dialog, and skips it when `keyboard` is false (non-dismissable).
+ * While mounted, Modal tells Layout a modal is open (useLayoutModal) so
+ * Layout's own Escape handler doesn't also navigate. The "closed" signal is
+ * deferred one tick: rc-dialog's listener may run before Layout's on the same
+ * Escape, and a synchronous "closed" could let Layout navigate too.
  *
  * Ant hardcodes role="dialog" + aria-modal + aria-labelledby on its panel,
  * so there is no `role` prop (no alertdialog).
  */
 export function Modal({ label, onClose, width, className, footer = null, children }: ModalProps) {
   const { setModalOpen } = useLayoutModal();
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const dismissable = Boolean(onClose);
 
   useEffect(() => {
+    mountedModals += 1;
     setModalOpen(true);
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      e.stopPropagation();
-      onCloseRef.current?.();
-    };
-    window.addEventListener('keydown', handleKeyDown, true);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown, true);
-      setModalOpen(false);
+      mountedModals -= 1;
+      setTimeout(() => {
+        if (mountedModals === 0) setModalOpen(false);
+      }, 0);
     };
     // setModalOpen only dispatches a window event; safe to run once per mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -54,7 +56,7 @@ export function Modal({ label, onClose, width, className, footer = null, childre
       title={label}
       onCancel={onClose}
       closable={dismissable}
-      keyboard={false}
+      keyboard={dismissable}
       mask={{ closable: dismissable }}
       footer={footer}
       width={width}
