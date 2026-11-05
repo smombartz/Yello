@@ -1033,6 +1033,11 @@ a.nav-rail-item.active {
 .yello-icon--rotate-90 > svg { transform: rotate(90deg); transition: transform var(--ds-duration-normal) var(--ds-easing-default); }
 @keyframes yello-icon-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .yello-icon--spin { animation-duration: 3s; } }
+.yello-icon--rotate-180 > svg { transform: rotate(180deg); transition: transform var(--ds-duration-normal) var(--ds-easing-default); }
+
+/* Row expander drawn by antIconConfig.table (theme/antIcons.tsx) */
+.yello-table-expand { all: unset; cursor: pointer; display: inline-flex; padding: 4px; border-radius: var(--ds-radius-sm); }
+.yello-table-expand:focus-visible { box-shadow: var(--ds-shadow-focus); }
 
 /* Avatar */
 .avatar {
