@@ -77,25 +77,26 @@ body {
  * Using :focus-visible for keyboard navigation
  * ============================================ */
 
-/* Default focus ring for interactive elements */
-:focus-visible {
+/* Default focus ring for interactive elements. Ant draws its own rings, so
+   every rule here skips elements whose class contains "ant-". */
+:focus-visible:not([class*='ant-']) {
   outline: 2px solid var(--ds-color-primary);
   outline-offset: 2px;
 }
 
 /* Buttons and interactive elements */
-button:focus-visible,
-a:focus-visible,
-[role="button"]:focus-visible {
+button:focus-visible:not([class*='ant-']),
+a:focus-visible:not([class*='ant-']),
+[role="button"]:focus-visible:not([class*='ant-']) {
   outline: 2px solid var(--ds-color-primary);
   outline-offset: 2px;
   box-shadow: var(--ds-shadow-focus);
 }
 
 /* Form inputs - ring inside the border */
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
+input:focus-visible:not([class*='ant-']),
+textarea:focus-visible:not([class*='ant-']),
+select:focus-visible:not([class*='ant-']) {
   outline: none;
   border-color: var(--ds-color-primary);
   box-shadow: var(--ds-shadow-focus);
@@ -7438,6 +7439,13 @@ a.nav-rail-item.active {
 }
 
 /* Mobile touch optimizations */
+@media (max-width: 768px) {
+  /* iOS zooms into any field under 16px; Ant's default is 14px */
+  .ant-input, .ant-input-affix-wrapper input, .ant-input-number-input,
+  .ant-select-selection-search-input, .ant-select-selection-item,
+  .ant-picker-input > input, textarea.ant-input { font-size: 16px; }
+}
+
 @media (max-width: 768px) {
   /* Larger touch targets */
   .contact-row {
