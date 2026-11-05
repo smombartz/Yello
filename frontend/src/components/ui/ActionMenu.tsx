@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentProps, MouseEvent } from 'react';
 import { Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Icon, type IconName } from '../Icon';
 import { Button } from './Button';
 
@@ -49,6 +49,7 @@ export function ActionMenu({
   disabled = false,
 }: ActionMenuProps) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   const triggerRef = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
 
   // Escape closes the menu only. Capture phase, so Layout's window-level Escape
@@ -73,16 +74,22 @@ export function ActionMenu({
         key: item.label,
         icon: <Icon name={item.icon} />,
         label: item.to ? <Link to={item.to}>{item.label}</Link> : item.label,
-        onClick: () => item.onSelect?.(),
+        // rc-menu activates a keyboard-selected item by calling onClick, never by clicking the
+        // inner <a>; mouse clicks on the anchor (incl. Cmd/Ctrl-click) keep the Link's own handling.
+        onClick: ({ domEvent }) => {
+          if (item.to && !(domEvent.target as HTMLElement).closest('a')) navigate(item.to);
+          item.onSelect?.();
+        },
       },
     ]),
-    [items],
+    [items, navigate],
   );
 
   return (
     <Dropdown
       trigger={['click']}
       placement="bottomRight"
+      autoFocus
       open={open}
       onOpenChange={setOpen}
       menu={{ items: menuItems, 'aria-label': label }}
@@ -94,6 +101,8 @@ export function ActionMenu({
         icon={triggerIcon}
         className={triggerClassName}
         aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
         disabled={disabled}
         onClick={stop}
       >
