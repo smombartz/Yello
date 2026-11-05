@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
+import { Avatar as AntAvatar } from 'antd';
+import { presetPalettes } from '@ant-design/colors';
 import { Icon } from './Icon';
 import type { ContactKind } from '../api/types';
 
@@ -22,13 +24,18 @@ function getInitials(name: string): string {
   return name.substring(0, 2).toUpperCase();
 }
 
+// Hues for the hashed colour. Yellow, lime and gold are too light for white initials, and
+// orange is borderline, so they are left out. Order is fixed: it decides which name gets which colour.
+const AVATAR_HUES = ['red', 'volcano', 'green', 'cyan', 'blue', 'geekblue', 'purple', 'magenta'] as const;
+// Shade 6 is each preset's primary colour
+const AVATAR_COLORS = AVATAR_HUES.map((hue) => presetPalettes[hue][6]);
+
 function stringToColor(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const hue = Math.abs(hash % 360);
-  return `hsl(${hue}, 65%, 45%)`;
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
 export function Avatar({
@@ -41,29 +48,20 @@ export function Avatar({
   isSelected = false,
   onToggleSelect,
 }: AvatarProps) {
-  const style: React.CSSProperties = {
-    width: size,
-    height: size,
-    fontSize: size * 0.4,
-    backgroundColor: stringToColor(name),
-  };
+  const background = useMemo(() => stringToColor(name), [name]);
 
-  // A photo that fails to load falls back to the placeholder, until the URL changes
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const showPhoto = !!photoUrl && photoUrl !== failedUrl;
-
+  // Ant falls back to the icon or initials when the photo fails, and retries when the URL changes
   const avatarEl = (
-    <div className={`avatar${kind !== 'person' && !showPhoto ? ' avatar-icon' : ''} ${className}`} style={style}>
-      {showPhoto ? (
-        <img src={photoUrl} alt={name} onError={() => setFailedUrl(photoUrl)} />
-      ) : kind === 'company' ? (
-        <Icon name="building" />
-      ) : kind === 'generic' ? (
-        <Icon name="address-card" />
-      ) : (
-        getInitials(name)
-      )}
-    </div>
+    <AntAvatar
+      className={`yello-avatar ${className}`}
+      size={size}
+      src={photoUrl || undefined}
+      alt={name}
+      style={{ backgroundColor: background }}
+      icon={kind === 'company' ? <Icon name="building" /> : kind === 'generic' ? <Icon name="address-card" /> : undefined}
+    >
+      {getInitials(name)}
+    </AntAvatar>
   );
 
   if (!selectable) {
