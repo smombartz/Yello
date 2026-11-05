@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Tag } from 'antd';
 
 type BadgeVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'error' | 'info' | 'count';
 
@@ -8,14 +9,25 @@ interface BadgeProps {
   className?: string;
 }
 
+const TAG_COLOR: Record<Exclude<BadgeVariant, 'neutral' | 'count'>, string> = {
+  brand: 'processing',
+  success: 'success',
+  warning: 'warning',
+  error: 'error',
+  info: 'processing',
+};
+
 /**
- * Canonical small pill label. `count` is the round number-badge style;
- * the rest are colored status labels. Renders `.badge .badge--{variant}`.
+ * Canonical small label on Ant `Tag`. `count` is the quiet number style;
+ * the rest are coloured status labels.
  */
-export function Badge({ variant = 'neutral', children, className = '' }: BadgeProps) {
+export function Badge({ variant = 'neutral', children, className }: BadgeProps) {
+  if (variant === 'count') {
+    return <Tag variant="filled" className={className}>{children}</Tag>;
+  }
   return (
-    <span className={['badge', `badge--${variant}`, className].filter(Boolean).join(' ')}>
+    <Tag color={variant === 'neutral' ? undefined : TAG_COLOR[variant]} className={className}>
       {children}
-    </span>
+    </Tag>
   );
 }

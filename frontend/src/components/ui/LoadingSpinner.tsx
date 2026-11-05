@@ -1,42 +1,29 @@
+import { Flex, Spin, Typography } from 'antd';
+
 interface LoadingSpinnerProps {
   /** Size of the spinner in pixels. Default: 40 */
   size?: number;
   /** Optional message to display below the spinner */
   message?: string;
-  /** Center the spinner in the full viewport (e.g. auth/route loading) */
+  /** Cover the full viewport with an overlay (e.g. auth/route loading) */
   fullscreen?: boolean;
   /** Additional class name for the container */
   className?: string;
 }
 
 /**
- * Unified loading spinner. Uses design system tokens for consistent styling.
- * Canonical loading primitive — prefer this over per-view loading markup.
+ * Unified loading spinner on Ant `Spin`. Canonical loading primitive,
+ * prefer this over per-view loading markup. Ant has three spinner sizes,
+ * so the pixel `size` maps to the closest one.
  */
-export function LoadingSpinner({
-  size = 40,
-  message,
-  fullscreen = false,
-  className = '',
-}: LoadingSpinnerProps) {
-  const containerClass = [
-    'loading-spinner-container',
-    fullscreen ? 'loading-spinner-fullscreen' : '',
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ');
-
+export function LoadingSpinner({ size = 40, message, fullscreen = false, className }: LoadingSpinnerProps) {
+  const spinSize = size >= 40 ? 'large' : size <= 20 ? 'small' : 'medium';
+  if (fullscreen) return <Spin fullscreen size={spinSize} description={message} />;
   return (
-    <div className={containerClass}>
-      <div
-        className="loading-spinner"
-        style={{ width: size, height: size }}
-        role="status"
-        aria-label="Loading"
-      />
-      {message && <p className="loading-spinner-message">{message}</p>}
-    </div>
+    <Flex vertical align="center" gap="small" className={className} role="status" aria-label={message ?? 'Loading'}>
+      <Spin size={spinSize} />
+      {message && <Typography.Text type="secondary">{message}</Typography.Text>}
+    </Flex>
   );
 }
 

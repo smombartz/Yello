@@ -321,7 +321,7 @@
   background: var(--ds-color-info-light);
 }
 
-.text-blast-table .badge {
+.text-blast-table .text-blast-badge {
   margin-top: var(--ds-space-1);
 }
 
