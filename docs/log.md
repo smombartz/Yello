@@ -1,5 +1,32 @@
 # Change Log
 
+## 2026-11-05 — Plan: move the frontend to Ant Design, redesigning in phases
+
+**Session:** `cddc1b10-7aa9-448d-87cd-d2e6c4cac3ea`
+
+**What Changed:**
+- New plan for rebuilding the frontend on stock Ant Design 6, in 11 phases. Phase 0 (foundation) has full
+  tasks with code. Each later phase lists its scope, files and exit criteria, and gets its tasks when it starts
+- Decisions recorded: stock Ant theme (blue, system font), Tabler icons (`@tabler/icons-react`, stroke 1.5) in
+  place of Font Awesome, Ant on every page including the landing page and public card, dark mode as an optional
+  last phase
+- Revised the same day: icons moved from `@ant-design/icons` to Tabler, and a new Task 0.4 swaps the icons Ant draws
+  inside its own components (`antIconConfig` on `ConfigProvider`, wrappers for pagination, date pickers and the
+  password field, a lint ban and a DOM check)
+- Phase 2 uses impeccable (`doctor`, `document`, `init`) to rewrite DESIGN.md, its sidecar and PRODUCT.md for
+  the Ant system. Phase 6 shapes a redesign of Tools › Cleanup and Merge before any code
+- Added a roadmap item with one step per phase
+
+**Why:**
+- The user prefers Ant's look and feel. A test bundle measured Ant at +177 KB gzipped for the core set and
+  +218 KB with form widgets (today's main bundle is 295 KB), which the user accepted
+
+**Files Modified:**
+- `docs/plans/2026-11-05-ant-design-migration.md` — new
+- `.dashcode/roadmap.json` — "Ant Design migration and phased redesign" item
+
+---
+
 ## 2026-11-01 — Fix: Top contacts Gmail scan failed with "Quota exceeded … Units per minute per user"
 
 **Session:** `3a21085e-9d0b-4c4c-8fad-7d5b28db0475`

@@ -266,12 +266,9 @@ select:focus-visible:not([class*='ant-']) {
 }
 
 /* ============================================
- * CANONICAL BADGE SYSTEM (components/ui/Badge.tsx)
- * `.badge` + variant modifiers. Status-badge and count-badge
- * legacy classes are grouped in so the app shares one look.
+ * Legacy badge classes (unmigrated markup). The canonical Badge is Ant Tag.
  * ============================================ */
 
-.badge,
 .confidence-badge,
 .cleanup-badge,
 .normalize-badge,
@@ -289,15 +286,7 @@ select:focus-visible:not([class*='ant-']) {
   white-space: nowrap;
 }
 
-.badge--neutral { background: var(--ds-bg-tertiary); color: var(--ds-text-secondary); }
-.badge--brand   { background: var(--ds-color-primary-light); color: var(--ds-color-primary); }
-.badge--success { background: var(--ds-color-success-light); color: var(--ds-color-success-dark); }
-.badge--warning { background: var(--ds-color-warning-light); color: var(--ds-color-warning-dark); }
-.badge--error   { background: var(--ds-color-error-light); color: var(--ds-color-error-dark); }
-.badge--info    { background: var(--ds-color-info-light); color: var(--ds-color-info-dark); }
-
-/* Count badges — round number pills */
-.badge--count,
+/* Count badges — round number pills (unmigrated markup) */
 .subtab-badge,
 .groups-count-badge,
 .archived-count-badge {
@@ -315,23 +304,8 @@ select:focus-visible:not([class*='ant-']) {
 }
 
 /* ============================================
- * LOADING SPINNER COMPONENT
- * Global styles for unified LoadingSpinner
+ * Raw `.loading-spinner` ring (PublicContactCard). LoadingSpinner is Ant Spin.
  * ============================================ */
-
-.loading-spinner-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--ds-space-4);
-  padding: var(--ds-space-12);
-}
-
-.loading-spinner-fullscreen {
-  min-height: 100vh;
-  background: var(--ds-bg-secondary);
-}
 
 .loading-spinner {
   width: 40px;
@@ -340,12 +314,6 @@ select:focus-visible:not([class*='ant-']) {
   border-top-color: var(--ds-color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
-}
-
-.loading-spinner-message {
-  color: var(--ds-text-secondary);
-  margin: 0;
-  font-size: var(--ds-font-sm);
 }
 
 @keyframes spin {
@@ -1152,7 +1120,7 @@ a.nav-rail-item.active {
   color: var(--ds-color-error);
 }
 
-/* Shared EmptyState primitive (components/ui/EmptyState.tsx) */
+/* Raw empty block (DashboardView). The shared EmptyState is Ant Empty. */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -1165,24 +1133,8 @@ a.nav-rail-item.active {
 }
 
 .empty-state-icon {
-  font-size: 3rem;
-  color: var(--ds-text-muted);
-}
-
-.empty-state-title {
-  margin: 0;
-  color: var(--ds-text-primary);
-  font-size: var(--ds-font-xl);
-  font-weight: var(--ds-weight-semibold);
-}
-
-.empty-state-description {
-  margin: 0;
-  max-width: 340px;
-}
-
-.empty-state-action {
-  margin-top: var(--ds-space-2);
+  font-size: 40px;
+  color: var(--ds-text-disabled);
 }
 
 /* Virtual scroll — handled by useWindowVirtualizer (body scroll) */
@@ -1205,73 +1157,6 @@ a.nav-rail-item.active {
 .merge-buttons {
   display: flex;
   gap: var(--ds-space-2);
-}
-
-/* ============================================
- * CANONICAL TABS (components/ui/Tabs.tsx)
- * Underline tab bar used by Merge and Cleanup.
- * ============================================ */
-.tabs {
-  display: flex;
-  gap: var(--ds-space-1);
-  margin-bottom: var(--ds-space-4);
-  border-bottom: 1px solid var(--ds-border-color);
-  overflow-x: auto;
-}
-
-.tab {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-2);
-  padding: var(--ds-space-3) var(--ds-space-4);
-  margin-bottom: -1px; /* overlap the container's bottom border */
-  border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  color: var(--ds-text-secondary);
-  font-weight: var(--ds-weight-medium);
-  font-size: var(--ds-font-sm);
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color var(--ds-duration-normal) var(--ds-easing-default), border-color var(--ds-duration-normal) var(--ds-easing-default);
-}
-
-.tab:hover:not(:disabled) {
-  color: var(--ds-text-primary);
-}
-
-.tab.active {
-  color: var(--ds-color-primary);
-  border-bottom-color: var(--ds-color-primary);
-}
-
-.tab:focus-visible {
-  outline-offset: -2px;
-  box-shadow: none;
-}
-
-.tab:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.tab .yello-icon {
-  font-size: var(--ds-font-md);
-}
-
-.tab-count {
-  background-color: var(--ds-bg-tertiary);
-  color: var(--ds-text-secondary);
-  padding: 0.0625rem 0.4375rem;
-  border-radius: var(--ds-radius-full);
-  font-size: var(--ds-font-xs);
-  font-weight: var(--ds-weight-semibold);
-}
-
-.tab.active .tab-count {
-  background-color: var(--ds-color-primary-light);
-  color: var(--ds-color-primary);
 }
 
 .dedup-stats-row {
@@ -7580,11 +7465,6 @@ a.nav-rail-item.active {
 .icloud-empty-state h3 {
   margin: 0;
   font-size: var(--ds-font-xl);
-}
-
-/* LoadingSpinner sits inline in this layout; the block's own padding applies */
-.icloud-empty-state .loading-spinner-container {
-  padding: 0;
 }
 
 .icloud-empty-state p {
