@@ -293,8 +293,8 @@ a.top-contact-row:hover {
   gap: var(--ds-space-2);
 }
 
-.match-actions .btn .avatar,
-.match-actions .btn > div:first-child {
+.match-actions .ant-btn .avatar,
+.match-actions .ant-btn > div:first-child {
   flex-shrink: 0;
 }
 

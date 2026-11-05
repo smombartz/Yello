@@ -180,7 +180,7 @@
   .admin-dataset-actions {
     text-align: right;
   }
-  .admin-dataset-actions .btn + .btn {
+  .admin-dataset-actions .ant-btn + .ant-btn {
     margin-left: var(--ds-space-2);
   }
   .admin-dataset-new {

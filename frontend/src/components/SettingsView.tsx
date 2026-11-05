@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useOutletContext, Link } from 'react-router-dom';
+import { useOutletContext, useNavigate, Link } from 'react-router-dom';
 import { Icon } from './Icon';
 import {
   useDeleteAllContacts,
@@ -21,6 +21,7 @@ import { useSyncStatus } from '../api/syncHooks';
 import { FilePicker } from './ui/FilePicker';
 
 export function SettingsView() {
+  const navigate = useNavigate();
   const { setHeaderConfig } = useOutletContext<OutletContext>();
   const deleteMutation = useDeleteAllContacts();
 
@@ -313,10 +314,9 @@ export function SettingsView() {
                     Connected as <strong>{icloudSettings.data.email}</strong>
                   </p>
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                    <Link to="/icloud-import" className="btn btn--secondary" style={{ textDecoration: 'none' }}>
-                      <Icon name="cloud-arrow-down" />
+                    <Button icon="cloud-arrow-down" onClick={() => navigate('/icloud-import')}>
                       Import from iCloud
-                    </Link>
+                    </Button>
                     <Button
                       icon="link-slash"
                       onClick={() => deleteICloudSettings.mutate(undefined, {

@@ -121,9 +121,9 @@ export function GoogleContactsImportContent() {
         <p>
           {contactsStatus.data.reason || 'You need to grant permission to access your Google Contacts.'}
         </p>
-        <a href="/api/auth/google/contacts" className="btn btn--secondary" style={{ textDecoration: 'none' }}>
-          <Icon name="right-to-bracket" /> Grant Access
-        </a>
+        <Button href="/api/auth/google/contacts" icon="right-to-bracket">
+          Grant Access
+        </Button>
       </div>
     );
   }
