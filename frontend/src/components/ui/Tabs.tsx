@@ -1,4 +1,4 @@
-import { Space, Tabs as AntTabs, Tag } from 'antd';
+import { Space, Tabs as AntTabs, Tag, theme } from 'antd';
 import { Icon, type IconName } from '../Icon';
 
 export interface TabItem<T extends string> {
@@ -32,6 +32,7 @@ export function Tabs<T extends string>({
   'aria-label': ariaLabel,
   className,
 }: TabsProps<T>) {
+  const { token } = theme.useToken();
   return (
     <div role="group" aria-label={ariaLabel} className={className}>
       <AntTabs
@@ -42,7 +43,7 @@ export function Tabs<T extends string>({
           disabled,
           icon: item.icon ? <Icon name={item.icon} /> : undefined,
           label: (
-            <Space size={4}>
+            <Space size={token.marginXXS}>
               {item.label}
               {item.count != null && <Tag variant="filled">{item.count.toLocaleString()}</Tag>}
             </Space>

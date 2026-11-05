@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Empty, Flex, Typography } from 'antd';
+import { Empty, Flex, Typography, theme } from 'antd';
 import { Icon, type IconName } from '../Icon';
 
 interface EmptyStateProps {
@@ -16,12 +16,13 @@ interface EmptyStateProps {
  * Shared empty-state block on Ant `Empty`: icon + title + description + optional CTA.
  */
 export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
+  const { token } = theme.useToken();
   return (
     <Empty
       className={className}
       image={icon ? <Icon name={icon} className="empty-state-icon" /> : Empty.PRESENTED_IMAGE_SIMPLE}
       description={
-        <Flex vertical gap={4}>
+        <Flex vertical gap={token.marginXXS}>
           <Typography.Text strong>{title}</Typography.Text>
           {description && <Typography.Text type="secondary">{description}</Typography.Text>}
         </Flex>

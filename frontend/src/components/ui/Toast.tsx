@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { App, Button } from 'antd';
+import { App, Button, theme } from 'antd';
 import { statusIcons } from '../../theme/antIcons';
 
 type ToastType = 'success' | 'error' | 'info';
@@ -20,6 +20,17 @@ interface ShowToastOptions {
 
 interface ToastContextValue {
   showToast: (message: string, options?: ShowToastOptions) => void;
+}
+
+/** A custom `icon` loses Ant's per-type colour class in notification, so colour and size it here */
+function ToastIcon({ type }: { type: ToastType }) {
+  const { token } = theme.useToken();
+  const color = { success: token.colorSuccess, error: token.colorError, info: token.colorInfo }[type];
+  return (
+    <span className="yello-toast-icon" style={{ color, fontSize: token.fontSizeLG * token.lineHeightLG }}>
+      {statusIcons[type]}
+    </span>
+  );
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -53,7 +64,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       notification.open({
         key: TOAST_KEY,
         type,
-        icon: statusIcons[type],
+        icon: <ToastIcon type={type} />,
         title: text,
         duration,
         placement: 'top',

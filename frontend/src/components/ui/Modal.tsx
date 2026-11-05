@@ -38,9 +38,12 @@ export function Modal({ label, onClose, width, className, footer = null, childre
   const dismissable = Boolean(onClose);
 
   useEffect(() => {
+    // rc-dialog restores focus only when `open` flips true to false, not on unmount, and callers unmount us
+    const prev = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     mountedModals += 1;
     setModalOpen(true);
     return () => {
+      if (prev?.isConnected) prev.focus({ preventScroll: true });
       mountedModals -= 1;
       setTimeout(() => {
         if (mountedModals === 0) setModalOpen(false);

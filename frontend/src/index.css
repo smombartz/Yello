@@ -425,7 +425,7 @@ select:focus-visible:not([class*='ant-']) {
 .yello-icon--rotate-180 > svg { transform: rotate(180deg); transition: transform var(--ds-duration-normal) var(--ds-easing-default); }
 
 /* Row expander drawn by antIconConfig.table (theme/antIcons.tsx) */
-.yello-table-expand { all: unset; cursor: pointer; display: inline-flex; padding: 4px; border-radius: var(--ds-radius-sm); }
+.yello-table-expand { all: unset; cursor: pointer; display: inline-flex; padding: var(--ds-space-1); border-radius: var(--ds-radius-sm); }
 .yello-table-expand:focus-visible { box-shadow: var(--ds-shadow-focus); }
 
 /* Avatar (Ant draws the rest) */
@@ -433,6 +433,9 @@ select:focus-visible:not([class*='ant-']) {
   flex-shrink: 0;
   font-weight: var(--ds-weight-semibold);
 }
+/* Ant sizes the avatar root's font (size / 2); let the glyph follow it instead of the fixed icon size */
+.yello-avatar > .yello-icon,
+.yello-toast-icon > .yello-icon { font-size: inherit; }
 
 /* Contact Detail Panel */
 .contact-detail-panel {
@@ -2252,7 +2255,7 @@ select:focus-visible:not([class*='ant-']) {
   height: calc(100vh - var(--ds-header-height));
 }
 
-/* .archived-count-badge styled by the canonical .badge--count group */
+/* .archived-count-badge: count badge, styled with the Ant Badge/Tag primitives */
 
 .archived-actions {
   display: flex;
@@ -2950,7 +2953,7 @@ select:focus-visible:not([class*='ant-']) {
   padding: 1.5rem 0;
 }
 
-/* .groups-count-badge styled by the canonical .badge--count group */
+/* .groups-count-badge: count badge, styled with the Ant Badge/Tag primitives */
 
 .groups-error {
   display: flex;
@@ -5078,7 +5081,7 @@ select:focus-visible:not([class*='ant-']) {
   font-size: var(--ds-font-lg);
 }
 
-/* .subtab-badge base from canonical .badge--count; brand-colored variant */
+/* .subtab-badge: brand-colored variant */
 .subtab-badge {
   height: 20px;
   background: var(--ds-color-primary);

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Avatar } from 'antd';
 import { useAuth } from '../hooks/useAuth';
+import { stringToColor } from '../lib/avatarColor';
 
 interface UserAvatarProps {
   /** Diameter in px (pass a token, e.g. token.controlHeight) */
@@ -31,7 +32,7 @@ export function UserAvatar({ size, className, style }: UserAvatarProps) {
   ) : undefined;
 
   return (
-    <Avatar size={size} src={photo} className={className} style={style} aria-hidden="true">
+    <Avatar size={size} src={photo} className={className} style={{ backgroundColor: stringToColor(displayName), ...style }} aria-hidden="true">
       {initials}
     </Avatar>
   );
