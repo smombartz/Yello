@@ -1,4 +1,6 @@
-import { Icon } from '../Icon';
+import { Upload } from 'antd';
+import { uploadListIcons } from '../../theme/antIcons';
+import { Button } from './Button';
 
 interface FilePickerProps {
   /** Unique id linking the hidden input to its label */
@@ -16,25 +18,23 @@ interface FilePickerProps {
 }
 
 /**
- * Canonical file-upload control for import flows. Renders a visually-hidden
- * native input plus a styled `.file-input-label` button that shows the chosen
- * filename. Pair with a secondary `<Button>` submit inside `.import-controls`.
+ * Canonical file-chooser for import flows (Ant Upload). It never uploads by
+ * itself: the chosen file is handed to `onChange` and the caller submits it.
+ * Pair with a secondary `<Button>` submit inside `.import-controls`.
  */
 export function FilePicker({ id, accept, file, onChange, prompt = 'Choose file', disabled = false }: FilePickerProps) {
   return (
-    <div className="file-input-row">
-      <input
-        type="file"
-        id={id}
-        accept={accept}
-        className="file-input"
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.files?.[0] ?? null)}
-      />
-      <label htmlFor={id} className={`file-input-label${disabled ? ' is-disabled' : ''}`}>
-        <Icon name="file-lines" />
-        {file ? file.name : prompt}
-      </label>
-    </div>
+    <Upload
+      id={id}
+      accept={accept}
+      maxCount={1}
+      disabled={disabled}
+      {...uploadListIcons}
+      beforeUpload={(f) => { onChange(f); return false; }}
+      fileList={file ? [{ uid: '1', name: file.name, status: 'done' }] : []}
+      onRemove={() => onChange(null)}
+    >
+      <Button icon="upload" disabled={disabled}>{prompt}</Button>
+    </Upload>
   );
 }

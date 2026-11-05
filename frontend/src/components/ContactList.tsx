@@ -445,7 +445,6 @@ export function ContactList({ search = '', categoryFilter, viewMode, onViewModeC
                 <ActionMenu
                   items={exportItems({ group: categoryFilter })}
                   label={`Export ${categoryFilter}`}
-                  triggerClassName="contact-action-button"
                   triggerIcon="download"
                   triggerLabel={exportMutation.isPending ? 'Exporting...' : 'Export'}
                   disabled={exportMutation.isPending}

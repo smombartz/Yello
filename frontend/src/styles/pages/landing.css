@@ -319,7 +319,7 @@
   max-width: 300px;
 }
 
-.lp-book__search .search-bar-input {
+.lp-book__search input {
   caret-color: var(--ds-color-primary);
 }
 
