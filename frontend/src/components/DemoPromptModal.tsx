@@ -19,8 +19,7 @@ export function DemoPromptModal() {
   if (!show || dismissed) return null;
 
   return (
-    <Modal label="Enjoying Yello?" onClose={() => setDismissed(true)} className="demo-prompt-modal">
-      <h3>Enjoying Yello?</h3>
+    <Modal label="Enjoying Yello?" onClose={() => setDismissed(true)} width={400} className="demo-prompt-modal">
       <p>Sign in with Google to keep your contacts and unlock all features.</p>
       <div className="demo-prompt-actions">
         <button className="demo-prompt-primary" onClick={login}>

@@ -91,7 +91,7 @@ const GUIDANCE: Record<string, Guidance> = {
   },
   'component-tokens': {
     dos: [],
-    donts: ['Redefine a canonical class (`.btn`, `.tab`, `.modal-content`, `.card`) in a page stylesheet. Page CSS loads globally, so the override leaks app-wide.'],
+    donts: ['Redefine a canonical class (`.btn`, `.tab`, `.card`) in a page stylesheet. Page CSS loads globally, so the override leaks app-wide.'],
   },
   buttons: {
     dos: [
@@ -902,11 +902,10 @@ function OverlaysSpecimen() {
         <Button icon="triangle-exclamation" onClick={() => setConfirmOpen(true)}>Open confirm dialog</Button>
         <span className="sg-try-hint">Escape or a click outside closes them; focus returns to the button.</span>
       </div>
-      <CodeLine>{'{open && <Modal label="Merge contacts" onClose={close} className="merge-conflict-modal">…</Modal>}'}</CodeLine>
+      <CodeLine>{'{open && <Modal label="Merge contacts" onClose={close} width={700}>…</Modal>}'}</CodeLine>
 
       {modalOpen && (
-        <Modal label="Sample modal" onClose={() => setModalOpen(false)} className="sg-modal">
-          <h3>Sample modal</h3>
+        <Modal label="Sample modal" onClose={() => setModalOpen(false)} width={420} className="sg-modal">
           <p>Every overlay renders through Modal: aria-modal, Escape, outside click, initial focus and focus return.</p>
           <div className="sg-modal-actions">
             <Button variant="primary" onClick={() => setModalOpen(false)}>Done</Button>

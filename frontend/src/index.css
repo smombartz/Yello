@@ -1560,55 +1560,10 @@ a.nav-rail-item.active {
   color: var(--ds-color-error);
 }
 
-/* Modal Overlay */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--ds-bg-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--ds-z-modal);
-}
-
-.modal-content {
-  background: var(--ds-bg-primary);
-  border-radius: var(--ds-modal-radius);
-  padding: var(--ds-modal-padding);
-  box-shadow: var(--ds-modal-shadow);
-  max-width: calc(100vw - 2rem);
-}
-
-/* The panel takes programmatic focus on open; it is not a control */
-.modal-content:focus {
-  outline: none;
-}
-
-.confirm-dialog {
-  max-width: 400px;
-  text-align: left;
-}
-
-.confirm-dialog h3 {
-  margin: 0 0 0.75rem 0;
-  font-size: var(--ds-font-lg);
-}
-
-.confirm-dialog p {
-  margin: 0 0 1.25rem 0;
-  color: var(--ds-text-secondary);
-  line-height: 1.5;
-}
-
-.confirm-dialog .warning-text {
+.warning-text {
   color: var(--ds-color-error);
   font-weight: var(--ds-weight-medium);
   font-size: var(--ds-font-sm);
-}
-
-.confirm-actions {
-  display: flex;
-  justify-content: space-between;
 }
 
 /* Expanded Contact Card */
@@ -2895,33 +2850,9 @@ a.nav-rail-item.active {
    Archive Styles
    ============================================================ */
 
-/* Merge Conflict Modal */
-.merge-conflict-modal {
-  max-width: 700px;
-  width: 90vw;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.merge-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--ds-border-color);
-}
-
-.merge-modal-header h3 {
-  margin: 0;
-  font-size: var(--ds-font-xl);
-  font-weight: var(--ds-weight-semibold);
-}
-
 .merge-modal-body {
-  flex: 1;
+  max-height: 60vh;
   overflow-y: auto;
-  padding: var(--ds-space-6);
 }
 
 .merge-section-label {
@@ -3104,15 +3035,6 @@ a.nav-rail-item.active {
 .merge-no-conflicts p {
   margin: 0;
   font-size: var(--ds-font-sm);
-}
-
-/* Modal Footer */
-.merge-modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--ds-space-3);
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--ds-border-color);
 }
 
 /* Cleanup Action Buttons Container */
@@ -4619,11 +4541,6 @@ a.nav-rail-item.active {
 /* Danger Zone action keeps its width beside the description */
 .danger-zone-button {
   flex-shrink: 0;
-}
-
-/* Danger confirmation modal */
-.confirm-dialog.danger h3 {
-  color: var(--ds-color-error);
 }
 
 .confirm-instruction {
@@ -7085,18 +7002,6 @@ a.nav-rail-item.active {
   margin-top: var(--ds-space-1);
 }
 
-/* Geocoding Progress Modal */
-.geocoding-progress-modal {
-  max-width: 400px;
-  width: 90%;
-}
-
-.geocoding-progress-modal h3 {
-  margin: 0 0 1.5rem;
-  font-size: var(--ds-font-lg);
-  font-weight: var(--ds-weight-semibold);
-}
-
 .geocoding-progress-bar {
   height: 0.5rem;
   background: var(--ds-border-color);
@@ -7621,17 +7526,6 @@ a.nav-rail-item.active {
 
   body:has(.bottom-tab-bar) .toast {
     bottom: calc(56px + env(safe-area-inset-bottom) + var(--ds-space-3));
-  }
-
-  /* Tall dialogs scroll inside the screen rather than run off it */
-  .modal-overlay {
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-  }
-
-  .modal-content {
-    max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-    overflow-y: auto;
-    overscroll-behavior: contain;
   }
 }
 
