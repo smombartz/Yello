@@ -163,7 +163,7 @@ export function ICloudImportView() {
     return (
       <div className="icloud-import-view">
         <div className="icloud-empty-state">
-          <LoadingSpinner size={32} />
+          <LoadingSpinner compact size={32} />
           <h3>{fetchContacts.isPending ? 'Connecting to iCloud...' : 'Analyzing contacts...'}</h3>
           <p>{fetchContacts.isPending
             ? 'Fetching your contacts via CardDAV. This may take a moment for large address books.'
@@ -179,7 +179,7 @@ export function ICloudImportView() {
     return (
       <div className="icloud-import-view">
         <div className="icloud-empty-state">
-          <LoadingSpinner size={32} />
+          <LoadingSpinner compact size={32} />
           <h3>Importing contacts...</h3>
           <p>Please wait while your contacts are being imported and merged.</p>
         </div>

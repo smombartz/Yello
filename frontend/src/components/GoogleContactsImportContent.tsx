@@ -151,7 +151,7 @@ export function GoogleContactsImportContent() {
   if (fetchContacts.isPending || previewImport.isPending) {
     return (
       <div className="icloud-empty-state">
-        <LoadingSpinner size={32} />
+        <LoadingSpinner compact size={32} />
         <h3>{fetchContacts.isPending ? 'Fetching from Google...' : 'Analyzing contacts...'}</h3>
         <p>{fetchContacts.isPending
           ? 'Fetching your contacts from Google. This may take a moment for large address books.'
@@ -165,7 +165,7 @@ export function GoogleContactsImportContent() {
   if (executeImport.isPending) {
     return (
       <div className="icloud-empty-state">
-        <LoadingSpinner size={32} />
+        <LoadingSpinner compact size={32} />
         <h3>Importing contacts...</h3>
         <p>Please wait while your contacts are being imported and merged.</p>
       </div>
