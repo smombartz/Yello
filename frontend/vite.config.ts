@@ -20,6 +20,16 @@ export default defineConfig(({ mode }) => {
         },
       },
     ],
+    build: {
+      rollupOptions: {
+        output: {
+          // Ant changes far less often than app code, so browsers keep it cached across deploys
+          manualChunks(id: string) {
+            if (/node_modules\/(antd|@ant-design|@rc-component|rc-[a-z-]+)\//.test(id)) return 'antd';
+          },
+        },
+      },
+    },
     server: {
       proxy: {
         '/api': 'http://localhost:3456',

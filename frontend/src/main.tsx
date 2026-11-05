@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
 import './styles/pages.css';
 import App from './App.tsx';
+import { AntProvider } from './theme/AntProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,7 +20,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <AntProvider>
+          <App />
+        </AntProvider>
       </QueryClientProvider>
     </BrowserRouter>
   </StrictMode>
