@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Empty, Flex, Typography } from 'antd';
 import { Icon, type IconName } from '../Icon';
 
 interface EmptyStateProps {
@@ -12,16 +13,21 @@ interface EmptyStateProps {
 }
 
 /**
- * Shared empty-state block: centered icon + title + description + optional CTA.
- * Replaces the ~16 per-view empty-state markups.
+ * Shared empty-state block on Ant `Empty`: icon + title + description + optional CTA.
  */
-export function EmptyState({ icon, title, description, action, className = '' }: EmptyStateProps) {
+export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div className={`empty-state${className ? ` ${className}` : ''}`}>
-      {icon && <Icon name={icon} className="empty-state-icon" />}
-      <h3 className="empty-state-title">{title}</h3>
-      {description && <p className="empty-state-description">{description}</p>}
-      {action && <div className="empty-state-action">{action}</div>}
-    </div>
+    <Empty
+      className={className}
+      image={icon ? <Icon name={icon} className="empty-state-icon" /> : Empty.PRESENTED_IMAGE_SIMPLE}
+      description={
+        <Flex vertical gap={4}>
+          <Typography.Text strong>{title}</Typography.Text>
+          {description && <Typography.Text type="secondary">{description}</Typography.Text>}
+        </Flex>
+      }
+    >
+      {action}
+    </Empty>
   );
 }
