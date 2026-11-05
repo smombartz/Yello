@@ -24,11 +24,14 @@ function getInitials(name: string): string {
   return name.substring(0, 2).toUpperCase();
 }
 
-// Hues for the hashed colour. Yellow, lime and gold are too light for white initials, and
-// orange is borderline, so they are left out. Order is fixed: it decides which name gets which colour.
-const AVATAR_HUES = ['red', 'volcano', 'green', 'cyan', 'blue', 'geekblue', 'purple', 'magenta'] as const;
-// Shade 6 is each preset's primary colour
-const AVATAR_COLORS = AVATAR_HUES.map((hue) => presetPalettes[hue][6]);
+// Hues for the hashed colour, as [preset, index]. presetPalettes[hue] is 0-indexed, so index 6 is
+// Ant's "-7" shade. Yellow, lime, gold and orange are too light for white initials. Index 6 gives
+// at least 4.5:1 against white (AA) for red 5.57, volcano 4.80, blue 6.16, geekblue 8.63, purple 9.85
+// and magenta 5.48. Green (3.46) and cyan (3.55) fail there, so they use index 7: 5.59 and 6.10.
+// Order is fixed: it decides which name gets which colour.
+const AVATAR_COLORS = (
+  [['red', 6], ['volcano', 6], ['green', 7], ['cyan', 7], ['blue', 6], ['geekblue', 6], ['purple', 6], ['magenta', 6]] as const
+).map(([hue, shade]) => presetPalettes[hue][shade]);
 
 function stringToColor(str: string): string {
   let hash = 0;
@@ -48,20 +51,26 @@ export function Avatar({
   isSelected = false,
   onToggleSelect,
 }: AvatarProps) {
-  const background = useMemo(() => stringToColor(name), [name]);
+  const { background, initials } = useMemo(
+    () => ({ background: stringToColor(name), initials: getInitials(name) }),
+    [name],
+  );
+  const showInitials = kind === 'person';
 
-  // Ant falls back to the icon or initials when the photo fails, and retries when the URL changes
+  // Ant falls back to the icon when the photo fails, and retries when the URL changes.
+  // Initials go through Ant's `icon` branch, not its text branch: the text branch renders an
+  // opacity:0 span until a post-paint effect runs, then mounts a ResizeObserver, so fresh rows in
+  // the virtual list could flash a blank circle. The icon branch renders synchronously. Ant sizes
+  // text at 18px, so the font size is set per instance (the 0.4 ratio the old avatar used).
   const avatarEl = (
     <AntAvatar
       className={`yello-avatar ${className}`}
       size={size}
       src={photoUrl || undefined}
       alt={name}
-      style={{ backgroundColor: background }}
-      icon={kind === 'company' ? <Icon name="building" /> : kind === 'generic' ? <Icon name="address-card" /> : undefined}
-    >
-      {getInitials(name)}
-    </AntAvatar>
+      style={showInitials ? { backgroundColor: background, fontSize: size * 0.4 } : { backgroundColor: background }}
+      icon={kind === 'company' ? <Icon name="building" /> : kind === 'generic' ? <Icon name="address-card" /> : <span>{initials}</span>}
+    />
   );
 
   if (!selectable) {
