@@ -133,6 +133,7 @@ export function LandingPage() {
             <Button
               variant="ghost"
               size="sm"
+              className="lp-nav__demo"
               onClick={() => handleDemo('hero')}
               loading={demoState === 'loading'}
             >

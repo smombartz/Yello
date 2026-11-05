@@ -1553,7 +1553,7 @@ button.lp-btn-reset:not(.card) {
 }
 
 @media (max-width: 639px) {
-  .lp-nav__actions .ant-btn-text {
+  .lp-nav__actions .lp-nav__demo {
     display: none;
   }
 
