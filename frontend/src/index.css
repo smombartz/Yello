@@ -1239,87 +1239,6 @@ a.nav-rail-item.active {
   font-style: italic;
 }
 
-/* Undo Toast */
-.toast {
-  position: fixed;
-  bottom: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: var(--ds-space-3);
-  padding: 0.75rem 1rem;
-  background-color: #333;
-  color: var(--ds-text-inverse);
-  border-radius: var(--ds-radius-lg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  z-index: var(--ds-z-toast);
-  animation: slideUp var(--ds-duration-slow) var(--ds-easing-out);
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(1rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-.toast .yello-icon {
-  font-size: var(--ds-font-xl);
-  color: var(--ds-color-success);
-}
-
-.toast .message {
-  font-size: 0.9375rem;
-}
-
-.toast .dismiss {
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  padding: var(--ds-space-1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background-color var(--ds-duration-normal) var(--ds-easing-default), color var(--ds-duration-normal) var(--ds-easing-default);
-}
-
-.toast .dismiss:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: var(--ds-text-inverse);
-}
-
-.toast .dismiss .yello-icon {
-  font-size: var(--ds-font-lg);
-  color: inherit;
-}
-
-.toast .toast-action {
-  background: transparent;
-  border: none;
-  color: var(--ds-text-inverse);
-  font-weight: var(--ds-weight-semibold);
-  font-size: var(--ds-font-sm);
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--ds-radius-sm);
-  transition: background-color var(--ds-duration-normal) var(--ds-easing-default);
-}
-
-.toast .toast-action:hover {
-  background-color: rgba(255, 255, 255, 0.15);
-}
-
-.toast.error .yello-icon {
-  color: var(--ds-color-error);
-}
-
 .warning-text {
   color: var(--ds-color-error);
   font-weight: var(--ds-weight-medium);
@@ -4323,11 +4242,6 @@ a.nav-rail-item.active {
   box-shadow: var(--ds-shadow-focus-error);
 }
 
-.toast.error {
-  background-color: #2a1215;
-  border: 1px solid var(--ds-color-error);
-}
-
 /* ================================
    Collapsible Card & LinkedIn Import
    ================================ */
@@ -7279,14 +7193,6 @@ a.nav-rail-item.active {
     min-height: 40px;
   }
 
-  /* The toast clears the tab bar instead of hiding behind it */
-  .toast {
-    max-width: calc(100vw - 2 * var(--ds-space-4));
-  }
-
-  body:has(.bottom-tab-bar) .toast {
-    bottom: calc(56px + env(safe-area-inset-bottom) + var(--ds-space-3));
-  }
 }
 
 @keyframes sheet-up {

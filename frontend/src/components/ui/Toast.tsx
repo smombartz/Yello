@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { Icon, type IconName } from '../Icon';
+import { App, Button } from 'antd';
+import { statusIcons } from '../../theme/antIcons';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -11,15 +12,9 @@ interface ToastAction {
 
 interface ShowToastOptions {
   type?: ToastType;
-  /** Auto-dismiss delay in ms (default 5000) */
+  /** Auto-dismiss delay in ms (default 5000). 0 keeps the toast until dismissed (Ant semantics). */
   duration?: number;
-  /** Optional action button (e.g. Undo) rendered before the dismiss button */
-  action?: ToastAction;
-}
-
-interface ToastState {
-  message: string;
-  type: ToastType;
+  /** Optional action button (e.g. Undo); runs its callback, then closes the toast */
   action?: ToastAction;
 }
 
@@ -28,6 +23,8 @@ interface ToastContextValue {
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
+/** One toast at a time, last wins (same behaviour as before) */
+const TOAST_KEY = 'yello-toast';
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useToast(): ToastContextValue {
@@ -36,65 +33,47 @@ export function useToast(): ToastContextValue {
   return ctx;
 }
 
-const TOAST_ICONS: Record<ToastType, IconName> = {
-  success: 'circle-check',
-  error: 'circle-exclamation',
-  info: 'circle-info',
-};
-
-/** App-wide toast. Single toast, last-wins, auto-dismisses. */
+/** App-wide toast on Ant's message (plain) or notification (with an action). Single toast, last-wins. */
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toast, setToast] = useState<ToastState | null>(null);
-  const timeoutRef = useRef<number | null>(null);
+  const { message, notification } = App.useApp();
 
-  const dismiss = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    setToast(null);
-  }, []);
-
-  const showToast = useCallback((message: string, options?: ShowToastOptions) => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setToast({ message, type: options?.type ?? 'success', action: options?.action });
-    timeoutRef.current = window.setTimeout(() => {
-      setToast(null);
-      timeoutRef.current = null;
-    }, options?.duration ?? 5000);
-  }, []);
-
-  useEffect(
-    () => () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  const showToast = useCallback(
+    (text: string, options?: ShowToastOptions) => {
+      const type = options?.type ?? 'success';
+      const duration = (options?.duration ?? 5000) / 1000; // Ant takes seconds
+      const action = options?.action;
+      if (!action) {
+        // The other kind may still be showing under the same key; clear it so only one toast is visible
+        notification.destroy(TOAST_KEY);
+        message.open({ key: TOAST_KEY, type, icon: statusIcons[type], content: text, duration });
+        return;
+      }
+      // A toast with an action (e.g. Undo) needs a button, which message has no slot for
+      message.destroy(TOAST_KEY);
+      notification.open({
+        key: TOAST_KEY,
+        type,
+        icon: statusIcons[type],
+        title: text,
+        duration,
+        placement: 'top',
+        actions: (
+          <Button
+            type="link"
+            size="small"
+            onClick={() => {
+              action.onClick();
+              notification.destroy(TOAST_KEY);
+            }}
+          >
+            {action.label}
+          </Button>
+        ),
+      });
     },
-    []
+    [message, notification]
   );
 
-  return (
-    <ToastContext.Provider value={{ showToast }}>
-      {children}
-      {toast && (
-        <div className={`toast${toast.type !== 'success' ? ` ${toast.type}` : ''}`} role="status">
-          <Icon name={TOAST_ICONS[toast.type]} />
-          <span className="message">{toast.message}</span>
-          {toast.action && (
-            <button
-              type="button"
-              className="toast-action"
-              onClick={() => {
-                toast.action?.onClick();
-                dismiss();
-              }}
-            >
-              {toast.action.label}
-            </button>
-          )}
-          <button type="button" className="dismiss" onClick={dismiss} aria-label="Dismiss">
-            <Icon name="xmark" />
-          </button>
-        </div>
-      )}
-    </ToastContext.Provider>
-  );
+  const value = useMemo(() => ({ showToast }), [showToast]);
+  return <ToastContext.Provider value={value}>{children}</ToastContext.Provider>;
 }
