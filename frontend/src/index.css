@@ -347,8 +347,8 @@ select:focus-visible:not([class*='ant-']) {
   color: var(--ds-text-muted);
 }
 
-/* Shared SearchBar (components/ui/SearchBar.tsx, an Ant Input). Header variant — pinned to the right edge of the center column, ahead of
-   any info/actions blocks. */
+/* Header search (SearchBar className): pinned to the right edge of the center
+   column, ahead of any info/actions blocks. */
 .search-bar--header {
   max-width: var(--ds-header-search-width);
   flex: 1;
@@ -362,7 +362,6 @@ select:focus-visible:not([class*='ant-']) {
 .search-bar--header ~ .page-header-info {
   margin-left: 0;
 }
-
 
 .page-header-info {
   flex-shrink: 1;
