@@ -1,12 +1,12 @@
 import { useRef } from 'react';
 import type { KeyboardEvent } from 'react';
-import { Icon } from '../Icon';
+import { Icon, type IconName } from '../Icon';
 
 export interface TabItem<T extends string> {
   id: T;
   label: string;
   /** Optional leading Font Awesome icon name */
-  icon?: string;
+  icon?: IconName;
   /** Optional count pill; omit or pass null to hide it */
   count?: number | null;
 }

@@ -106,7 +106,7 @@ export function BlastDetail({ blastId, desktop, progress }: BlastDetailProps) {
                     </>
                   ) : (
                     <>
-                      <Icon name="spinner" className="fa-spin" />
+                      <Icon name="spinner" spin />
                       <span>
                         Sending now to <strong>{progress.current.name || progress.current.phone}</strong>
                         {progress.current.name && <span className="text-blast-phone"> · {progress.current.phone}</span>}

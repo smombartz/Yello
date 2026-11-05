@@ -1,12 +1,12 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { UserAvatar } from './UserAvatar';
 import { isAdmin } from '../lib/admin';
 
 interface NavRailItemProps {
   to: string;
-  icon: string;
+  icon: IconName;
   label: string;
   end?: boolean;
 }

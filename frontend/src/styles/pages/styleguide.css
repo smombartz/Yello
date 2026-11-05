@@ -599,16 +599,16 @@
   color: var(--ds-text-secondary);
 }
 
-.sg-guidance-item [class*="fa-"] {
+.sg-guidance-item .yello-icon {
   margin-top: 3px;
   font-size: var(--ds-font-sm);
 }
 
-.sg-guidance-item.is-do [class*="fa-"] {
+.sg-guidance-item.is-do .yello-icon {
   color: var(--ds-color-success);
 }
 
-.sg-guidance-item.is-dont [class*="fa-"] {
+.sg-guidance-item.is-dont .yello-icon {
   color: var(--ds-color-error);
 }
 

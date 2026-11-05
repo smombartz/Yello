@@ -40,7 +40,7 @@ export function SetupBar({ available, setup, checking, onRecheck, onOpenSettings
     );
   }
   if (!setup) {
-    return <div className="text-blast-notice"><Icon name="spinner" className="fa-spin" /> Checking Messages…</div>;
+    return <div className="text-blast-notice"><Icon name="spinner" spin /> Checking Messages…</div>;
   }
   if (!setup.macos) {
     return <div className="text-blast-notice is-error"><Icon name="circle-xmark" /> Text Blast sends through Apple Messages, so it only works on a Mac.</div>;

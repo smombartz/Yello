@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
+import type { IconName } from '../components/Icon';
 import { API_BASE } from './client';
 
 export type ExportFormat = 'vcf' | 'csv';
@@ -7,7 +8,7 @@ export type ExportFormat = 'vcf' | 'csv';
 export type ExportTarget = { ids: number[] } | { group: string };
 
 /** The two formats, as the export menus list them. */
-export const EXPORT_FORMATS: Array<{ format: ExportFormat; label: string; icon: string }> = [
+export const EXPORT_FORMATS: Array<{ format: ExportFormat; label: string; icon: IconName }> = [
   { format: 'vcf', label: 'vCard (.vcf)', icon: 'address-card' },
   { format: 'csv', label: 'CSV (Google Contacts)', icon: 'file-csv' },
 ];

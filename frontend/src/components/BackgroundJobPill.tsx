@@ -57,7 +57,7 @@ export function BackgroundJobPill({ job, onDismiss, onOpen }: BackgroundJobPillP
         disabled={!onOpen}
       >
         <span className="background-job-pill__icon">
-          {isRunning && <Icon name="arrows-rotate" className="spinning" />}
+          {isRunning && <Icon name="arrows-rotate" spin />}
           {job.status === 'completed' && <Icon name="circle-check" />}
           {job.status === 'failed' && <Icon name="circle-exclamation" />}
         </span>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { ConfirmDialog } from './ui/ConfirmDialog';
@@ -16,7 +16,7 @@ import {
   type SyncRunResult,
 } from '../api/syncHooks';
 
-const NAMES: Record<BackupProvider, { name: string; icon: string }> = {
+const NAMES: Record<BackupProvider, { name: string; icon: IconName }> = {
   icloud: { name: 'Apple iCloud', icon: 'apple' },
   google: { name: 'Google Contacts', icon: 'google' },
 };

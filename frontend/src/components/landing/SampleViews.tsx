@@ -3,7 +3,7 @@ import type { LinkedInEnrichment } from '../../api/types';
 import { Avatar } from '../Avatar';
 import { ContactCardView, type ContactCardViewData } from '../ContactCardView';
 import { LinkedInSection } from '../ContactFormSections';
-import { Icon } from '../Icon';
+import { Icon, type IconName } from '../Icon';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/Toast';
 import {
@@ -285,7 +285,7 @@ export function SampleGroups({ onOpenGroup }: { onOpenGroup: (name: string) => v
  * app's own words. They need a real book, so each one offers sign-in.
  * ------------------------------------------------------------------------- */
 
-const TOOLS: { group: string; items: { icon: string; brand?: boolean; name: string; text: string }[] }[] = [
+const TOOLS: { group: string; items: { icon: IconName; brand?: boolean; name: string; text: string }[] }[] = [
   {
     group: 'Import',
     items: [

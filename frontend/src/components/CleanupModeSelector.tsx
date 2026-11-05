@@ -1,4 +1,5 @@
 import { Tabs } from './ui/Tabs';
+import type { IconName } from './Icon';
 import type { CleanupMode, CleanupSummary, SocialLinksSummary, AddressCleanupSummary, ContactKindSummary } from '../api/types';
 
 interface CleanupModeSelectorProps {
@@ -11,7 +12,7 @@ interface CleanupModeSelectorProps {
   isLoading: boolean;
 }
 
-const MODE_CONFIG: { mode: CleanupMode; label: string; icon: string }[] = [
+const MODE_CONFIG: { mode: CleanupMode; label: string; icon: IconName }[] = [
   { mode: 'empty', label: 'Empty Contacts', icon: 'user-slash' },
   { mode: 'problematic', label: 'Problematic Emails', icon: 'triangle-exclamation' },
   { mode: 'social-links', label: 'Social Links', icon: 'share-nodes' },

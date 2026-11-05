@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { OutletContext } from './Layout';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { Avatar } from './Avatar';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
@@ -660,7 +660,7 @@ function BadgesSpecimen() {
 type SampleTab = 'recommended' | 'email' | 'phone';
 
 const SAMPLE_CHIPS = ['All', 'Missing email', 'No photo'];
-const SAMPLE_SUBTABS = [
+const SAMPLE_SUBTABS: { label: string; icon: IconName; count: number }[] = [
   { label: 'Duplicates', icon: 'clone', count: 12 },
   { label: 'Geocoding', icon: 'location-crosshairs', count: 48 },
 ];

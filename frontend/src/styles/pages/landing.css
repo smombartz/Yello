@@ -92,7 +92,7 @@
   transition: color var(--ds-duration-normal) var(--ds-easing-default);
 }
 
-.lp-text-link [class*="fa-"] {
+.lp-text-link .yello-icon {
   font-size: 0.875em;
   transition: transform var(--ds-duration-normal) var(--ds-easing-default);
 }
@@ -102,7 +102,7 @@
   text-decoration: underline;
 }
 
-.lp-text-link:hover:not(:disabled) [class*="fa-"] {
+.lp-text-link:hover:not(:disabled) .yello-icon {
   transform: translateX(2px);
 }
 
@@ -467,7 +467,7 @@
   font-size: var(--ds-font-sm);
 }
 
-.lp-row__detail [class*="fa-"] {
+.lp-row__detail .yello-icon {
   font-size: var(--ds-font-md);
 }
 
@@ -648,7 +648,7 @@ button.lp-btn-reset:not(.card) {
   background: var(--ds-bg-secondary);
 }
 
-.lp-map__popover li [class*="fa-"] {
+.lp-map__popover li .yello-icon {
   color: var(--ds-text-tertiary);
   font-size: var(--ds-font-xs);
 }
@@ -869,7 +869,7 @@ button.lp-btn-reset:not(.card) {
   white-space: nowrap;
 }
 
-.lp-merge__fields [class*="fa-"] {
+.lp-merge__fields .yello-icon {
   flex-shrink: 0;
   width: 14px;
   color: var(--ds-text-tertiary);
@@ -1206,7 +1206,7 @@ button.lp-btn-reset:not(.card) {
   text-align: left;
 }
 
-.lp-public__rows [class*="fa-"] {
+.lp-public__rows .yello-icon {
   flex-shrink: 0;
   width: 14px;
   color: var(--ds-text-secondary);

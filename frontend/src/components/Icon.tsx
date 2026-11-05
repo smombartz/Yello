@@ -1,10 +1,179 @@
+import {
+  IconAddressBook, IconAlertCircle, IconAlertCircleFilled, IconAlertTriangle, IconAlertTriangleFilled, IconArchive,
+  IconArrowBackUp, IconArrowLeft, IconArrowRight, IconArrowUp, IconArrowsExchange, IconArrowsLeftRight, IconBook,
+  IconBrandApple, IconBrandGoogle, IconBrandLinkedin, IconBrandWhatsapp, IconBriefcase, IconBuilding,
+  IconBuildingSkyscraper, IconCake, IconCalendar, IconCalendarX, IconCamera, IconCertificate, IconCheck,
+  IconChevronDown, IconChevronLeft, IconChevronRight, IconChevronsLeft, IconChevronsRight, IconCircle,
+  IconCircleCheck, IconCircleCheckFilled, IconCircleDot, IconCircleMinus, IconCirclePlus, IconCircleX,
+  IconCircleXFilled, IconClock, IconCloudDownload, IconCopy, IconDeviceLaptop, IconDots, IconDotsVertical,
+  IconDownload, IconExternalLink, IconEye, IconEyeOff, IconFileImport, IconFileText, IconFilter, IconGitMerge,
+  IconHistory, IconHome, IconId, IconInfoCircle, IconInfoCircleFilled, IconLayoutGrid, IconLink, IconLinkOff,
+  IconList, IconListCheck, IconLoader2, IconLock, IconLogin, IconMail, IconMap, IconMapPin, IconMessage,
+  IconMessages, IconNote, IconPalette, IconPaperclip, IconPencil, IconPhone, IconPhoto, IconPlus, IconRefresh,
+  IconReportSearch, IconRocket, IconRosetteDiscountCheck, IconSchool, IconSearch, IconSend, IconShare,
+  IconShieldHalf, IconSparkles, IconSquare, IconStar, IconThumbUp, IconTool, IconTrash, IconTrophy, IconUpload,
+  IconUser, IconUserOff, IconUserPlus, IconUsers, IconWand, IconWorld, IconX,
+  IconFileTypeCsv,
+  IconCurrentLocation,
+  IconEdit,
+  IconMapPinOff,
+  IconBox,
+  IconBoxMultiple,
+  IconSquareCheck,
+  IconAdjustmentsHorizontal,
+  IconChevronUp,
+  IconBrandYahoo,
+  IconBrandWindows,
+  IconArrowsDiagonal,
+  IconDeviceFloppy,
+  IconRotateClockwise,
+  IconRotate,
+  IconDeviceDesktop,
+  IconAt,
+  IconFolderMinus,
+  IconSettings,
+  IconPlayerSkipForward,
+  IconPlayerPlay,
+  IconPlayerPause,
+  IconPlayerStop,
+  IconWindowMaximize,
+  IconLockOpen,
+  IconPlug,
+  IconHelpCircle,
+  IconFlask,
+  IconLogout,
+  IconHelmet,
+  IconHeartHandshake,
+  IconBrandX,
+  IconBrandFacebook,
+  IconBrandInstagram,
+  IconBrandGithub,
+  IconMessageCircle,
+  IconMessageDots,
+  IconVideo,
+  IconHash,
+  IconCode,
+  IconHeart,
+  IconMoodKid,
+  IconUsersGroup,
+  IconIdBadge,
+  IconBrandYoutube,
+  IconBrandTiktok,
+  IconBrandPinterest,
+  IconBrandSnapchat,
+  IconBrandReddit,
+  IconBrandThreads,
+} from '@tabler/icons-react';
+import type { TablerIcon } from '@tabler/icons-react';
+
+/** Every icon in Yello is Tabler at this stroke (DESIGN.md). Filled icons ignore it. */
+export const ICON_STROKE = 1.5;
+
+/** Old Font Awesome names → Tabler. Keys are kept so the 329 call sites didn't need touching. */
+const ICONS = {
+  'address-book': IconAddressBook, 'address-card': IconId, apple: IconBrandApple,
+  'arrow-left': IconArrowLeft, 'arrow-right': IconArrowRight, 'arrow-rotate-left': IconArrowBackUp,
+  'arrow-up': IconArrowUp, 'arrow-up-right-from-square': IconExternalLink, 'arrows-left-right': IconArrowsLeftRight,
+  'arrows-rotate': IconRefresh, 'badge-check': IconRosetteDiscountCheck, book: IconBook, 'box-archive': IconArchive,
+  briefcase: IconBriefcase, broom: IconWand, building: IconBuilding, 'cake-candles': IconCake,
+  calendar: IconCalendar, 'calendar-xmark': IconCalendarX, camera: IconCamera, certificate: IconCertificate,
+  check: IconCheck, 'chevron-down': IconChevronDown, 'chevron-left': IconChevronLeft,
+  'chevron-right': IconChevronRight, 'chevrons-left': IconChevronsLeft, 'chevrons-right': IconChevronsRight,
+  circle: IconCircle, 'circle-check': IconCircleCheck, 'circle-check-solid': IconCircleCheckFilled,
+  'circle-dot': IconCircleDot, 'circle-exclamation': IconAlertCircle, 'circle-exclamation-solid': IconAlertCircleFilled,
+  'circle-info': IconInfoCircle, 'circle-info-solid': IconInfoCircleFilled, 'circle-minus': IconCircleMinus,
+  'circle-plus': IconCirclePlus, 'circle-xmark': IconCircleX, 'circle-xmark-solid': IconCircleXFilled,
+  city: IconBuildingSkyscraper, clock: IconClock, 'clock-rotate-left': IconHistory,
+  'cloud-arrow-down': IconCloudDownload, 'code-merge': IconGitMerge, 'comment-sms': IconMessage,
+  comments: IconMessages, copy: IconCopy, download: IconDownload, ellipsis: IconDots,
+  'ellipsis-vertical': IconDotsVertical, envelope: IconMail, eye: IconEye, 'eye-slash': IconEyeOff,
+  'file-import': IconFileImport, 'file-lines': IconFileText, filter: IconFilter, globe: IconWorld,
+  google: IconBrandGoogle, 'graduation-cap': IconSchool, 'hand-sparkles': IconSparkles, house: IconHome,
+  images: IconPhoto, laptop: IconDeviceLaptop, link: IconLink, 'link-slash': IconLinkOff,
+  linkedin: IconBrandLinkedin, list: IconList, 'list-check': IconListCheck, 'location-dot': IconMapPin,
+  lock: IconLock, 'magnifying-glass': IconSearch, 'magnifying-glass-chart': IconReportSearch, map: IconMap,
+  message: IconMessage, 'paper-plane': IconSend, paperclip: IconPaperclip, pen: IconPencil, phone: IconPhone,
+  plus: IconPlus, 'ranking-star': IconTrophy, 'right-left': IconArrowsExchange, 'right-to-bracket': IconLogin,
+  rocket: IconRocket, 'screwdriver-wrench': IconTool, 'share-nodes': IconShare, 'shield-halved': IconShieldHalf,
+  spinner: IconLoader2, square: IconSquare, star: IconStar, 'sticky-note': IconNote, swatchbook: IconPalette,
+  'table-cells-large': IconLayoutGrid, 'thumbs-up': IconThumbUp, trash: IconTrash,
+  'triangle-exclamation': IconAlertTriangle, 'triangle-exclamation-solid': IconAlertTriangleFilled,
+  upload: IconUpload, user: IconUser, 'user-plus': IconUserPlus, 'user-slash': IconUserOff, users: IconUsers,
+  whatsapp: IconBrandWhatsapp, xmark: IconX,
+  'file-csv': IconFileTypeCsv,
+  'wand-magic-sparkles': IconSparkles,
+  'location-crosshairs': IconCurrentLocation,
+  'pen-to-square': IconEdit,
+  'location-pin-slash': IconMapPinOff,
+  'box-open': IconBox,
+  'trash-can': IconTrash,
+  'boxes-stacked': IconBoxMultiple,
+  'square-check': IconSquareCheck,
+  sliders: IconAdjustmentsHorizontal,
+  'chevron-up': IconChevronUp,
+  yahoo: IconBrandYahoo,
+  microsoft: IconBrandWindows,
+  pencil: IconPencil,
+  'up-right-and-down-left-from-center': IconArrowsDiagonal,
+  'floppy-disk': IconDeviceFloppy,
+  'rotate-right': IconRotateClockwise,
+  'rotate-left': IconRotate,
+  rotate: IconRefresh,
+  desktop: IconDeviceDesktop,
+  at: IconAt,
+  'folder-minus': IconFolderMinus,
+  gear: IconSettings,
+  forward: IconPlayerSkipForward,
+  play: IconPlayerPlay,
+  pause: IconPlayerPause,
+  stop: IconPlayerStop,
+  'window-maximize': IconWindowMaximize,
+  'lock-open': IconLockOpen,
+  plug: IconPlug,
+  'circle-question': IconHelpCircle,
+  vial: IconFlask,
+  'right-from-bracket': IconLogout,
+  'helmet-safety': IconHelmet,
+  'hand-holding-heart': IconHeartHandshake,
+  'x-twitter': IconBrandX,
+  facebook: IconBrandFacebook,
+  instagram: IconBrandInstagram,
+  github: IconBrandGithub,
+  comment: IconMessageCircle,
+  'comment-dots': IconMessageDots,
+  video: IconVideo,
+  hashtag: IconHash,
+  code: IconCode,
+  heart: IconHeart,
+  child: IconMoodKid,
+  'people-roof': IconUsersGroup,
+  'id-badge': IconIdBadge,
+  youtube: IconBrandYoutube,
+  tiktok: IconBrandTiktok,
+  pinterest: IconBrandPinterest,
+  snapchat: IconBrandSnapchat,
+  reddit: IconBrandReddit,
+  threads: IconBrandThreads,
+  clone: IconCopy,
+} satisfies Record<string, TablerIcon>;
+
+export type IconName = keyof typeof ICONS;
+
 interface IconProps {
-  name: string;
+  name: IconName;
   className?: string;
+  /** Rotate continuously (busy states) */
+  spin?: boolean;
+  /** @deprecated Font Awesome style; ignored. Removed in Phase 9. */
   style?: 'solid' | 'regular' | 'brands';
 }
 
-export function Icon({ name, className = '', style = 'solid' }: IconProps) {
-  const prefix = style === 'brands' ? 'fa-brands' : style === 'regular' ? 'fa-regular' : 'fa-solid';
-  return <i className={`${prefix} fa-${name} ${className}`.trim()} />;
+export function Icon({ name, className, spin = false }: IconProps) {
+  const Svg = ICONS[name];
+  const classes = ['anticon', 'yello-icon', spin && 'yello-icon--spin', className].filter(Boolean).join(' ');
+  return (
+    <span role="img" aria-hidden className={classes}>
+      <Svg size="1em" stroke={ICON_STROKE} />
+    </span>
+  );
 }

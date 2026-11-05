@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { Button } from './ui/Button';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { Badge } from './ui/Badge';
@@ -16,7 +16,7 @@ import {
   type DeletionGate,
 } from '../api/syncHooks';
 
-const PROVIDERS: Array<{ id: BackupProvider; name: string; icon: string }> = [
+const PROVIDERS: Array<{ id: BackupProvider; name: string; icon: IconName }> = [
   { id: 'icloud', name: 'Apple iCloud', icon: 'apple' },
   { id: 'google', name: 'Google Contacts', icon: 'google' },
 ];

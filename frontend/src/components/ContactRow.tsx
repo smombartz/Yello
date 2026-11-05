@@ -101,7 +101,7 @@ export function ContactRow({
     },
     ...(onArchive ? [{
       label: 'Archive',
-      icon: 'box-archive',
+      icon: 'box-archive' as const,
       dividerBefore: true,
       onSelect: () => onArchive(contact),
     }] : []),

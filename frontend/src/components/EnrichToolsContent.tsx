@@ -380,7 +380,7 @@ export function EnrichToolsContent() {
                   <div className="enrichment-progress">
                     <div className="progress-header">
                       <span className="progress-status">
-                        <Icon name="arrows-rotate" className="spinning" />
+                        <Icon name="arrows-rotate" spin />
                         Enriching contacts...
                       </span>
                       <span className="progress-count">
@@ -551,7 +551,7 @@ export function EnrichToolsContent() {
                     <div className="enrichment-progress" style={{ marginTop: 12 }}>
                       <div className="progress-header">
                         <span className="progress-status">
-                          <Icon name="arrows-rotate" className="spinning" />
+                          <Icon name="arrows-rotate" spin />
                           Recovering...
                         </span>
                         <span className="progress-count">
@@ -641,7 +641,7 @@ export function EnrichToolsContent() {
             )}
             {/* Not `loading`: while streaming this same button is the Cancel action, so it must stay enabled */}
             <Button onClick={isStreaming ? cancelFetching : handleFetchPhotos}>
-              <Icon name={isStreaming ? 'arrows-rotate' : 'cloud-arrow-down'} className={isStreaming ? 'spinning' : ''} />
+              <Icon name={isStreaming ? 'arrows-rotate' : 'cloud-arrow-down'} spin={isStreaming} />
               {isStreaming ? 'Cancel' : 'Fetch Contact Photos'}
             </Button>
           </div>
@@ -782,7 +782,7 @@ export function EnrichToolsContent() {
                   <div className="enrichment-progress">
                     <div className="progress-header">
                       <span className="progress-status">
-                        <Icon name="arrows-rotate" className="spinning" />
+                        <Icon name="arrows-rotate" spin />
                         Syncing email history...
                       </span>
                       <span className="progress-count">

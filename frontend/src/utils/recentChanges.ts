@@ -1,3 +1,4 @@
+import type { IconName } from '../components/Icon';
 /** Labels for the Recent card and page. */
 import type { RecentChange, RecentKind } from '../api/dashboardHooks';
 import type { ContactTile } from '../components/ContactTileGrid';
@@ -14,7 +15,7 @@ export const RECENT_KIND_LABELS: Record<RecentKind, string> = {
   archived: 'Archived',
 };
 
-export const RECENT_KIND_ICONS: Record<RecentKind, string> = {
+export const RECENT_KIND_ICONS: Record<RecentKind, IconName> = {
   added: 'user-plus',
   imported: 'file-import',
   synced: 'arrows-rotate',

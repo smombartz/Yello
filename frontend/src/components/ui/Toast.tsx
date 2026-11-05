@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Icon } from '../Icon';
+import { Icon, type IconName } from '../Icon';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -36,7 +36,7 @@ export function useToast(): ToastContextValue {
   return ctx;
 }
 
-const TOAST_ICONS: Record<ToastType, string> = {
+const TOAST_ICONS: Record<ToastType, IconName> = {
   success: 'circle-check',
   error: 'circle-exclamation',
   info: 'circle-info',
